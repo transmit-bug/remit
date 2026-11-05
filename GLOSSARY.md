@@ -1,6 +1,6 @@
-# Remember It
+# Remit
 
-Remember It（仓库名 remit）是开源、本地优先的桌面知识记忆应用：块级笔记为一等公民，复习是核心价值。
+Remit 是开源、本地优先的桌面知识记忆应用：块级笔记为一等公民，复习是核心价值。
 
 ## Language
 
