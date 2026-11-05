@@ -1,0 +1,6 @@
+{
+  "name": "remit",
+  "identifier": "com.example.remit",
+  "version": "0.1.0",
+  "out": "build"
+}
