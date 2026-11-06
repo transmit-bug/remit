@@ -50,7 +50,11 @@ type Block = { id: string; noteId: string; text: string; title: string }
 type Grade = 1 | 2 | 3 | 4                 // again | hard | good | easy
 
 // derive：一块文本 → 若干卡片（ADR 0002：`::` 前提示、后答案；空则整块为提示）
-export function deriveBlock(block: Block): Array<{ front: string; back: string }>
+export function deriveBlock(block: Block): Array<{
+  ordinal: number;              // 同一块派生的第几张卡（cloze 的每个空、双向的两个方向）
+  kind: string;                 // 插件自己的字符串，宿主只存不解释
+  front: string; back: string;
+}>
 
 // render：卡片 → 两段 markdown（宿主用 ui/markdown 渲染，插件拿不到渲染器）
 export function renderCard(card: { id: string; blockId: string; front: string; back: string }):
@@ -107,7 +111,7 @@ export function scheduleGrade(input: {
 - `apiVersion`：整数，是**契约产物 `remit.d.ts` 的版本**（与 VS Code 的 `vscode.d.ts` 同位）。宿主按**最低版本**语义接受：插件声明的 `apiVersion` ≤ 宿主即可加载，不要求精确匹配（`#9` 的 `protocol: 1` 精确匹配只能硬失败，这是要改掉的地方——研究 #70）。
 - 破坏性变更 +1；旧版插件继续可用一个大版本（deprecation 窗口），之后拒绝加载。
 - `protocol`（#9 的 exec 线协议）与 `apiVersion`（JS 宿主面）分开：前者是传输，后者是数据契约。
-- 复习记录里写 `scheduler: { id, version }`：换调度插件后历史仍可读，只是不再可比（#72 的规则）。
+- 复习记录里写 `scheduler: { family, flags, version }`：换调度插件后历史仍可读，只是不再可比；切换点作为一条边界记录写入。家族+开关的形态是刻意的（Anki 的 `schedVer` 是家族，"v3"只是 V2 上的 flag）。
 
 ## 7. 生命周期
 

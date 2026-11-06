@@ -10,7 +10,9 @@ the issue tracker; this file says how code is written, gated and merged.
 - Dependencies point one way: `cmd` → `ui` → `core`. `internal/core` never
   imports `mygo/ui`; if it needs to, the code belongs in `internal/ui`.
 - Split a package when a boundary is needed. Do not create packages in
-  anticipation of one.
+  anticipation of one. The design language and the kit are such a boundary
+  (`internal/ui/design`, `internal/ui/kit`); screen packages are split only when
+  a screen is rewritten (ADR 0004, landing with the review slice).
 
 ## Tests
 
@@ -58,6 +60,13 @@ A PR is mergeable only when every job is green:
   `examples/notes` (MIT) is the preferred reference; MixMusic (GPL) is not.
 - Prefer a mature, maintained library over a hand-rolled one; hand-roll only
   the product's own differentiators.
+
+## No second implementation
+
+A behaviour has one implementation, in one language. When a plugin replaces a
+built-in path, the built-in path is deleted once golden fixtures pass against
+the plugin — not kept "just in case". Two implementations drift, and the older
+one wins by accident (ADR 0007).
 
 ## MyGo discipline
 
