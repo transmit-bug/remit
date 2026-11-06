@@ -18,6 +18,8 @@ type editorState struct {
 	draft    core.Note
 	loaded   string // the note the draft holds
 	title    ui.Handle
+	body     ui.Handle
+	jumpTo   int // a paragraph of the note to put the caret in, 1-based; 0 for none
 
 	focus   bool               // the title takes the caret in the next pass
 	doc     *richtext.Document // the note as one document, markers and all
@@ -92,6 +94,15 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 		return
 	}
 	a.editor.ensureDocument()
+	if a.editor.jumpTo > 0 {
+		// A backlink names a paragraph of this note: the caret goes there, which
+		// scrolls it into view.
+		if at := paragraphOffset(documentText(a.editor.draft), a.editor.jumpTo); at >= 0 {
+			a.editor.doc.SetSelection(at, at)
+			a.editor.body.Focus(c)
+		}
+		a.editor.jumpTo = 0
+	}
 
 	edited, retitled := false, false
 	ui.Scroll(c).Grow(1).Padding(tk.spaceXL).Children(func() {
@@ -117,7 +128,7 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 
 			if richtext.Editor(c, a.editor.doc).
 				Fill().MinHeight(tk.control * 8).
-				Label(m(c).NoteBody()).Changed() {
+				Label(m(c).NoteBody()).Bind(&a.editor.body).Changed() {
 				edited = true
 			}
 		})

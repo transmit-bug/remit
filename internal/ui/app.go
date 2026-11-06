@@ -65,17 +65,19 @@ type App struct {
 	data    libraryData    // the library as the view reads it
 	due     []core.ID      // today's queue, as the last reload derived it
 
-	mode     mode
-	review   review.State
-	editor   editorState
-	browse   browseState
-	stats    statsState
-	palette  paletteState
-	relink   relinkState
-	cardEdit cardEditState
-	prefs    prefsState
-	panel    panelMode    // what the user said about the note's panel
-	aboutWin *mygo.Window // the open About window, or nil
+	mode      mode
+	review    review.State
+	editor    editorState
+	browse    browseState
+	stats     statsState
+	palette   paletteState
+	relink    relinkState
+	cardEdit  cardEditState
+	prefs     prefsState
+	panel     panelMode        // what the user said about the note's panel
+	panelTab  panelTab         // outline or backlinks
+	backlinks []store.Backlink // what points at the note open now
+	aboutWin  *mygo.Window     // the open About window, or nil
 
 	// preview is what the four answers would schedule for the card on screen,
 	// loaded with the rest of what a mode reads so that no frame reads the
