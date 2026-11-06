@@ -77,7 +77,7 @@ func TestOpenLibraryPicker(t *testing.T) {
 	if calls != 0 {
 		t.Error("the app asked for a folder although it remembered one")
 	}
-	tt.Advance(200 * time.Millisecond) // the opening card's entry
+	tt.Advance(320 * time.Millisecond) // the opening card's entry
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}

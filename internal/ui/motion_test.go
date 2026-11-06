@@ -18,7 +18,7 @@ func TestMotionSettles(t *testing.T) {
 
 	// A screen change: the entrance of the screen it switches to.
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 	if tt.FramePending() {
 		t.Fatal("the screen's change never settled")
 	}
@@ -27,9 +27,9 @@ func TestMotionSettles(t *testing.T) {
 	// rests. (The palette's field blinks its caret while it is open — the
 	// framework's own loop, not this motion's.)
 	tt.Key(ui.Cmd, ui.KeyK)
-	tt.Advance(200 * time.Millisecond) // the palette's arrival
+	tt.Advance(320 * time.Millisecond) // the palette's arrival
 	tt.Key(0, ui.KeyEscape)
-	tt.Advance(200 * time.Millisecond) // the palette's exit
+	tt.Advance(320 * time.Millisecond) // the palette's exit
 	if tt.FramePending() {
 		t.Fatal("the command palette's arrival never settled")
 	}

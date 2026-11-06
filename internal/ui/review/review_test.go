@@ -80,15 +80,16 @@ func at(t *testing.T, view func(*ui.Context), w, h int) *ui.Tester {
 	return tt
 }
 
-// One card: its prompt, the way to reveal the answer, and how many are left,
-// at both the sizes the window opens at.
+// One card takes the window: its prompt, the way to reveal the answer, and a
+// status bar that says how many are left — at both the sizes the window opens
+// at, and with no navigation of its own.
 func TestCardOnScreen(t *testing.T) {
 	msgs := locales.In("en")
 	for _, size := range sizes {
 		t.Run(size.name, func(t *testing.T) {
 			_, state, view := open(t, "c1", "c2")
 			tt := at(t, view, size.w, size.h)
-			for _, want := range []string{msgs.ReviewTitle(), "Prompt c1", msgs.ShowAnswer(), msgs.Remaining(2)} {
+			for _, want := range []string{"Prompt c1", msgs.ShowAnswer(), msgs.Remaining(2)} {
 				if !tt.HasText(want) {
 					t.Fatalf("missing %q; texts %q", want, tt.Texts())
 				}

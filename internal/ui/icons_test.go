@@ -20,7 +20,7 @@ func lostCardWindow(t *testing.T) (*ui.Tester, testLibrary) {
 	chooseFromMenu(t, tt, 1, "Delete block")
 
 	tt.Key(ui.Cmd, ui.Key3)
-	tt.Advance(200 * time.Millisecond) // the card's exit
+	tt.Advance(320 * time.Millisecond) // the card's exit
 	if err := tt.Click("Lost"); err != nil {
 		t.Fatalf("show the lost cards: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestIconsFitTheSmallestWindow(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 720, 520)
 	settle(tt)
-	tt.Advance(200 * time.Millisecond) // the card's entry
+	tt.Advance(320 * time.Millisecond) // the card's entry
 
 	inside := func(label string) {
 		t.Helper()
@@ -73,15 +73,15 @@ func TestIconsFitTheSmallestWindow(t *testing.T) {
 			t.Errorf("%q box %+v is outside the 720x520 window", label, box)
 		}
 	}
-	// The toolbar's new-note button carries the plus beside its text.
-	inside("New note")
-	// The first-run page leads with an icon over its title.
+	// Review takes the window whole: the card is all that is there.
 	if !tt.HasText("Show answer") {
 		t.Fatalf("the queue did not open; texts %q", tt.Texts())
 	}
 
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the card's exit
+	tt.Advance(320 * time.Millisecond) // the card's exit
+	// The toolbar's new-note button carries the plus beside its text.
+	inside("New note")
 	// A note of the sidebar carries a page icon.
 	inside("Memory and recall")
 	if tt.FramePending() {

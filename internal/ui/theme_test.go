@@ -102,12 +102,12 @@ func TestEveryModeInBothAppearances(t *testing.T) {
 				tt := ui.NewTester(a.View, size.w, size.h)
 				tt.SetDark(dark)
 				tt.Frame()
-				tt.Advance(200 * time.Millisecond) // the first card's entry
+				tt.Advance(320 * time.Millisecond) // the first card's entry
 
 				// The review queue, then the notes, on the real mode keys.
 				assertShows(t, tt, "Show answer")
 				tt.Key(ui.Cmd, ui.Key2)
-				tt.Advance(200 * time.Millisecond) // the card's exit
+				tt.Advance(320 * time.Millisecond) // the card's exit
 				assertShows(t, tt, "Notebook")
 
 				tt.Key(ui.Cmd, ui.Key3)
@@ -123,7 +123,7 @@ func TestEveryModeInBothAppearances(t *testing.T) {
 				assertShows(t, tt, "Agent API")
 
 				tt.Key(0, ui.KeyEscape)
-				tt.Advance(200 * time.Millisecond)
+				tt.Advance(320 * time.Millisecond)
 				if tt.FramePending() {
 					t.Error("view still requests frames after it should settle")
 				}

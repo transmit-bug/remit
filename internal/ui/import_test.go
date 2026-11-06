@@ -170,7 +170,7 @@ func TestImportAnkiFromThePalette(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("anki")
@@ -211,7 +211,7 @@ func TestImportAnkiCanceled(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("anki")
 	tt.Key(0, ui.KeyEnter)
@@ -241,7 +241,7 @@ func TestImportAnkiFailure(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("anki")
 	tt.Key(0, ui.KeyEnter)

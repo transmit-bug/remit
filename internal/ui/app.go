@@ -38,6 +38,12 @@ const (
 	modeSettings
 )
 
+// takingOver reports whether the screen takes the window whole: review hides
+// the navigation, so that the card and its status bar are all the user sees.
+func (a *App) takingOver() bool {
+	return a.lib != nil && !a.start && a.openErr == nil && a.mode == modeReview
+}
+
 // animState counts the moments the window's own motion replays by: a screen
 // changing, a panel opening. The count is the run of a preset, so when it moves
 // the preset plays again from its first frame.
@@ -157,11 +163,14 @@ func (a *App) View(c *ui.Context) {
 	a.shortcuts(c)
 
 	ui.Column(c).Fill().Background(tk.Background).LineHeight(lineHeight).Children(func() {
-		// The first frame arrives in two beats: the toolbar, then the main area
-		// behind it. Both move down and fade in; the stagger sets the beat.
-		toolbar := a.toolbar(c, tk)
-		entering := toolbar.Keyframes("enter", design.EnterFrames)
-		toolbar.Opacity(entering).Translate(0, design.Rise*(1-entering))
+		// Review takes the window whole: no navigation, no list, just the card
+		// and its status bar. Everywhere else the first frame arrives in two
+		// beats — the toolbar, then the main area behind it.
+		if !a.takingOver() {
+			toolbar := a.toolbar(c, tk)
+			entering := toolbar.Keyframes("enter", design.EnterFrames)
+			toolbar.Opacity(entering).Translate(0, design.Rise*(1-entering))
+		}
 
 		// One screen replacing another fades in and rises, played by the count
 		// the mode handler keeps.

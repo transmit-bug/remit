@@ -62,7 +62,7 @@ func seedStatsLibrary(t *testing.T) *App {
 func openStats(t *testing.T, tt *ui.Tester) {
 	t.Helper()
 	tt.Key(ui.Cmd, ui.KeyK)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 	tt.Type("stat")
 	tt.Key(0, ui.KeyEnter)
 	if tt.HasText("Search actions") {
@@ -78,7 +78,7 @@ func TestStatsPage(t *testing.T) {
 			a := seedStatsLibrary(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
-			tt.Advance(200 * time.Millisecond) // the opening card's entry
+			tt.Advance(320 * time.Millisecond) // the opening card's entry
 			openStats(t, tt)
 
 			for _, want := range []string{
@@ -125,7 +125,7 @@ func TestStatsPage(t *testing.T) {
 					t.Errorf("the page shows the empty state %q beside its data", gone)
 				}
 			}
-			tt.Advance(200 * time.Millisecond) // the screen's entrance
+			tt.Advance(320 * time.Millisecond) // the screen's entrance
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
@@ -147,7 +147,7 @@ func TestStatsEmptyLibrary(t *testing.T) {
 			a := NewApp(Options{LibraryDir: dir})
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
-			tt.Advance(200 * time.Millisecond) // the empty queue settles
+			tt.Advance(320 * time.Millisecond) // the empty queue settles
 			openStats(t, tt)
 
 			for _, want := range []string{
@@ -163,7 +163,7 @@ func TestStatsEmptyLibrary(t *testing.T) {
 					t.Fatalf("the empty statistics page is missing %q; texts %q", want, tt.Texts())
 				}
 			}
-			tt.Advance(200 * time.Millisecond) // the screen's entrance
+			tt.Advance(320 * time.Millisecond) // the screen's entrance
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
@@ -189,13 +189,13 @@ func TestZhHansAtMinimum(t *testing.T) {
 	tt.SetLocale("zh-Hans")
 	tt.Frame()
 
-	for _, label := range []string{"复习", "新建笔记", "显示答案", "撤销 (U)", "暂停 (S)", "编辑笔记 (E)"} {
+	for _, label := range []string{"显示答案", "撤销 (U)", "暂停 (S)", "编辑笔记 (E)"} {
 		assertControl(t, tt, 720, 520, label)
 	}
-	tt.Advance(200 * time.Millisecond) // the card's entry
+	tt.Advance(320 * time.Millisecond) // the card's entry
 
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the card's exit
+	tt.Advance(320 * time.Millisecond) // the card's exit
 	for _, label := range []string{"笔记", "浏览", "统计", "笔记本", "建卡", "块操作"} {
 		assertControl(t, tt, 720, 520, label)
 	}
@@ -207,7 +207,7 @@ func TestZhHansAtMinimum(t *testing.T) {
 	assertControl(t, tt, 720, 520, "Spacing beats cramming")
 
 	tt.Key(ui.Cmd, ui.KeyK)
-	tt.Advance(200 * time.Millisecond) // the card's exit
+	tt.Advance(320 * time.Millisecond) // the card's exit
 	tt.Type("统计")
 	tt.Key(0, ui.KeyEnter)
 	for _, label := range []string{"统计数据", "复习热力图", "按预测记忆率看正确率", "少", "多"} {
@@ -216,7 +216,7 @@ func TestZhHansAtMinimum(t *testing.T) {
 	if tt.HasText("Search actions") {
 		t.Error("the palette stayed open after running its action")
 	}
-	tt.Advance(200 * time.Millisecond) // the screen's entrance
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}

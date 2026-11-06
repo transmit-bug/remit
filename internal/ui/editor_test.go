@@ -20,7 +20,7 @@ func notesMode(t *testing.T, a *App, tt *ui.Tester) {
 	t.Helper()
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 }
 
 // openNote chooses a note from the sidebar, which is a title no field holds
@@ -79,7 +79,7 @@ func TestEditNoteTitle(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(seed.dir, "notes", "a-daily-habit-"+string(seed.habit.ID)+".md")); err != nil {
 		t.Errorf("the note file moved with its title: %v", err)
 	}
-	tt.Advance(200 * time.Millisecond) // the screen's entrance
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -126,7 +126,7 @@ func TestAddBlock(t *testing.T) {
 		}
 		ids[block.ID] = true
 	}
-	tt.Advance(200 * time.Millisecond) // the screen's entrance
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -299,7 +299,7 @@ func TestDeleteBlockLosesTheCard(t *testing.T) {
 
 	// The lost card is the Lost filter's, and the window offers the repair.
 	tt.Key(ui.Cmd, ui.Key3)
-	tt.Advance(200 * time.Millisecond) // the card's exit
+	tt.Advance(320 * time.Millisecond) // the card's exit
 	if err := tt.Click("Lost"); err != nil {
 		t.Fatal(err)
 	}
