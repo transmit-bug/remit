@@ -55,7 +55,7 @@ func TestGradingAnnouncesWhatIsLeft(t *testing.T) {
 	if len(got) == 0 {
 		t.Fatal("grading announced nothing")
 	}
-	if want := a.review.remaining(); !containsSubstring(got, "left") {
+	if want := a.review.Remaining(); !containsSubstring(got, "left") {
 		t.Errorf("announcements %q do not say what is left (%d cards)", got, want)
 	}
 }

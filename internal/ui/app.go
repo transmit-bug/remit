@@ -13,6 +13,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/review"
 	"github.com/transmit-bug/remit/internal/update"
 )
 
@@ -57,7 +58,7 @@ type App struct {
 	due     []core.ID      // today's queue, as the last reload derived it
 
 	mode     mode
-	review   reviewState
+	review   review.State
 	editor   editorState
 	browse   browseState
 	stats    statsState

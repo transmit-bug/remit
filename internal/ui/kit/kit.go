@@ -55,6 +55,22 @@ func Empty(c *ui.Context, icon, text string, action func()) ui.Element {
 	})
 }
 
+// StateBadge is a pill that reports a name and the way a card stands — lost,
+// frozen, suspended — as its symbol and its word, tinted by the colour that
+// state carries so that the word keeps its contrast.
+func StateBadge(c *ui.Context, icon, text string, colour ui.Color) ui.Element {
+	t := c.Theme()
+	return ui.Badge(c, "").
+		Background(colour.Alpha(0.12)).TextColor(colour.Mix(t.Text, 0.35)).
+		Children(func() {
+			ui.Row(c).AlignItems(ui.Center).Gap(design.SpaceXS).Children(func() {
+				ui.Icon(c, design.Icon(icon)).
+					Width(design.IconSmall).Height(design.IconSmall)
+				ui.Text(c, text).SingleLine()
+			})
+		})
+}
+
 // Keycap is a key's name on the face of a key, as the grade keys show 1 to 4:
 // quiet and small, so the label beside it carries the meaning.
 func Keycap(c *ui.Context, key string) ui.Element {

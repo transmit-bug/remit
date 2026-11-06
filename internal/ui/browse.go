@@ -267,7 +267,7 @@ func (a *App) openRow(c *ui.Context) {
 		a.setMode(modeNotes)
 		return
 	}
-	a.review.reset()
-	a.review.queue = []core.ID{row.card.ID}
+	a.review.Reset()
+	a.review.Only(row.card.ID)
 	a.setMode(modeReview)
 }
