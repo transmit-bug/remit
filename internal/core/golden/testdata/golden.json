@@ -1,0 +1,271 @@
+{
+  "note": "Frozen answers of the Go implementation (ADR 0005/0007): the faces a paragraph gives, and the schedule each answer leaves. Regenerate with go test ./internal/core/golden -update only when the answers are meant to change.",
+  "faces": [
+    {
+      "proves": "a paragraph with no separator asks everything and answers nothing",
+      "text": "a paragraph with no separator at all",
+      "kind": "basic",
+      "ordinal": 0,
+      "prompt": "a paragraph with no separator at all",
+      "answer": "",
+      "state": "live"
+    },
+    {
+      "proves": "the first separator divides, and later ones stay in the answer",
+      "text": "one block :: that divides :: twice",
+      "kind": "basic",
+      "ordinal": 0,
+      "prompt": "one block",
+      "answer": "that divides :: twice",
+      "state": "live"
+    },
+    {
+      "proves": "a card's own prompt replaces the paragraph's",
+      "text": "Spacing beats cramming :: reviewing just before you forget strengthens recall.",
+      "kind": "basic",
+      "ordinal": 0,
+      "override_prompt": "asked another way",
+      "prompt": "asked another way",
+      "answer": "reviewing just before you forget strengthens recall.",
+      "state": "live"
+    },
+    {
+      "proves": "a card's own answer replaces the paragraph's",
+      "text": "Spacing beats cramming :: reviewing just before you forget strengthens recall.",
+      "kind": "basic",
+      "ordinal": 0,
+      "override_answer": "answered another way",
+      "prompt": "Spacing beats cramming",
+      "answer": "answered another way",
+      "state": "live"
+    },
+    {
+      "proves": "a lost card keeps only what it overrides",
+      "text": "",
+      "kind": "basic",
+      "ordinal": 0,
+      "override_prompt": "still asked",
+      "lost": true,
+      "prompt": "still asked",
+      "answer": "",
+      "state": "lost"
+    },
+    {
+      "proves": "a frozen card asks the text it kept, not the paragraph's",
+      "text": "Spacing beats cramming :: reviewing just before you forget strengthens recall.",
+      "kind": "basic",
+      "ordinal": 0,
+      "frozen_text": "old prompt :: old answer",
+      "prompt": "old prompt",
+      "answer": "old answer",
+      "state": "frozen"
+    },
+    {
+      "proves": "the first blank of a cloze is the gap, the rest show",
+      "text": "The {{first}} blank and the {{second}} one.",
+      "kind": "cloze",
+      "ordinal": 0,
+      "prompt": "The […] blank and the second one.",
+      "answer": "first",
+      "state": "live"
+    },
+    {
+      "proves": "the second blank of a cloze is the gap, the first shows",
+      "text": "The {{first}} blank and the {{second}} one.",
+      "kind": "cloze",
+      "ordinal": 1,
+      "prompt": "The first blank and the […] one.",
+      "answer": "second",
+      "state": "live"
+    },
+    {
+      "proves": "a cloze whose blank is gone asks what it can",
+      "text": "The {{first}} blank and the {{second}} one.",
+      "kind": "cloze",
+      "ordinal": 5,
+      "prompt": "The first blank and the second one.",
+      "answer": "",
+      "state": "live"
+    },
+    {
+      "proves": "both ways asks the paragraph as written",
+      "text": "spacing ::: the gaps between reviews",
+      "kind": "bidirectional",
+      "ordinal": 0,
+      "prompt": "spacing",
+      "answer": "the gaps between reviews",
+      "state": "live"
+    },
+    {
+      "proves": "both ways asks it reversed",
+      "text": "spacing ::: the gaps between reviews",
+      "kind": "bidirectional",
+      "ordinal": 1,
+      "prompt": "the gaps between reviews",
+      "answer": "spacing",
+      "state": "live"
+    }
+  ],
+  "schedule": [
+    {
+      "proves": "a card never reviewed, answered",
+      "from": "new",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "again",
+      "due": "2026-11-08T09:00:00Z",
+      "reviews": 1,
+      "stability": 0.212,
+      "difficulty": 6.4133
+    },
+    {
+      "proves": "a card never reviewed, answered",
+      "from": "new",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "hard",
+      "due": "2026-11-08T09:00:00Z",
+      "reviews": 1,
+      "stability": 1.2931,
+      "difficulty": 5.112170705601055
+    },
+    {
+      "proves": "a card never reviewed, answered",
+      "from": "new",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "good",
+      "due": "2026-11-09T09:00:00Z",
+      "reviews": 1,
+      "stability": 2.3065,
+      "difficulty": 2.118103970459015
+    },
+    {
+      "proves": "a card never reviewed, answered",
+      "from": "new",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "easy",
+      "due": "2026-11-15T09:00:00Z",
+      "reviews": 1,
+      "stability": 8.2956,
+      "difficulty": 1
+    },
+    {
+      "proves": "a card being learned, answered",
+      "from": "learned",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "again",
+      "due": "2026-11-08T09:00:00Z",
+      "reviews": 2,
+      "stability": 0.6075801062519339,
+      "difficulty": 7.394502741279718
+    },
+    {
+      "proves": "a card being learned, answered",
+      "from": "learned",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "hard",
+      "due": "2026-11-15T09:00:00Z",
+      "reviews": 2,
+      "stability": 7.513320366762571,
+      "difficulty": 4.7528584885325555
+    },
+    {
+      "proves": "a card being learned, answered",
+      "from": "learned",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "good",
+      "due": "2026-11-18T09:00:00Z",
+      "reviews": 2,
+      "stability": 10.964332335820703,
+      "difficulty": 2.1112142357853942
+    },
+    {
+      "proves": "a card being learned, answered",
+      "from": "learned",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "easy",
+      "due": "2026-11-26T09:00:00Z",
+      "reviews": 2,
+      "stability": 18.521754181758595,
+      "difficulty": 1
+    },
+    {
+      "proves": "a card in long-term review, answered",
+      "from": "reviewed",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "again",
+      "due": "2026-11-08T09:00:00Z",
+      "reviews": 3,
+      "stability": 0.7593120455111854,
+      "difficulty": 7.392238132342694
+    },
+    {
+      "proves": "a card in long-term review, answered",
+      "from": "reviewed",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "hard",
+      "due": "2026-11-23T09:00:00Z",
+      "reviews": 3,
+      "stability": 16.030392655278792,
+      "difficulty": 4.7482847615945705
+    },
+    {
+      "proves": "a card in long-term review, answered",
+      "from": "reviewed",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "good",
+      "due": "2026-12-02T09:00:00Z",
+      "reviews": 3,
+      "stability": 25.126407973526423,
+      "difficulty": 2.104331390846447
+    },
+    {
+      "proves": "a card in long-term review, answered",
+      "from": "reviewed",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "easy",
+      "due": "2026-12-22T09:00:00Z",
+      "reviews": 3,
+      "stability": 45.04590564361764,
+      "difficulty": 1
+    },
+    {
+      "proves": "a card too stable to schedule further: the interval cap",
+      "from": "capped",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "again",
+      "due": "2027-02-07T09:00:00Z",
+      "reviews": 4,
+      "stability": 91.715096768162,
+      "difficulty": 8.341762369296838
+    },
+    {
+      "proves": "a card too stable to schedule further: the interval cap",
+      "from": "capped",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "hard",
+      "due": "2126-10-14T09:00:00Z",
+      "reviews": 4,
+      "stability": 36500,
+      "difficulty": 6.665995369296838
+    },
+    {
+      "proves": "a card too stable to schedule further: the interval cap",
+      "from": "capped",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "good",
+      "due": "2126-10-14T09:00:00Z",
+      "reviews": 4,
+      "stability": 36500,
+      "difficulty": 4.9902283692968386
+    },
+    {
+      "proves": "a card too stable to schedule further: the interval cap",
+      "from": "capped",
+      "at": "2026-11-07T09:00:00Z",
+      "rating": "easy",
+      "due": "2126-10-14T09:00:00Z",
+      "reviews": 4,
+      "stability": 36500,
+      "difficulty": 3.3144613692968385
+    }
+  ]
+}
