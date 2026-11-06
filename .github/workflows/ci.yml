@@ -26,6 +26,23 @@ jobs:
       - name: mygo vet
         run: go tool mygo vet .
 
+  privacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Remit is zero-telemetry: no analytics, no crash service, no calls home.
+      # A new URL in Go source must be added here on purpose, with a reason.
+      - name: no unexpected outbound URLs
+        run: |
+          allowed='gnu\.org/licenses|golang\.org/|github\.com/|open-spaced-repetition|modernc\.org'
+          unexpected=$(grep -RIn --include='*.go' -E 'https?://' . | grep -vE "$allowed" || true)
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected URL in Go sources — telemetry is not allowed:"
+            echo "$unexpected"
+            exit 1
+          fi
+          echo "no unexpected outbound URLs"
+
   build:
     runs-on: ubuntu-latest
     strategy:

@@ -3,11 +3,13 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"runtime"
 
 	"github.com/egoist/mygo"
 	myui "github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/logging"
 	appui "github.com/transmit-bug/remit/internal/ui"
 )
 
@@ -15,6 +17,18 @@ func main() {
 	a := appui.NewApp()
 	mygo.App.SetName(appui.Name)
 	mygo.App.SetVersion(appui.Version)
+
+	// Diagnostics go to the app's own log directory and nowhere else.
+	logDir, err := mygo.App.Path(mygo.PathLogs)
+	if err != nil {
+		log.Fatalf("log directory: %v", err)
+	}
+	logger, closeLog, err := logging.Open(logDir)
+	if err != nil {
+		log.Fatalf("logging: %v", err)
+	}
+	defer closeLog()
+	slog.SetDefault(logger)
 
 	// The window the About window belongs to, set once the app is ready.
 	var mainWin *mygo.Window
