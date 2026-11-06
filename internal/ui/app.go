@@ -39,6 +39,10 @@ type App struct {
 	editor   editorState
 	palette  paletteState
 	aboutWin *mygo.Window // the open About window, or nil
+
+	// remaining is told the queue's length whenever it is rebuilt, so the
+	// tray can show it without asking the window.
+	remaining func(int)
 }
 
 // NewApp returns an app on the library in opts.LibraryDir, or on Remit's own

@@ -45,5 +45,9 @@
   "modeLabel": "模式",
   "libraryError": "无法打开笔记库：{reason}",
   "retryLibrary": "重试",
-  "saveFailed": "无法保存更改。"
+  "saveFailed": "无法保存更改。",
+  "openRemit": "打开 Remit",
+  "quitRemit": "退出 Remit",
+  "trayTitle": "Remit · {count}",
+  "trayTooltip": "Remit"
 }

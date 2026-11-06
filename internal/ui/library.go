@@ -159,6 +159,9 @@ func (a *App) reload() {
 	}
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
 	a.review.sync(a.dueToday())
+	if a.remaining != nil {
+		a.remaining(a.review.remaining())
+	}
 }
 
 // report logs a write that failed and says so where the action was, so a

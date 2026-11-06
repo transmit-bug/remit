@@ -679,3 +679,59 @@ func SaveFailed() string { return In(i18n.Locale()).SaveFailed() }
 func (msgs Messages) SaveFailed() string {
 	return Catalog.Format(msgs.locale, "saveFailed", nil)
 }
+
+// OpenRemit says "Open Remit"
+// in the language the app shows.
+//
+// Tray menu: bring the window forward.
+func OpenRemit() string { return In(i18n.Locale()).OpenRemit() }
+
+// OpenRemit says "Open Remit"
+// in the language of msgs.
+//
+// Tray menu: bring the window forward.
+func (msgs Messages) OpenRemit() string {
+	return Catalog.Format(msgs.locale, "openRemit", nil)
+}
+
+// QuitRemit says "Quit Remit"
+// in the language the app shows.
+//
+// Tray menu: quit the app.
+func QuitRemit() string { return In(i18n.Locale()).QuitRemit() }
+
+// QuitRemit says "Quit Remit"
+// in the language of msgs.
+//
+// Tray menu: quit the app.
+func (msgs Messages) QuitRemit() string {
+	return Catalog.Format(msgs.locale, "quitRemit", nil)
+}
+
+// TrayTitle says "Remit · {count}"
+// in the language the app shows.
+//
+// Tray title with the number of cards left.
+func TrayTitle(count int) string { return In(i18n.Locale()).TrayTitle(count) }
+
+// TrayTitle says "Remit · {count}"
+// in the language of msgs.
+//
+// Tray title with the number of cards left.
+func (msgs Messages) TrayTitle(count int) string {
+	return Catalog.Format(msgs.locale, "trayTitle", map[string]any{"count": count})
+}
+
+// TrayTooltip says "Remit"
+// in the language the app shows.
+//
+// Tray tooltip.
+func TrayTooltip() string { return In(i18n.Locale()).TrayTooltip() }
+
+// TrayTooltip says "Remit"
+// in the language of msgs.
+//
+// Tray tooltip.
+func (msgs Messages) TrayTooltip() string {
+	return Catalog.Format(msgs.locale, "trayTooltip", nil)
+}
