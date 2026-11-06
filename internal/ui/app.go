@@ -74,6 +74,7 @@ type App struct {
 	relink   relinkState
 	cardEdit cardEditState
 	prefs    prefsState
+	panel    panelMode    // what the user said about the note's panel
 	aboutWin *mygo.Window // the open About window, or nil
 
 	// preview is what the four answers would schedule for the card on screen,

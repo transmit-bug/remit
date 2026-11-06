@@ -92,10 +92,10 @@ func TestRemovingTheSeparatorSuspendsTheCard(t *testing.T) {
 	if !ok {
 		t.Fatal("the card was deleted; the rules keep it")
 	}
-	// Replacing the whole paragraph takes its marker with it, so the card loses
-	// the block it pointed at rather than keeping an empty prompt.
-	if _, _, state := after.Sides(a.Library()); state != core.LinkLost {
-		t.Errorf("the card is %s, want lost", state)
+	// The paragraph is still there, so the card keeps its reference, but it no
+	// longer asks anything: the reconcile takes it out of the queue.
+	if after.Status != core.StatusSuspended {
+		t.Errorf("the card is %s, want suspended", after.Status)
 	}
 	if tt.HasText(locales.In("en").CardOnParagraph(1, 1)) {
 		t.Errorf("the badge stayed after the separator left; texts %q", tt.Texts())
@@ -143,7 +143,8 @@ func TestCardBadgeEditsOverrides(t *testing.T) {
 	}
 }
 
-// The badges sit above the document and stay inside the smallest window.
+// The note's panel is put away on the smallest window until it is asked for, and
+// when it opens its badges stay inside the window.
 func TestCardBadgesFitTheSmallestWindow(t *testing.T) {
 	msgs := locales.In("en")
 	a, _ := newTestApp(t)
@@ -151,6 +152,13 @@ func TestCardBadgesFitTheSmallestWindow(t *testing.T) {
 	settle(tt)
 	newNoteTyped(t, a, tt, "What is spacing? :: Practice spread over days.")
 
+	if _, ok := tt.Find(msgs.CardOnParagraph(1, 1)); ok {
+		t.Fatal("the panel is open on the smallest window before it was asked for")
+	}
+	// Its toggle is in the document's header; opening it shows the badges.
+	if err := tt.Click(msgs.PanelTitle()); err != nil {
+		t.Fatalf("open the panel: %v", err)
+	}
 	badge, ok := tt.Find(msgs.CardOnParagraph(1, 1))
 	if !ok {
 		t.Fatalf("the badge is not drawn; texts %q", tt.Texts())
@@ -158,12 +166,8 @@ func TestCardBadgesFitTheSmallestWindow(t *testing.T) {
 	if badge.X < 0 || badge.Y < 0 || badge.X+badge.W > 720 || badge.Y+badge.H > 520 {
 		t.Errorf("the badge box %+v is outside the 720x520 window", badge)
 	}
-	editor, ok := tt.Find("Note")
-	if !ok {
-		t.Fatalf("the document is not drawn; texts %q", tt.Texts())
-	}
-	if badge.Y+badge.H > editor.Y {
-		t.Errorf("the badge %+v covers the document %+v", badge, editor)
+	if badge.X < 720-panelWidth-1 {
+		t.Errorf("the badge %+v is not in the panel column", badge)
 	}
 }
 

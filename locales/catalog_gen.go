@@ -1747,6 +1747,36 @@ func (msgs Messages) CheckNow() string {
 	return Catalog.Format(msgs.locale, "checkNow", nil)
 }
 
+// Today says "Today"
+// in the language the app shows.
+//
+// The first row of the notebook's list: what is due today.
+func Today() string { return In(i18n.Locale()).Today() }
+
+// Today says "Today"
+// in the language of msgs.
+//
+// The first row of the notebook's list: what is due today.
+func (msgs Messages) Today() string {
+	return Catalog.Format(msgs.locale, "today", nil)
+}
+
+// PanelTitle says "Note panel"
+// in the language the app shows.
+//
+// Accessible label of the button that shows and hides the note's panel, and
+// the panel's heading.
+func PanelTitle() string { return In(i18n.Locale()).PanelTitle() }
+
+// PanelTitle says "Note panel"
+// in the language of msgs.
+//
+// Accessible label of the button that shows and hides the note's panel, and
+// the panel's heading.
+func (msgs Messages) PanelTitle() string {
+	return Catalog.Format(msgs.locale, "panelTitle", nil)
+}
+
 // CardOnParagraph says "{count, plural, one {# card} other {# cards}} on ¶{paragraph}"
 // in the language the app shows.
 //

@@ -108,14 +108,12 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 			}
 
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
-				if n := a.data.cardsInNote(*note); n > 0 {
-					ui.Badge(c, blockCount(c, n))
-				}
 				ui.Text(c, m(c).EditorHint()).
-					FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+					FontSize(tk.typeSmall).TextColor(tk.TextMuted).Grow(1)
+				ui.Button(c, "").Label(m(c).PanelTitle()).Tooltip(m(c).PanelTitle()).
+					Children(func() { tk.icon(c, "sparkles", iconSmall) }).
+					OnClick(a.togglePanel)
 			})
-
-			a.cardsStrip(c, tk, *note)
 
 			if richtext.Editor(c, a.editor.doc).
 				Fill().MinHeight(tk.control * 8).
@@ -205,18 +203,14 @@ func (a *App) makeCardAtCaret(c *ui.Context) {
 	if a.editor.doc == nil || a.editor.draft.ID == "" {
 		return
 	}
-	text := a.editor.doc.Text().Markdown()
+	text := a.editor.doc.Text().String()
 	_, caret := a.editor.doc.Selection()
-	start, end := paragraphAt(text, caret)
-	id, _, ok := core.SplitBlockMarker(strings.TrimSpace(text[start:end]))
-	if !ok || id.Kind() != core.BlockKind {
-		return
-	}
-	for i, block := range a.editor.draft.Blocks {
-		if block.ID == id {
-			a.makeCard(c, i)
-			return
-		}
+	start, _ := paragraphAt(text, caret)
+	// The paragraphs are the blocks, in order: the caret's place among the
+	// blank lines is the block it is in.
+	at := strings.Count(text[:start], "\n\n")
+	if at >= 0 && at < len(a.editor.draft.Blocks) {
+		a.makeCard(c, at)
 	}
 }
 

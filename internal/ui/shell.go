@@ -15,8 +15,13 @@ import (
 
 const (
 	// sidebarWidth is the notes column, a fixed 260 DIP column rather than a
-	// pane the user resizes: review mode hides it instead of sharing space.
-	sidebarWidth float32 = 260
+	// pane the user resizes: review mode hides it instead of sharing space. On
+	// the smallest window it narrows, so that the note keeps room to be typed.
+	sidebarWidth  float32 = 260
+	sidebarNarrow float32 = 220
+	// panelWidth is the note's own panel, to the right of the document: its
+	// cards, and what #97 and #98 will put there.
+	panelWidth float32 = 280
 	// paletteWidth is the command palette's panel.
 	paletteWidth float32 = 480
 )
@@ -48,18 +53,88 @@ func (a *App) toolbar(c *ui.Context, tk tokens) ui.Element {
 	return toolbar
 }
 
-// notesView is editing mode: the notes list beside the selected note.
+// notesView is editing mode: the notes on the left, the note in the middle, and
+// the note's own panel on the right. A narrow window drops the panel first, then
+// narrows the notes column, so the document always keeps room to be typed.
 func (a *App) notesView(c *ui.Context, tk tokens) {
+	w, _ := c.Size()
+	narrow := w < narrowWindow
+	side := sidebarWidth
+	if narrow {
+		side = sidebarNarrow
+	}
 	ui.Row(c).Grow(1).AlignItems(ui.Stretch).Children(func() {
-		a.notesList(c, tk)
+		a.notesList(c, tk, side)
 		ui.Divider(c)
 		a.editorView(c, tk)
+		if a.panelShown(narrow) {
+			ui.Divider(c)
+			a.notePanel(c, tk)
+		}
 	})
 }
 
-// notesList is the source list of notes, with how many cards each one feeds.
-func (a *App) notesList(c *ui.Context, tk tokens) {
+// narrowWindow is the width below which the notebook drops its panel and
+// narrows its notes column.
+const narrowWindow float32 = 900
+
+// panelMode is what the user said about the note's panel, when they said
+// anything: a narrow window closes it until they ask for it.
+type panelMode uint8
+
+const (
+	panelAuto panelMode = iota
+	panelOpen
+	panelClosed
+)
+
+// panelShown reports whether the note's panel takes a column this frame.
+func (a *App) panelShown(narrow bool) bool {
+	switch a.panel {
+	case panelOpen:
+		return true
+	case panelClosed:
+		return false
+	}
+	return !narrow
+}
+
+// togglePanel opens or closes the note's panel, whatever the window's width.
+func (a *App) togglePanel() {
+	if a.panelShown(true) {
+		a.panel = panelClosed
+		return
+	}
+	a.panel = panelOpen
+}
+
+// notePanel is the column beside the document: what the note feeds, and the way
+// to put it away.
+func (a *App) notePanel(c *ui.Context, tk tokens) {
+	msgs := m(c)
+	ui.Column(c).Width(panelWidth).MaxWidth(panelWidth).Padding(tk.spaceM).Gap(tk.spaceM).Children(func() {
+		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
+			ui.Text(c, msgs.PanelTitle()).FontSize(tk.typeSmall).Bold().
+				TextColor(tk.TextMuted).Grow(1)
+			ui.Button(c, "").Label(msgs.Close()).Tooltip(msgs.Close()).
+				Children(func() { tk.icon(c, "x", iconSmall) }).
+				OnClick(func() { a.panel = panelClosed })
+		})
+		ui.Scroll(c).Grow(1).Children(func() {
+			ui.Column(c).Gap(tk.spaceS).Children(func() {
+				a.cardsStrip(c, tk, a.editor.draft)
+			})
+		})
+	})
+}
+
+// notesList is the source list of notes: today at the top, then every note
+// newest first, with how many cards each one feeds.
+func (a *App) notesList(c *ui.Context, tk tokens, width float32) {
 	ui.Sidebar(c, &a.editor.selected, func() {
+		ui.SidebarItem(c, "today", design.Icon("layers"), m(c).Today()).
+			Children(func() { ui.Badge(c, fmt.Sprint(a.review.Remaining())) }).
+			OnClick(func() { a.setMode(modeReview) })
 		ui.SidebarSection(c, m(c).Notebook(), nil, func() {
 			for _, n := range a.data.notes {
 				item := ui.SidebarItem(c, string(n.ID), design.Icon("file-text"), n.Title)
@@ -68,7 +143,7 @@ func (a *App) notesList(c *ui.Context, tk tokens) {
 				}
 			}
 		})
-	}).Width(sidebarWidth)
+	}).Width(width)
 }
 
 // shortcuts declares the app's keys. They are window shortcuts, so they wait

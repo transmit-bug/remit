@@ -438,8 +438,8 @@ func TestNotesList(t *testing.T) {
 	if strings.Contains(a.editor.doc.Text().String(), "When to review") {
 		t.Error("the editor still shows the note chosen before")
 	}
-	if !tt.HasText("2 blocks") {
-		t.Errorf("the note's paragraph count is missing; texts %q", tt.Texts())
+	if !tt.HasText("Note panel") {
+		t.Errorf("the note's panel is missing; texts %q", tt.Texts())
 	}
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
@@ -457,7 +457,7 @@ func TestMakeCard(t *testing.T) {
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("make card")
 	tt.Key(0, ui.KeyEnter)
-	if !tt.HasText("Card made from block 2") {
+	if !tt.HasText("Card made from block 1") {
 		t.Fatalf("no outcome for making a card; texts %q", tt.Texts())
 	}
 	cards, err := os.ReadDir(filepath.Join(seed.dir, "cards"))
@@ -500,7 +500,7 @@ func TestMinimumSizeControls(t *testing.T) {
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("make card")
 	tt.Key(0, ui.KeyEnter)
-	if !tt.HasText("Card made from block 2") {
+	if !tt.HasText("Card made from block 1") {
 		t.Fatalf("Make card did not run at the minimum; texts %q", tt.Texts())
 	}
 	tt.Advance(5 * time.Second) // let the toast go

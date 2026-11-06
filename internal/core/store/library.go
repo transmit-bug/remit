@@ -356,7 +356,7 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 
 	return l.index.write(func(e execer) error {
 		for id, entry := range notes {
-			if err := putNote(e, noteRow{id: id, slug: entry.slug, title: entry.note.Title}); err != nil {
+			if err := putNote(e, noteRow{id: id, slug: entry.slug, title: entry.note.Title, updated: entry.note.Updated}); err != nil {
 				return err
 			}
 			for at, block := range entry.note.Blocks {
@@ -642,10 +642,10 @@ func (l *Library) Note(id core.ID) (core.Note, bool) {
 	if err != nil {
 		return core.Note{}, false
 	}
-	return core.Note{ID: id, Title: row.title, Blocks: blocks}, true
+	return core.Note{ID: id, Title: row.title, Blocks: blocks, Updated: row.updated}, true
 }
 
-// Notes returns every note, by title.
+// Notes returns every note, newest save first: the notebook lists them that way.
 func (l *Library) Notes() []core.Note {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -662,9 +662,12 @@ func (l *Library) Notes() []core.Note {
 	}
 	notes := make([]core.Note, 0, len(rows))
 	for _, row := range rows {
-		notes = append(notes, core.Note{ID: row.id, Title: row.title, Blocks: blocks[row.id]})
+		notes = append(notes, core.Note{ID: row.id, Title: row.title, Blocks: blocks[row.id], Updated: row.updated})
 	}
 	sort.Slice(notes, func(i, j int) bool {
+		if !notes[i].Updated.Equal(notes[j].Updated) {
+			return notes[i].Updated.After(notes[j].Updated)
+		}
 		a, b := strings.ToLower(notes[i].Title), strings.ToLower(notes[j].Title)
 		if a != b {
 			return a < b
@@ -700,6 +703,7 @@ func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 		slug, path = entry.slug, l.notePath(entry.slug, note.ID)
 	}
 	note = normalizeNote(note)
+	note.Updated = l.now().UTC()
 
 	before, err := l.index.blocksOfNote(note.ID)
 	if err != nil {
@@ -715,7 +719,7 @@ func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 	}
 	moved := movedBlocks(before, note.Blocks)
 	err = l.index.write(func(e execer) error {
-		if err := putNote(e, noteRow{id: note.ID, slug: slug, title: note.Title}); err != nil {
+		if err := putNote(e, noteRow{id: note.ID, slug: slug, title: note.Title, updated: note.Updated}); err != nil {
 			return err
 		}
 		if err := deleteBlocksOfNote(e, note.ID); err != nil {
