@@ -163,7 +163,7 @@ func (a *App) heatmapSection(c *ui.Context, tk tokens) {
 	ui.Column(c).Gap(tk.spaceS).Children(func() {
 		if a.stats.heatTotal == 0 {
 			statsHeading(c, tk, m(c).StatsHeat(), "")
-			ui.Text(c, m(c).StatsHeatEmpty()).FontSize(tk.typeBody).TextColor(tk.textMuted)
+			ui.Text(c, m(c).StatsHeatEmpty()).FontSize(tk.typeBody).TextColor(tk.TextMuted)
 			return
 		}
 		statsHeading(c, tk, m(c).StatsHeat(),
@@ -174,7 +174,7 @@ func (a *App) heatmapSection(c *ui.Context, tk tokens) {
 				for _, day := range a.stats.heat[0] {
 					ui.Text(c, m(c).StatsHeatWeekday(day.day)).NoWrap().
 						Width(heatWeekdayWidth).Height(heatCell).LineHeight(1).
-						FontSize(tk.typeSmall).TextColor(tk.textMuted)
+						FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 				}
 			})
 			for _, week := range a.stats.heat {
@@ -196,12 +196,12 @@ const heatWeekdayWidth float32 = 34
 // heatCell is one day: a tinted box for a counted day, a spacer for one still
 // ahead of today.
 func (a *App) heatCell(c *ui.Context, tk tokens, day heatDay) {
-	box := ui.Box(c).Width(heatCell).Height(heatCell).Radius(tk.radiusControl / 2)
+	box := ui.Box(c).Width(heatCell).Height(heatCell).Radius(tk.radiusBar)
 	switch {
 	case day.future:
 		return
 	case day.count == 0:
-		box.Background(tk.surfaceSunken)
+		box.Background(tk.sunken)
 	default:
 		box.Background(tk.heatFill(heatLevel(day.count, a.stats.heatMax)))
 		label := m(c).StatsDayCount(day.day, day.count)
@@ -213,12 +213,12 @@ func (a *App) heatCell(c *ui.Context, tk tokens, day heatDay) {
 // counts rather than decoration.
 func (a *App) heatLegend(c *ui.Context, tk tokens) {
 	ui.Row(c).Gap(heatGap).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, m(c).StatsHeatLess()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
+		ui.Text(c, m(c).StatsHeatLess()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 		for level := 0; level <= 4; level++ {
-			ui.Box(c).Width(heatCell).Height(heatCell).Radius(tk.radiusControl / 2).
+			ui.Box(c).Width(heatCell).Height(heatCell).Radius(tk.radiusBar).
 				Background(tk.heatFill(level))
 		}
-		ui.Text(c, m(c).StatsHeatMore()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
+		ui.Text(c, m(c).StatsHeatMore()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 	})
 }
 
@@ -241,7 +241,7 @@ func (a *App) retentionSection(c *ui.Context, tk tokens) {
 	ui.Column(c).Gap(tk.spaceS).Children(func() {
 		if r.Reviews == 0 {
 			statsHeading(c, tk, m(c).StatsRetention(), "")
-			ui.Text(c, m(c).StatsRetentionEmpty()).FontSize(tk.typeBody).TextColor(tk.textMuted)
+			ui.Text(c, m(c).StatsRetentionEmpty()).FontSize(tk.typeBody).TextColor(tk.TextMuted)
 			return
 		}
 		statsHeading(c, tk, m(c).StatsRetention(),
@@ -263,7 +263,7 @@ func (a *App) retentionSection(c *ui.Context, tk tokens) {
 				}
 				rate := float64(b.Passes) / float64(b.Reviews)
 				chart.Rect(c, x.Band(i), y.Span(0, rate)).
-					Background(tk.accent).Radius(tk.radiusControl / 2).
+					Background(tk.Accent).Radius(tk.radiusBar).
 					Tooltip(m(c).StatsBucketReviews(labels[i], b.Reviews))
 			}
 		}).Height(statsChartHeight).Gap(tk.spaceS).Label(m(c).StatsRetention())
@@ -279,7 +279,7 @@ func (a *App) forecastSection(c *ui.Context, tk tokens) {
 	ui.Column(c).Gap(tk.spaceS).Children(func() {
 		if total == 0 {
 			statsHeading(c, tk, m(c).StatsForecast(), "")
-			ui.Text(c, m(c).StatsForecastEmpty()).FontSize(tk.typeBody).TextColor(tk.textMuted)
+			ui.Text(c, m(c).StatsForecastEmpty()).FontSize(tk.typeBody).TextColor(tk.TextMuted)
 			return
 		}
 		statsHeading(c, tk, m(c).StatsForecast(), cardCount(c, total))
@@ -307,7 +307,7 @@ func (a *App) dayPlot(c *ui.Context, tk tokens, days []dayCount, label string, t
 			bar := chart.Rect(c,
 				chart.Span{Lo: span.Lo + inset, Hi: span.Hi - inset},
 				y.Span(0, float64(day.count)),
-			).Background(tk.accent).Radius(tk.radiusControl / 2)
+			).Background(tk.Accent).Radius(tk.radiusBar)
 			if day.count > 0 {
 				bar.Tooltip(tooltip(day.day, day.count))
 			}
@@ -324,14 +324,14 @@ func statsHeading(c *ui.Context, tk tokens, title, summary string) {
 			return
 		}
 		ui.Spacer(c)
-		ui.Text(c, summary).FontSize(tk.typeSmall).TextColor(tk.textMuted)
+		ui.Text(c, summary).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 	})
 }
 
 // mutedAxis labels a plot's ticks in the small muted type.
 func mutedAxis(c *ui.Context, tk tokens) func(chart.Side, chart.Tick) {
 	return func(_ chart.Side, tick chart.Tick) {
-		ui.Text(c, tick.Label).NoWrap().FontSize(tk.typeSmall).TextColor(tk.textMuted)
+		ui.Text(c, tick.Label).NoWrap().FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 	}
 }
 

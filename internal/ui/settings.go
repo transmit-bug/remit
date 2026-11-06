@@ -121,10 +121,10 @@ func (a *App) agentFieldset(c *ui.Context, tk tokens) {
 				toggled = ui.Switch(c, &a.prefs.agentOn).Changed()
 				ui.Column(c).Gap(tk.spaceXS).Children(func() {
 					if a.prefs.agent.Address == "" {
-						ui.Text(c, m(c).SettingsAgentStopped()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
+						ui.Text(c, m(c).SettingsAgentStopped()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 					} else {
 						ui.Text(c, m(c).SettingsAgentAddress(a.prefs.agent.Address)).
-							FontSize(tk.typeSmall).TextColor(tk.textMuted)
+							FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 					}
 					if a.prefs.agent.TokenPath != "" {
 						ui.Text(c, m(c).SettingsTokenPath(a.prefs.agent.TokenPath)).
@@ -153,7 +153,7 @@ func (a *App) updateFieldset(c *ui.Context, tk tokens) {
 					ui.Button(c, m(c).CheckNow()).MinHeight(tk.control).
 						OnClick(func() { a.checkNow(c) })
 					if a.prefs.updateMsg != "" {
-						ui.Text(c, a.prefs.updateMsg).FontSize(tk.typeSmall).TextColor(tk.textMuted)
+						ui.Text(c, a.prefs.updateMsg).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 					}
 				})
 			})

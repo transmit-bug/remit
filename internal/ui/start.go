@@ -16,7 +16,7 @@ func (a *App) startView(c *ui.Context, tk tokens) {
 	ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Padding(tk.spaceXXL).Children(func() {
 		ui.Text(c, m(c).StartTitle()).FontSize(tk.typeTitle).Bold()
 		ui.Text(c, m(c).StartBody()).
-			FontSize(tk.typeBody).TextColor(tk.textMuted).MaxWidth(messageWidth)
+			FontSize(tk.typeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)
 		if dir := a.startDir(); dir != "" {
 			ui.Text(c, dir).FontSize(tk.typeSmall).TextColor(tk.textFaint).
 				MaxWidth(messageWidth).SingleLine()
