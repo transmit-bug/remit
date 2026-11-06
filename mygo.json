@@ -2,5 +2,6 @@
   "name": "remit",
   "identifier": "com.example.remit",
   "version": "0.1.0",
+  "main": "./cmd/remit",
   "out": "build"
 }
