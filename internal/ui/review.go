@@ -20,6 +20,17 @@ func (a *App) reviewView(c *ui.Context, tk tokens) {
 func (a *App) reviewDeps(c *ui.Context) review.Deps {
 	return review.Deps{
 		Card: a.reviewCard,
+		Summary: func() (review.Summary, bool) {
+			if !a.hasSummary {
+				return review.Summary{}, false
+			}
+			return review.Summary{
+				Reviewed:    a.summary.Reviewed,
+				DueTomorrow: a.summary.DueTomorrow,
+				Accuracy:    a.summary.Accuracy,
+				Tone:        review.Quiet,
+			}, true
+		},
 		Preview: func() ([4]review.Interval, bool) {
 			if !a.hasPreview || len(a.preview) != 4 {
 				return [4]review.Interval{}, false

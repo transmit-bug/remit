@@ -34,6 +34,7 @@ type fake struct {
 	edited    []core.ID
 	home      int
 	preview   func() ([4]review.Interval, bool)
+	summary   func() (review.Summary, bool)
 }
 
 func (f *fake) deps() review.Deps {
@@ -54,6 +55,7 @@ func (f *fake) deps() review.Deps {
 		EditNote: func(id core.ID) { f.edited = append(f.edited, id) },
 		Home:     func() { f.home++ },
 		Preview:  f.preview,
+		Summary:  f.summary,
 	}
 }
 
@@ -342,5 +344,72 @@ func TestIntervalsFitTheSmallestWindow(t *testing.T) {
 	// The label is the key itself: the interval sits inside it, past the name.
 	if box.X < label.X || box.X+box.W > label.X+label.W {
 		t.Errorf("the interval %+v is not inside its key %+v", box, label)
+	}
+}
+
+// A finished queue reports what the app says it is worth reporting: the day's
+// answers, tomorrow's work and how many were right.
+func TestSummaryWords(t *testing.T) {
+	msgs := locales.In("en")
+	f := &fake{cards: map[core.ID]review.Card{}, state: &review.State{}}
+	f.summary = func() (review.Summary, bool) {
+		return review.Summary{Reviewed: 24, DueTomorrow: 6, Accuracy: 0.87}, true
+	}
+	state, deps := f.state, f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
+
+	for _, want := range []string{
+		msgs.SummaryTitle(),
+		msgs.SummaryReviewed(24),
+		msgs.SummaryDueTomorrow(6),
+		msgs.SummaryAccuracy(87),
+	} {
+		if !tt.HasText(want) {
+			t.Errorf("the summary is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+
+	// Leaving is never held up by the summary.
+	if err := tt.Click(msgs.BackToNotes()); err != nil {
+		t.Fatal(err)
+	}
+	if f.home != 1 {
+		t.Errorf("leaving reached the app %d times, want 1", f.home)
+	}
+}
+
+// Both tones render the same words; the celebrated one arrives on the design
+// language's motion and then rests, the quiet one is simply there.
+func TestSummaryTones(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		tone review.Tone
+	}{
+		{"quiet", review.Quiet},
+		{"celebrated", review.Celebrated},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			msgs := locales.In("en")
+			f := &fake{cards: map[core.ID]review.Card{}, state: &review.State{}}
+			f.summary = func() (review.Summary, bool) {
+				return review.Summary{Reviewed: 3, DueTomorrow: 1, Accuracy: 1, Tone: tc.tone}, true
+			}
+			state, deps := f.state, f.deps()
+			tt := ui.NewTester(func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
+			tt.Frame()
+
+			if !tt.HasText(msgs.SummaryTitle()) {
+				t.Fatalf("the %s summary is not on screen; texts %q", tc.name, tt.Texts())
+			}
+			// The tone is what the summary does, not only what it says: the
+			// celebrated one is still arriving on the first frame.
+			if wantPending := tc.tone == review.Celebrated; tt.FramePending() != wantPending {
+				t.Errorf("first frame: pending %v, want %v for the %s tone", tt.FramePending(), wantPending, tc.name)
+			}
+			tt.Advance(320 * time.Millisecond)
+			if tt.FramePending() {
+				t.Errorf("the %s summary never settles", tc.name)
+			}
+		})
 	}
 }

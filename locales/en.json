@@ -686,6 +686,40 @@
   "@checkNow": {
     "description": "Button: run an update check now."
   },
+  "summaryTitle": "Today's review",
+  "@summaryTitle": {
+    "description": "Heading of the summary shown when the queue is finished."
+  },
+  "summaryReviewed": "{count, plural, =0 {No cards reviewed today} one {# card reviewed} other {# cards reviewed}}",
+  "@summaryReviewed": {
+    "description": "How many cards were reviewed today, in the completion summary.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "24"
+      }
+    }
+  },
+  "summaryDueTomorrow": "{count, plural, =0 {Nothing due tomorrow} one {# card due tomorrow} other {# cards due tomorrow}}",
+  "@summaryDueTomorrow": {
+    "description": "How many cards come due tomorrow, in the completion summary.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "6"
+      }
+    }
+  },
+  "summaryAccuracy": "{count}% remembered",
+  "@summaryAccuracy": {
+    "description": "Share of today's answers that were not Again, in the completion summary.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "87"
+      }
+    }
+  },
   "intervalMinutes": "{count}m",
   "@intervalMinutes": {
     "description": "How long until a card comes back, on a grade key, when it is minutes.",

@@ -1747,6 +1747,62 @@ func (msgs Messages) CheckNow() string {
 	return Catalog.Format(msgs.locale, "checkNow", nil)
 }
 
+// SummaryTitle says "Today's review"
+// in the language the app shows.
+//
+// Heading of the summary shown when the queue is finished.
+func SummaryTitle() string { return In(i18n.Locale()).SummaryTitle() }
+
+// SummaryTitle says "Today's review"
+// in the language of msgs.
+//
+// Heading of the summary shown when the queue is finished.
+func (msgs Messages) SummaryTitle() string {
+	return Catalog.Format(msgs.locale, "summaryTitle", nil)
+}
+
+// SummaryReviewed says "{count, plural, =0 {No cards reviewed today} one {# card reviewed} other {# cards reviewed}}"
+// in the language the app shows.
+//
+// How many cards were reviewed today, in the completion summary.
+func SummaryReviewed(count int) string { return In(i18n.Locale()).SummaryReviewed(count) }
+
+// SummaryReviewed says "{count, plural, =0 {No cards reviewed today} one {# card reviewed} other {# cards reviewed}}"
+// in the language of msgs.
+//
+// How many cards were reviewed today, in the completion summary.
+func (msgs Messages) SummaryReviewed(count int) string {
+	return Catalog.Format(msgs.locale, "summaryReviewed", map[string]any{"count": count})
+}
+
+// SummaryDueTomorrow says "{count, plural, =0 {Nothing due tomorrow} one {# card due tomorrow} other {# cards due tomorrow}}"
+// in the language the app shows.
+//
+// How many cards come due tomorrow, in the completion summary.
+func SummaryDueTomorrow(count int) string { return In(i18n.Locale()).SummaryDueTomorrow(count) }
+
+// SummaryDueTomorrow says "{count, plural, =0 {Nothing due tomorrow} one {# card due tomorrow} other {# cards due tomorrow}}"
+// in the language of msgs.
+//
+// How many cards come due tomorrow, in the completion summary.
+func (msgs Messages) SummaryDueTomorrow(count int) string {
+	return Catalog.Format(msgs.locale, "summaryDueTomorrow", map[string]any{"count": count})
+}
+
+// SummaryAccuracy says "{count}% remembered"
+// in the language the app shows.
+//
+// Share of today's answers that were not Again, in the completion summary.
+func SummaryAccuracy(count int) string { return In(i18n.Locale()).SummaryAccuracy(count) }
+
+// SummaryAccuracy says "{count}% remembered"
+// in the language of msgs.
+//
+// Share of today's answers that were not Again, in the completion summary.
+func (msgs Messages) SummaryAccuracy(count int) string {
+	return Catalog.Format(msgs.locale, "summaryAccuracy", map[string]any{"count": count})
+}
+
 // IntervalMinutes says "{count}m"
 // in the language the app shows.
 //
