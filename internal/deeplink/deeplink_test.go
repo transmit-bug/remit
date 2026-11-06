@@ -21,7 +21,7 @@ func TestParse(t *testing.T) {
 		{name: "card", raw: "remit://card/" + string(card), want: Route{Kind: KindCard, ID: card}},
 		{name: "queue", raw: "remit://queue", want: Route{Kind: KindQueue}},
 		{name: "search", raw: "remit://search?q=spacing%20effect", want: Route{Kind: KindSearch, Query: "spacing effect", Search: true}},
-		{name: "wrong scheme", raw: "https://note/" + string(note), wantErr: true},
+		{name: "wrong scheme", raw: "elsewhere://note/" + string(note), wantErr: true},
 		{name: "unknown host", raw: "remit://library/" + string(note), wantErr: true},
 		{name: "bad id", raw: "remit://note/not-an-id", wantErr: true},
 		{name: "path in note", raw: "remit://note/../../etc/passwd", wantErr: true},
