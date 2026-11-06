@@ -117,7 +117,11 @@ type Deps struct {
 	Preview func() ([4]Interval, bool)
 	// Summary is what a finished queue reports, when the app has a summary to
 	// give; false falls back to the one quiet line.
-	Summary  func() (Summary, bool)
+	Summary func() (Summary, bool)
+	// Render asks for how a card reads, as markdown the host renders. false —
+	// no plugin, or one that failed — leaves the card reading its paragraph's
+	// own words rather than nothing.
+	Render   func(card core.ID, prompt, answer string) (string, string, bool)
 	Grade    func(core.ID, Rating) // record the answer and move on
 	Undo     func()                // take the newest answer back
 	Suspend  func(core.ID)         // out of the queue, history untouched
@@ -337,7 +341,13 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 				})
 			}
 
-			ui.Text(c, maths.Render(card.Prompt)).FontSize(design.TypeHeading).Bold()
+			front, back := card.Prompt, card.Answer
+			if d.Render != nil {
+				if renderedFront, renderedBack, ok := d.Render(card.ID, front, back); ok {
+					front, back = renderedFront, renderedBack
+				}
+			}
+			ui.Text(c, maths.Render(front)).FontSize(design.TypeHeading).Bold()
 			ui.Divider(c)
 			if !s.Answered() {
 				ui.Text(c, msgs.RevealHint()).
@@ -354,7 +364,7 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 			}
 			// The answer's formulas are set for reading; the note keeps the
 			// source.
-			ui.Text(c, maths.Render(card.Answer)).FontSize(design.TypeBody).TextColor(c.Theme().Text)
+			ui.Text(c, maths.Render(back)).FontSize(design.TypeBody).TextColor(c.Theme().Text)
 		})
 }
 

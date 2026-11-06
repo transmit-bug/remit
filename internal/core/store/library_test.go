@@ -26,7 +26,7 @@ func TestCreateCardsDerivesPlaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cards, err := lib.CreateCards(note.Blocks[0].ID)
+	cards, err := lib.CreateCards(note.Blocks[0].ID, core.Derive(note.Blocks[0].Text))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestCreateCardsDerivesPlaces(t *testing.T) {
 		t.Errorf("the first blank asks %q / %q", prompt, answer)
 	}
 
-	both, err := lib.CreateCards(note.Blocks[1].ID)
+	both, err := lib.CreateCards(note.Blocks[1].ID, core.Derive(note.Blocks[1].Text))
 	if err != nil || len(both) != 2 {
 		t.Fatalf("the both-ways paragraph made %v (%v)", both, err)
 	}
@@ -52,7 +52,7 @@ func TestCreateCardsDerivesPlaces(t *testing.T) {
 		t.Errorf("the reversed card asks %q / %q", p, a)
 	}
 
-	if _, err := lib.CreateCards(note.Blocks[3].ID); !errors.Is(err, store.ErrNothingToAsk) {
+	if _, err := lib.CreateCards(note.Blocks[3].ID, core.Derive(note.Blocks[3].Text)); !errors.Is(err, store.ErrNothingToAsk) {
 		t.Errorf("a plain paragraph made %v, want ErrNothingToAsk", err)
 	}
 

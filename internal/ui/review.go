@@ -41,8 +41,9 @@ func (a *App) reviewDeps(c *ui.Context) review.Deps {
 			}
 			return out, true
 		},
-		Grade: func(id core.ID, r review.Rating) { a.grade(c, id, r) },
-		Undo:  func() { a.undo(c) },
+		Grade:  func(id core.ID, r review.Rating) { a.grade(c, id, r) },
+		Render: a.renderCard,
+		Undo:   func() { a.undo(c) },
 		Suspend: func(id core.ID) {
 			a.suspend(c, id)
 		},
