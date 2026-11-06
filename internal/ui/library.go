@@ -113,6 +113,9 @@ func (a *App) open() {
 	a.lib, a.dir = lib, dir
 	a.review.reset()
 	a.reload()
+	if a.opened != nil {
+		a.opened(lib)
+	}
 }
 
 // libraryDir is where the library lives: the directory the app was given, or
@@ -122,11 +125,31 @@ func (a *App) libraryDir() (string, error) {
 	if a.dir != "" {
 		return a.dir, nil
 	}
+	return DefaultLibraryDir()
+}
+
+// DefaultLibraryDir is where a library lives when the caller names none:
+// Remit's own folder in the user's Documents.
+func DefaultLibraryDir() (string, error) {
 	docs, err := mygo.App.Path(mygo.PathDocuments)
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(docs, Name), nil
+}
+
+// Library is the open library, for the local agent server. The store is
+// safe for concurrent use; a caller must not close it.
+func (a *App) Library() *store.Library { return a.lib }
+
+// OnLibraryOpen registers a function told about the library once it opens,
+// and again after a retry succeeds. Setting it again replaces the previous
+// one; it is not called for a library that already opened.
+func (a *App) OnLibraryOpen(fn func(*store.Library)) {
+	a.opened = fn
+	if fn != nil && a.lib != nil {
+		fn(a.lib)
+	}
 }
 
 // dueToday is the store's answer to what is due now.

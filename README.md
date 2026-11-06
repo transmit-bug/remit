@@ -52,9 +52,17 @@ it and may be deleted at any time.
 ## Moving a library
 
 A `.remitlib` file is a zip of those plaintext sources — never the index — so
-it can be inspected, versioned or handed to someone else. Writing and reading
-one lives in `internal/core/transfer`; unpacking refuses an archive that
-escapes its target directory or one that would overwrite a library.
+it can be inspected, versioned or handed to someone else.
+
+```sh
+go run ./cmd/remit -export ~/Desktop/library.remitlib
+go run ./cmd/remit -import ~/Desktop/library.remitlib   # into a new library
+go run ./cmd/remit -library /path/to/library            # name the library
+```
+
+Unpacking refuses an archive that escapes its target directory or one that
+would overwrite a library. Writing and reading live in
+`internal/core/transfer`.
 
 ## License
 
