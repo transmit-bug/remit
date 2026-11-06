@@ -1,4 +1,4 @@
-module remit
+module github.com/transmit-bug/remit
 
 go 1.27.3
 
