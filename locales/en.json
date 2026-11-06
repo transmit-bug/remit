@@ -686,6 +686,40 @@
   "@checkNow": {
     "description": "Button: run an update check now."
   },
+  "cardOnParagraph": "{count, plural, one {# card} other {# cards}} on ¶{paragraph}",
+  "@cardOnParagraph": {
+    "description": "Badge of a paragraph that feeds cards: how many, and which paragraph.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      },
+      "paragraph": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "editCard": "Edit card",
+  "@editCard": {
+    "description": "Title of the dialog that edits a card's prompt and answer."
+  },
+  "cardPrompt": "Prompt (empty takes the paragraph's)",
+  "@cardPrompt": {
+    "description": "Label of the card's prompt override."
+  },
+  "cardAnswer": "Answer (empty takes the paragraph's)",
+  "@cardAnswer": {
+    "description": "Label of the card's answer override."
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Button: write what the dialog holds."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Button: close the dialog without writing."
+  },
   "noteBody": "Note",
   "@noteBody": {
     "description": "Accessible label of the note's document editor."

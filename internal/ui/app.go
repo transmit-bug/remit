@@ -72,6 +72,7 @@ type App struct {
 	stats    statsState
 	palette  paletteState
 	relink   relinkState
+	cardEdit cardEditState
 	prefs    prefsState
 	aboutWin *mygo.Window // the open About window, or nil
 
@@ -207,5 +208,6 @@ func (a *App) View(c *ui.Context) {
 
 		a.paletteView(c, tk)
 		a.relinkView(c, tk)
+		a.cardEditView(c, tk)
 	})
 }

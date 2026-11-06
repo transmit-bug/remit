@@ -1747,6 +1747,92 @@ func (msgs Messages) CheckNow() string {
 	return Catalog.Format(msgs.locale, "checkNow", nil)
 }
 
+// CardOnParagraph says "{count, plural, one {# card} other {# cards}} on ¶{paragraph}"
+// in the language the app shows.
+//
+// Badge of a paragraph that feeds cards: how many, and which paragraph.
+func CardOnParagraph(count int, paragraph int) string {
+	return In(i18n.Locale()).CardOnParagraph(count, paragraph)
+}
+
+// CardOnParagraph says "{count, plural, one {# card} other {# cards}} on ¶{paragraph}"
+// in the language of msgs.
+//
+// Badge of a paragraph that feeds cards: how many, and which paragraph.
+func (msgs Messages) CardOnParagraph(count int, paragraph int) string {
+	return Catalog.Format(msgs.locale, "cardOnParagraph", map[string]any{"count": count, "paragraph": paragraph})
+}
+
+// EditCard says "Edit card"
+// in the language the app shows.
+//
+// Title of the dialog that edits a card's prompt and answer.
+func EditCard() string { return In(i18n.Locale()).EditCard() }
+
+// EditCard says "Edit card"
+// in the language of msgs.
+//
+// Title of the dialog that edits a card's prompt and answer.
+func (msgs Messages) EditCard() string {
+	return Catalog.Format(msgs.locale, "editCard", nil)
+}
+
+// CardPrompt says "Prompt (empty takes the paragraph's)"
+// in the language the app shows.
+//
+// Label of the card's prompt override.
+func CardPrompt() string { return In(i18n.Locale()).CardPrompt() }
+
+// CardPrompt says "Prompt (empty takes the paragraph's)"
+// in the language of msgs.
+//
+// Label of the card's prompt override.
+func (msgs Messages) CardPrompt() string {
+	return Catalog.Format(msgs.locale, "cardPrompt", nil)
+}
+
+// CardAnswer says "Answer (empty takes the paragraph's)"
+// in the language the app shows.
+//
+// Label of the card's answer override.
+func CardAnswer() string { return In(i18n.Locale()).CardAnswer() }
+
+// CardAnswer says "Answer (empty takes the paragraph's)"
+// in the language of msgs.
+//
+// Label of the card's answer override.
+func (msgs Messages) CardAnswer() string {
+	return Catalog.Format(msgs.locale, "cardAnswer", nil)
+}
+
+// Save says "Save"
+// in the language the app shows.
+//
+// Button: write what the dialog holds.
+func Save() string { return In(i18n.Locale()).Save() }
+
+// Save says "Save"
+// in the language of msgs.
+//
+// Button: write what the dialog holds.
+func (msgs Messages) Save() string {
+	return Catalog.Format(msgs.locale, "save", nil)
+}
+
+// Cancel says "Cancel"
+// in the language the app shows.
+//
+// Button: close the dialog without writing.
+func Cancel() string { return In(i18n.Locale()).Cancel() }
+
+// Cancel says "Cancel"
+// in the language of msgs.
+//
+// Button: close the dialog without writing.
+func (msgs Messages) Cancel() string {
+	return Catalog.Format(msgs.locale, "cancel", nil)
+}
+
 // NoteBody says "Note"
 // in the language the app shows.
 //

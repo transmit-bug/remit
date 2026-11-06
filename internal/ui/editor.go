@@ -115,6 +115,8 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 					FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 			})
 
+			a.cardsStrip(c, tk, *note)
+
 			if richtext.Editor(c, a.editor.doc).
 				Fill().MinHeight(tk.control * 8).
 				Label(m(c).NoteBody()).Changed() {
@@ -140,6 +142,9 @@ func (a *App) saveDocument(c *ui.Context) {
 	a.editor.draft.Blocks = blocksOfDocument(live, a.editor.draft.Blocks)
 	a.editor.docText = live
 	a.saveNote(c)
+	// Typing :: is what makes a paragraph a card, and deleting it is what takes
+	// the card out of the queue.
+	a.reconcileCards(c)
 }
 
 // saveNote writes the draft and reloads what the window reads.
