@@ -31,9 +31,7 @@ func route(a *appui.App, raw string) {
 	case deeplink.KindQueue:
 		a.ShowQueue()
 	case deeplink.KindSearch:
-		// The browse view that answers a search link lands with it; until
-		// then the link is reported rather than silently ignored.
-		slog.Warn("remit: search links need the browse view", "query", r.Query)
+		a.Search(r.Query)
 	}
 }
 

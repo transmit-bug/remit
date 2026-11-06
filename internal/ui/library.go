@@ -25,12 +25,16 @@ type Options struct {
 
 // libraryData is the library as the views read it: a snapshot the app retakes
 // after every write, so that no frame has to touch the store. Everything the
-// notes list, the editor and review show is derived here once, per write.
+// notes list, the editor, review and browse show is derived here once, per
+// write.
 type libraryData struct {
 	notes  []core.Note
+	cards  []core.Card
 	byID   map[core.ID]core.Card
 	blocks core.BlockSet
 
+	// titles name a note, so a card can say which note it came from.
+	titles map[core.ID]string
 	// perBlock and perNote are the card counts the editor's badge and the
 	// note's summary show.
 	perBlock map[core.ID]int
@@ -43,13 +47,16 @@ type libraryData struct {
 func newLibraryData(notes []core.Note, cards []core.Card) libraryData {
 	d := libraryData{
 		notes:    notes,
+		cards:    cards,
 		byID:     make(map[core.ID]core.Card, len(cards)),
 		blocks:   make(core.BlockSet),
+		titles:   make(map[core.ID]string, len(notes)),
 		perBlock: make(map[core.ID]int, len(cards)),
 		perNote:  make(map[core.ID]int, len(notes)),
 		noteOf:   make(map[core.ID]core.ID, len(notes)),
 	}
 	for _, note := range notes {
+		d.titles[note.ID] = note.Title
 		for _, block := range note.Blocks {
 			if block.ID == "" {
 				continue
@@ -85,6 +92,9 @@ func (d libraryData) noteOfBlock(id core.ID) (core.ID, bool) {
 	note, ok := d.noteOf[id]
 	return note, ok
 }
+
+// titleOf names a note.
+func (d libraryData) titleOf(note core.ID) string { return d.titles[note] }
 
 // messageWidth caps a message that is about the library rather than a card:
 // the error state's one line, centred in the window.
@@ -166,8 +176,9 @@ func (a *App) dueToday() []core.ID {
 	return ids
 }
 
-// reload retakes the snapshot and asks the store what is due now. Every write
-// ends here, which is what keeps the build pass free of store calls.
+// reload retakes the snapshot, asks the store what is due now, and loads what
+// the mode on screen reads beyond both. Every write ends here, which is what
+// keeps the build pass free of store calls.
 //
 // Writes themselves run on the UI thread. A review append is a durable file
 // write the store finishes before it returns — about 9 ms at a 10k-card
@@ -181,9 +192,23 @@ func (a *App) reload() {
 		return
 	}
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
-	a.review.sync(a.dueToday())
+	a.due = a.dueToday()
+	a.review.sync(a.due)
 	if a.remaining != nil {
 		a.remaining(a.review.remaining())
+	}
+	a.loadCurrent()
+}
+
+// loadCurrent derives what the mode on screen reads beyond the snapshot: the
+// browse rows and the statistics replay. It is the only path that asks the
+// store for them, so no frame does.
+func (a *App) loadCurrent() {
+	switch a.mode {
+	case modeBrowse:
+		a.loadBrowse()
+	case modeStats:
+		a.loadStats()
 	}
 }
 

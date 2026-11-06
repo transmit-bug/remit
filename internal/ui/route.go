@@ -33,6 +33,16 @@ func (a *App) ShowQueue() {
 	a.mode = modeReview
 }
 
+// Search shows browse on a query from outside the window and puts the caret in
+// its field. A query that finds nothing leaves its empty state up, which says
+// the search ran.
+func (a *App) Search(query string) {
+	a.browse.query, a.browse.filter, a.browse.selected = query, browseAll, -1
+	a.mode = modeBrowse
+	a.reload()
+	a.browse.field.Focus()
+}
+
 // OnRemaining registers a function told how many cards remain whenever the
 // queue is rebuilt; the tray shows that number. Setting it again replaces the
 // previous one.
