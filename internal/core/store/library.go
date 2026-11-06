@@ -82,6 +82,10 @@ type Library struct {
 	notes  map[core.ID]noteEntry
 	cards  map[core.ID]cardEntry
 	blocks map[core.ID]blockRef
+
+	// events is the review log as loaded, kept so a caller can ask what
+	// happened without re-reading the file. Reviews append to it.
+	events []schedule.Event
 }
 
 // noteEntry is a note and where its source lives.
@@ -240,6 +244,7 @@ func (l *Library) load() error {
 	l.notes = notes
 	l.cards = cards
 	l.applier = applier
+	l.events = events
 	l.nextSeq = 0
 	for _, event := range events {
 		if event.Seq > l.nextSeq {
@@ -652,10 +657,20 @@ func (l *Library) record(event schedule.Event, card core.ID) error {
 		return err
 	}
 	l.nextSeq = event.Seq
+	l.events = append(l.events, event)
 	if err := l.applier.Apply(event); err != nil {
 		return err
 	}
 	return l.reindexCard(card)
+}
+
+// Events returns the review log in order, void events included, so a caller
+// can compute what the schedule cannot answer on its own (counts per day,
+// predictions against outcomes).
+func (l *Library) Events() []schedule.Event {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return append([]schedule.Event(nil), l.events...)
 }
 
 // CardState returns a card's replayed schedule, and whether it has been
