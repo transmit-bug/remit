@@ -88,13 +88,35 @@ type Interval struct {
 	Wait   time.Duration
 }
 
+// Tone is how the completion summary carries itself: Quiet says it and stops;
+// Celebrated arrives on the design language's panel motion, once.
+type Tone uint8
+
+const (
+	Quiet Tone = iota
+	Celebrated
+)
+
+// Summary is what a finished queue is worth saying. The numbers come from the
+// app — today's answers, what tomorrow holds, how many were right — so that the
+// screen words a decision it did not make.
+type Summary struct {
+	Reviewed    int
+	DueTomorrow int
+	Accuracy    float64
+	Tone        Tone
+}
+
 // Deps is what the screen asks the app for: the card to show, and what the user
 // can do with it. Each runs on the UI thread; the app does the writing.
 type Deps struct {
 	Card func(core.ID) (Card, bool) // the card shown, false when it is gone
 	// Preview is the four intervals for the card shown, when the schedule can
 	// give them; false leaves the keys with their plain labels.
-	Preview  func() ([4]Interval, bool)
+	Preview func() ([4]Interval, bool)
+	// Summary is what a finished queue reports, when the app has a summary to
+	// give; false falls back to the one quiet line.
+	Summary  func() (Summary, bool)
 	Grade    func(core.ID, Rating) // record the answer and move on
 	Undo     func()                // take the newest answer back
 	Suspend  func(core.ID)         // out of the queue, history untouched
@@ -409,13 +431,50 @@ func footer(c *ui.Context, s *State, d Deps, card Card) {
 	})
 }
 
-// empty is the state after the last card.
+// empty is the state after the last card: the session's summary when the app
+// has one, and either way the way back.
 func empty(c *ui.Context, d Deps) {
 	msgs := locales.In(c.Locale())
-	kit.Card(c, func() {
-		kit.Empty(c, "coffee", msgs.NoCards(), func() {
-			ui.Button(c, msgs.BackToNotes()).MinHeight(design.ControlHeight).
-				OnClick(d.Home)
+	summary, hasSummary := Summary{}, false
+	if d.Summary != nil {
+		summary, hasSummary = d.Summary()
+	}
+
+	// The tone is what the screen does: a quiet summary is simply there, a
+	// celebrated one arrives once and then rests. Both follow the desktop's
+	// reduce-motion setting, which snaps the frames to their end.
+	face := ui.Column(c)
+	if hasSummary && summary.Tone == Celebrated {
+		rise := face.Keyframes("celebrate", design.EnterFrames)
+		face.Opacity(rise).Translate(0, design.Rise*(1-rise))
+	}
+	face.Children(func() {
+		kit.Card(c, func() {
+			if !hasSummary {
+				kit.Empty(c, "coffee", msgs.NoCards(), func() {
+					ui.Button(c, msgs.BackToNotes()).MinHeight(design.ControlHeight).
+						OnClick(d.Home)
+				})
+				return
+			}
+			t := c.Theme()
+			ui.Column(c).Gap(design.SpaceS).Children(func() {
+				ui.Row(c).AlignItems(ui.Center).Gap(design.SpaceS).Children(func() {
+					ui.Icon(c, design.Icon("coffee")).
+						Width(design.IconMedium).Height(design.IconMedium).
+						TextColor(t.TextMuted)
+					ui.Text(c, msgs.SummaryTitle()).FontSize(design.TypeHeading).Bold()
+				})
+				ui.Text(c, msgs.SummaryReviewed(summary.Reviewed)).
+					FontSize(design.TypeBody).TextColor(t.Text)
+				ui.Text(c, msgs.SummaryDueTomorrow(summary.DueTomorrow)).
+					FontSize(design.TypeBody).TextColor(t.Text)
+				ui.Text(c, msgs.SummaryAccuracy(int(summary.Accuracy*100))).
+					FontSize(design.TypeBody).TextColor(t.TextMuted)
+				// Leaving is never blocked, whatever the tone.
+				ui.Button(c, msgs.BackToNotes()).AlignSelf(ui.Start).
+					MinHeight(design.ControlHeight).OnClick(d.Home)
+			})
 		})
 	})
 }

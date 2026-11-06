@@ -586,7 +586,8 @@ func TestFirstRun(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "remit.json")); err != nil {
 		t.Fatalf("Create library did not make one: %v", err)
 	}
-	if !tt.HasText("No cards left to review.") || !tt.HasText("Back to notes") {
+	// A finished queue reports the session, not a bare "nothing here".
+	if !tt.HasText("Today's review") || !tt.HasText("Back to notes") {
 		t.Fatalf("a new library did not open on its empty queue; texts %q", tt.Texts())
 	}
 
@@ -606,7 +607,7 @@ func TestFirstRun(t *testing.T) {
 	if tt.HasText("Start your library") {
 		t.Fatalf("the remembered library was not opened; texts %q", tt.Texts())
 	}
-	if !tt.HasText("No cards left to review.") {
+	if !tt.HasText("Today's review") {
 		t.Fatalf("the remembered library's queue is not up; texts %q", tt.Texts())
 	}
 
@@ -663,7 +664,7 @@ func TestCorruptLibrary(t *testing.T) {
 	if err := tt.Click("Try again"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("No cards left to review.") || tt.HasText("Remit could not open its library") {
+	if !tt.HasText("Today's review") || tt.HasText("Remit could not open its library") {
 		t.Fatalf("trying again did not open the repaired library; texts %q", tt.Texts())
 	}
 	tt.Advance(320 * time.Millisecond) // the screen's entrance

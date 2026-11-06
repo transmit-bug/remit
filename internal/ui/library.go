@@ -15,6 +15,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/schedule"
+	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/update"
@@ -358,6 +359,15 @@ func (a *App) reload() {
 	a.loadCurrent()
 }
 
+// summaryFor is the finished session's summary as the store reads it: today's
+// answers, what tomorrow holds, how many were right.
+func (a *App) summaryFor() (stats.Summary, bool) {
+	if a.lib == nil {
+		return stats.Summary{}, false
+	}
+	return stats.Summarize(a.lib, time.Now()), true
+}
+
 // previewFor asks the store what each answer would schedule for the card on
 // screen, through the same parameters the review will use.
 func (a *App) previewFor() ([]schedule.Outlook, bool) {
@@ -382,6 +392,7 @@ func (a *App) loadCurrent() {
 		a.loadStats()
 	case modeReview:
 		a.preview, a.hasPreview = a.previewFor()
+		a.summary, a.hasSummary = a.summaryFor()
 	}
 }
 

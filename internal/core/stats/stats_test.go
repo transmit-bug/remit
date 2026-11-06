@@ -104,3 +104,57 @@ func TestForecastBucketsDueCards(t *testing.T) {
 		t.Errorf("forecast day %s, want %s", got[0].Day, state.Due.Format("2006-01-02"))
 	}
 }
+
+// The day's summary counts today's answers, how many came out right, and what
+// is due tomorrow — from the log and the schedule, not from anything the view
+// keeps.
+func TestSummarize(t *testing.T) {
+	lib, cards := library(t)
+	// Three answers today: two right, one Again; and one answer yesterday,
+	// which is not today's.
+	for _, review := range []struct {
+		card core.ID
+		r    schedule.Rating
+		at   time.Time
+	}{
+		{cards[0].ID, schedule.Good, day0},
+		{cards[1].ID, schedule.Hard, day0.Add(2 * time.Hour)},
+		{cards[0].ID, schedule.Again, day0.Add(4 * time.Hour)},
+		{cards[1].ID, schedule.Good, day0.Add(-24 * time.Hour)},
+	} {
+		if err := lib.Review(review.card, review.r, review.at); err != nil {
+			t.Fatalf("review: %v", err)
+		}
+	}
+
+	got := Summarize(lib, day0.Add(6*time.Hour))
+	if got.Reviewed != 3 {
+		t.Errorf("counted %d reviews today, want 3", got.Reviewed)
+	}
+	if want := 2.0 / 3.0; got.Accuracy < want-0.001 || got.Accuracy > want+0.001 {
+		t.Errorf("accuracy is %v, want %v", got.Accuracy, want)
+	}
+	// Due tomorrow, counted here from the schedule rather than from the
+	// summary's own path.
+	day := func(t time.Time) string { return t.In(time.UTC).Format("2006-01-02") }
+	tomorrow := day0.AddDate(0, 0, 1)
+	want := 0
+	scheduled, err := lib.Scheduled()
+	if err != nil {
+		t.Fatalf("scheduled: %v", err)
+	}
+	for _, s := range scheduled {
+		if day(s.State.Due) == day(tomorrow) {
+			want++
+		}
+	}
+	if got.DueTomorrow != want {
+		t.Errorf("%d cards due tomorrow, want %d", got.DueTomorrow, want)
+	}
+
+	// A day with no answers divides by nothing.
+	quiet := Summarize(lib, day0.AddDate(0, 0, 9))
+	if quiet.Reviewed != 0 || quiet.Accuracy != 0 {
+		t.Errorf("a day with no reviews reports %+v", quiet)
+	}
+}

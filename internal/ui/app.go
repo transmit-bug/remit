@@ -11,6 +11,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/schedule"
+	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
@@ -79,6 +80,8 @@ type App struct {
 	// store.
 	preview    []schedule.Outlook
 	hasPreview bool
+	summary    stats.Summary
+	hasSummary bool
 
 	// anim counts how often each moment played: a screen change, a panel
 	// opening. A counter that moves replays its preset.

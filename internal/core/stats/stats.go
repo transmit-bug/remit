@@ -89,6 +89,40 @@ func RetentionOf(lib *store.Library, params schedule.Params) Retention {
 	return out
 }
 
+// Summary is what a finished queue is worth reporting: how many cards were
+// reviewed today, how many come due tomorrow, and how many of today's answers
+// were right. Zero reviews leaves Accuracy at zero rather than dividing by it.
+type Summary struct {
+	Reviewed    int
+	DueTomorrow int
+	Accuracy    float64
+}
+
+// Summarize reads today's live reviews out of the log and the next day out of
+// the schedule. The day is the calendar day of now, in now's location.
+func Summarize(lib *store.Library, now time.Time) Summary {
+	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	end := start.AddDate(0, 0, 1)
+
+	var out Summary
+	if events, err := lib.LiveReviews(start, end); err == nil {
+		pass := 0
+		for _, ev := range events {
+			out.Reviewed++
+			if ev.Rating != schedule.Again {
+				pass++
+			}
+		}
+		if out.Reviewed > 0 {
+			out.Accuracy = float64(pass) / float64(out.Reviewed)
+		}
+	}
+	if next := Forecast(lib, end, 1); len(next) > 0 {
+		out.DueTomorrow = next[0].Count
+	}
+	return out
+}
+
 // Forecast counts cards due on each of the next days, starting at from. It asks
 // the store for the cards a queue can hold, with the schedule each one has, so
 // no card file is opened and no log line replayed.
