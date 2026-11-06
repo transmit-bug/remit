@@ -7,5 +7,17 @@
   "i18n": {
     "dir": "locales",
     "source": "en"
-  }
+  },
+  "urlSchemes": [
+    "remit"
+  ],
+  "fileAssociations": [
+    {
+      "ext": [
+        "remitlib"
+      ],
+      "name": "Remit Library",
+      "mimeType": "application/x-remit-library"
+    }
+  ]
 }
