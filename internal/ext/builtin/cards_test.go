@@ -111,3 +111,32 @@ func TestBuiltinFollowsTheExtensionRules(t *testing.T) {
 		t.Error("a built-in entry outside its own directory was accepted")
 	}
 }
+
+// The plugin answers a card's faces from its paragraph, kind and ordinal: the
+// same sides the model's own reading gives, card for card.
+func TestCardsFacesMatchTheModel(t *testing.T) {
+	runner := cards(t)
+	for _, text := range texts {
+		for _, kind := range []string{"basic", "cloze", "bidirectional"} {
+			for ordinal := 0; ordinal < 3; ordinal++ {
+				var got struct {
+					Front string `json:"front"`
+					Back  string `json:"back"`
+				}
+				params := map[string]any{"text": text, "kind": kind, "ordinal": ordinal}
+				if err := runner.Call("faces", params, &got); err != nil {
+					t.Fatalf("faces %q %s/%d: %v", text, kind, ordinal, err)
+				}
+				parsed, _ := core.ParseKind(kind)
+				blocks := core.BlockSet{"block_1": {ID: "block_1", Text: text}}
+				wantPrompt, wantAnswer, _ := core.Card{
+					Ref: core.Reference{Block: "block_1"}, Kind: parsed, Ordinal: ordinal,
+				}.Sides(blocks)
+				if got.Front != wantPrompt || got.Back != wantAnswer {
+					t.Errorf("%q %s/%d: the plugin asks %q / %q, the model %q / %q",
+						text, kind, ordinal, got.Front, got.Back, wantPrompt, wantAnswer)
+				}
+			}
+		}
+	}
+}

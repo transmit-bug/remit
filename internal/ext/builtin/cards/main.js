@@ -67,3 +67,43 @@ export function derive(block) {
   }
   return [];
 }
+
+// faces answers one card's two sides: the same shaping derive does, for a card
+// that already exists. The host asks this when it draws a card, so the shapes
+// live here and nowhere else.
+export function faces(card) {
+  const text = (card && card.text) || "";
+  const kind = (card && card.kind) || "basic";
+  const ordinal = (card && card.ordinal) || 0;
+  if (kind === "cloze") {
+    const found = blanks(text);
+    const ask = ordinal >= 0 && ordinal < found.length ? ordinal : -1;
+    return { front: clozePrompt(text, ask), back: ask >= 0 ? found[ask] : "" };
+  }
+  if (kind === "bidirectional") {
+    const both = text.indexOf(":::");
+    let front, back;
+    if (both >= 0) {
+      front = text.slice(0, both).trim();
+      back = text.slice(both + 3).trim();
+    } else {
+      const single = text.indexOf("::");
+      front = single >= 0 ? text.slice(0, single).trim() : text.trim();
+      back = single >= 0 ? text.slice(single + 2).trim() : "";
+    }
+    return ordinal === 1 ? { front: back, back: front } : { front, back };
+  }
+  const single = text.indexOf("::");
+  if (single < 0) return { front: text.trim(), back: "" };
+  return { front: text.slice(0, single).trim(), back: text.slice(single + 2).trim() };
+}
+
+// render answers how a card reads: markdown the host renders. It changes nothing
+// about the text today — a card reads as it asks — but the plugin is what
+// decides, so a plugin may present a card differently.
+export function render(card) {
+  return {
+    front: (card && card.front) || "",
+    back: (card && card.back) || "",
+  };
+}
