@@ -51,6 +51,13 @@ of the two wrappers documented below, or the heatmap's recorded composition.
 | A page taller than the window | `ui.Scroll` + the centred `ui.Column` measure the statistics page uses |
 | Importing an Anki package | a palette action that opens `mygo.Dialog.Open` with an `.apkg` filter, then `importanki.Import` from the handler; `c.Toast` for the report |
 | The command palette trapping the pointer and keys | `ui.DialogBase` (`Modal`) over the dimmed window |
+| A symbol beside a note in the sidebar | `ui.SidebarItem(c, id, icon, label)`, which takes the `*SVG` itself |
+| A symbol before a button's label | `ui.Button(c, "")` + `Children(icon + text)`: the chrome, hover and press stay the widget's, the button names itself with `Label` |
+| An action that is only a symbol | `ui.Button(c, "")` + `Children(ui.Icon)` + `Label` + `Tooltip`, as the re-link dialog's close button |
+| A symbol on the card's link state | `ui.Badge(c, "")` + `Children(icon + text)`, tinted as before |
+| A page or a panel with nothing in it | a centred `ui.Column`: `ui.Icon` at 24, one sentence, the action that fills it |
+| Where the symbols come from | `design.Icon(name)` over the vendored Lucide set; `ui.Icon` draws them in the text colour |
+| Symbols inside the mode switch | **gap** — see below |
 
 ## Wrapper 1 — `flipCard` (`review.go`)
 
@@ -125,7 +132,36 @@ sizes it needs are named in `stats.go` (`heatCell`, `heatGap`) and nothing is
 painted; the weekday names and the range come from the catalogs, so the
 calendar follows the locale like every other text.
 
+## Gap — icons in the mode switch (`shell.go`)
+
+**The need.** Spec #78 asks the five modes to read as an icon and a word, so
+that the switch is recognised rather than read.
+
+**Checked at v0.7.4.** `ui.Segmented` (draws its `labels ...string` and nothing
+else), `ui.SegmentedBase` (lookless by design: the segments are built by the
+caller, and its own doc names this as the icon path), `ui.ToggleGroup` /
+`ui.Toggle` (a multi-select of pressed states, not one choice of five),
+`ui.Tabs` / `ui.TabsBase` (the same base/look split, labels only), `ui.Toolbar`
+(a container, not a choice), `ui.Sidebar` (a source list with its own frame).
+
+**Why it is left as a gap.** `SegmentedBase` is the documented route to icons,
+but carrying the look over means re-creating what `styleButton` does for a
+segment — padding, radius, the selected face, and the hover and press faces —
+inside this package. That is the same hand-built widget look ADR 0005 was
+written against, and it would drift from the theme the moment MyGo's segment
+styling changes. The mode switch therefore keeps its words, and the icons it
+should carry wait for one of:
+
+- a MyGo release whose `Segmented` takes an icon per label (an upgrade is the
+  fix, per the version protocol — not a wrapper), or
+- a decision to build the switch in the kit once #87 has a card to sit beside,
+  with the duplicate look recorded here as a deliberate cost.
+
+`ui.SidebarItem` needs none of this: the side list's rows carry their icon
+through the widget's own parameter.
+
 ## Audit notes
+
 
 - The inventory grep ran against `/Users/pony/go/pkg/mod/github.com/egoist/mygo@v0.7.4`.
 - ADR 0005 corrects this file: the packages that decide the note editor are
@@ -158,3 +194,7 @@ calendar follows the locale like every other text.
   their own theme-derived look.
 - `ui.Mix` documented on the site is not exported at v0.7.4; the tokens blend
   with `Color.Mix`, which is.
+- Icons are Lucide's, vendored from `lucide-static@0.460.0` under ISC in
+  `internal/ui/design/icons/` and embedded: `git grep -n '<svg' -- '*.go'` finds
+  no inline drawing, and the app requests nothing for an icon. Sizes come from
+  the scale (`iconSmall` 16, `iconMedium` 20, `iconLarge` 24).

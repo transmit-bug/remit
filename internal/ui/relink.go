@@ -80,6 +80,14 @@ func (a *App) relinkView(c *ui.Context, tk tokens) {
 		panel.Label(msgs.RelinkTitle())
 
 		panel.Children(func() {
+			ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
+				ui.Text(c, msgs.RelinkTitle()).FontSize(tk.typeHeading).Bold().Grow(1)
+				// An icon-only button carries its name for the pointer and for a
+				// screen reader, since the drawing says nothing on its own.
+				ui.Button(c, "").Label(msgs.Close()).Tooltip(msgs.Close()).
+					Children(func() { tk.icon(c, "x", iconSmall) }).
+					OnClick(func() { a.relink.open = false })
+			})
 			field := ui.TextInput(c, &a.relink.query).
 				Placeholder(msgs.RelinkSearch()).Bind(&a.relink.field).
 				Label(msgs.RelinkSearch()).MinHeight(tk.control)

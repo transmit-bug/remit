@@ -21,6 +21,11 @@ const (
 	TypeSmall   float32 = 13
 	TypeMono    float32 = 14
 
+	// The three icon sizes: a button's, a control's, and a page's.
+	IconSmall  float32 = 16
+	IconMedium float32 = 20
+	IconLarge  float32 = 24
+
 	ControlHeight float32 = 32
 	Hairline      float32 = 1
 	LineHeight    float32 = 1.5

@@ -7,6 +7,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -36,7 +37,9 @@ func (a *App) toolbar(c *ui.Context, tk tokens) {
 		}
 
 		ui.Spacer(c)
-		ui.Button(c, m(c).NewNote()).OnClick(func() { a.newNote(c) })
+		ui.Button(c, "").Label(m(c).NewNote()).
+			Children(func() { tk.iconText(c, "plus", m(c).NewNote(), iconSmall) }).
+			OnClick(func() { a.newNote(c) })
 	}).Label(m(c).Toolbar(Name)).
 		Padding(tk.spaceS, tk.spaceL).
 		Background(tk.Surface)
@@ -56,7 +59,7 @@ func (a *App) notesList(c *ui.Context, tk tokens) {
 	ui.Sidebar(c, &a.editor.selected, func() {
 		ui.SidebarSection(c, m(c).Notebook(), nil, func() {
 			for _, n := range a.data.notes {
-				item := ui.SidebarItem(c, string(n.ID), nil, n.Title)
+				item := ui.SidebarItem(c, string(n.ID), design.Icon("file-text"), n.Title)
 				if cards := a.data.cardsInNote(n); cards > 0 {
 					item.Children(func() { ui.Badge(c, fmt.Sprint(cards)) })
 				}

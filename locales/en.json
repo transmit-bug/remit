@@ -686,6 +686,10 @@
   "@checkNow": {
     "description": "Button: run an update check now."
   },
+  "close": "Close",
+  "@close": {
+    "description": "Closes the dialog shown. The button is an icon, so this label is what assistive technology reads and what the pointer shows."
+  },
   "updateAvailable": "Version {version} is available.",
   "@updateAvailable": {
     "description": "An update check found a newer version.",
