@@ -133,9 +133,9 @@ func NewApp(opts ...Options) *App {
 // View draws the window. It reads state and returns; anything that changes
 // state belongs in a handler.
 func (a *App) View(c *ui.Context) {
-	t := appTheme(c.Theme())
+	t, palette := appTheme(c.Theme())
 	c.SetTheme(t)
-	tk := newTokens(t)
+	tk := newTokens(t, palette)
 
 	// Window shortcuts belong to the window, not to the column they are built
 	// beside, so that they work with no control focused.
