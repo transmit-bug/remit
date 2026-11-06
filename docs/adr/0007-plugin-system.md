@@ -27,13 +27,14 @@ names are fixed by the host, so a plugin's claimed surface is validated without
 loading it, and there is no runtime-appended hook list whose order becomes an
 implicit contract.
 
-### Three pure hooks and one notification
+### Three pure hooks, one presentation hook and one notification
 
 ```ts
-deriveBlock(block)   -> [{ ordinal, kind, front, back }]
-renderCard(card)     -> { frontMarkdown, backMarkdown }
-scheduleGrade(input) -> { intervalSeconds, state, previews? }
-onEvent(event)       -> void
+deriveBlock(block)    -> [{ ordinal, kind, front, back }]
+renderCard(card)      -> { frontMarkdown, backMarkdown }
+scheduleGrade(input)  -> { intervalSeconds, state, previews? }
+reviewSummary(input)  -> { title, lines: string[], tone: "quiet" | "celebrate" }
+onEvent(event)        -> void
 ```
 
 The first three never write. Their output is a **suggestion**: the host
@@ -47,6 +48,18 @@ reference still follows its block (ADR 0002).
 `store:own`. Enabling a plugin shows its declared list and asks the user; at
 runtime the host installs only the granted `remit.*` functions and the standard
 library is frozen. There is no `fs`, `net` or UI, and no `node_modules`.
+
+### The completion moment is content, the host owns the motion
+
+When a session empties, the host asks the scheduler plugin's `reviewSummary`
+what to say: a title, some markdown lines, and a **tone**. The host renders it
+and picks the motion from its own vocabulary — a quiet fade by default, a
+bounded celebration when the tone asks for one, and the same reduced-motion
+rules as everything else.
+
+This replaces #21's blanket *"no celebration"* with *"the default plugin does not
+celebrate, and a plugin may ask for it"*. What does not change: the host renders
+it, so a plugin still cannot inject UI, and the motion stays inside the table.
 
 ### Roles, not ordering
 

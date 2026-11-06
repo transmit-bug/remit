@@ -60,6 +60,12 @@ export function deriveBlock(block: Block): Array<{
 export function renderCard(card: { id: string; blockId: string; front: string; back: string }):
   { frontMarkdown: string; backMarkdown: string }
 
+// summary：队列空了 → 说什么（内容归插件，动效归宿主）
+export function reviewSummary(input: {
+  graded: number; again: number; hard: number; good: number; easy: number;
+  dueTomorrow: number; streakDays: number; durationSeconds: number;
+}): { title: string; lines: string[]; tone: "quiet" | "celebrate" }
+
 // schedule：评分 → 间隔与预览。FSRS 数学在宿主，插件只给策略
 export function scheduleGrade(input: {
   cardId: string; grade: Grade; now: string;
@@ -71,7 +77,7 @@ export function scheduleGrade(input: {
 
 ## 3.5 产出即建议
 
-- 三个钩子的返回值都是**建议**：宿主校验结构、夹取边界（间隔上限、非负）、然后由宿主自己写库。插件永远不直接写。
+- 四个钩子的返回值都是**建议**：宿主校验结构、夹取边界（间隔上限、非负）、然后由宿主自己写库。插件永远不直接写。
 - 每条派生数据都带**生产者标识与版本**（`producer: {id, version}`），卸载插件后数据仍可读、可解释（研究 #70 的第三条"该抄"）。
 - 渲染钩子的产出**不落库**：每次从卡片数据重新渲染；渲染插件缺失时回退到块的原文，而不是空白。
 
