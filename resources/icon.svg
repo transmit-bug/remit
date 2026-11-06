@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Remit</title>
+  <!-- Placeholder brand: a geometric R in one ink on a square badge. -->
+  <rect width="1024" height="1024" rx="200" fill="#17181A"/>
+  <g fill="#F7F7F8">
+    <rect x="288" y="224" width="112" height="576"/>
+    <rect x="288" y="224" width="448" height="112"/>
+    <rect x="624" y="224" width="112" height="336"/>
+    <rect x="288" y="448" width="448" height="112"/>
+    <polygon points="540,560 652,560 708,800 596,800"/>
+  </g>
+</svg>
