@@ -1,6 +1,6 @@
 # ADR 0002 — Content model
 
-- **Status:** accepted
+- **Status:** accepted — amended by ADR 0005 (block identity and the editing surface) and ADR 0007 (a plugin derives a card)
 - **Date:** 2026-11-06
 - **Related:** #8, #7, ADR 0001
 
