@@ -77,7 +77,7 @@ func (a *App) reviewCard(id core.ID) (review.Card, bool) {
 	if !ok {
 		return review.Card{}, false
 	}
-	prompt, answer, state := card.Sides(a.data.blocks)
+	prompt, answer, state := a.faces(card)
 	out := review.Card{ID: card.ID, Prompt: prompt, Answer: answer, State: state}
 	if card.Ref.Frozen != nil {
 		out.Frozen = card.Ref.Frozen.At
@@ -93,7 +93,7 @@ func (a *App) grade(c *ui.Context, id core.ID, r review.Rating) {
 	if !ok || !a.review.Answered() {
 		return
 	}
-	if _, _, state := card.Sides(a.data.blocks); state == core.LinkLost {
+	if _, _, state := a.faces(card); state == core.LinkLost {
 		return
 	}
 	if err := a.lib.Review(card.ID, r.Schedule(), time.Now()); err != nil {

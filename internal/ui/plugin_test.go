@@ -162,7 +162,7 @@ func TestTheShippedPluginDerivesCards(t *testing.T) {
 	if len(made) != 1 || made[0].Kind != core.KindBasic {
 		t.Fatalf("the plugin made %+v, want one basic card", made)
 	}
-	prompt, answer, _ := made[0].Sides(a.Library())
+	prompt, answer, _ := a.faces(made[0])
 	if prompt != "what is spacing" || answer != "the gaps between reviews" {
 		t.Errorf("the card reads %q / %q", prompt, answer)
 	}

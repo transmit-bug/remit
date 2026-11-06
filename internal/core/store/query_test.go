@@ -25,7 +25,7 @@ func TestSearchCards(t *testing.T) {
 		t.Fatalf("note: %v", err)
 	}
 	for _, b := range note.Blocks {
-		if _, err := lib.CreateCard(b.ID); err != nil {
+		if _, err := firstCard(lib, b.ID); err != nil {
 			t.Fatalf("card: %v", err)
 		}
 	}
@@ -70,7 +70,7 @@ func TestCardsWithStatus(t *testing.T) {
 	}
 	var cards []core.Card
 	for _, b := range note.Blocks {
-		card, err := lib.CreateCard(b.ID)
+		card, err := firstCard(lib, b.ID)
 		if err != nil {
 			t.Fatalf("card: %v", err)
 		}
@@ -93,4 +93,15 @@ func TestCardsWithStatus(t *testing.T) {
 	if got, err := lib.CardsWithStatus(core.StatusReading); err != nil || len(got) != 0 {
 		t.Errorf("reading = %+v (%v), want none", got, err)
 	}
+}
+
+// firstCard makes one basic card for a block, which is all this test needs: the
+// shapes a paragraph makes are the card plugin's decision, and the store only
+// stores what it is told to.
+func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
+	cards, err := lib.CreateCards(blockID, []core.Derived{{Kind: core.KindBasic}})
+	if err != nil {
+		return core.Card{}, err
+	}
+	return cards[0], nil
 }

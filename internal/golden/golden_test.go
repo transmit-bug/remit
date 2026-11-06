@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/transmit-bug/remit/internal/core/golden"
+	"github.com/transmit-bug/remit/internal/golden"
 )
 
 var update = flag.Bool("update", false, "rewrite the frozen answers from the code under test")
@@ -31,7 +31,7 @@ func TestFrozenAnswers(t *testing.T) {
 	}
 	want, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("read %s: %v (run go test ./internal/core/golden -update once)", path, err)
+		t.Fatalf("read %s: %v (run go test ./internal/golden -update once)", path, err)
 	}
 	if !bytes.Equal(got, want) {
 		t.Fatalf("the answers changed.\n--- frozen\n%s\n--- now\n%s", want, got)
@@ -102,7 +102,7 @@ func TestFrozenSetCovers(t *testing.T) {
 	if !capped {
 		t.Error("no capped step waits the longest")
 	}
-	if !strings.Contains(set.Note, "go test ./internal/core/golden -update") {
+	if !strings.Contains(set.Note, "go test ./internal/golden -update") {
 		t.Error("the set does not say how to regenerate it")
 	}
 }

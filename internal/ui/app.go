@@ -75,16 +75,17 @@ type App struct {
 	relink         relinkState
 	cardEdit       cardEditState
 	prefs          prefsState
-	cards          *cardPlugin          // what a paragraph asks and how a card reads
-	scheduler      *schedulerPlugin     // what schedules a review, and what a session is worth
-	summaryWord    summaryAnswer        // what the scheduling plugin says about a session
-	summaryWordFor string               // the numbers that answer was given
-	rendered       map[core.ID]rendered // what the plugin last answered for a card
-	panel          panelMode            // what the user said about the note's panel
-	panelTab       panelTab             // outline or backlinks
-	tagFilter      string               // the tag the notes are filtered by, empty for none
-	backlinks      []store.Backlink     // what points at the note open now
-	aboutWin       *mygo.Window         // the open About window, or nil
+	cards          *cardPlugin             // what a paragraph asks and how a card reads
+	scheduler      *schedulerPlugin        // what schedules a review, and what a session is worth
+	summaryWord    summaryAnswer           // what the scheduling plugin says about a session
+	summaryWordFor string                  // the numbers that answer was given
+	rendered       map[core.ID]rendered    // what the plugin last answered for a card
+	facesCache     map[core.ID]facesAnswer // what the plugin last shaped for a card
+	panel          panelMode               // what the user said about the note's panel
+	panelTab       panelTab                // outline or backlinks
+	tagFilter      string                  // the tag the notes are filtered by, empty for none
+	backlinks      []store.Backlink        // what points at the note open now
+	aboutWin       *mygo.Window            // the open About window, or nil
 
 	// preview is what the four answers would schedule for the card on screen,
 	// loaded with the rest of what a mode reads so that no frame reads the
@@ -137,6 +138,7 @@ func NewApp(opts ...Options) *App {
 	a := &App{
 		browse:      browseState{selected: -1},
 		rendered:    map[core.ID]rendered{},
+		facesCache:  map[core.ID]facesAnswer{},
 		editor:      editorState{},
 		relink:      relinkState{selected: -1},
 		pickLibrary: pickLibraryDir,

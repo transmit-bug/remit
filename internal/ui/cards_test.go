@@ -61,7 +61,7 @@ func TestSeparatorMakesACard(t *testing.T) {
 	if !ok {
 		t.Fatal("the new card is gone")
 	}
-	prompt, answer, state := card.Sides(a.Library())
+	prompt, answer, state := a.faces(card)
 	if state != core.LinkLive || prompt != "What is spacing?" || answer != "Practice spread over days." {
 		t.Errorf("the card reads %q / %q (%s)", prompt, answer, state)
 	}
@@ -138,7 +138,7 @@ func TestCardBadgeEditsOverrides(t *testing.T) {
 	if after.Prompt != "What is spaced practice?" {
 		t.Errorf("the override is %q, want what the dialog took", after.Prompt)
 	}
-	if prompt, _, _ := after.Sides(a.Library()); prompt != "What is spaced practice?" {
+	if prompt, _, _ := a.faces(after); prompt != "What is spaced practice?" {
 		t.Errorf("the card reads %q, want the override", prompt)
 	}
 }
@@ -208,11 +208,11 @@ func TestClozeMakesOneCardPerBlank(t *testing.T) {
 	}
 	// Each asks its own blank; the faces follow the paragraph, so nothing about
 	// the pair is stored twice.
-	prompt, answer, _ := cloze[0].Sides(a.Library())
+	prompt, answer, _ := a.faces(cloze[0])
 	if prompt != "The […] blank asks second." || answer != "first" {
 		t.Errorf("the first card asks %q / %q", prompt, answer)
 	}
-	prompt, answer, _ = cloze[1].Sides(a.Library())
+	prompt, answer, _ = a.faces(cloze[1])
 	if prompt != "The first blank asks […]." || answer != "second" {
 		t.Errorf("the second card asks %q / %q", prompt, answer)
 	}

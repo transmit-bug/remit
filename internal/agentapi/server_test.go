@@ -11,9 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"errors"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
 
 var now = time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
@@ -30,9 +33,9 @@ func newLibrary(t *testing.T) *store.Library {
 	return lib
 }
 
-func newServer(t *testing.T, lib Library) *httptest.Server {
+func newServer(t *testing.T, lib *store.Library) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(New(lib, Options{Token: token, Now: func() time.Time { return now }}).Handler())
+	srv := httptest.NewServer(New(newPluginSource(t, lib), Options{Token: token, Now: func() time.Time { return now }}).Handler())
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -109,7 +112,7 @@ func TestReadsNeedNoTokenWritesDo(t *testing.T) {
 
 func TestNoTokenMakesWritesUnavailable(t *testing.T) {
 	lib := newLibrary(t)
-	srv := httptest.NewServer(New(lib, Options{Now: func() time.Time { return now }}).Handler())
+	srv := httptest.NewServer(New(newPluginSource(t, lib), Options{Now: func() time.Time { return now }}).Handler())
 	defer srv.Close()
 
 	if code, _ := do(t, http.MethodPost, srv.URL+"/v1/notes", "", map[string]any{"title": "x"}); code != http.StatusServiceUnavailable {
@@ -172,10 +175,11 @@ func TestPatchIsLimitedToWordingAndStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("save note: %v", err)
 	}
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	cards, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Kind: core.KindBasic}})
 	if err != nil {
 		t.Fatalf("create card: %v", err)
 	}
+	card := cards[0]
 	srv := newServer(t, lib)
 
 	code, raw := do(t, http.MethodPatch, srv.URL+"/v1/cards/"+string(card.ID), token,
@@ -263,3 +267,84 @@ func TestRotateTokenReplaces(t *testing.T) {
 		t.Errorf("reload = %q, want the rotated token", again)
 	}
 }
+
+// pluginSource is the library as the API sees it in these tests: a card is made
+// and shaped by the card plugin, as it is in the app. The API itself knows
+// neither.
+type pluginSource struct {
+	*store.Library
+	plugin *ext.JSRunner
+}
+
+func newPluginSource(t *testing.T, lib *store.Library) pluginSource {
+	t.Helper()
+	runner, err := builtin.Cards(ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open the card plugin: %v", err)
+	}
+	t.Cleanup(func() { _ = runner.Close() })
+	return pluginSource{Library: lib, plugin: runner}
+}
+
+func (s pluginSource) CreateCard(blockID core.ID) (core.Card, error) {
+	block, ok := s.Block(blockID)
+	if !ok {
+		return core.Card{}, errNoSuchBlock
+	}
+	var answered []struct {
+		Kind    string `json:"kind"`
+		Ordinal int    `json:"ordinal"`
+	}
+	if err := s.plugin.Call("derive", map[string]any{"text": block.Text}, &answered); err != nil {
+		return core.Card{}, err
+	}
+	derived := make([]core.Derived, 0, len(answered))
+	for _, card := range answered {
+		kind, ok := core.ParseKind(card.Kind)
+		if !ok {
+			continue
+		}
+		derived = append(derived, core.Derived{Kind: kind, Ordinal: card.Ordinal})
+	}
+	cards, err := s.Library.CreateCards(blockID, derived)
+	if err != nil {
+		return core.Card{}, err
+	}
+	if len(cards) == 0 {
+		return core.Card{}, errNoSuchBlock
+	}
+	return cards[0], nil
+}
+
+func (s pluginSource) Faces(card core.Card) (prompt, answer, link string) {
+	text, state := card.Ref.Text(s.Blocks())
+	prompt, answer = text, ""
+	var answered struct {
+		Front string `json:"front"`
+		Back  string `json:"back"`
+	}
+	params := map[string]any{"text": text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
+	if err := s.plugin.Call("faces", params, &answered); err == nil {
+		prompt, answer = answered.Front, answered.Back
+	}
+	if card.Prompt != "" {
+		prompt = card.Prompt
+	}
+	if card.Answer != "" {
+		answer = card.Answer
+	}
+	return prompt, answer, state.String()
+}
+
+// Blocks is the library's blocks as the model reads them.
+func (s pluginSource) Blocks() core.BlockSet {
+	blocks := core.BlockSet{}
+	for _, note := range s.Notes() {
+		for _, block := range note.Blocks {
+			blocks[block.ID] = block
+		}
+	}
+	return blocks
+}
+
+var errNoSuchBlock = errors.New("agentapi: the block asks nothing")

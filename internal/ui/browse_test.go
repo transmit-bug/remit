@@ -112,7 +112,7 @@ func seedBrowseLibrary(t *testing.T) (*App, browseSeed) {
 		t.Fatalf("save note: %v", err)
 	}
 	card := func(i int) core.Card {
-		c, err := lib.CreateCard(note.Blocks[i].ID)
+		c, err := firstCard(lib, note.Blocks[i].ID)
 		if err != nil {
 			t.Fatalf("create card: %v", err)
 		}

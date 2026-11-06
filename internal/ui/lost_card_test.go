@@ -47,7 +47,7 @@ func TestRelinkedCardGradesInReview(t *testing.T) {
 	events := len(a.Library().Events())
 
 	linked, _ := a.Library().Card(seed.lost.ID)
-	_, answer, _ := linked.Sides(a.Library())
+	_, answer, _ := a.faces(linked)
 	tt.Key(0, ui.KeySpace)
 	tt.Advance(320 * time.Millisecond) // the answer unfolding
 	if !tt.HasText(answer) {
@@ -67,7 +67,7 @@ func TestRelinkedCardGradesInReview(t *testing.T) {
 		t.Errorf("the log holds %d events, want %d", got, events+1)
 	}
 	card, _ := a.Library().Card(seed.lost.ID)
-	if _, _, state := card.Sides(a.Library()); state != core.LinkLive {
+	if _, _, state := a.faces(card); state != core.LinkLive {
 		t.Errorf("the graded card is %s, want live", state)
 	}
 	if id, ok := a.review.Current(); ok && id == seed.lost.ID {

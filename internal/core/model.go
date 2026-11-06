@@ -4,7 +4,6 @@
 package core
 
 import (
-	"strings"
 	"time"
 )
 
@@ -182,58 +181,8 @@ func (s Status) Scheduled() bool {
 	return false
 }
 
-// Card is an independent review entity: it references exactly one block,
-// owns its scheduling history, and may replace the wording the block gives it.
-type Card struct {
-	ID     ID
-	Ref    Reference
-	Prompt string // replaces the block's prompt when set
-	Answer string // replaces the block's answer when set
-	Status Status
-	// Kind and Ordinal say which of its paragraph's cards this is: one
-	// paragraph can ask several things (each blank, both directions).
-	Kind    Kind
-	Ordinal int
-}
-
-// Sides returns the prompt and the answer the card shows, and where the text
-// came from. Overrides win over the block, and either side alone may be
-// overridden.
-func (c Card) Sides(src Blocks) (prompt, answer string, state LinkState) {
-	text, state := c.Ref.Text(src)
-	prompt, answer = faces(c.Kind, c.Ordinal, text)
-	if c.Prompt != "" {
-		prompt = c.Prompt
-	}
-	if c.Answer != "" {
-		answer = c.Answer
-	}
-	return prompt, answer, state
-}
-
-// Split divides block text into prompt and answer at the first Separator. A
-// block without one is all prompt, and a block that only separates has an
-// empty answer rather than an error.
-func Split(text string) (prompt, answer string) {
-	before, after, ok := strings.Cut(text, Separator)
-	if !ok {
-		return strings.TrimSpace(text), ""
-	}
-	return strings.TrimSpace(before), strings.TrimSpace(after)
-}
-
-// The shapes a paragraph can take as a card. Which one it is comes from how it
-// is written, so a note carries its own card definitions.
-const (
-	// ClozeOpen and ClozeClose wrap a blank of a cloze paragraph: every blank
-	// is one card, its own blank hidden and the others shown.
-	ClozeOpen, ClozeClose = "{{", "}}"
-	// BothSeparator asks a paragraph both ways: the sides as written, then
-	// reversed. It is checked before Separator, which it begins with.
-	BothSeparator = Separator + ":"
-)
-
-// Kind is how a paragraph produced a card.
+// Kind is how a paragraph produced a card: a card's own record of its place,
+// not a rule this package applies.
 type Kind uint8
 
 const (
@@ -270,9 +219,9 @@ func ParseKind(s string) (Kind, bool) {
 	return KindBasic, false
 }
 
-// Derived is one card a paragraph makes, before it has an identity or a
+// Derived is one card a card plugin answered, before it has an identity or a
 // schedule: what to ask, what to accept, and which of the paragraph's cards it
-// is.
+// is. The shapes are the plugin's; this is only how they travel.
 type Derived struct {
 	Kind    Kind
 	Ordinal int
@@ -280,108 +229,16 @@ type Derived struct {
 	Answer  string
 }
 
-// Derive returns the cards a paragraph's text makes, in the order they are
-// numbered. A paragraph with blanks is a cloze, one card per blank; one that
-// separates both ways makes two cards, each the other's reverse; one with a
-// single separator makes one; one with none makes none — text alone is a note,
-// not a card.
-func Derive(text string) []Derived {
-	if blanks := clozeBlanks(text); len(blanks) > 0 {
-		out := make([]Derived, 0, len(blanks))
-		for i, blank := range blanks {
-			out = append(out, Derived{
-				Kind:    KindCloze,
-				Ordinal: i,
-				Prompt:  clozePrompt(text, blanks, i),
-				Answer:  blank,
-			})
-		}
-		return out
-	}
-	if before, after, ok := strings.Cut(text, BothSeparator); ok {
-		prompt, answer := strings.TrimSpace(before), strings.TrimSpace(after)
-		return []Derived{
-			{Kind: KindBidirectional, Ordinal: 0, Prompt: prompt, Answer: answer},
-			{Kind: KindBidirectional, Ordinal: 1, Prompt: answer, Answer: prompt},
-		}
-	}
-	if prompt, answer := Split(text); strings.Contains(text, Separator) {
-		return []Derived{{Kind: KindBasic, Prompt: prompt, Answer: answer}}
-	}
-	return nil
-}
-
-// clozeBlanks is the text of each blank, in the order they appear.
-func clozeBlanks(text string) []string {
-	var out []string
-	for rest := text; ; {
-		open := strings.Index(rest, ClozeOpen)
-		if open < 0 {
-			return out
-		}
-		rest = rest[open+len(ClozeOpen):]
-		end := strings.Index(rest, ClozeClose)
-		if end < 0 {
-			return out
-		}
-		out = append(out, strings.TrimSpace(rest[:end]))
-		rest = rest[end+len(ClozeClose):]
-	}
-}
-
-// clozePrompt is the paragraph with every blank shown but the one asked: that
-// one is a gap, so the card asks for it and nothing else.
-func clozePrompt(text string, blanks []string, ask int) string {
-	var out strings.Builder
-	rest := text
-	for i := 0; ; i++ {
-		open := strings.Index(rest, ClozeOpen)
-		if open < 0 {
-			out.WriteString(rest)
-			break
-		}
-		out.WriteString(rest[:open])
-		rest = rest[open+len(ClozeOpen):]
-		end := strings.Index(rest, ClozeClose)
-		if end < 0 {
-			out.WriteString(ClozeOpen + rest)
-			break
-		}
-		blank := strings.TrimSpace(rest[:end])
-		rest = rest[end+len(ClozeClose):]
-		if i == ask {
-			out.WriteString("[…]")
-			continue
-		}
-		out.WriteString(blank)
-	}
-	return strings.TrimSpace(out.String())
-}
-
-// faces is the pair a card asks, from the paragraph's text and how the card was
-// derived.
-func faces(kind Kind, ordinal int, text string) (prompt, answer string) {
-	switch kind {
-	case KindCloze:
-		blanks := clozeBlanks(text)
-		if ordinal >= 0 && ordinal < len(blanks) {
-			return clozePrompt(text, blanks, ordinal), blanks[ordinal]
-		}
-		return clozePrompt(text, blanks, -1), ""
-	case KindBidirectional:
-		// The both-ways separator is what divided the paragraph, so a card's
-		// sides come from it — not from replacing it and splitting again, which
-		// would divide at an earlier :: when the paragraph holds both.
-		if before, after, ok := strings.Cut(text, BothSeparator); ok {
-			prompt, answer = strings.TrimSpace(before), strings.TrimSpace(after)
-		} else {
-			prompt, answer = Split(text)
-		}
-		if ordinal == 1 {
-			return answer, prompt
-		}
-		return prompt, answer
-	default:
-		return Split(text)
-	}
+// Card is an independent review entity: it references exactly one block,
+// owns its scheduling history, and may replace the wording the block gives it.
+type Card struct {
+	ID     ID
+	Ref    Reference
+	Prompt string // replaces the block's prompt when set
+	Answer string // replaces the block's answer when set
+	Status Status
+	// Kind and Ordinal say which of its paragraph's cards this is: one
+	// paragraph can ask several things (each blank, both directions).
+	Kind    Kind
+	Ordinal int
 }

@@ -269,7 +269,7 @@ func TestCreateCard(t *testing.T) {
 	note := saveNote(t, lib, "Card Making", "what :: that")
 	block := note.Blocks[0]
 
-	card, err := lib.CreateCard(block.ID)
+	card, err := firstCard(lib, block.ID)
 	if err != nil {
 		t.Fatalf("CreateCard: %v", err)
 	}
@@ -280,9 +280,8 @@ func TestCreateCard(t *testing.T) {
 		t.Errorf("card references %q, want %q", card.Ref.Block, block.ID)
 	}
 
-	prompt, answer, state := card.Sides(lib)
-	if prompt != "what" || answer != "that" || state != core.LinkLive {
-		t.Errorf("Sides() = (%q, %q, %v), want the block's two sides", prompt, answer, state)
+	if card.Kind != core.KindBasic || card.Ordinal != 0 {
+		t.Errorf("the card is %v/%d, want the paragraph's first", card.Kind, card.Ordinal)
 	}
 
 	// The marker is in the note source, and the card file exists.
@@ -321,8 +320,8 @@ func TestCreateCard(t *testing.T) {
 	if err := os.WriteFile(path, unmarked, 0o644); err != nil {
 		t.Fatalf("write unmarked note: %v", err)
 	}
-	if _, err := reread.CreateCard(block.ID); err != nil {
-		t.Fatalf("CreateCard without a marker: %v", err)
+	if _, err := firstCard(reread, block.ID); err != nil {
+		t.Fatalf("making a card without a marker: %v", err)
 	}
 	if got := read(t, path); !bytes.Equal(got, source) {
 		t.Errorf("marking rewrote more than the marker:\n%q\nwant\n%q", got, source)
@@ -332,7 +331,7 @@ func TestCreateCard(t *testing.T) {
 func TestReviewAndReopen(t *testing.T) {
 	lib, dir, clk := newLibrary(t)
 	note := saveNote(t, lib, "Review Me", "q :: a")
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("CreateCard: %v", err)
 	}
@@ -382,7 +381,7 @@ func TestReviewAndReopen(t *testing.T) {
 func TestUndoRestoresTheState(t *testing.T) {
 	lib, dir, clk := newLibrary(t)
 	note := saveNote(t, lib, "Undo", "q :: a")
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("CreateCard: %v", err)
 	}
@@ -447,7 +446,7 @@ func TestUndoRestoresTheState(t *testing.T) {
 func TestLostCardKeepsItsSchedule(t *testing.T) {
 	lib, dir, clk := newLibrary(t)
 	note := saveNote(t, lib, "Orphans", "keep me :: for now")
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("CreateCard: %v", err)
 	}
@@ -469,7 +468,7 @@ func TestLostCardKeepsItsSchedule(t *testing.T) {
 	if err != nil || len(lost) != 1 || lost[0].ID != card.ID {
 		t.Fatalf("LostCards = (%v, %v), want the orphan", ids(lost), err)
 	}
-	if _, _, state := lost[0].Sides(lib); state != core.LinkLost {
+	if _, state := lost[0].Ref.Text(lib); state != core.LinkLost {
 		t.Errorf("a lost card renders as %v, want lost", state)
 	}
 	if state, _ := lib.CardState(card.ID); !sameState(state, before) {
@@ -498,7 +497,7 @@ func TestDerivedIndexRebuilds(t *testing.T) {
 	var cards []core.Card
 	for i, rating := range []schedule.Rating{schedule.Good, schedule.Again, schedule.Easy} {
 		note := saveNote(t, lib, "Indexed", "q :: a")
-		card, err := lib.CreateCard(note.Blocks[0].ID)
+		card, err := firstCard(lib, note.Blocks[0].ID)
 		if err != nil {
 			t.Fatalf("CreateCard: %v", err)
 		}
@@ -590,7 +589,7 @@ func TestDerivedIndexRebuilds(t *testing.T) {
 func TestReviewLeavesTheNoteAlone(t *testing.T) {
 	lib, dir, clk := newLibrary(t)
 	note := saveNote(t, lib, "Hands Off", "q :: a", "another paragraph")
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("CreateCard: %v", err)
 	}
@@ -621,7 +620,7 @@ func TestCreateRefusesAnExistingLibrary(t *testing.T) {
 func TestSaveCard(t *testing.T) {
 	lib, dir, clk := newLibrary(t)
 	note := saveNote(t, lib, "Overrides", "the question :: the answer")
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("CreateCard: %v", err)
 	}
@@ -635,8 +634,10 @@ func TestSaveCard(t *testing.T) {
 	if !ok || stored.Prompt != "sharpened question" || stored.Status != core.StatusSuspended {
 		t.Fatalf("Card = (%+v, %v)", stored, ok)
 	}
-	if prompt, answer, _ := stored.Sides(lib); prompt != "sharpened question" || answer != "the answer" {
-		t.Errorf("Sides() = (%q, %q), want the override and the block", prompt, answer)
+	// The sides a card asks are the card plugin's shaping; the store keeps the
+	// override it was given.
+	if stored.Prompt != "sharpened question" {
+		t.Errorf("the stored override is %q", stored.Prompt)
 	}
 	if due, _ := lib.Due(clk.Now(), 0); len(due) != 0 {
 		t.Errorf("a suspended card is in the queue: %v", ids(due))
@@ -650,7 +651,7 @@ func TestSaveCard(t *testing.T) {
 		t.Fatalf("SaveCard frozen: %v", err)
 	}
 	stored, _ = lib.Card(card.ID)
-	if _, _, state := stored.Sides(lib); state != core.LinkFrozen {
+	if _, state := stored.Ref.Text(lib); state != core.LinkFrozen {
 		t.Errorf("a frozen card renders as %v, want frozen", state)
 	}
 
@@ -660,9 +661,8 @@ func TestSaveCard(t *testing.T) {
 	if !ok {
 		t.Fatalf("frozen card did not survive a reopen")
 	}
-	prompt, answer, state := stored.Sides(reopened)
-	if prompt != "sharpened question" || answer != "the answer" || state != core.LinkFrozen {
-		t.Errorf("after reopen Sides() = (%q, %q, %v)", prompt, answer, state)
+	if _, state := stored.Ref.Text(reopened); state != core.LinkFrozen {
+		t.Errorf("after reopen the reference is %v, want frozen", state)
 	}
 	if stored.Ref.Frozen == nil || stored.Ref.Frozen.Text != "the question :: the answer" {
 		t.Fatalf("snapshot = %+v, want the block as it was", stored.Ref.Frozen)
@@ -697,7 +697,7 @@ func TestSaveCard(t *testing.T) {
 func TestConcurrentReadersSeeWholeValues(t *testing.T) {
 	lib, _, clk := newLibrary(t)
 	note := saveNote(t, lib, "Shared", "q :: a")
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("CreateCard: %v", err)
 	}

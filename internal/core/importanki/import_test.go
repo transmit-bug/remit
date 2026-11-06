@@ -94,14 +94,15 @@ func TestImportMinimalPackage(t *testing.T) {
 		})
 	}
 
-	// The prompt is the block and the answer is the rendered back template.
+	// The prompt is the block and the answer is the rendered back template, as
+	// the card plugin shapes them.
 	card := cards["Capital of France?"]
-	prompt, answer, state := card.Sides(lib)
+	prompt, answer, state := cardFaces(t, lib, card)
 	if prompt != "Capital of France?" || answer != "Paris" || state != core.LinkLive {
-		t.Errorf("Sides() = (%q, %q, %v), want the block's live text", prompt, answer, state)
+		t.Errorf("faces = (%q, %q, %v), want the block's live text", prompt, answer, state)
 	}
 	reverse := cards["Tokyo"]
-	if prompt, answer, _ := reverse.Sides(lib); prompt != "Tokyo" || answer != "Capital of Japan?" {
+	if prompt, answer, _ := cardFaces(t, lib, reverse); prompt != "Tokyo" || answer != "Capital of Japan?" {
 		t.Errorf("reverse card = (%q, %q), want (Tokyo, Capital of Japan?)", prompt, answer)
 	}
 
@@ -253,7 +254,7 @@ func TestHTMLFieldsBecomeBlocks(t *testing.T) {
 	}
 
 	card := cardsByPrompt(t, lib)["Q one\nsecond & line"]
-	prompt, answer, _ := card.Sides(lib)
+	prompt, answer, _ := cardFaces(t, lib, card)
 	if prompt != "Q one\nsecond & line" {
 		t.Errorf("prompt = %q, want the whole multi-line field", prompt)
 	}
@@ -372,10 +373,11 @@ func TestClozeCards(t *testing.T) {
 		if !ok {
 			t.Fatalf("no card has %q as its prompt", prompt)
 		}
-		if got, _, _ := card.Sides(lib); got != prompt {
+		got, answer, _ := cardFaces(t, lib, card)
+		if got != prompt {
 			t.Errorf("prompt = %q, want %q", got, prompt)
 		}
-		if _, answer, _ := card.Sides(lib); answer != want {
+		if answer != want {
 			t.Errorf("answer = %q, want %q", answer, want)
 		}
 		if card.Ref.Block != notes[0].Blocks[0].ID {
@@ -463,7 +465,7 @@ func prompts(t *testing.T, lib *store.Library) []string {
 	t.Helper()
 	var out []string
 	for _, card := range lib.Cards() {
-		prompt, _, _ := card.Sides(lib)
+		prompt, _, _ := cardFaces(t, lib, card)
 		out = append(out, prompt)
 	}
 	return out

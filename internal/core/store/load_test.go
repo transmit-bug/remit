@@ -25,7 +25,7 @@ func TestCurrentIndexReadsNoSources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("note: %v", err)
 	}
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("card: %v", err)
 	}
@@ -81,4 +81,15 @@ func TestCurrentIndexReadsNoSources(t *testing.T) {
 	if due, err := incremental.Due(now, 0); err != nil || len(due) != 0 {
 		t.Errorf("Due after the tail = (%v, %v), want nothing", due, err)
 	}
+}
+
+// firstCard makes one basic card for a block, which is all this test needs: the
+// shapes a paragraph makes are the card plugin's decision, and the store only
+// stores what it is told to.
+func firstCard(lib *Library, blockID core.ID) (core.Card, error) {
+	cards, err := lib.CreateCards(blockID, []core.Derived{{Kind: core.KindBasic}})
+	if err != nil {
+		return core.Card{}, err
+	}
+	return cards[0], nil
 }

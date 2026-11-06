@@ -29,7 +29,7 @@ func cards(t *testing.T, lib *store.Library, n int) []core.Card {
 	}
 	out := make([]core.Card, 0, n)
 	for _, b := range note.Blocks {
-		card, err := lib.CreateCard(b.ID)
+		card, err := firstCard(lib, b.ID)
 		if err != nil {
 			t.Fatalf("card: %v", err)
 		}
@@ -180,4 +180,15 @@ func TestNewPerDayCountsWhatStartedToday(t *testing.T) {
 			}
 		}
 	}
+}
+
+// firstCard makes one basic card for a block, which is all this test needs: the
+// shapes a paragraph makes are the card plugin's decision, and the store only
+// stores what it is told to.
+func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
+	cards, err := lib.CreateCards(blockID, []core.Derived{{Kind: core.KindBasic}})
+	if err != nil {
+		return core.Card{}, err
+	}
+	return cards[0], nil
 }

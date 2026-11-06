@@ -26,7 +26,10 @@ func TestCreateCardsDerivesPlaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cards, err := lib.CreateCards(note.Blocks[0].ID, core.Derive(note.Blocks[0].Text))
+	cards, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{
+		{Kind: core.KindCloze, Ordinal: 0, Prompt: "The […] blank and the second one.", Answer: "first"},
+		{Kind: core.KindCloze, Ordinal: 1, Prompt: "The first blank and the […].", Answer: "second"},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,21 +41,21 @@ func TestCreateCardsDerivesPlaces(t *testing.T) {
 			t.Errorf("card %d is %v/%d, want cloze/%d", i, card.Kind, card.Ordinal, i)
 		}
 	}
-	prompt, answer, _ := cards[0].Sides(core.BlockSet{note.Blocks[0].ID: note.Blocks[0]})
-	if prompt != "The […] blank and the second one." || answer != "first" {
-		t.Errorf("the first blank asks %q / %q", prompt, answer)
-	}
+	// The faces a card asks are the card plugin's shaping; the store keeps the
+	// place it was told to keep.
 
-	both, err := lib.CreateCards(note.Blocks[1].ID, core.Derive(note.Blocks[1].Text))
+	both, err := lib.CreateCards(note.Blocks[1].ID, []core.Derived{
+		{Kind: core.KindBidirectional, Ordinal: 0, Prompt: "the gaps between reviews", Answer: "spacing"},
+		{Kind: core.KindBidirectional, Ordinal: 1, Prompt: "spacing", Answer: "the gaps between reviews"},
+	})
 	if err != nil || len(both) != 2 {
 		t.Fatalf("the both-ways paragraph made %v (%v)", both, err)
 	}
-	blocks := core.BlockSet{note.Blocks[1].ID: note.Blocks[1]}
-	if p, a, _ := both[1].Sides(blocks); p != "the gaps between reviews" || a != "spacing" {
-		t.Errorf("the reversed card asks %q / %q", p, a)
+	if both[1].Kind != core.KindBidirectional || both[1].Ordinal != 1 {
+		t.Errorf("the reversed card is %v/%d", both[1].Kind, both[1].Ordinal)
 	}
 
-	if _, err := lib.CreateCards(note.Blocks[3].ID, core.Derive(note.Blocks[3].Text)); !errors.Is(err, store.ErrNothingToAsk) {
+	if _, err := lib.CreateCards(note.Blocks[3].ID, nil); !errors.Is(err, store.ErrNothingToAsk) {
 		t.Errorf("a plain paragraph made %v, want ErrNothingToAsk", err)
 	}
 

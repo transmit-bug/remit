@@ -82,7 +82,7 @@ func seedLibrary(t *testing.T, dir string) testLibrary {
 	)
 
 	card := func(block core.ID) core.Card {
-		c, err := lib.CreateCard(block)
+		c, err := firstCard(lib, block)
 		if err != nil {
 			t.Fatalf("create card: %v", err)
 		}
@@ -407,7 +407,7 @@ func TestEditDocument(t *testing.T) {
 	if !ok {
 		t.Fatal("the card is gone")
 	}
-	prompt, _, state := card.Sides(a.Library())
+	prompt, _, state := a.faces(card)
 	if state != core.LinkLive {
 		t.Errorf("the card is %s, want live", state)
 	}
@@ -765,4 +765,15 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 	if tt.FramePending() {
 		t.Error("view still requests frames after a locale switch")
 	}
+}
+
+// firstCard makes one basic card for a block, which is all this test needs: the
+// shapes a paragraph makes are the card plugin's decision, and the store only
+// stores what it is told to.
+func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
+	cards, err := lib.CreateCards(blockID, []core.Derived{{Kind: core.KindBasic}})
+	if err != nil {
+		return core.Card{}, err
+	}
+	return cards[0], nil
 }

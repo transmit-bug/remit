@@ -15,12 +15,14 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
+	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
 
 // Note says what the file is and where it comes from.
 const Note = "Frozen answers of the Go implementation (ADR 0005/0007): the faces a " +
 	"paragraph gives, and the schedule each answer leaves. Regenerate with " +
-	"go test ./internal/core/golden -update only when the answers are meant to change."
+	"go test ./internal/golden -update only when the answers are meant to change."
 
 // Set is the whole frozen answer set.
 type Set struct {
@@ -128,9 +130,15 @@ func faces() []Face {
 				Kind: core.KindBidirectional, Ordinal: 1}},
 	}
 
+	runner, err := builtin.Cards(ext.JSLimits{})
+	if err != nil {
+		panic("golden: the card plugin did not start: " + err.Error())
+	}
+	defer runner.Close()
+
 	out := make([]Face, 0, len(cases))
 	for _, c := range cases {
-		prompt, answer, state := c.card.Sides(blocks)
+		prompt, answer, state := facesOf(runner, blocks, c.card)
 		face := Face{
 			Proves:         c.proves,
 			Kind:           c.card.Kind.String(),
@@ -214,4 +222,27 @@ func schedule_() []Step {
 		}
 	}
 	return out
+}
+
+// facesOf asks the card plugin what a card asks, and applies the card's own
+// overrides: the shapes are the plugin's, the overrides are the card's.
+func facesOf(runner *ext.JSRunner, blocks core.BlockSet, card core.Card) (prompt, answer string, state core.LinkState) {
+	text, state := card.Ref.Text(blocks)
+	prompt, answer = text, ""
+	var answered struct {
+		Front string `json:"front"`
+		Back  string `json:"back"`
+	}
+	params := map[string]any{"text": text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
+	if err := runner.Call("faces", params, &answered); err != nil {
+		panic("golden: the card plugin could not shape a card: " + err.Error())
+	}
+	prompt, answer = answered.Front, answered.Back
+	if card.Prompt != "" {
+		prompt = card.Prompt
+	}
+	if card.Answer != "" {
+		answer = card.Answer
+	}
+	return prompt, answer, state
 }
