@@ -72,12 +72,18 @@ type libraryData struct {
 	perNote  map[core.ID]int
 	// noteOf is the note a block belongs to, so a card can open its source.
 	noteOf map[core.ID]core.ID
+	// tags counts how many notes carry each tag, and noteTags is what each note
+	// carries: the sidebar's filter reads them without asking the store.
+	tags     map[string]int
+	noteTags map[core.ID][]string
 }
 
 // newLibraryData derives the snapshot from the store's notes and cards.
 func newLibraryData(notes []core.Note, cards []core.Card) libraryData {
 	d := libraryData{
 		notes:    notes,
+		tags:     map[string]int{},
+		noteTags: map[core.ID][]string{},
 		cards:    cards,
 		byID:     make(map[core.ID]core.Card, len(cards)),
 		blocks:   make(core.BlockSet),
@@ -88,12 +94,21 @@ func newLibraryData(notes []core.Note, cards []core.Card) libraryData {
 	}
 	for _, note := range notes {
 		d.titles[note.ID] = note.Title
+		seen := map[string]bool{}
 		for _, block := range note.Blocks {
 			if block.ID == "" {
 				continue
 			}
 			d.blocks[block.ID] = block
 			d.noteOf[block.ID] = note.ID
+			for _, tag := range core.Tags(block.Text) {
+				if seen[tag] {
+					continue
+				}
+				seen[tag] = true
+				d.noteTags[note.ID] = append(d.noteTags[note.ID], tag)
+				d.tags[tag]++
+			}
 		}
 	}
 	for _, card := range cards {

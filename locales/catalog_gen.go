@@ -1747,6 +1747,20 @@ func (msgs Messages) CheckNow() string {
 	return Catalog.Format(msgs.locale, "checkNow", nil)
 }
 
+// ClearFilter says "All notes"
+// in the language the app shows.
+//
+// Button: drop the tag filter and show every note.
+func ClearFilter() string { return In(i18n.Locale()).ClearFilter() }
+
+// ClearFilter says "All notes"
+// in the language of msgs.
+//
+// Button: drop the tag filter and show every note.
+func (msgs Messages) ClearFilter() string {
+	return Catalog.Format(msgs.locale, "clearFilter", nil)
+}
+
 // Outline says "Outline"
 // in the language the app shows.
 //

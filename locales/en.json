@@ -686,6 +686,10 @@
   "@checkNow": {
     "description": "Button: run an update check now."
   },
+  "clearFilter": "All notes",
+  "@clearFilter": {
+    "description": "Button: drop the tag filter and show every note."
+  },
   "outline": "Outline",
   "@outline": {
     "description": "The note panel's first view: the note's headings."

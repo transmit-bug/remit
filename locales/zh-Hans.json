@@ -121,6 +121,7 @@
   "settingsCheckAtLaunch": "启动时检查",
   "settingsUpdatesBody": "Remit 在打开后检查一次，除此之外不会联网。",
   "checkNow": "立即检查",
+  "clearFilter": "全部笔记",
   "outline": "大纲",
   "backlinks": "反链",
   "outlineEmpty": "还没有标题。",
