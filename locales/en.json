@@ -261,5 +261,27 @@
   "saveFailed": "Could not save the change.",
   "@saveFailed": {
     "description": "A write to the library failed."
+  },
+  "openRemit": "Open Remit",
+  "@openRemit": {
+    "description": "Tray menu: bring the window forward."
+  },
+  "quitRemit": "Quit Remit",
+  "@quitRemit": {
+    "description": "Tray menu: quit the app."
+  },
+  "trayTitle": "Remit · {count}",
+  "@trayTitle": {
+    "description": "Tray title with the number of cards left.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "trayTooltip": "Remit",
+  "@trayTooltip": {
+    "description": "Tray tooltip."
   }
 }

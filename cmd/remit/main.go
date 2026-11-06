@@ -14,6 +14,12 @@ import (
 )
 
 func main() {
+	// One instance per user: a second launch forwards its URLs and exits, and
+	// opening a library never races the running app.
+	if !mygo.App.RequestSingleInstanceLock() {
+		return
+	}
+
 	a := appui.NewApp()
 	mygo.App.SetName(appui.Name)
 	mygo.App.SetVersion(appui.Version)
@@ -40,6 +46,8 @@ func main() {
 		mygo.App.SetMenu(menuBar(func() { a.ShowAbout(mainWin) }))
 	}
 
+	installDeepLinks(a)
+
 	mygo.App.WhenReady(func() {
 		mainWin = mygo.NewWindow(mygo.WindowOptions{
 			Title:     appui.Name,
@@ -51,6 +59,8 @@ func main() {
 			StateKey: "main",
 			Content:  myui.View(a.View),
 		})
+		installHotkey(a)
+		installTray(a, func() { mainWin.Focus() })
 	})
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)
