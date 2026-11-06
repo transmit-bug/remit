@@ -11,10 +11,14 @@ import (
 // cardFile is the on-disk shape of a card. Overrides may be multi-line and are
 // edited by hand, so the file is indented JSON rather than prose.
 type cardFile struct {
-	Block   core.ID     `json:"block"`
-	Prompt  string      `json:"prompt"`
-	Answer  string      `json:"answer"`
-	Status  string      `json:"status"`
+	Block  core.ID `json:"block"`
+	Prompt string  `json:"prompt"`
+	Answer string  `json:"answer"`
+	Status string  `json:"status"`
+	// Kind and Ordinal are written only when they are not a basic card's, so a
+	// plain card file stays as it was.
+	Kind    string      `json:"kind,omitempty"`
+	Ordinal int         `json:"ordinal,omitempty"`
 	Created string      `json:"created"`
 	Frozen  *frozenFile `json:"frozen,omitempty"`
 }
@@ -32,7 +36,11 @@ func encodeCard(card core.Card, created time.Time) ([]byte, error) {
 		Prompt:  card.Prompt,
 		Answer:  card.Answer,
 		Status:  card.Status.String(),
+		Ordinal: card.Ordinal,
 		Created: formatTime(created),
+	}
+	if card.Kind != core.KindBasic {
+		file.Kind = card.Kind.String()
 	}
 	if card.Ref.Frozen != nil {
 		file.Frozen = &frozenFile{
@@ -63,12 +71,22 @@ func decodeCard(id core.ID, data []byte) (core.Card, time.Time, error) {
 		}
 		status = parsed
 	}
+	kind := core.KindBasic
+	if file.Kind != "" {
+		parsed, ok := core.ParseKind(file.Kind)
+		if !ok {
+			return core.Card{}, time.Time{}, fmt.Errorf("store: card %q: unknown kind %q", id, file.Kind)
+		}
+		kind = parsed
+	}
 	card := core.Card{
-		ID:     id,
-		Ref:    core.Reference{Block: file.Block},
-		Prompt: file.Prompt,
-		Answer: file.Answer,
-		Status: status,
+		ID:      id,
+		Ref:     core.Reference{Block: file.Block},
+		Prompt:  file.Prompt,
+		Answer:  file.Answer,
+		Status:  status,
+		Kind:    kind,
+		Ordinal: file.Ordinal,
 	}
 	if file.Frozen != nil {
 		at, err := parseTime(file.Frozen.At)

@@ -1,11 +1,11 @@
 package ui
 
 import (
-	"strings"
-
+	"errors"
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ui/kit"
 )
 
@@ -21,9 +21,9 @@ type paragraphCards struct {
 func (a *App) cardsByParagraph(note core.Note) []paragraphCards {
 	var out []paragraphCards
 	for i, block := range note.Blocks {
-		// Only a paragraph that holds the separator is a card's source, so a
-		// paragraph whose separator went away has no badge to show.
-		if !strings.Contains(block.Text, core.Separator) {
+		// Only a paragraph that asks something is a card's source, so a
+		// paragraph whose separator or blanks went away has no badge to show.
+		if len(core.Derive(block.Text)) == 0 {
 			continue
 		}
 		var cards []core.Card
@@ -41,54 +41,55 @@ func (a *App) cardsByParagraph(note core.Note) []paragraphCards {
 }
 
 // reconcileCards applies the note's shape to its cards after a save. A paragraph
-// that now holds the separator makes a card, unless one already points at it; a
-// paragraph whose separator is gone has its cards suspended — out of the queue,
-// history kept — because a card without a prompt and an answer has nothing to
-// ask. Neither path deletes anything.
+// that asks something makes the card it asks for — one per blank, both ways, or
+// one — unless a card already holds that place; a card whose place the paragraph
+// no longer asks for is suspended, out of the queue with its history kept.
+// Nothing is deleted.
 func (a *App) reconcileCards(c *ui.Context) {
 	if a.lib == nil || a.editor.draft.ID == "" {
 		return
 	}
 	wrote := false
 	for _, block := range a.editor.draft.Blocks {
-		_, _, hasSeparator := strings.Cut(block.Text, core.Separator)
-
-		live, suspended := core.Card{}, core.Card{}
-		for _, card := range a.data.cards {
-			if card.Ref.Block != block.ID {
-				continue
-			}
-			if card.Status == core.StatusSuspended {
-				if suspended.ID == "" {
-					suspended = card
-				}
-				continue
-			}
-			if live.ID == "" {
-				live = card
-			}
+		asked := core.Derive(block.Text)
+		type place struct {
+			kind    core.Kind
+			ordinal int
 		}
-
-		switch {
-		case hasSeparator && live.ID == "" && suspended.ID == "":
-			// A paragraph typed with :: is a card: it joins the queue now.
-			if _, err := a.lib.CreateCard(block.ID); err != nil {
+		wanted := make(map[place]bool, len(asked))
+		for _, d := range asked {
+			wanted[place{d.Kind, d.Ordinal}] = true
+		}
+		held := map[place]bool{}
+		for _, card := range a.data.cards {
+			if card.Ref.Block != block.ID || card.Status == core.StatusSuspended {
+				continue
+			}
+			place := place{card.Kind, card.Ordinal}
+			if !wanted[place] {
+				// The paragraph stopped asking this: it leaves the queue.
+				card.Status = core.StatusSuspended
+				if err := a.lib.SaveCard(card); err != nil {
+					a.report(c, "suspend card", err)
+					return
+				}
+				wrote = true
+				continue
+			}
+			held[place] = true
+		}
+		missing := 0
+		for range wanted {
+			missing++
+		}
+		if missing == len(held) && missing == len(wanted) {
+			continue
+		}
+		if missing > 0 {
+			// A card the note asks for and the library does not hold — a new
+			// separator, a new blank — is made now.
+			if _, err := a.lib.CreateCards(block.ID); err != nil && !errors.Is(err, store.ErrNothingToAsk) {
 				a.report(c, "make card", err)
-				return
-			}
-			wrote = true
-		case hasSeparator && live.ID == "" && suspended.ID != "":
-			// The separator came back: the card it had comes back with it.
-			suspended.Status = core.StatusNew
-			if err := a.lib.SaveCard(suspended); err != nil {
-				a.report(c, "restore card", err)
-				return
-			}
-			wrote = true
-		case !hasSeparator && live.ID != "":
-			live.Status = core.StatusSuspended
-			if err := a.lib.SaveCard(live); err != nil {
-				a.report(c, "suspend card", err)
 				return
 			}
 			wrote = true

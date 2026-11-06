@@ -17,7 +17,7 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "2"
+const schemaVersion = "3"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -58,7 +58,9 @@ CREATE TABLE cards (
 	frozen      INTEGER NOT NULL,
 	frozen_text TEXT NOT NULL,
 	frozen_at   INTEGER NOT NULL,
-	live        INTEGER NOT NULL
+	live        INTEGER NOT NULL,
+	kind        TEXT NOT NULL DEFAULT '',
+	ordinal     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX cards_block ON cards (block_id);
 CREATE TABLE card_state (
@@ -328,7 +330,7 @@ type cardRow struct {
 // cardColumns is the projection a card row is read through, in scan order.
 const cardColumns = `
 	c.id, c.block_id, c.status, c.stored, c.created, c.prompt, c.answer,
-	c.frozen, c.frozen_text, c.frozen_at, c.live,
+	c.frozen, c.frozen_text, c.frozen_at, c.live, c.kind, c.ordinal,
 	COALESCE(s.stability, 0), COALESCE(s.difficulty, 0), COALESCE(s.due, 0),
 	COALESCE(s.last_review, 0), COALESCE(s.reviews, 0), COALESCE(s.last_rating, ''),
 	COALESCE(s.last_seq, 0)`
@@ -349,10 +351,11 @@ func putCard(e execer, row cardRow) error {
 	}
 	_, err := e.Exec(
 		`INSERT OR REPLACE INTO cards
-		 (id, block_id, status, stored, created, prompt, answer, frozen, frozen_text, frozen_at, live)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 (id, block_id, status, stored, created, prompt, answer, frozen, frozen_text, frozen_at, live, kind, ordinal)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		string(row.card.ID), string(row.card.Ref.Block), row.card.Status.String(), row.stored.String(),
-		row.created.UnixNano(), row.card.Prompt, row.card.Answer, frozen, frozenText, frozenAt, live)
+		row.created.UnixNano(), row.card.Prompt, row.card.Answer, frozen, frozenText, frozenAt, live,
+		row.card.Kind.String(), row.card.Ordinal)
 	return err
 }
 
@@ -473,14 +476,14 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 		var (
 			row                                       cardRow
 			id, block, status, stored, prompt, answer string
-			frozenText, lastRating                    string
+			frozenText, lastRating, kind              string
 			created, frozenAt, due, lastReview        int64
-			frozen, live                              int
+			frozen, live, ordinal                     int
 			stability, difficulty                     float64
 			reviews                                   int
 		)
 		err := rows.Scan(&id, &block, &status, &stored, &created, &prompt, &answer,
-			&frozen, &frozenText, &frozenAt, &live,
+			&frozen, &frozenText, &frozenAt, &live, &kind, &ordinal,
 			&stability, &difficulty, &due, &lastReview, &reviews, &lastRating, &row.lastSeq)
 		if err != nil {
 			return nil, err
@@ -490,6 +493,10 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 		row.card.Prompt = prompt
 		row.card.Answer = answer
 		row.card.Status, _ = core.ParseStatus(status)
+		if kind != "" {
+			row.card.Kind, _ = core.ParseKind(kind)
+		}
+		row.card.Ordinal = ordinal
 		row.stored, _ = core.ParseStatus(stored)
 		if frozen == 1 {
 			row.card.Ref.Frozen = &core.Snapshot{Text: frozenText, At: time.Unix(0, frozenAt).UTC()}

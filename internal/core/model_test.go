@@ -203,3 +203,134 @@ func TestBlockSet(t *testing.T) {
 		t.Error("Block found a block that is not in the set")
 	}
 }
+
+// A paragraph derives as many cards as it asks: each blank of a cloze, both
+// directions of a both-ways paragraph, one for a single separator, none for
+// plain text.
+func TestDerive(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want []Derived
+	}{
+		{
+			name: "plain text asks nothing",
+			text: "A paragraph of a note.",
+			want: nil,
+		},
+		{
+			name: "one separator asks one",
+			text: "Spacing beats cramming :: reviewing just before you forget",
+			want: []Derived{{Kind: KindBasic, Ordinal: 0,
+				Prompt: "Spacing beats cramming", Answer: "reviewing just before you forget"}},
+		},
+		{
+			name: "several separators still ask one, split at the first",
+			text: "A block divides at :: the first :: prompt before, answer after.",
+			want: []Derived{{Kind: KindBasic, Ordinal: 0,
+				Prompt: "A block divides at", Answer: "the first :: prompt before, answer after."}},
+		},
+		{
+			name: "two blanks ask two, each hiding its own",
+			text: "The {{first}} blank and the {{second}} one.",
+			want: []Derived{
+				{Kind: KindCloze, Ordinal: 0, Prompt: "The […] blank and the second one.", Answer: "first"},
+				{Kind: KindCloze, Ordinal: 1, Prompt: "The first blank and the […] one.", Answer: "second"},
+			},
+		},
+		{
+			name: "both ways asks two, reversed",
+			text: "spacing ::: the gaps between reviews",
+			want: []Derived{
+				{Kind: KindBidirectional, Ordinal: 0, Prompt: "spacing", Answer: "the gaps between reviews"},
+				{Kind: KindBidirectional, Ordinal: 1, Prompt: "the gaps between reviews", Answer: "spacing"},
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := Derive(c.text)
+			if len(got) != len(c.want) {
+				t.Fatalf("derived %d cards, want %d: %+v", len(got), len(c.want), got)
+			}
+			for i := range got {
+				if got[i] != c.want[i] {
+					t.Errorf("card %d is %+v, want %+v", i, got[i], c.want[i])
+				}
+			}
+		})
+	}
+}
+
+// A card's sides follow its paragraph while the reference is live, and the
+// paragraph's own shape picks which of its cards this is.
+func TestClozeAndBothWaySides(t *testing.T) {
+	src := BlockSet{"block_x": {ID: "block_x", Text: "The {{first}} blank asks {{second}}."}}
+	cases := []struct {
+		name  string
+		card  Card
+		wantP string
+		wantA string
+	}{
+		{"live cloze, first blank", Card{Ref: Reference{Block: "block_x"}, Kind: KindCloze, Ordinal: 0},
+			"The […] blank asks second.", "first"},
+		{"live cloze, second blank", Card{Ref: Reference{Block: "block_x"}, Kind: KindCloze, Ordinal: 1},
+			"The first blank asks […].", "second"},
+		{"live cloze, blank gone", Card{Ref: Reference{Block: "block_x"}, Kind: KindCloze, Ordinal: 5},
+			"The first blank asks second.", ""},
+		{"override wins on the prompt", Card{Ref: Reference{Block: "block_x"}, Kind: KindCloze, Ordinal: 0, Prompt: "asked another way"},
+			"asked another way", "first"},
+	}
+
+	both := BlockSet{"block_x": {ID: "block_x", Text: "spacing ::: the gaps between reviews"}}
+	cases = append(cases,
+		struct {
+			name  string
+			card  Card
+			wantP string
+			wantA string
+		}{"both ways, as written", Card{Ref: Reference{Block: "block_x"}, Kind: KindBidirectional}, "spacing", "the gaps between reviews"},
+		struct {
+			name  string
+			card  Card
+			wantP string
+			wantA string
+		}{"both ways, reversed", Card{Ref: Reference{Block: "block_x"}, Kind: KindBidirectional, Ordinal: 1}, "the gaps between reviews", "spacing"},
+	)
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			blocks := src
+			if c.card.Kind == KindBidirectional {
+				blocks = both
+			}
+			prompt, answer, state := c.card.Sides(blocks)
+			if state != LinkLive {
+				t.Errorf("state is %s, want live", state)
+			}
+			if prompt != c.wantP || answer != c.wantA {
+				t.Errorf("sides are %q / %q, want %q / %q", prompt, answer, c.wantP, c.wantA)
+			}
+		})
+	}
+}
+
+// A frozen card asks the text it kept, and a lost one asks its overrides or
+// nothing: the paragraph's changes do not reach either.
+func TestFrozenAndLostSides(t *testing.T) {
+	src := BlockSet{"block_x": {ID: "block_x", Text: "spacing :: the gaps between reviews"}}
+	frozen := Card{
+		Ref:  Reference{Block: "block_x", Frozen: &Snapshot{Text: "old :: snapshot"}},
+		Kind: KindBasic,
+	}
+	prompt, answer, state := frozen.Sides(src)
+	if state != LinkFrozen || prompt != "old" || answer != "snapshot" {
+		t.Errorf("frozen card asks %q / %q (%s)", prompt, answer, state)
+	}
+
+	lost := Card{Ref: Reference{Block: "gone"}, Kind: KindBasic, Prompt: "override"}
+	prompt, answer, state = lost.Sides(src)
+	if state != LinkLost || prompt != "override" || answer != "" {
+		t.Errorf("lost card asks %q / %q (%s)", prompt, answer, state)
+	}
+}

@@ -180,3 +180,51 @@ func noteFile(a *App, id core.ID) string {
 	}
 	return ""
 }
+
+// A paragraph with two blanks is two cards, each asking its own blank, and both
+// can be graded.
+func TestClozeMakesOneCardPerBlank(t *testing.T) {
+	msgs := locales.In("en")
+	a, _ := newTestApp(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	newNoteTyped(t, a, tt, "The {{first}} blank asks {{second}}.")
+
+	if !tt.HasText(msgs.CardOnParagraph(1, 2)) {
+		t.Fatalf("the paragraph's badge does not say two cards; texts %q", tt.Texts())
+	}
+	var cloze []core.Card
+	for _, card := range a.Library().Cards() {
+		if card.Kind == core.KindCloze {
+			cloze = append(cloze, card)
+		}
+	}
+	if len(cloze) != 2 {
+		t.Fatalf("the paragraph made %d cloze cards, want 2", len(cloze))
+	}
+	// Each asks its own blank; the faces follow the paragraph, so nothing about
+	// the pair is stored twice.
+	prompt, answer, _ := cloze[0].Sides(a.Library())
+	if prompt != "The […] blank asks second." || answer != "first" {
+		t.Errorf("the first card asks %q / %q", prompt, answer)
+	}
+	prompt, answer, _ = cloze[1].Sides(a.Library())
+	if prompt != "The first blank asks […]." || answer != "second" {
+		t.Errorf("the second card asks %q / %q", prompt, answer)
+	}
+
+	// Both are due, so the queue holds both and each takes a grade.
+	due, err := a.Library().Due(time.Now(), 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	for _, card := range due {
+		if card.Kind == core.KindCloze {
+			seen++
+		}
+	}
+	if seen != 2 {
+		t.Fatalf("the queue holds %d cloze cards, want 2", seen)
+	}
+}
