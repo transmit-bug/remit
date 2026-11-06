@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -24,12 +25,24 @@ func (a *App) reviewDeps(c *ui.Context) review.Deps {
 			if !a.hasSummary {
 				return review.Summary{}, false
 			}
-			return review.Summary{
+			out := review.Summary{
 				Reviewed:    a.summary.Reviewed,
 				DueTomorrow: a.summary.DueTomorrow,
 				Accuracy:    a.summary.Accuracy,
 				Tone:        review.Quiet,
-			}, true
+			}
+			// What the scheduling plugin adds to the numbers is asked once per
+			// session, not once a frame: a plugin may spend a second on it.
+			key := fmt.Sprintf("%d/%d/%.3f", out.Reviewed, out.DueTomorrow, out.Accuracy)
+			if a.summaryWordFor != key {
+				a.summaryWordFor = key
+				a.summaryWord, _ = a.scheduler.SummaryOf(out.Reviewed, out.DueTomorrow, out.Accuracy)
+			}
+			if a.summaryWord.Tone == "celebrated" {
+				out.Tone = review.Celebrated
+			}
+			out.Lines = a.summaryWord.Lines
+			return out, true
 		},
 		Preview: func() ([4]review.Interval, bool) {
 			if !a.hasPreview || len(a.preview) != 4 {

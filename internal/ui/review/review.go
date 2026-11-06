@@ -7,6 +7,7 @@
 package review
 
 import (
+	"strings"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -106,6 +107,9 @@ type Summary struct {
 	DueTomorrow int
 	Accuracy    float64
 	Tone        Tone
+	// Lines are what the scheduling plugin adds to the numbers, as markdown the
+	// screen renders beneath its own wording.
+	Lines []string
 }
 
 // Deps is what the screen asks the app for: the card to show, and what the user
@@ -482,6 +486,15 @@ func empty(c *ui.Context, d Deps) {
 					FontSize(design.TypeBody).TextColor(t.Text)
 				ui.Text(c, msgs.SummaryDueTomorrow(summary.DueTomorrow)).
 					FontSize(design.TypeBody).TextColor(t.Text)
+				for _, line := range summary.Lines {
+					if strings.TrimSpace(line) == "" {
+						continue
+					}
+					// A plugin's line is markdown; the screen renders it as one
+					// line of text with its formulas set.
+					ui.Text(c, maths.Render(line)).
+						FontSize(design.TypeBody).TextColor(t.Text)
+				}
 				ui.Text(c, msgs.SummaryAccuracy(int(summary.Accuracy*100))).
 					FontSize(design.TypeBody).TextColor(t.TextMuted)
 				// Leaving is never blocked, whatever the tone.

@@ -434,3 +434,26 @@ func TestFormulaIsSetOnTheCard(t *testing.T) {
 		t.Error("the card shows the TeX source")
 	}
 }
+
+// What a scheduling plugin adds to the summary is shown beneath the numbers, and
+// a line of its own does not replace them.
+func TestSummaryLinesAreShown(t *testing.T) {
+	msgs := locales.In("en")
+	f := &fake{cards: map[core.ID]review.Card{}, state: &review.State{}}
+	f.summary = func() (review.Summary, bool) {
+		return review.Summary{Reviewed: 2, DueTomorrow: 1, Accuracy: 0.5,
+			Lines: []string{"a quiet word about the day"}}, true
+	}
+	state, deps := f.state, f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
+
+	for _, want := range []string{
+		msgs.SummaryReviewed(2),
+		msgs.SummaryDueTomorrow(1),
+		"a quiet word about the day",
+	} {
+		if !tt.HasText(want) {
+			t.Errorf("the summary is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+}

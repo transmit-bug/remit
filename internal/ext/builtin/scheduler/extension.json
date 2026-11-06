@@ -1,0 +1,8 @@
+{
+  "name": "scheduler",
+  "version": "1.0.0",
+  "protocol": 1,
+  "runtime": "js",
+  "entry": "main.js",
+  "capabilities": []
+}

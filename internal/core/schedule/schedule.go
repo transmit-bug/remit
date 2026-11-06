@@ -95,6 +95,10 @@ type Event struct {
 	Rating Rating
 	At     time.Time
 	Void   int64
+	// Scheduler is what wrote this review: a family and its version, as the
+	// plugin that scheduled it named itself. Empty means the review was written
+	// before the log carried one.
+	Scheduler string
 }
 
 // IsVoid reports whether the event cancels another review instead of recording
@@ -123,6 +127,9 @@ type State struct {
 type Params struct {
 	Weights          [21]float64 `json:"weights"`
 	DesiredRetention float64     `json:"desired_retention"`
+	// Scheduler is the identity future reviews are stamped with: a family and
+	// its version, as the scheduling plugin names them.
+	Scheduler string `json:"scheduler,omitempty"`
 }
 
 // DefaultParams returns the FSRS defaults: the published weights and a 0.9

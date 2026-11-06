@@ -75,6 +75,9 @@ type Options struct {
 	// Params is the schedule a new library starts with. An existing library
 	// keeps the one in its remit.json.
 	Params schedule.Params
+	// Scheduler names what schedules this library's reviews; every review it
+	// records is stamped with it. Empty keeps whatever the library holds.
+	Scheduler string
 }
 
 // Library is an open library. It is safe for concurrent use: every call takes
@@ -85,10 +88,11 @@ type Options struct {
 // ask for on every write. Note and block text stay on disk, read when a caller
 // names a note, a block or a card file.
 type Library struct {
-	mu     sync.Mutex
-	dir    string
-	now    func() time.Time
-	params schedule.Params
+	mu        sync.Mutex
+	dir       string
+	now       func() time.Time
+	params    schedule.Params
+	scheduler string
 
 	index   *index
 	nextSeq int64
@@ -150,6 +154,7 @@ func Create(dir string, opts Options) (*Library, error) {
 
 	library := newLibrary(dir, opts)
 	library.params = opts.Params.Normalized()
+	library.scheduler = firstNonEmpty(opts.Scheduler, library.params.Scheduler)
 	if err := os.MkdirAll(dir, dirPerms); err != nil {
 		return nil, err
 	}
@@ -185,6 +190,9 @@ func Open(dir string, opts Options) (*Library, error) {
 
 	library := newLibrary(dir, opts)
 	library.params = params
+	// What schedules this library is what the app says it schedules with, or
+	// what the library was last written with.
+	library.scheduler = firstNonEmpty(opts.Scheduler, params.Scheduler)
 	library.extensions = extensions
 	if err := library.load(); err != nil {
 		library.Close()
@@ -1047,6 +1055,20 @@ func (l *Library) markBlock(slug string, ref blockRef) error {
 }
 
 // Review records that a card was reviewed, and schedules it again.
+// Scheduler is what schedules this library's reviews now.
+func (l *Library) Scheduler() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.scheduler
+}
+
+// ScheduleParams is the schedule this library reviews with.
+func (l *Library) ScheduleParams() schedule.Params {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.params
+}
+
 func (l *Library) Review(cardID core.ID, rating schedule.Rating, at time.Time) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -1060,7 +1082,8 @@ func (l *Library) Review(cardID core.ID, rating schedule.Rating, at time.Time) e
 	if !rating.Valid() {
 		return fmt.Errorf("store: unknown rating %d", uint8(rating))
 	}
-	event := schedule.Event{Seq: l.nextSeq + 1, Card: cardID, Rating: rating, At: l.instant(at)}
+	event := schedule.Event{Seq: l.nextSeq + 1, Card: cardID, Rating: rating,
+		At: l.instant(at), Scheduler: l.scheduler}
 	return l.record(event, meta)
 }
 
@@ -1536,4 +1559,14 @@ func (l *Library) emit(kind string, id core.ID) {
 		return
 	}
 	l.onEvent(Event{Kind: kind, ID: id})
+}
+
+// firstNonEmpty is the first of the values that has anything in it.
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

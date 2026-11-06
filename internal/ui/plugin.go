@@ -37,6 +37,82 @@ func openCards(chosen *ext.JSRunner, without bool) *cardPlugin {
 	return &cardPlugin{runner: runner}
 }
 
+// schedulerPlugin is the extension that decides scheduling policy and says what
+// a finished session is worth: the arithmetic stays the app's (ADR 0007).
+type schedulerPlugin struct {
+	runner *ext.JSRunner
+}
+
+// openScheduler starts the scheduling plugin, or returns nil when the app is
+// asked to run without one.
+func openScheduler(chosen *ext.JSRunner, without bool) *schedulerPlugin {
+	if without {
+		return nil
+	}
+	if chosen != nil {
+		return &schedulerPlugin{runner: chosen}
+	}
+	runner, err := builtin.Scheduler(ext.JSLimits{})
+	if err != nil {
+		slog.Error("remit: the scheduler plugin did not start", "err", err)
+		return nil
+	}
+	return &schedulerPlugin{runner: runner}
+}
+
+// policy is what the plugin schedules with, and how it names itself.
+type policy struct {
+	Family    string  `json:"family"`
+	Version   string  `json:"version"`
+	Retention float64 `json:"retention"`
+}
+
+// Policy answers the plugin's policy, and false when it has none to give: the
+// app then schedules as it did before plugins, with its own defaults.
+func (p *schedulerPlugin) Policy() (policy, bool) {
+	if p == nil {
+		return policy{}, false
+	}
+	var answered policy
+	if err := p.runner.Call("policy", nil, &answered); err != nil {
+		slog.Error("remit: the scheduler plugin answered no policy", "err", err)
+		return policy{}, false
+	}
+	return answered, answered.Family != ""
+}
+
+// Identity is what a review record carries: the family and version that
+// scheduled it.
+func (p policy) Identity() string {
+	if p.Family == "" {
+		return ""
+	}
+	if p.Version == "" {
+		return p.Family
+	}
+	return p.Family + "-" + p.Version
+}
+
+// summary is what a finished session is worth, as a plugin may add to it.
+type summaryAnswer struct {
+	Tone  string   `json:"tone"`
+	Lines []string `json:"lines"`
+}
+
+// SummaryOf asks what the session is worth saying beyond its numbers.
+func (p *schedulerPlugin) SummaryOf(reviewed, dueTomorrow int, accuracy float64) (summaryAnswer, bool) {
+	if p == nil {
+		return summaryAnswer{}, false
+	}
+	var answered summaryAnswer
+	params := map[string]any{"reviewed": reviewed, "dueTomorrow": dueTomorrow, "accuracy": accuracy}
+	if err := p.runner.Call("summary", params, &answered); err != nil {
+		slog.Error("remit: the scheduler plugin answered no summary", "err", err)
+		return summaryAnswer{}, false
+	}
+	return answered, true
+}
+
 // derived is one card a plugin answered, as the extension speaks it.
 type derived struct {
 	Kind    string `json:"kind"`
