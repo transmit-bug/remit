@@ -152,6 +152,21 @@ func DefaultLibraryDir() (string, error) {
 // safe for concurrent use; a caller must not close it.
 func (a *App) Library() *store.Library { return a.lib }
 
+// OpenLibrary switches the window to the library at dir, closing the one open
+// now. A missing library is created, so a link or a dropped archive can point
+// at a place the app has not been before.
+func (a *App) OpenLibrary(dir string) {
+	if a.lib != nil {
+		if err := a.lib.Close(); err != nil {
+			slog.Warn("remit: close library", "err", err)
+		}
+		a.lib = nil
+	}
+	a.dir = dir
+	a.review.reset()
+	a.open()
+}
+
 // OnLibraryOpen registers a function told about the library once it opens,
 // and again after a retry succeeds. Setting it again replaces the previous
 // one; it is not called for a library that already opened.

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"log/slog"
+	"path/filepath"
 	"runtime"
 
 	"github.com/egoist/mygo"
@@ -67,6 +68,7 @@ func main() {
 	}
 
 	installDeepLinks(a)
+	installFileAssociations(a, filepath.Dir(dir))
 
 	mygo.App.WhenReady(func() {
 		mainWin = mygo.NewWindow(mygo.WindowOptions{
