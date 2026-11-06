@@ -17,6 +17,9 @@ type Note struct {
 	ID     ID
 	Title  string
 	Blocks []Block
+	// Updated is when the note was last saved, as the library reads it back:
+	// the notebook lists notes newest first.
+	Updated time.Time
 }
 
 // Block is a addressable piece of a note. Its ID is written inline in the

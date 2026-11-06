@@ -686,6 +686,14 @@
   "@checkNow": {
     "description": "Button: run an update check now."
   },
+  "today": "Today",
+  "@today": {
+    "description": "The first row of the notebook's list: what is due today."
+  },
+  "panelTitle": "Note panel",
+  "@panelTitle": {
+    "description": "Accessible label of the button that shows and hides the note's panel, and the panel's heading."
+  },
   "cardOnParagraph": "{count, plural, one {# card} other {# cards}} on ¶{paragraph}",
   "@cardOnParagraph": {
     "description": "Badge of a paragraph that feeds cards: how many, and which paragraph.",

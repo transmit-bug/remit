@@ -17,7 +17,7 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "3"
+const schemaVersion = "4"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -35,9 +35,10 @@ CREATE TABLE meta (
 	value TEXT NOT NULL
 );
 CREATE TABLE notes (
-	id    TEXT PRIMARY KEY,
-	slug  TEXT NOT NULL,
-	title TEXT NOT NULL
+	id      TEXT PRIMARY KEY,
+	slug    TEXT NOT NULL,
+	title   TEXT NOT NULL,
+	updated INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE blocks (
 	note_id  TEXT NOT NULL,
@@ -198,22 +199,24 @@ func (x *index) readMeta() (map[string]string, error) {
 
 // noteRow is a note as the index holds it.
 type noteRow struct {
-	id    core.ID
-	slug  string
-	title string
+	id      core.ID
+	slug    string
+	title   string
+	updated time.Time
 }
 
 func putNote(e execer, row noteRow) error {
-	_, err := e.Exec(`INSERT OR REPLACE INTO notes (id, slug, title) VALUES (?, ?, ?)`,
-		string(row.id), row.slug, row.title)
+	_, err := e.Exec(`INSERT OR REPLACE INTO notes (id, slug, title, updated) VALUES (?, ?, ?, ?)`,
+		string(row.id), row.slug, row.title, row.updated.UnixNano())
 	return err
 }
 
 func (x *index) note(id core.ID) (noteRow, bool) {
 	var row noteRow
 	var idText string
-	err := x.db.QueryRow(`SELECT id, slug, title FROM notes WHERE id = ?`, string(id)).
-		Scan(&idText, &row.slug, &row.title)
+	var updated int64
+	err := x.db.QueryRow(`SELECT id, slug, title, updated FROM notes WHERE id = ?`, string(id)).
+		Scan(&idText, &row.slug, &row.title, &updated)
 	if err != nil {
 		return noteRow{}, false
 	}
@@ -222,7 +225,7 @@ func (x *index) note(id core.ID) (noteRow, bool) {
 }
 
 func (x *index) notes() ([]noteRow, error) {
-	rows, err := x.db.Query(`SELECT id, slug, title FROM notes`)
+	rows, err := x.db.Query(`SELECT id, slug, title, updated FROM notes`)
 	if err != nil {
 		return nil, fmt.Errorf("store: notes query: %w", err)
 	}
@@ -231,10 +234,12 @@ func (x *index) notes() ([]noteRow, error) {
 	for rows.Next() {
 		var row noteRow
 		var idText string
-		if err := rows.Scan(&idText, &row.slug, &row.title); err != nil {
+		var updated int64
+		if err := rows.Scan(&idText, &row.slug, &row.title, &updated); err != nil {
 			return nil, err
 		}
 		row.id = core.ID(idText)
+		row.updated = time.Unix(0, updated).UTC()
 		out = append(out, row)
 	}
 	return out, rows.Err()
