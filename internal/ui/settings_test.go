@@ -79,7 +79,7 @@ func TestSettingsPage(t *testing.T) {
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
 			tt.Key(ui.Cmd, ui.Key2)
-			tt.Advance(200 * time.Millisecond) // the review card's exit
+			tt.Advance(320 * time.Millisecond) // the review card's exit
 
 			tt.Key(ui.Cmd, ui.KeyComma)
 			if a.mode != modeSettings {
@@ -116,7 +116,7 @@ func TestSettingsPage(t *testing.T) {
 			if a.mode != modeSettings || !tt.HasText("Rotate token") {
 				t.Fatalf("the palette did not open the settings page; texts %q", tt.Texts())
 			}
-			tt.Advance(200 * time.Millisecond) // the screen's entrance
+			tt.Advance(320 * time.Millisecond) // the screen's entrance
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
@@ -133,7 +133,7 @@ func TestSettingsSurviveRestart(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 	tt.Key(ui.Cmd, ui.KeyComma)
 
 	for _, field := range []string{"Serve to agents", "Check at launch", "Daily reminder"} {

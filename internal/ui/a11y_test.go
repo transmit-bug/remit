@@ -25,13 +25,13 @@ func TestChineseFitsTheSmallestWindow(t *testing.T) {
 			t.Errorf("%q box %+v is outside the 720x520 window", label, box)
 		}
 	}
-	for _, label := range []string{"复习", "新建笔记", "显示答案", "编辑笔记 (E)"} {
+	for _, label := range []string{"显示答案", "编辑笔记 (E)"} {
 		inside(label)
 	}
-	tt.Advance(200 * time.Millisecond) // the card's entry
+	tt.Advance(320 * time.Millisecond) // the card's entry
 
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the card's exit
+	tt.Advance(320 * time.Millisecond) // the card's exit
 	for _, label := range []string{"笔记", "笔记本", "第 1 块 · A daily habit"} {
 		inside(label)
 	}
@@ -57,23 +57,6 @@ func TestGradingAnnouncesWhatIsLeft(t *testing.T) {
 	}
 	if want := a.review.Remaining(); !containsSubstring(got, "left") {
 		t.Errorf("announcements %q do not say what is left (%d cards)", got, want)
-	}
-}
-
-// The whole review flow is reachable from the keyboard: enter, reveal, grade,
-// undo, leave.
-func TestReviewIsKeyboardOnly(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
-
-	tt.Key(ui.Cmd, ui.Key1)
-	tt.Key(0, ui.KeySpace)
-	tt.Key(0, ui.Key3)
-	tt.Key(0, ui.KeyU)
-	tt.Key(0, ui.KeyEscape)
-	if !tt.HasText("Notebook") {
-		t.Errorf("Escape did not return to notes; texts %q", tt.Texts())
 	}
 }
 

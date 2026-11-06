@@ -36,6 +36,9 @@ const (
 	PressScale float32 = 0.98
 	// PanelScale is how small a panel is as it arrives over the page.
 	PanelScale float32 = 0.96
+	// GradeRise is how far the graded card leaves upward and the next arrives
+	// from below: 8 DIP, enough to read as one card replacing another.
+	GradeRise float32 = 8
 )
 
 var (

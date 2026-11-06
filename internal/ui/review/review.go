@@ -26,11 +26,14 @@ const width float32 = 680
 // fade, no celebration. The transition honours the desktop's reduce-motion
 // setting by fading in place.
 var advance = ui.ElementTransition{
-	Duration: 120 * time.Millisecond,
-	Ease:     ui.EaseOut,
-	Enter:    &ui.Motion{Y: 8},
-	Exit:     &ui.Motion{Y: -8},
+	Duration: design.Grade.Duration,
+	Ease:     design.Grade.Ease,
+	Enter:    &ui.Motion{Y: design.GradeRise},
+	Exit:     &ui.Motion{Y: -design.GradeRise},
 }
+
+// statusHeight is how tall the one line the screen keeps may be.
+const statusHeight float32 = design.SpaceXL + design.SpaceXS
 
 // Rating is one of the four answers a revealed card takes.
 type Rating uint8
@@ -128,6 +131,13 @@ func (s *State) Sync(due []core.ID) {
 	s.queue = kept
 }
 
+// Progress is how many cards this session has graded, and how many it started
+// with: what the status bar draws.
+func (s *State) Progress() (done, total int) {
+	done = len(s.graded)
+	return done, done + len(s.queue)
+}
+
 // Remaining is how many cards are still to grade.
 func (s *State) Remaining() int { return len(s.queue) }
 
@@ -201,29 +211,61 @@ func (s *State) Forget() {
 
 // View draws the screen: one card, centred.
 func View(c *ui.Context, s *State, d Deps) {
-	msgs := locales.In(c.Locale())
-	ui.Column(c).Grow(1).AlignItems(ui.Center).Padding(design.SpaceXL).Children(func() {
-		ui.Column(c).FillWidth().MaxWidth(width).Gap(design.SpaceL).Children(func() {
-			ui.Row(c).AlignItems(ui.Center).Children(func() {
-				ui.Text(c, msgs.ReviewTitle()).FontSize(design.TypeTitle).Bold()
-				ui.Spacer(c)
-				ui.Badge(c, msgs.Remaining(s.Remaining()))
+	ui.Column(c).Fill().Children(func() {
+		statusBar(c, s)
+		// The card sits in the middle of what the status bar leaves, on the
+		// smallest window with a tighter margin so the card keeps its room.
+		pad := float32(design.SpaceXXL)
+		if w, _ := c.Size(); w < 800 {
+			pad = design.SpaceXL
+		}
+		ui.Column(c).Grow(1).Center().Padding(pad).Children(func() {
+			ui.Column(c).FillWidth().MaxWidth(width).Gap(design.SpaceL).Children(func() {
+				id, ok := s.Current()
+				var card Card
+				if ok {
+					card, ok = d.Card(id)
+				}
+				if !ok {
+					empty(c, d)
+					return
+				}
+				flipCard(c, s, d, card)
+				if card.State != core.LinkLost && s.Answered() {
+					grades(c, d, card.ID)
+				}
+				footer(c, s, d, card)
 			})
+		})
+	})
+}
 
-			id, ok := s.Current()
-			var card Card
-			if ok {
-				card, ok = d.Card(id)
+// statusBar is the one line the taking-over screen keeps: how much is left, how
+// far along the session is, and the keys that move it. It is never taller than
+// statusHeight.
+func statusBar(c *ui.Context, s *State) {
+	msgs := locales.In(c.Locale())
+	t := c.Theme()
+	done, total := s.Progress()
+	ui.Row(c).Height(statusHeight).Padding(design.SpaceXS, design.SpaceL).
+		AlignItems(ui.Center).Gap(design.SpaceS).Children(func() {
+		ui.Text(c, msgs.Remaining(s.Remaining())).
+			FontSize(design.TypeSmall).TextColor(t.TextMuted)
+		if total > 0 {
+			ui.Progress(c, float64(done)/float64(total)).Grow(1)
+		}
+		ui.Spacer(c)
+		ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Children(func() {
+			keys := []struct{ key, label string }{
+				{"Space", msgs.ShowAnswer()},
+				{"U", msgs.Undo()},
+				{"S", msgs.Suspend()},
+				{"E", msgs.EditNote()},
+				{"Esc", msgs.ModeNotes()},
 			}
-			if !ok {
-				empty(c, d)
-				return
+			for _, k := range keys {
+				kit.Keycap(c, k.key).Tooltip(k.label)
 			}
-			flipCard(c, s, d, card)
-			if card.State != core.LinkLost && s.Answered() {
-				grades(c, d, card.ID)
-			}
-			footer(c, s, d, card)
 		})
 	})
 }

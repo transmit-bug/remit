@@ -150,7 +150,7 @@ func TestModes(t *testing.T) {
 			}
 
 			tt.Key(ui.Cmd, ui.Key2)
-			tt.Advance(200 * time.Millisecond) // the card's exit
+			tt.Advance(320 * time.Millisecond) // the card's exit
 			for _, want := range []string{"Notebook", "Memory and recall", "Make card"} {
 				if !tt.HasText(want) {
 					t.Fatalf("notes mode: missing %q; texts %q", want, tt.Texts())
@@ -168,9 +168,9 @@ func TestModes(t *testing.T) {
 			if !tt.HasText("Show answer") {
 				t.Fatalf("Cmd+1 did not return to review; texts %q", tt.Texts())
 			}
-			tt.Advance(200 * time.Millisecond) // the card's entry
+			tt.Advance(320 * time.Millisecond) // the card's entry
 			tt.Key(0, ui.KeyEscape)
-			tt.Advance(200 * time.Millisecond) // the card's exit
+			tt.Advance(320 * time.Millisecond) // the card's exit
 			if !tt.HasText("Notebook") {
 				t.Fatalf("Esc did not return to notes; texts %q", tt.Texts())
 			}
@@ -319,7 +319,7 @@ func TestPalette(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	const field = "Block 1 · A daily habit"
 	if err := tt.Click(field); err != nil {
@@ -381,7 +381,7 @@ func TestEditBlock(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("Memory and recall"); err != nil {
 		t.Fatal(err)
@@ -409,7 +409,7 @@ func TestEditBlock(t *testing.T) {
 	if !tt.HasText("Practice spread over several days.") {
 		t.Fatalf("the edited answer is missing; texts %q", tt.Texts())
 	}
-	tt.Advance(200 * time.Millisecond)
+	tt.Advance(320 * time.Millisecond)
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -421,7 +421,7 @@ func TestNotesList(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("Writing cards"); err != nil {
 		t.Fatal(err)
@@ -470,7 +470,7 @@ func TestMakeCard(t *testing.T) {
 	if !tt.HasText("5 cards left") {
 		t.Fatalf("the card made now is not in today's queue; texts %q", tt.Texts())
 	}
-	tt.Advance(200 * time.Millisecond) // the card's entry
+	tt.Advance(320 * time.Millisecond) // the card's entry
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -485,10 +485,10 @@ func TestMinimumSizeControls(t *testing.T) {
 
 	// The queue the window opens on is usable at the smallest size.
 	assertControl(t, tt, 720, 520, "Show answer")
-	tt.Advance(200 * time.Millisecond) // the card's entry
+	tt.Advance(320 * time.Millisecond) // the card's entry
 
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the card's exit
+	tt.Advance(320 * time.Millisecond) // the card's exit
 	for _, label := range []string{"New note", "Notebook", "A daily habit", "Block 1 · A daily habit", "Make card", "Block 2 · A daily habit"} {
 		assertControl(t, tt, 720, 520, label)
 	}
@@ -524,7 +524,7 @@ func TestMinimumSizeControls(t *testing.T) {
 	if tt.HasText("Search actions") {
 		t.Error("the palette row was not clickable at the minimum")
 	}
-	tt.Advance(200 * time.Millisecond) // the card's transition
+	tt.Advance(320 * time.Millisecond) // the card's transition
 
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
@@ -542,7 +542,7 @@ func TestDark(t *testing.T) {
 	}
 
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the card's exit
+	tt.Advance(320 * time.Millisecond) // the card's exit
 	if !tt.HasText("Notebook") || !tt.HasText("Make card") {
 		t.Fatalf("dark notes mode is incomplete; texts %q", tt.Texts())
 	}
@@ -552,7 +552,7 @@ func TestDark(t *testing.T) {
 	if !tt.HasText("reviewing just before you forget strengthens recall.") {
 		t.Fatalf("dark review mode lost its content; texts %q", tt.Texts())
 	}
-	tt.Advance(200 * time.Millisecond)
+	tt.Advance(320 * time.Millisecond)
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -627,11 +627,11 @@ func TestFirstRun(t *testing.T) {
 	tt = ui.NewTester(third.View, 1024, 720)
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 	if !tt.HasText("Block 1 · Untitled note") {
 		t.Fatalf("the new note did not survive a restart; texts %q", tt.Texts())
 	}
-	tt.Advance(200 * time.Millisecond) // the screen's entrance
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -666,6 +666,7 @@ func TestCorruptLibrary(t *testing.T) {
 	if !tt.HasText("No cards left to review.") || tt.HasText("Remit could not open its library") {
 		t.Fatalf("trying again did not open the repaired library; texts %q", tt.Texts())
 	}
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -735,14 +736,14 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 
 	tt.SetLocale("zh-Hans")
 	tt.Frame()
-	for _, want := range []string{"复习", "显示答案", "新建笔记"} {
+	for _, want := range []string{"显示答案", "撤销 (U)"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing Chinese text %q; texts %q", want, tt.Texts())
 		}
 	}
 
 	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 	for _, want := range []string{"笔记", "笔记本"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing Chinese text %q in the notes; texts %q", want, tt.Texts())
@@ -756,7 +757,7 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 			t.Errorf("missing English text %q after switching back; texts %q", want, tt.Texts())
 		}
 	}
-	tt.Advance(200 * time.Millisecond) // the screen's entrance
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after a locale switch")
 	}

@@ -23,10 +23,10 @@ func TestBrowseEnter(t *testing.T) {
 			a, _ := newTestApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
-			tt.Advance(200 * time.Millisecond) // the opening card's entry
+			tt.Advance(320 * time.Millisecond) // the opening card's entry
 
 			tt.Key(ui.Cmd, ui.Key3)
-			tt.Advance(200 * time.Millisecond) // the review card's exit
+			tt.Advance(320 * time.Millisecond) // the review card's exit
 			for _, want := range []string{"Browse cards", "Search cards", "All", "Due", "Spacing beats cramming", "Memory and recall", "4 cards"} {
 				if !tt.HasText(want) {
 					t.Fatalf("browse is missing %q; texts %q", want, tt.Texts())
@@ -48,10 +48,10 @@ func TestBrowseSearch(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Advance(200 * time.Millisecond) // the opening card's entry
+	tt.Advance(320 * time.Millisecond) // the opening card's entry
 
 	tt.Key(ui.Cmd, ui.KeyF)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 	if !tt.HasText("Browse cards") {
 		t.Fatalf("Cmd+F did not open browse; texts %q", tt.Texts())
 	}
@@ -78,7 +78,7 @@ func TestBrowseSearch(t *testing.T) {
 	if !tt.HasText("Notebook") {
 		t.Fatalf("Esc did not return to the notes; texts %q", tt.Texts())
 	}
-	tt.Advance(200 * time.Millisecond) // the screen's entrance
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -148,9 +148,9 @@ func TestBrowseFilters(t *testing.T) {
 			a, _ := seedBrowseLibrary(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
-			tt.Advance(200 * time.Millisecond) // the opening card's entry
+			tt.Advance(320 * time.Millisecond) // the opening card's entry
 			tt.Key(ui.Cmd, ui.Key3)
-			tt.Advance(200 * time.Millisecond) // the review card's exit
+			tt.Advance(320 * time.Millisecond) // the review card's exit
 
 			for _, want := range []string{"Due card", "Fresh card", "Suspended card", lostBody} {
 				if !tt.HasText(want) {
@@ -203,9 +203,9 @@ func TestBrowseOpens(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Advance(200 * time.Millisecond) // the opening card's entry
+	tt.Advance(320 * time.Millisecond) // the opening card's entry
 	tt.Key(ui.Cmd, ui.Key3)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("Spacing beats cramming"); err != nil {
 		t.Fatal(err)
@@ -231,7 +231,7 @@ func TestBrowseOpens(t *testing.T) {
 	if tt.HasText("Block 1 · Memory and recall") {
 		t.Error("the editor still shows the note opened before")
 	}
-	tt.Advance(200 * time.Millisecond) // the screen's entrance
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -242,9 +242,9 @@ func TestBrowseOpensLostCard(t *testing.T) {
 	a, _ := seedBrowseLibrary(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Advance(200 * time.Millisecond) // the opening card's entry
+	tt.Advance(320 * time.Millisecond) // the opening card's entry
 	tt.Key(ui.Cmd, ui.Key3)
-	tt.Advance(200 * time.Millisecond) // the review card's exit
+	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click(lostBody); err != nil {
 		t.Fatal(err)
@@ -258,7 +258,7 @@ func TestBrowseOpensLostCard(t *testing.T) {
 	if tt.HasText("Notebook") {
 		t.Error("a lost card opened the editor")
 	}
-	tt.Advance(200 * time.Millisecond) // the card's entry
+	tt.Advance(320 * time.Millisecond) // the card's entry
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
