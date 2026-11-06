@@ -10,6 +10,7 @@ package golden
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 
 	"github.com/transmit-bug/remit/internal/core"
@@ -152,6 +153,13 @@ func faces() []Face {
 	return out
 }
 
+// round trims floating-point noise to nine decimals. The same weights give the
+// same answer on every platform to within the last bits — arm64 and amd64 fuse
+// differently — and an answer a card's schedule turns on is far above 1e-9, so
+// the frozen file holds the value without the noise rather than a platform's
+// version of it.
+func round(v float64) float64 { return math.Round(v*1e9) / 1e9 }
+
 // stateName names a link state as the file writes it.
 func stateName(state core.LinkState) string {
 	switch state {
@@ -200,8 +208,8 @@ func schedule_() []Step {
 				Rating:     r.String(),
 				Due:        next.Due.UTC().Format(time.RFC3339),
 				Reviews:    next.Reviews,
-				Stability:  next.Memory.Stability,
-				Difficulty: next.Memory.Difficulty,
+				Stability:  round(next.Memory.Stability),
+				Difficulty: round(next.Memory.Difficulty),
 			})
 		}
 	}

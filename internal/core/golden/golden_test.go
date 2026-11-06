@@ -3,6 +3,7 @@ package golden_test
 import (
 	"bytes"
 	"flag"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -121,6 +122,20 @@ func TestFrozenSetIsDeterministic(t *testing.T) {
 		}
 		if !bytes.Equal(first, again) {
 			t.Fatalf("build %d differs from the first", i+2)
+		}
+	}
+}
+
+// The frozen numbers carry no floating-point noise: nine decimals is where
+// rounding stops, and a value that needs more is a platform's answer rather than
+// the schedule's (arm64 and amd64 fuse differently in the last bits).
+func TestFrozenNumbersAreRounded(t *testing.T) {
+	for _, step := range golden.Build().Schedule {
+		for name, value := range map[string]float64{"stability": step.Stability, "difficulty": step.Difficulty} {
+			rounded := math.Round(value*1e9) / 1e9
+			if rounded != value {
+				t.Errorf("%s/%s %s is %v, which is not nine decimals", step.From, step.Rating, name, value)
+			}
 		}
 	}
 }

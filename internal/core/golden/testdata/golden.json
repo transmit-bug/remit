@@ -125,7 +125,7 @@
       "due": "2026-11-08T09:00:00Z",
       "reviews": 1,
       "stability": 1.2931,
-      "difficulty": 5.112170705601055
+      "difficulty": 5.112170706
     },
     {
       "proves": "a card never reviewed, answered",
@@ -135,7 +135,7 @@
       "due": "2026-11-09T09:00:00Z",
       "reviews": 1,
       "stability": 2.3065,
-      "difficulty": 2.118103970459015
+      "difficulty": 2.11810397
     },
     {
       "proves": "a card never reviewed, answered",
@@ -154,8 +154,8 @@
       "rating": "again",
       "due": "2026-11-08T09:00:00Z",
       "reviews": 2,
-      "stability": 0.6075801062519339,
-      "difficulty": 7.394502741279718
+      "stability": 0.607580106,
+      "difficulty": 7.394502741
     },
     {
       "proves": "a card being learned, answered",
@@ -164,8 +164,8 @@
       "rating": "hard",
       "due": "2026-11-15T09:00:00Z",
       "reviews": 2,
-      "stability": 7.513320366762571,
-      "difficulty": 4.7528584885325555
+      "stability": 7.513320367,
+      "difficulty": 4.752858489
     },
     {
       "proves": "a card being learned, answered",
@@ -174,8 +174,8 @@
       "rating": "good",
       "due": "2026-11-18T09:00:00Z",
       "reviews": 2,
-      "stability": 10.964332335820703,
-      "difficulty": 2.1112142357853942
+      "stability": 10.964332336,
+      "difficulty": 2.111214236
     },
     {
       "proves": "a card being learned, answered",
@@ -184,7 +184,7 @@
       "rating": "easy",
       "due": "2026-11-26T09:00:00Z",
       "reviews": 2,
-      "stability": 18.521754181758595,
+      "stability": 18.521754182,
       "difficulty": 1
     },
     {
@@ -194,8 +194,8 @@
       "rating": "again",
       "due": "2026-11-08T09:00:00Z",
       "reviews": 3,
-      "stability": 0.7593120455111854,
-      "difficulty": 7.392238132342694
+      "stability": 0.759312046,
+      "difficulty": 7.392238132
     },
     {
       "proves": "a card in long-term review, answered",
@@ -204,8 +204,8 @@
       "rating": "hard",
       "due": "2026-11-23T09:00:00Z",
       "reviews": 3,
-      "stability": 16.030392655278792,
-      "difficulty": 4.7482847615945705
+      "stability": 16.030392655,
+      "difficulty": 4.748284762
     },
     {
       "proves": "a card in long-term review, answered",
@@ -214,8 +214,8 @@
       "rating": "good",
       "due": "2026-12-02T09:00:00Z",
       "reviews": 3,
-      "stability": 25.126407973526423,
-      "difficulty": 2.104331390846447
+      "stability": 25.126407974,
+      "difficulty": 2.104331391
     },
     {
       "proves": "a card in long-term review, answered",
@@ -224,7 +224,7 @@
       "rating": "easy",
       "due": "2026-12-22T09:00:00Z",
       "reviews": 3,
-      "stability": 45.04590564361764,
+      "stability": 45.045905644,
       "difficulty": 1
     },
     {
@@ -234,8 +234,8 @@
       "rating": "again",
       "due": "2027-02-07T09:00:00Z",
       "reviews": 4,
-      "stability": 91.715096768162,
-      "difficulty": 8.341762369296838
+      "stability": 91.715096768,
+      "difficulty": 8.341762369
     },
     {
       "proves": "a card too stable to schedule further: the interval cap",
@@ -245,7 +245,7 @@
       "due": "2126-10-14T09:00:00Z",
       "reviews": 4,
       "stability": 36500,
-      "difficulty": 6.665995369296838
+      "difficulty": 6.665995369
     },
     {
       "proves": "a card too stable to schedule further: the interval cap",
@@ -255,7 +255,7 @@
       "due": "2126-10-14T09:00:00Z",
       "reviews": 4,
       "stability": 36500,
-      "difficulty": 4.9902283692968386
+      "difficulty": 4.990228369
     },
     {
       "proves": "a card too stable to schedule further: the interval cap",
@@ -265,7 +265,7 @@
       "due": "2126-10-14T09:00:00Z",
       "reviews": 4,
       "stability": 36500,
-      "difficulty": 3.3144613692968385
+      "difficulty": 3.314461369
     }
   ]
 }
