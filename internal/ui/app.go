@@ -76,6 +76,7 @@ type App struct {
 	prefs     prefsState
 	panel     panelMode        // what the user said about the note's panel
 	panelTab  panelTab         // outline or backlinks
+	tagFilter string           // the tag the notes are filtered by, empty for none
 	backlinks []store.Backlink // what points at the note open now
 	aboutWin  *mygo.Window     // the open About window, or nil
 

@@ -367,6 +367,9 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 			if err := putLinks(e, id, entry.note.Blocks); err != nil {
 				return err
 			}
+			if err := putTags(e, id, entry.note.Blocks); err != nil {
+				return err
+			}
 		}
 		for id, entry := range cards {
 			state := states[id]
@@ -739,6 +742,12 @@ func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 			return err
 		}
 		if err := putLinks(e, note.ID, note.Blocks); err != nil {
+			return err
+		}
+		if err := deleteTagsOfNote(e, note.ID); err != nil {
+			return err
+		}
+		if err := putTags(e, note.ID, note.Blocks); err != nil {
 			return err
 		}
 		if err := resolveBlocks(e, moved); err != nil {

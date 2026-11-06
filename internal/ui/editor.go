@@ -14,12 +14,16 @@ import (
 // document editor the note is written in. A note is a document whose paragraphs
 // are addressable (ADR 0005); the per-block form is gone.
 type editorState struct {
-	selected string
-	draft    core.Note
-	loaded   string // the note the draft holds
-	title    ui.Handle
-	body     ui.Handle
-	jumpTo   int // a paragraph of the note to put the caret in, 1-based; 0 for none
+	selected    string
+	draft       core.Note
+	loaded      string // the note the draft holds
+	title       ui.Handle
+	body        ui.Handle
+	findOpen    bool   // the in-document find bar is up
+	findQuery   string // what it looks for
+	findCurrent int    // which match is shown
+	findJumped  string // the query the selection was last put on
+	jumpTo      int    // a paragraph of the note to put the caret in, 1-based; 0 for none
 
 	focus   bool               // the title takes the caret in the next pass
 	doc     *richtext.Document // the note as one document, markers and all
@@ -94,6 +98,9 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 		return
 	}
 	a.editor.ensureDocument()
+	if a.editor.findOpen {
+		a.findBar(c)
+	}
 	if a.editor.jumpTo > 0 {
 		// A backlink names a paragraph of this note: the caret goes there, which
 		// scrolls it into view.
@@ -139,6 +146,45 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	case retitled:
 		a.saveNote(c)
 	}
+}
+
+// findBar shows the in-document find bar: it counts the query in the note open
+// now, and choosing a match puts the selection on it, which scrolls it into view.
+// It never looks at another note.
+func (a *App) findBar(c *ui.Context) {
+	matches, spans := findMatches(a.editor.doc.Text().String(), a.editor.findQuery)
+	if a.editor.findCurrent >= matches {
+		a.editor.findCurrent = 0
+	}
+	before := a.editor.findCurrent
+	ui.FindBar(c, &a.editor.findOpen, &a.editor.findQuery, matches, &a.editor.findCurrent)
+	if (a.editor.findCurrent != before || a.editor.findQuery != a.editor.findJumped) && matches > 0 {
+		// The bar keeps the focus: Escape and Enter are its keys while it is
+		// open, and the selection is enough to scroll the match into view.
+		span := spans[a.editor.findCurrent]
+		a.editor.doc.SetSelection(span[0], span[1])
+		a.editor.findJumped = a.editor.findQuery
+	}
+}
+
+// findMatches is every non-overlapping, case-insensitive match of query in text,
+// with where each one is.
+func findMatches(text, query string) (int, [][2]int) {
+	if query == "" {
+		return 0, nil
+	}
+	lower, needle := strings.ToLower(text), strings.ToLower(query)
+	var spans [][2]int
+	for from := 0; ; {
+		at := strings.Index(lower[from:], needle)
+		if at < 0 {
+			break
+		}
+		start := from + at
+		spans = append(spans, [2]int{start, start + len(needle)})
+		from = start + len(needle)
+	}
+	return len(spans), spans
 }
 
 // saveDocument writes what the editor holds: its paragraphs back into blocks,

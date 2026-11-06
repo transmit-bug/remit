@@ -17,7 +17,7 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "5"
+const schemaVersion = "6"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -71,6 +71,12 @@ CREATE TABLE links (
 	paragraph INTEGER NOT NULL
 );
 CREATE INDEX links_title ON links (title);
+CREATE TABLE tags (
+	note_id  TEXT NOT NULL,
+	block_id TEXT NOT NULL,
+	tag      TEXT NOT NULL
+);
+CREATE INDEX tags_tag ON tags (tag);
 CREATE TABLE card_state (
 	card_id     TEXT PRIMARY KEY,
 	stability   REAL NOT NULL,
