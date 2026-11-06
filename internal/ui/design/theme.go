@@ -1,6 +1,13 @@
 // Package design is Remit's design language: the two appearances (paper and
-// ink), the theme a window draws with, and the scale views size themselves by.
-// It imports nothing of the app, so every view may read it.
+// ink), the theme a window draws with, the scale views size themselves by, and
+// the icon set they draw with.
+//
+// The icons are Lucide's (lucide.dev), vendored in icons/ from
+// lucide-static v0.460.0 under the ISC license Lucide ships them with. Only the
+// icons the app uses are vendored; they are embedded in the binary and parsed
+// once, so the app makes no request for one.
+//
+// The package imports nothing of the app, so every view may read it.
 package design
 
 import (

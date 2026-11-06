@@ -106,6 +106,7 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	note := &a.editor.draft
 	if note.ID == "" {
 		ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Children(func() {
+			tk.icon(c, "file-text", iconLarge).TextColor(tk.TextMuted)
 			ui.Text(c, m(c).NoNotes()).FontSize(tk.typeHeading).TextColor(tk.TextMuted)
 			ui.Button(c, m(c).NewNote()).MinHeight(tk.control).OnClick(func() { a.newNote(c) })
 		})

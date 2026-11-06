@@ -200,7 +200,8 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 		Children(func() {
 			switch state {
 			case core.LinkLost:
-				ui.Badge(c, m(c).Lost()).AlignSelf(ui.Start).
+				ui.Badge(c, "").AlignSelf(ui.Start).
+					Children(func() { tk.iconText(c, "unlink", m(c).Lost(), iconSmall) }).
 					Background(tk.linkFill(tk.Danger)).TextColor(tk.linkInk(tk.Danger))
 				ui.Text(c, m(c).LostBody()).
 					FontSize(tk.typeBody).TextColor(tk.TextMuted)
@@ -213,7 +214,8 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 				return
 			case core.LinkFrozen:
 				ui.Row(c).AlignSelf(ui.Start).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
-					ui.Badge(c, m(c).Frozen()).
+					ui.Badge(c, "").
+						Children(func() { tk.iconText(c, "snowflake", m(c).Frozen(), iconSmall) }).
 						Background(tk.linkFill(tk.Warning)).TextColor(tk.linkInk(tk.Warning))
 					ui.Text(c, m(c).SnapshotTaken(card.Ref.Frozen.At.Format("2 January 2006"))).
 						FontSize(tk.typeSmall).TextColor(tk.TextMuted)
@@ -275,6 +277,7 @@ func (a *App) reviewFooter(c *ui.Context, tk tokens, card core.Card, state core.
 // reviewEmpty is the state after the last card.
 func (a *App) reviewEmpty(c *ui.Context, tk tokens) {
 	tk.card(ui.Column(c).Padding(tk.spaceXL).Gap(tk.spaceM)).Children(func() {
+		tk.icon(c, "coffee", iconLarge).TextColor(tk.TextMuted)
 		ui.Text(c, m(c).NoCards()).FontSize(tk.typeHeading).TextColor(tk.TextMuted)
 		ui.Button(c, m(c).BackToNotes()).MinHeight(tk.control).
 			OnClick(func() { a.setMode(modeNotes) })

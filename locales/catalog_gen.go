@@ -1747,6 +1747,22 @@ func (msgs Messages) CheckNow() string {
 	return Catalog.Format(msgs.locale, "checkNow", nil)
 }
 
+// Close says "Close"
+// in the language the app shows.
+//
+// Closes the dialog shown. The button is an icon, so this label is what
+// assistive technology reads and what the pointer shows.
+func Close() string { return In(i18n.Locale()).Close() }
+
+// Close says "Close"
+// in the language of msgs.
+//
+// Closes the dialog shown. The button is an icon, so this label is what
+// assistive technology reads and what the pointer shows.
+func (msgs Messages) Close() string {
+	return Catalog.Format(msgs.locale, "close", nil)
+}
+
 // UpdateAvailable says "Version {version} is available."
 // in the language the app shows.
 //

@@ -14,6 +14,7 @@ import (
 // already on disk. Nothing is created until the user says so.
 func (a *App) startView(c *ui.Context, tk tokens) {
 	ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Padding(tk.spaceXXL).Children(func() {
+		tk.icon(c, "book-open", iconLarge).TextColor(tk.TextMuted)
 		ui.Text(c, m(c).StartTitle()).FontSize(tk.typeTitle).Bold()
 		ui.Text(c, m(c).StartBody()).
 			FontSize(tk.typeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)

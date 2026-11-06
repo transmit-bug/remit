@@ -7,8 +7,14 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// lineHeight is the one line height the views draw at.
-const lineHeight = design.LineHeight
+// lineHeight is the one line height the views draw at, and the three sizes an
+// icon draws at.
+const (
+	lineHeight = design.LineHeight
+	iconSmall  = design.IconSmall
+	iconMedium = design.IconMedium
+	iconLarge  = design.IconLarge
+)
 
 // tokens is what a view draws with: the appearance's theme, and the product
 // vocabulary the theme does not carry — the four review ratings, the heat
@@ -98,6 +104,21 @@ func (tk tokens) card(e ui.Element) ui.Element {
 // colour under a larger shadow.
 func (tk tokens) panel(e ui.Element) ui.Element {
 	return e.Background(tk.Surface).Radius(tk.radiusPanel).Shadow(0, 8, 24, 0, tk.shadowPanel)
+}
+
+// icon draws the named icon at size DIPs, in the text colour of whatever holds
+// it.
+func (tk tokens) icon(c *ui.Context, name string, size float32) ui.Element {
+	return ui.Icon(c, design.Icon(name)).Width(size).Height(size)
+}
+
+// iconText is an icon and a label on one line, for a button or a badge: the
+// icon takes the colour of the text around it.
+func (tk tokens) iconText(c *ui.Context, name, text string, size float32) ui.Element {
+	return ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceXS).Children(func() {
+		tk.icon(c, name, size)
+		ui.Text(c, text).SingleLine()
+	})
 }
 
 // ratingFill is the face of a grade button for its rating colour: the quiet

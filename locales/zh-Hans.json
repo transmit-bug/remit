@@ -121,6 +121,7 @@
   "settingsCheckAtLaunch": "启动时检查",
   "settingsUpdatesBody": "Remit 在打开后检查一次，除此之外不会联网。",
   "checkNow": "立即检查",
+  "close": "关闭",
   "updateAvailable": "发现新版本 {version}。",
   "updateUpToDate": "Remit 已是最新版本。",
   "updateCannot": "这个构建无法自我更新。",
