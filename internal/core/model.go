@@ -369,7 +369,14 @@ func faces(kind Kind, ordinal int, text string) (prompt, answer string) {
 		}
 		return clozePrompt(text, blanks, -1), ""
 	case KindBidirectional:
-		prompt, answer = Split(strings.Replace(text, BothSeparator, Separator, 1))
+		// The both-ways separator is what divided the paragraph, so a card's
+		// sides come from it — not from replacing it and splitting again, which
+		// would divide at an earlier :: when the paragraph holds both.
+		if before, after, ok := strings.Cut(text, BothSeparator); ok {
+			prompt, answer = strings.TrimSpace(before), strings.TrimSpace(after)
+		} else {
+			prompt, answer = Split(text)
+		}
 		if ordinal == 1 {
 			return answer, prompt
 		}

@@ -91,16 +91,35 @@ func OpenJS(dir string, limits JSLimits) (*JSRunner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ext: %s: %w", entry, err)
 	}
-	module, err := moejs.Compile(ext.Manifest.Entry, string(source))
-	if err != nil {
-		return nil, fmt.Errorf("ext: %s: compile: %w", entry, err)
+	return compileJS(ext.Manifest, source, limits)
+}
+
+// OpenBuiltin compiles an extension the app ships. It is the same loader as
+// OpenJS — the same manifest rules, the same capability set, the same limits —
+// with the bytes read from the binary rather than from a directory, so that a
+// built-in extension has no door a downloaded one does not.
+func OpenBuiltin(manifest Manifest, source []byte, limits JSLimits) (*JSRunner, error) {
+	if err := Validate(manifest); err != nil {
+		return nil, fmt.Errorf("ext: builtin %s: %w", manifest.Name, err)
 	}
-	caps := make(map[string]bool, len(ext.Manifest.Capabilities))
-	for _, capability := range ext.Manifest.Capabilities {
+	if Runtime(manifest.Runtime) != RuntimeJS {
+		return nil, fmt.Errorf("ext: builtin %s: runtime %q, not js", manifest.Name, manifest.Runtime)
+	}
+	return compileJS(manifest, source, limits)
+}
+
+// compileJS is the one place a JavaScript extension is compiled and its
+// capabilities read.
+func compileJS(manifest Manifest, source []byte, limits JSLimits) (*JSRunner, error) {
+	module, err := moejs.Compile(manifest.Entry, string(source))
+	if err != nil {
+		return nil, fmt.Errorf("ext: %s: compile: %w", manifest.Name, err)
+	}
+	caps := make(map[string]bool, len(manifest.Capabilities))
+	for _, capability := range manifest.Capabilities {
 		caps[capability] = true
 	}
-	return &JSRunner{dir: dir, manifest: ext.Manifest, module: module,
-		limits: limits.withDefaults(), caps: caps}, nil
+	return &JSRunner{manifest: manifest, module: module, limits: limits.withDefaults(), caps: caps}, nil
 }
 
 // Name is the extension's name.

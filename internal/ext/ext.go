@@ -44,6 +44,30 @@ type Manifest struct {
 	Capabilities []string `json:"capabilities"`
 }
 
+// Validate checks a manifest against what this build can run.
+func Validate(m Manifest) error {
+	if m.Name == "" {
+		return errors.New("manifest needs a name")
+	}
+	switch Runtime(m.Runtime) {
+	case RuntimeJS:
+		if m.Entry == "" {
+			return errors.New("a js extension needs an entry")
+		}
+		if filepath.IsAbs(m.Entry) || strings.Contains(m.Entry, "..") {
+			return fmt.Errorf("entry %q is outside the extension", m.Entry)
+		}
+	default:
+		if len(m.Entrypoint) == 0 {
+			return errors.New("manifest needs an entrypoint")
+		}
+	}
+	if m.Protocol != Protocol {
+		return fmt.Errorf("protocol %d, this app speaks %d", m.Protocol, Protocol)
+	}
+	return nil
+}
+
 // Extension is a discovered extension: its directory and its manifest.
 type Extension struct {
 	Dir      string
@@ -88,42 +112,40 @@ func Load(dir string) (Extension, error) {
 	if err := json.Unmarshal(data, &m); err != nil {
 		return Extension{}, fmt.Errorf("ext: %s: manifest: %w", dir, err)
 	}
-	if m.Name == "" {
-		return Extension{}, fmt.Errorf("ext: %s: manifest needs a name", dir)
-	}
-	switch Runtime(m.Runtime) {
-	case RuntimeJS:
-		if m.Entry == "" {
-			return Extension{}, fmt.Errorf("ext: %s: a js extension needs an entry", dir)
-		}
-		if filepath.IsAbs(m.Entry) || strings.Contains(m.Entry, "..") {
-			return Extension{}, fmt.Errorf("ext: %s: entry %q is outside the extension", dir, m.Entry)
-		}
-	default:
-		if len(m.Entrypoint) == 0 {
-			return Extension{}, fmt.Errorf("ext: %s: manifest needs an entrypoint", dir)
-		}
-	}
-	if m.Protocol != Protocol {
-		return Extension{}, fmt.Errorf("ext: %s: protocol %d, this app speaks %d", dir, m.Protocol, Protocol)
+	if err := Validate(m); err != nil {
+		return Extension{}, fmt.Errorf("ext: %s: %w", dir, err)
 	}
 	return Extension{Dir: dir, Manifest: m}, nil
+}
+
+// StartOptions configure a started extension. The zero value is the app's own:
+// a call may take Timeout and no longer.
+type StartOptions struct {
+	Timeout time.Duration
 }
 
 // Runner is a started extension. Calls are serialized: the protocol is one
 // request and one response at a time.
 type Runner struct {
-	ext  Extension
-	cmd  *exec.Cmd
-	in   *json.Encoder
-	out  *bufio.Reader
-	mu   sync.Mutex
-	seq  int64
-	dead bool
+	ext     Extension
+	cmd     *exec.Cmd
+	in      *json.Encoder
+	out     *bufio.Reader
+	mu      sync.Mutex
+	seq     int64
+	dead    bool
+	timeout time.Duration
 }
 
 // Start runs the extension.
-func Start(ext Extension) (*Runner, error) {
+func Start(ext Extension, opts ...StartOptions) (*Runner, error) {
+	options := StartOptions{Timeout: Timeout}
+	if len(opts) > 0 {
+		options = opts[0]
+		if options.Timeout <= 0 {
+			options.Timeout = Timeout
+		}
+	}
 	if len(ext.Manifest.Entrypoint) == 0 {
 		return nil, fmt.Errorf("ext: %s has no entrypoint", ext.Manifest.Name)
 	}
@@ -141,10 +163,11 @@ func Start(ext Extension) (*Runner, error) {
 		return nil, fmt.Errorf("ext: start %s: %w", ext.Manifest.Name, err)
 	}
 	return &Runner{
-		ext: ext,
-		cmd: cmd,
-		in:  json.NewEncoder(stdin),
-		out: bufio.NewReader(stdout),
+		ext:     ext,
+		cmd:     cmd,
+		in:      json.NewEncoder(stdin),
+		out:     bufio.NewReader(stdout),
+		timeout: options.Timeout,
 	}, nil
 }
 
@@ -212,9 +235,9 @@ func (r *Runner) Call(method string, params, out any) error {
 			return fmt.Errorf("ext: %s: decode %s result: %w", r.Name(), method, err)
 		}
 		return nil
-	case <-time.After(Timeout):
+	case <-time.After(r.timeout):
 		r.kill()
-		return fmt.Errorf("ext: %s: %s timed out after %s", r.Name(), method, Timeout)
+		return fmt.Errorf("ext: %s: %s timed out after %s", r.Name(), method, r.timeout)
 	}
 }
 
