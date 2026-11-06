@@ -42,5 +42,8 @@
   "cardMade": "已从第 {number} 块建卡",
   "version": "版本 {version}",
   "licenseLink": "GNU AGPL-3.0",
-  "modeLabel": "模式"
+  "modeLabel": "模式",
+  "libraryError": "无法打开笔记库：{reason}",
+  "retryLibrary": "重试",
+  "saveFailed": "无法保存更改。"
 }

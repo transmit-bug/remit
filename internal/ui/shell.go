@@ -30,7 +30,7 @@ func (a *App) toolbar(c *ui.Context, tk tokens) {
 		}
 
 		ui.Spacer(c)
-		ui.Button(c, m(c).NewNote()).OnClick(a.newNote)
+		ui.Button(c, m(c).NewNote()).OnClick(func() { a.newNote(c) })
 	}).Label(m(c).Toolbar(Name)).
 		Padding(tk.spaceS, tk.spaceL).
 		Background(tk.surface).
@@ -51,9 +51,9 @@ func (a *App) notesView(c *ui.Context, tk tokens) {
 func (a *App) notesList(c *ui.Context, tk tokens) {
 	ui.Sidebar(c, &a.editor.selected, func() {
 		ui.SidebarSection(c, m(c).Notebook(), nil, func() {
-			for _, n := range a.library.notes {
+			for _, n := range a.data.notes {
 				item := ui.SidebarItem(c, string(n.ID), nil, n.Title)
-				if cards := a.library.cardsInNote(n); cards > 0 {
+				if cards := a.data.cardsInNote(n); cards > 0 {
 					item.Children(func() { ui.Badge(c, fmt.Sprint(cards)) })
 				}
 			}
@@ -62,49 +62,52 @@ func (a *App) notesList(c *ui.Context, tk tokens) {
 }
 
 // shortcuts declares the app's keys. They are window shortcuts, so they wait
-// while the palette is open.
+// while the palette is open. With no library open nothing has an action yet.
 func (a *App) shortcuts(c *ui.Context) {
+	if a.lib == nil {
+		return
+	}
 	c.OnShortcut(ui.Cmd, ui.KeyK, func() { a.openPalette(c) })
 	c.OnShortcut(ui.Cmd, ui.Key1, func() { a.setMode(modeReview) })
 	c.OnShortcut(ui.Cmd, ui.Key2, func() { a.setMode(modeNotes) })
-	c.OnShortcut(ui.Cmd, ui.KeyN, a.newNote)
+	c.OnShortcut(ui.Cmd, ui.KeyN, func() { a.newNote(c) })
 
 	if a.mode != modeReview {
 		return
 	}
 	c.OnShortcut(0, ui.KeySpace, func() { a.review.reveal() })
-	c.OnShortcut(0, ui.Key1, func() { a.grade(ratingAgain) })
-	c.OnShortcut(0, ui.Key2, func() { a.grade(ratingHard) })
-	c.OnShortcut(0, ui.Key3, func() { a.grade(ratingGood) })
-	c.OnShortcut(0, ui.Key4, func() { a.grade(ratingEasy) })
+	c.OnShortcut(0, ui.Key1, func() { a.grade(c, ratingAgain) })
+	c.OnShortcut(0, ui.Key2, func() { a.grade(c, ratingHard) })
+	c.OnShortcut(0, ui.Key3, func() { a.grade(c, ratingGood) })
+	c.OnShortcut(0, ui.Key4, func() { a.grade(c, ratingEasy) })
 	c.OnShortcut(0, ui.KeyU, func() { a.undo(c) })
-	c.OnShortcut(0, ui.KeyS, a.suspend)
+	c.OnShortcut(0, ui.KeyS, func() { a.suspend(c) })
 	c.OnShortcut(0, ui.KeyE, a.editCurrent)
 	c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
 }
 
-// setMode moves between notes and review. Entering review seeds the queue the
-// first time; focus mode is the sidebar going away.
-func (a *App) setMode(m mode) {
-	if m == a.mode {
-		return
-	}
-	a.mode = m
-	if m == modeReview {
-		a.review.begin(a.library)
-	}
-}
+// setMode switches the window's face. Review keeps its own queue, so going to
+// the notes and back never starts over.
+func (a *App) setMode(m mode) { a.mode = m }
 
 // newNote adds an empty note, selects it and puts the caret in its first
-// block.
-func (a *App) newNote() {
-	n := core.Note{
+// block. The note exists on disk before it is shown, so what the user types
+// next has somewhere to go.
+func (a *App) newNote(c *ui.Context) {
+	if a.lib == nil {
+		return
+	}
+	note, err := a.lib.SaveNote(core.Note{
 		ID:     core.NewID("note"),
 		Title:  locales.UntitledNote(),
 		Blocks: []core.Block{{ID: core.NewID("block")}},
+	})
+	if err != nil {
+		a.report(c, "new note", err)
+		return
 	}
-	a.library.notes = append(a.library.notes, n)
-	a.editor.selected = string(n.ID)
+	a.reload()
+	a.editor.selected = string(note.ID)
 	a.mode = modeNotes
 	a.editor.focusFirst = true
 }
@@ -112,11 +115,11 @@ func (a *App) newNote() {
 // editNote opens the note a card's block belongs to. A lost card has no note
 // to open, and leaves the window where it is.
 func (a *App) editNote(card core.Card) {
-	note, ok := a.library.noteOfBlock(card.Ref.Block)
+	note, ok := a.data.noteOfBlock(card.Ref.Block)
 	if !ok {
 		return
 	}
-	a.editor.selected = string(note.ID)
+	a.editor.selected = string(note)
 	a.setMode(modeNotes)
 }
 
@@ -150,7 +153,7 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 	return []paletteAction{
 		{label: m(c).ActionReviewCards(), run: func() { a.setMode(modeReview) }},
 		{label: m(c).ActionEditNotes(), run: func() { a.setMode(modeNotes) }},
-		{label: m(c).NewNote(), run: a.newNote},
+		{label: m(c).NewNote(), run: func() { a.newNote(c) }},
 	}
 }
 

@@ -12,7 +12,7 @@ of the two wrappers documented below.
 | Choosing notes or review as one of a few views | `ui.Segmented`, labelled "Mode" |
 | A source list of notes, keyboard-driven, with card counts | `ui.Sidebar`, `ui.SidebarSection`, `ui.SidebarItem`, `ui.Badge` |
 | A note as a vertical document of blocks | `ui.Scroll` + `ui.Column` (not `ui.List`: see `blockRow`) |
-| Editing a block's text | `ui.TextArea`, one per block, bound to the stored block |
+| Editing a block's text | `ui.TextArea`, one per block, bound to the app's draft of the note and written through `store.SaveNote` once the fields are built |
 | Making a card from a block, split at the first `::` | `ui.Button` calling `core.Split` |
 | Marking a block that a card references | `ui.Badge` ("1 card", "2 cards") |
 | The review card and its reveal | `flipCard` wrapper — gap 1 |
@@ -79,8 +79,9 @@ focus and keyboard entirely to `ui.TextArea`.
 
 - The inventory grep ran against `/Users/pony/go/pkg/mod/github.com/egoist/mygo@v0.7.4`.
 - Literal geometry audit: the only fixed sizes outside `tokens.go` are
-  `sidebarWidth` (260 DIP, a real fixed column) and `reviewWidth` (680 DIP,
-  the review column's maximum); both are named and commented.
+  `sidebarWidth` (260 DIP, a real fixed column), `reviewWidth` (680 DIP, the
+  review column's maximum) and `messageWidth` (520 DIP, the error state's
+  line); all are named and commented.
 - Colours and spacing used by the views come from `tokens.go`; widgets keep
   their own theme-derived look.
 - `ui.Mix` documented on the site is not exported at v0.7.4; the tokens blend
