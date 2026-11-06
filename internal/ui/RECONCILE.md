@@ -74,32 +74,32 @@ or a whole overlay. The wrapper is the composition of `ui.Column`, `ui.Text`,
 `ui.Divider`, `ui.Badge`, `ui.ButtonBase` and `ui.PrimaryButton`, with no
 behaviour re-implemented from a widget.
 
-## Wrapper 2 — `blockRow` (`editor.go`)
+## Wrapper 2 — the card badge in the editor's gutter (`editor.go`)
 
-**The need.** One block of the editor: its multiline text, the cards that
-already point at it, and the actions that change it or mint another card from
-it, in a vertical document where every block is editable and all are laid out.
+**Correction (ADR 0005).** This entry used to claim that no MyGo widget carried
+"an editable block that a card can be minted from", and built that claim on
+`ui.TextArea`, `ui.TextAreaBuffer`, `ui.EditableText`, `ui.Table` and `ui.List`.
+It never checked `ui/richtext`, `ui/markdown` or `ui/editor`, all of which ship
+at the same version. The claim was wrong: a note is a **document**, not a stack
+of fields, and the document editor exists (`richtext.Editor` — headings, lists,
+quotations, code, inline images, links, Markdown shortcuts, IME, accessibility,
+large documents, Markdown round-trip).
 
-**Checked at v0.7.4.** `ui.TextArea` (the field itself, used inside the row;
-it has no per-row actions or reference mark), `ui.TextAreaBuffer` (indexed
-storage for large documents; a block is a short string and the buffer's
-machinery buys nothing here), `ui.EditableText` (single-line rename in place,
-as a file's name in Finder, not a multiline block), `ui.Table` +
-`EditableText` (a grid of short cells with in-place rename; a block is
-multiline document text that the table would not measure as one), `ui.List`
-rows (builds only the rows in view; the scroll guide says a document whose
-text selection must span it uses a plain scroll container, and every block's
-field keeps focus and state across the whole note). The block's changes are
-`ui.PopoverMenuButton`, the widget for a command with options, drawn in the
-window so its items are the app's own elements.
+**The need that survives.** In that document, a paragraph that a card points at
+shows, in the editor's gutter, how many cards it feeds and their link state, and
+clicking it opens the card's face for an override.
 
-**Why it is a different need.** No widget carries "an editable block that a
-card can be minted from and that can be split, moved or deleted". The row
-composes `ui.Row`, `ui.TextArea`, `ui.Column`, `ui.Badge`, `ui.Button` and
-`ui.PopoverMenuButton`, and delegates the text editing, focus and keyboard
-entirely to `ui.TextArea`. A menu's choice is recorded in the pass and
-performed after the fields are built, so no store write happens while the
-view is being built.
+**Checked at v0.7.4.** `richtext.Editor` exposes paragraph geometry but nothing
+that draws outside the text column; `ui.Badge` is an in-flow badge, not a gutter
+mark; `ui.Tooltip` is a hover surface, not a persistent mark; `ui.List` builds
+rows, not paragraphs of one continuous text; `ui.Overlay` draws relative to an
+element, not to a paragraph inside an editor.
+
+**Why it is a different need.** A gutter mark is not a widget in the layout — it
+is a decoration pinned to a paragraph's line box inside someone else's editor.
+The wrapper draws it from the paragraph rects the editor reports and keeps the
+click target outside the text flow; everything else (text, focus, caret,
+selection, IME) stays the editor's.
 
 ## The review heatmap, composed rather than wrapped (`stats.go`)
 
@@ -128,6 +128,10 @@ calendar follows the locale like every other text.
 ## Audit notes
 
 - The inventory grep ran against `/Users/pony/go/pkg/mod/github.com/egoist/mygo@v0.7.4`.
+- ADR 0005 corrects this file: the packages that decide the note editor are
+  `ui/richtext`, `ui/markdown` and `ui/editor`, and they were missing from the
+  first pass. An entry whose evidence skipped a package is a bug, not a scope
+  call.
 - The charts use `ui/chart`'s plot, scales and `Rect` marks only: no bar or
   row table was hand-built, and no pixel is painted. `Axes.Label` and
   `Time.Format` carry the window's language, so axis labels follow the locale
