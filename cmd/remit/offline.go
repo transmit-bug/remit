@@ -80,7 +80,7 @@ func startAgentServer(lib *store.Library) {
 		slog.Warn("remit: agent api: token", "err", err)
 		return
 	}
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := serveAgent(lib, token)
 	if err != nil {
 		slog.Warn("remit: agent api: listen", "err", err)
 		return
@@ -89,10 +89,21 @@ func startAgentServer(lib *store.Library) {
 	if err := os.WriteFile(filepath.Join(dir, "agent-address"), []byte(addr+"\n"), 0o600); err != nil {
 		slog.Warn("remit: agent api: address file", "err", err)
 	}
+	slog.Info("remit: agent api listening", "addr", addr)
+}
+
+// serveAgent serves the agent API on a loopback port the system chooses, and
+// returns the listener. Loopback only: nothing on the network can reach it.
+func serveAgent(lib *store.Library, token string) (net.Listener, error) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return nil, err
+	}
+	srv := agentapi.New(lib, agentapi.Options{Token: token})
 	go func() {
-		slog.Info("remit: agent api listening", "addr", addr)
-		if err := agentapi.New(lib, agentapi.Options{Token: token}).Serve(ln); err != nil {
+		if err := srv.Serve(ln); err != nil {
 			slog.Warn("remit: agent api stopped", "err", err)
 		}
 	}()
+	return ln, nil
 }
