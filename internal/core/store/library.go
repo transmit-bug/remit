@@ -58,6 +58,10 @@ const (
 var (
 	// ErrClosed is returned when a library is used after Close.
 	ErrClosed = errors.New("store: library is closed")
+
+	// ErrNothingToAsk is a block whose text makes no card: a paragraph without
+	// a separator or a blank.
+	ErrNothingToAsk = errors.New("store: the block asks nothing")
 	// ErrNoReview is returned by UndoLast when a card has nothing to undo.
 	ErrNoReview = errors.New("store: no review to undo")
 	// ErrExists is returned by Create when the directory already holds a library.
@@ -917,62 +921,77 @@ func (l *Library) SaveCard(card core.Card) error {
 	return nil
 }
 
-// CreateCard makes the first card for a block, minting the block's marker in
-// the note source when the file does not carry it yet.
-func (l *Library) CreateCard(blockID core.ID) (core.Card, error) {
+// CreateCards makes the cards a block's text asks for: one for a separator, one
+// per blank of a cloze, both directions of a paragraph written both ways. A
+// block whose text asks nothing makes no card.
+func (l *Library) CreateCards(blockID core.ID) ([]core.Card, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.index == nil {
-		return core.Card{}, ErrClosed
+		return nil, ErrClosed
 	}
 	ref, ok := l.index.block(blockID)
 	if !ok {
-		return core.Card{}, fmt.Errorf("store: no block %q", blockID)
+		return nil, fmt.Errorf("store: no block %q", blockID)
 	}
 	entry, ok := l.index.note(ref.note)
 	if !ok {
-		return core.Card{}, fmt.Errorf("store: no note %q", ref.note)
+		return nil, fmt.Errorf("store: no note %q", ref.note)
+	}
+	derived := core.Derive(ref.block.Text)
+	if len(derived) == 0 {
+		return nil, ErrNothingToAsk
 	}
 	if err := l.markBlock(entry.slug, ref); err != nil {
-		return core.Card{}, err
+		return nil, err
 	}
-
-	card := core.Card{
-		ID:     core.NewID(cardKind),
-		Ref:    core.Reference{Block: blockID},
-		Status: core.StatusNew,
-	}
-	created := l.now().UTC()
-	encoded, err := encodeCard(card, created)
-	if err != nil {
-		return core.Card{}, err
-	}
-	if err := writeFileAtomic(l.cardPath(card.ID), encoded); err != nil {
-		return core.Card{}, err
-	}
-
-	row := cardRow{card: card, stored: card.Status, created: created, live: true}
 	marks, err := l.sourceMarks()
 	if err != nil {
-		return core.Card{}, err
+		return nil, err
 	}
-	err = l.index.write(func(e execer) error {
-		if err := putCard(e, row); err != nil {
-			return err
+
+	out := make([]core.Card, 0, len(derived))
+	for _, d := range derived {
+		created := l.now().UTC()
+		card := core.Card{
+			ID:      core.NewID(cardKind),
+			Ref:     core.Reference{Block: blockID},
+			Status:  core.StatusNew,
+			Kind:    d.Kind,
+			Ordinal: d.Ordinal,
 		}
-		return l.putMarks(e, marks)
-	})
+		encoded, err := encodeCard(card, created)
+		if err != nil {
+			return nil, err
+		}
+		if err := writeFileAtomic(l.cardPath(card.ID), encoded); err != nil {
+			return nil, err
+		}
+		row := cardRow{card: card, stored: card.Status, created: created, live: true}
+		err = l.index.write(func(e execer) error {
+			if err := putCard(e, row); err != nil {
+				return err
+			}
+			return l.putMarks(e, marks)
+		})
+		if err != nil {
+			return nil, err
+		}
+		l.storeCard(&cardMeta{card: row.card, stored: card.Status, created: created, live: true})
+		l.emit(EventCardCreated, card.ID)
+		out = append(out, card)
+	}
+	return out, nil
+}
+
+// CreateCard makes the first card a block's text asks for, minting the block's
+// marker in the note. A block that asks several makes them all with CreateCards.
+func (l *Library) CreateCard(blockID core.ID) (core.Card, error) {
+	cards, err := l.CreateCards(blockID)
 	if err != nil {
 		return core.Card{}, err
 	}
-	l.storeCard(&cardMeta{
-		card:    row.card,
-		stored:  card.Status,
-		created: created,
-		live:    true,
-	})
-	l.emit(EventCardCreated, card.ID)
-	return card, nil
+	return cards[0], nil
 }
 
 // markBlock appends a block's marker to its note source, leaving every other
