@@ -45,7 +45,7 @@ func TestChineseFitsTheSmallestWindow(t *testing.T) {
 func TestGradingAnnouncesWhatIsLeft(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 
 	tt.Key(ui.Cmd, ui.Key1)
 	tt.Key(0, ui.KeySpace)
@@ -65,7 +65,7 @@ func TestGradingAnnouncesWhatIsLeft(t *testing.T) {
 func TestReviewIsKeyboardOnly(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 
 	tt.Key(ui.Cmd, ui.Key1)
 	tt.Key(0, ui.KeySpace)

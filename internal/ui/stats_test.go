@@ -77,7 +77,7 @@ func TestStatsPage(t *testing.T) {
 		t.Run(size.name, func(t *testing.T) {
 			a := seedStatsLibrary(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
-			tt.Frame()
+			settle(tt)
 			tt.Advance(200 * time.Millisecond) // the opening card's entry
 			openStats(t, tt)
 
@@ -125,6 +125,7 @@ func TestStatsPage(t *testing.T) {
 					t.Errorf("the page shows the empty state %q beside its data", gone)
 				}
 			}
+			tt.Advance(200 * time.Millisecond) // the screen's entrance
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
@@ -145,7 +146,7 @@ func TestStatsEmptyLibrary(t *testing.T) {
 			lib.Close()
 			a := NewApp(Options{LibraryDir: dir})
 			tt := ui.NewTester(a.View, size.w, size.h)
-			tt.Frame()
+			settle(tt)
 			tt.Advance(200 * time.Millisecond) // the empty queue settles
 			openStats(t, tt)
 
@@ -162,6 +163,7 @@ func TestStatsEmptyLibrary(t *testing.T) {
 					t.Fatalf("the empty statistics page is missing %q; texts %q", want, tt.Texts())
 				}
 			}
+			tt.Advance(200 * time.Millisecond) // the screen's entrance
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
@@ -214,6 +216,7 @@ func TestZhHansAtMinimum(t *testing.T) {
 	if tt.HasText("Search actions") {
 		t.Error("the palette stayed open after running its action")
 	}
+	tt.Advance(200 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}

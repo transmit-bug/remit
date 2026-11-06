@@ -12,6 +12,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/update"
 )
 
@@ -36,6 +37,15 @@ const (
 	modeSettings
 )
 
+// animState counts the moments the window's own motion replays by: a screen
+// changing, a panel opening. The count is the run of a preset, so when it moves
+// the preset plays again from its first frame.
+type animState struct {
+	mode    uint64 // the screen the window shows
+	palette uint64 // the command palette
+	relink  uint64 // the re-link picker
+}
+
 // App is the state the window shows. The view rebuilds the interface from it
 // on every frame; handlers change it.
 type App struct {
@@ -55,6 +65,10 @@ type App struct {
 	relink   relinkState
 	prefs    prefsState
 	aboutWin *mygo.Window // the open About window, or nil
+
+	// anim counts how often each moment played: a screen change, a panel
+	// opening. A counter that moves replays its preset.
+	anim animState
 
 	// settingsDir is where settings.json lives, empty when the app keeps no
 	// settings; defaultLibrary is <Documents>/Remit, resolved once.
@@ -142,23 +156,35 @@ func (a *App) View(c *ui.Context) {
 	a.shortcuts(c)
 
 	ui.Column(c).Fill().Background(tk.Background).LineHeight(lineHeight).Children(func() {
-		a.toolbar(c, tk)
-		switch {
-		case a.openErr != nil:
-			a.libraryErrorView(c, tk)
-		case a.mode == modeSettings:
-			a.settingsView(c, tk)
-		case a.start:
-			a.startView(c, tk)
-		case a.mode == modeReview:
-			a.reviewView(c, tk)
-		case a.mode == modeBrowse:
-			a.browseView(c, tk)
-		case a.mode == modeStats:
-			a.statsView(c, tk)
-		default:
-			a.notesView(c, tk)
-		}
+		// The first frame arrives in two beats: the toolbar, then the main area
+		// behind it. Both move down and fade in; the stagger sets the beat.
+		toolbar := a.toolbar(c, tk)
+		entering := toolbar.Keyframes("enter", design.EnterFrames)
+		toolbar.Opacity(entering).Translate(0, design.Rise*(1-entering))
+
+		// One screen replacing another fades in and rises, played by the count
+		// the mode handler keeps.
+		main := ui.Column(c).Grow(1)
+		switchRise := main.Keyframes("mode", design.ModeFrames, ui.KeyframeOptions{Run: a.anim.mode})
+		main.Opacity(switchRise).Translate(0, design.Rise*(1-switchRise)).Children(func() {
+			switch {
+			case a.openErr != nil:
+				a.libraryErrorView(c, tk)
+			case a.mode == modeSettings:
+				a.settingsView(c, tk)
+			case a.start:
+				a.startView(c, tk)
+			case a.mode == modeReview:
+				a.reviewView(c, tk)
+			case a.mode == modeBrowse:
+				a.browseView(c, tk)
+			case a.mode == modeStats:
+				a.statsView(c, tk)
+			default:
+				a.notesView(c, tk)
+			}
+		})
+
 		a.paletteView(c, tk)
 		a.relinkView(c, tk)
 	})

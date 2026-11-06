@@ -13,7 +13,7 @@ func lostCardWindow(t *testing.T) (*ui.Tester, testLibrary) {
 	t.Helper()
 	a, seed := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 
 	notesMode(t, a, tt)
 	openNote(t, tt, "Memory and recall")
@@ -60,7 +60,7 @@ func TestIconOnlyButtonIsNamed(t *testing.T) {
 func TestIconsFitTheSmallestWindow(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 720, 520)
-	tt.Frame()
+	settle(tt)
 	tt.Advance(200 * time.Millisecond) // the card's entry
 
 	inside := func(label string) {

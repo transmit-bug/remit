@@ -6,6 +6,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
 // relinkPanel is the picker's height: enough rows to scan, short enough that
@@ -56,6 +57,7 @@ func (a *App) relinkRows(query string) []relinkRow {
 // openRelink shows the picker for a lost card, with the query cleared and the
 // focus asked for before the dialog is built, as the palette does.
 func (a *App) openRelink(c *ui.Context, card core.ID) {
+	a.anim.relink++
 	a.relink.open = true
 	a.relink.card = card
 	a.relink.query = ""
@@ -78,6 +80,11 @@ func (a *App) relinkView(c *ui.Context, tk tokens) {
 		backdrop.Background(tk.scrim)
 		panel = tk.panel(panel.Width(paletteWidth).MaxHeight(relinkPanel).Padding(tk.spaceL).Gap(tk.spaceM))
 		panel.Label(msgs.RelinkTitle())
+		// The picker arrives the way the palette does.
+		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.relink})
+		scale := design.PanelScale + (1-design.PanelScale)*arriving
+		panel.Opacity(arriving).Scale(scale, scale)
+		backdrop.Opacity(arriving)
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {

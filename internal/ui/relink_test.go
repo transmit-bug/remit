@@ -84,7 +84,7 @@ func TestRelinkFromReview(t *testing.T) {
 func TestRelinkFromBrowseRow(t *testing.T) {
 	a, seed := seedBrowseLibrary(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Advance(200 * time.Millisecond) // the opening card's entry
 	tt.Key(ui.Cmd, ui.Key3)
 	tt.Advance(200 * time.Millisecond) // the review card's exit

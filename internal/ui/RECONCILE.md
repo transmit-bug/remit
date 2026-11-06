@@ -132,6 +132,24 @@ sizes it needs are named in `stats.go` (`heatCell`, `heatGap`) and nothing is
 painted; the weekday names and the range come from the catalogs, so the
 calendar follows the locale like every other text.
 
+## Motion — which mechanism each moment takes (`internal/ui/design/motion.go`)
+
+Every moment of the design language names its mechanism, so nothing here is a
+hand-built clock:
+
+| Moment | Mechanism | Why not another |
+|---|---|---|
+| The first frame, in two beats | `Keyframes` on the toolbar and on the main area, the second with `Delay: EnterStagger` | A spring (`AnimateTo`) has no curve to stagger; the preset's frames carry the light overshoot |
+| A screen replacing another | `Keyframes` run by the mode's own count | `AnimateTo` has one target, so a replayed entrance would need a jump the API does not offer |
+| A panel or a dialog arriving | `Keyframes` run by the panel's count, on the panel's `Opacity` and `Scale`, and the scrim's `Opacity` | `ElementTransition.Enter` needs a parent whose last frame showed the element; the palette's parent is new each time |
+| Hover and press on a grade | `ElementTransition{Colors: true}` at `Hover`, and `AnimatePose` at `Press` | Poses are paint-only, so a press cannot move the layout it sits in |
+| Reveal, grade, row height, counts | presets only, wired by the screens that own them (#89, #87) | the landing points are other tickets |
+
+Reduced motion needs no code of ours: `Keyframes`, `AnimatePose` and
+`ElementTransition` read `Preferences.ReduceMotion` and snap to their ends,
+which `TestReducedMotionSwitchesAtOnce` asserts against the same switch running
+normally.
+
 ## Gap — icons in the mode switch (`shell.go`)
 
 **The need.** Spec #78 asks the five modes to read as an icon and a word, so

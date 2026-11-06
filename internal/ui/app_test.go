@@ -113,6 +113,13 @@ func seedLibrary(t *testing.T, dir string) testLibrary {
 	}
 }
 
+// settle draws the window's first frame and lets its entrance finish, so that a
+// test asserting the view is at rest starts from a window that is.
+func settle(tt *ui.Tester) {
+	tt.Frame()
+	tt.Advance(300 * time.Millisecond) // the entrance: two beats, on a spring
+}
+
 // newTestApp opens a window on a freshly seeded library.
 func newTestApp(t *testing.T) (*App, testLibrary) {
 	t.Helper()
@@ -128,7 +135,7 @@ func TestModes(t *testing.T) {
 		t.Run(size.name, func(t *testing.T) {
 			a, _ := newTestApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
-			tt.Frame()
+			settle(tt)
 
 			// The first screen is the review queue (decision #11).
 			for _, want := range []string{"Show answer", "Spacing beats cramming", "4 cards left"} {
@@ -179,7 +186,7 @@ func TestModes(t *testing.T) {
 func TestReviewKeys(t *testing.T) {
 	a, seed := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key1)
 
 	answer := "reviewing just before you forget strengthens recall."
@@ -272,7 +279,7 @@ func TestReviewPersists(t *testing.T) {
 	seed := seedLibrary(t, dir)
 	a := NewApp(Options{LibraryDir: dir})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key1)
 	tt.Key(0, ui.KeySpace)
 	tt.Key(0, ui.Key3) // Good
@@ -310,7 +317,7 @@ func TestReviewPersists(t *testing.T) {
 func TestPalette(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
 
@@ -372,7 +379,7 @@ func TestPalette(t *testing.T) {
 func TestEditBlock(t *testing.T) {
 	a, seed := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
 
@@ -412,7 +419,7 @@ func TestEditBlock(t *testing.T) {
 func TestNotesList(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
 
@@ -438,7 +445,7 @@ func TestNotesList(t *testing.T) {
 func TestMakeCard(t *testing.T) {
 	a, seed := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 
 	if err := tt.Click("Make card"); err != nil {
@@ -474,7 +481,7 @@ func TestMakeCard(t *testing.T) {
 func TestMinimumSizeControls(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 720, 520)
-	tt.Frame()
+	settle(tt)
 
 	// The queue the window opens on is usable at the smallest size.
 	assertControl(t, tt, 720, 520, "Show answer")
@@ -559,7 +566,7 @@ func TestFirstRun(t *testing.T) {
 	data := t.TempDir()
 	a := NewApp(Options{LibraryDir: dir, DataDir: data})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 
 	if _, err := os.Stat(filepath.Join(dir, "remit.json")); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("the window made a library before it was asked: %v", err)
@@ -624,6 +631,7 @@ func TestFirstRun(t *testing.T) {
 	if !tt.HasText("Block 1 · Untitled note") {
 		t.Fatalf("the new note did not survive a restart; texts %q", tt.Texts())
 	}
+	tt.Advance(200 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -640,7 +648,7 @@ func TestCorruptLibrary(t *testing.T) {
 
 	a := NewApp(Options{LibraryDir: dir})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	if !tt.HasText("Remit could not open its library") || !tt.HasText("remit/9") {
 		t.Fatalf("the error state does not say what happened; texts %q", tt.Texts())
 	}
@@ -667,7 +675,7 @@ func TestCorruptLibrary(t *testing.T) {
 // size the window opens at.
 func TestAbout(t *testing.T) {
 	tt := ui.NewTester(About, aboutWidth, aboutHeight)
-	tt.Frame()
+	settle(tt)
 
 	for _, want := range []string{Name, "Version " + Version, "GNU AGPL-3.0"} {
 		if !tt.HasText(want) {
@@ -748,6 +756,7 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 			t.Errorf("missing English text %q after switching back; texts %q", want, tt.Texts())
 		}
 	}
+	tt.Advance(200 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after a locale switch")
 	}

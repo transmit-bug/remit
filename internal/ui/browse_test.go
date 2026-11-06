@@ -22,7 +22,7 @@ func TestBrowseEnter(t *testing.T) {
 		t.Run(size.name, func(t *testing.T) {
 			a, _ := newTestApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
-			tt.Frame()
+			settle(tt)
 			tt.Advance(200 * time.Millisecond) // the opening card's entry
 
 			tt.Key(ui.Cmd, ui.Key3)
@@ -47,7 +47,7 @@ func TestBrowseEnter(t *testing.T) {
 func TestBrowseSearch(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Advance(200 * time.Millisecond) // the opening card's entry
 
 	tt.Key(ui.Cmd, ui.KeyF)
@@ -78,6 +78,7 @@ func TestBrowseSearch(t *testing.T) {
 	if !tt.HasText("Notebook") {
 		t.Fatalf("Esc did not return to the notes; texts %q", tt.Texts())
 	}
+	tt.Advance(200 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -146,7 +147,7 @@ func TestBrowseFilters(t *testing.T) {
 		t.Run(size.name, func(t *testing.T) {
 			a, _ := seedBrowseLibrary(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
-			tt.Frame()
+			settle(tt)
 			tt.Advance(200 * time.Millisecond) // the opening card's entry
 			tt.Key(ui.Cmd, ui.Key3)
 			tt.Advance(200 * time.Millisecond) // the review card's exit
@@ -201,7 +202,7 @@ func TestBrowseFilters(t *testing.T) {
 func TestBrowseOpens(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Advance(200 * time.Millisecond) // the opening card's entry
 	tt.Key(ui.Cmd, ui.Key3)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
@@ -230,6 +231,7 @@ func TestBrowseOpens(t *testing.T) {
 	if tt.HasText("Block 1 · Memory and recall") {
 		t.Error("the editor still shows the note opened before")
 	}
+	tt.Advance(200 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -239,7 +241,7 @@ func TestBrowseOpens(t *testing.T) {
 func TestBrowseOpensLostCard(t *testing.T) {
 	a, _ := seedBrowseLibrary(t)
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Advance(200 * time.Millisecond) // the opening card's entry
 	tt.Key(ui.Cmd, ui.Key3)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
@@ -271,7 +273,7 @@ func TestSearchLink(t *testing.T) {
 	// for the field's first build.
 	a.Search("question")
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	for _, want := range []string{"Browse cards", "A good card asks"} {
 		if !tt.HasText(want) {
 			t.Fatalf("the search link is missing %q; texts %q", want, tt.Texts())
