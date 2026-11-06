@@ -350,3 +350,11 @@ func sortEvents(events []Event) {
 		}
 	}
 }
+
+// PredictedRetention is the chance the schedule expected the card to be
+// recalled after elapsedDays, given its stability at the previous review. It
+// is what a retention chart compares a review's outcome against.
+func (p Params) PredictedRetention(elapsedDays, stability float64) float64 {
+	params := p.parameters()
+	return params.ForgettingCurve(elapsedDays, stability)
+}
