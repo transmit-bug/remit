@@ -31,6 +31,21 @@ jobs:
       - name: mygo vet
         run: go tool mygo vet .
 
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      # The v1 budget at the size the storage research measured: a due-queue
+      # read and a review write at 100k cards. The test writes the fixture's
+      # sources directly, so the run is a measurement, not a hundred thousand
+      # card creations.
+      - name: performance budget at 100k cards
+        run: REMIT_PERF_CARDS=100000 go test ./internal/core/store/ -run TestPerformanceBudget -v -count=1 -timeout 20m
+
   privacy:
     runs-on: ubuntu-latest
     steps:

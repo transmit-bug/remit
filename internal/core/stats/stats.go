@@ -7,7 +7,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
 )
@@ -18,32 +17,15 @@ type DayCount struct {
 	Count int
 }
 
-// live returns the reviews the log still counts: void events and the reviews
-// they cancel are both left out.
-func live(events []schedule.Event) []schedule.Event {
-	voided := map[int64]bool{}
-	for _, ev := range events {
-		if ev.IsVoid() {
-			voided[ev.Void] = true
-		}
-	}
-	out := make([]schedule.Event, 0, len(events))
-	for _, ev := range events {
-		if ev.IsVoid() || voided[ev.Seq] {
-			continue
-		}
-		out = append(out, ev)
-	}
-	return out
-}
-
-// ReviewsPerDay counts live reviews per day in [from, to).
+// ReviewsPerDay counts live reviews per day in [from, to). It reads the reviews
+// in that range out of the log, so its cost follows the range, not the library.
 func ReviewsPerDay(lib *store.Library, from, to time.Time) []DayCount {
+	events, err := lib.LiveReviews(from, to)
+	if err != nil {
+		return nil // a log that cannot be read has no reviews to count
+	}
 	counts := map[string]int{}
-	for _, ev := range live(lib.Events()) {
-		if ev.At.Before(from) || !ev.At.Before(to) {
-			continue
-		}
+	for _, ev := range events {
 		counts[ev.At.In(from.Location()).Format("2006-01-02")]++
 	}
 	return sorted(counts)
@@ -74,8 +56,13 @@ func RetentionOf(lib *store.Library, params schedule.Params) Retention {
 	var out Retention
 	out.Buckets = buckets
 
+	events, err := lib.LiveReviews(time.Time{}, time.Time{})
+	if err != nil {
+		return out // a log that cannot be read predicts nothing
+	}
+
 	applier := schedule.NewApplier(params)
-	for _, ev := range live(lib.Events()) {
+	for _, ev := range events {
 		prev, had := applier.State(ev.Card)
 		if had && prev.Reviews > 0 {
 			elapsed := ev.At.Sub(prev.LastReview).Hours() / 24
@@ -102,19 +89,19 @@ func RetentionOf(lib *store.Library, params schedule.Params) Retention {
 	return out
 }
 
-// Forecast counts cards due on each of the next days, starting at from.
+// Forecast counts cards due on each of the next days, starting at from. It asks
+// the store for the cards a queue can hold, with the schedule each one has, so
+// no card file is opened and no log line replayed.
 func Forecast(lib *store.Library, from time.Time, days int) []DayCount {
 	counts := map[string]int{}
 	day := func(t time.Time) string { return t.In(from.Location()).Format("2006-01-02") }
-	for _, card := range lib.Cards() {
-		if !card.Status.Scheduled() {
-			continue
-		}
-		if _, link := card.Ref.Text(lib); link == core.LinkLost {
-			continue
-		}
-		state, ok := lib.CardState(card.ID)
-		if !ok || state.Reviews == 0 || state.Due.Before(from) {
+	scheduled, err := lib.Scheduled()
+	if err != nil {
+		return nil
+	}
+	for _, card := range scheduled {
+		state := card.State
+		if state.Reviews == 0 || state.Due.Before(from) {
 			continue
 		}
 		offset := int(state.Due.In(from.Location()).Truncate(24*time.Hour).Sub(from.Truncate(24*time.Hour)).Hours() / 24)

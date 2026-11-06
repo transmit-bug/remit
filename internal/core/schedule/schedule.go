@@ -111,6 +111,11 @@ type State struct {
 	Due        time.Time
 	LastReview time.Time
 	Reviews    int
+	// LastRating is the answer the newest live review gave, zero when the card
+	// has none. Replay derives it with the rest of the state, so a caller that
+	// holds one card's state knows whether it is still being learned without
+	// reading the log.
+	LastRating Rating
 }
 
 // Params configures the review schedule: the 21 FSRS weights and the recall
@@ -265,6 +270,18 @@ func (a *Applier) void(void Event) {
 
 // step applies one review to a card's state.
 func (a *Applier) step(state State, ev Event) State {
+	return a.params.step(a.fsrs.Parameters, state, ev)
+}
+
+// Step applies one review to a card's schedule. It is the same step an applier
+// performs, exposed so a caller holding one card's state — the index, which
+// caches what replay derived — can advance it without the whole log.
+func (p Params) Step(state State, ev Event) State {
+	p = p.Normalized()
+	return p.step(p.parameters(), state, ev)
+}
+
+func (p Params) step(fsrsParameters fsrs.Parameters, state State, ev Event) State {
 	rating, err := ev.Rating.fsrs()
 	if err != nil {
 		return state // Apply rejects it before it gets here
@@ -276,18 +293,19 @@ func (a *Applier) step(state State, ev Event) State {
 		current = &memory
 	}
 
-	item := a.fsrs.Parameters.NextState(
+	item := fsrsParameters.NextState(
 		current,
-		a.params.DesiredRetention,
+		p.DesiredRetention,
 		elapsedDays(state.LastReview, ev.At),
 		rating,
 	)
 
-	days := intervalDays(item.Interval, a.fsrs.Parameters.MaximumInterval)
+	days := intervalDays(item.Interval, fsrsParameters.MaximumInterval)
 	state.Memory = item.Memory
 	state.LastReview = ev.At
 	state.Due = ev.At.Add(time.Duration(days * 24 * float64(time.Hour)))
 	state.Reviews++
+	state.LastRating = ev.Rating
 	return state
 }
 
