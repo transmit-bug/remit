@@ -21,18 +21,16 @@ type paragraphCards struct {
 func (a *App) cardsByParagraph(note core.Note) []paragraphCards {
 	var out []paragraphCards
 	for i, block := range note.Blocks {
-		// Only a paragraph that asks something is a card's source, so a
-		// paragraph whose separator or blanks went away has no badge to show.
-		if len(core.Derive(block.Text)) == 0 {
-			continue
-		}
 		var cards []core.Card
 		for _, card := range a.data.cards {
-			if card.Ref.Block == block.ID {
+			// A suspended card feeds nothing: the badge counts what the
+			// paragraph still puts in the queue.
+			if card.Ref.Block == block.ID && card.Status != core.StatusSuspended {
 				cards = append(cards, card)
 			}
 		}
 		if len(cards) == 0 {
+			// A paragraph that feeds nothing has no badge to show.
 			continue
 		}
 		out = append(out, paragraphCards{paragraph: i + 1, block: block.ID, cards: cards})
@@ -51,7 +49,12 @@ func (a *App) reconcileCards(c *ui.Context) {
 	}
 	wrote := false
 	for _, block := range a.editor.draft.Blocks {
-		asked := core.Derive(block.Text)
+		asked, fromPlugin := a.deriveCards(block.Text)
+		if !fromPlugin {
+			// Without a plugin a paragraph makes no new card; the ones it
+			// already has keep reading it.
+			continue
+		}
 		type place struct {
 			kind    core.Kind
 			ordinal int
@@ -88,7 +91,7 @@ func (a *App) reconcileCards(c *ui.Context) {
 		if missing > 0 {
 			// A card the note asks for and the library does not hold — a new
 			// separator, a new blank — is made now.
-			if _, err := a.lib.CreateCards(block.ID); err != nil && !errors.Is(err, store.ErrNothingToAsk) {
+			if _, err := a.lib.CreateCards(block.ID, asked); err != nil && !errors.Is(err, store.ErrNothingToAsk) {
 				a.report(c, "make card", err)
 				return
 			}

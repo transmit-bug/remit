@@ -13,6 +13,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/review"
@@ -74,11 +75,13 @@ type App struct {
 	relink    relinkState
 	cardEdit  cardEditState
 	prefs     prefsState
-	panel     panelMode        // what the user said about the note's panel
-	panelTab  panelTab         // outline or backlinks
-	tagFilter string           // the tag the notes are filtered by, empty for none
-	backlinks []store.Backlink // what points at the note open now
-	aboutWin  *mygo.Window     // the open About window, or nil
+	cards     *cardPlugin          // what a paragraph asks and how a card reads
+	rendered  map[core.ID]rendered // what the plugin last answered for a card
+	panel     panelMode            // what the user said about the note's panel
+	panelTab  panelTab             // outline or backlinks
+	tagFilter string               // the tag the notes are filtered by, empty for none
+	backlinks []store.Backlink     // what points at the note open now
+	aboutWin  *mygo.Window         // the open About window, or nil
 
 	// preview is what the four answers would schedule for the card on screen,
 	// loaded with the rest of what a mode reads so that no frame reads the
@@ -130,6 +133,7 @@ type App struct {
 func NewApp(opts ...Options) *App {
 	a := &App{
 		browse:      browseState{selected: -1},
+		rendered:    map[core.ID]rendered{},
 		editor:      editorState{},
 		relink:      relinkState{selected: -1},
 		pickLibrary: pickLibraryDir,
@@ -139,6 +143,8 @@ func NewApp(opts ...Options) *App {
 	// The importer reads the library open now, which a dropped archive can
 	// replace, so it takes it at call time rather than at construction.
 	a.importAnki = func(path string) (importanki.Report, error) { return importanki.Import(path, a.lib) }
+	var chosenCards *ext.JSRunner
+	withoutCards := false
 	if len(opts) > 0 {
 		o := opts[0]
 		a.dir = o.LibraryDir
@@ -157,7 +163,9 @@ func NewApp(opts ...Options) *App {
 		}
 		a.bindHotkey = o.BindHotkey
 		a.agentAPI = o.AgentControls
+		chosenCards, withoutCards = o.Cards, o.WithoutCards
 	}
+	a.cards = openCards(chosenCards, withoutCards)
 	if dir, err := DefaultLibraryDir(); err == nil {
 		a.defaultLibrary = dir
 	}

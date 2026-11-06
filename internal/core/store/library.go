@@ -948,7 +948,7 @@ func (l *Library) SaveCard(card core.Card) error {
 // CreateCards makes the cards a block's text asks for: one for a separator, one
 // per blank of a cloze, both directions of a paragraph written both ways. A
 // block whose text asks nothing makes no card.
-func (l *Library) CreateCards(blockID core.ID) ([]core.Card, error) {
+func (l *Library) CreateCards(blockID core.ID, derived []core.Derived) ([]core.Card, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.index == nil {
@@ -962,7 +962,6 @@ func (l *Library) CreateCards(blockID core.ID) ([]core.Card, error) {
 	if !ok {
 		return nil, fmt.Errorf("store: no note %q", ref.note)
 	}
-	derived := core.Derive(ref.block.Text)
 	if len(derived) == 0 {
 		return nil, ErrNothingToAsk
 	}
@@ -1011,7 +1010,17 @@ func (l *Library) CreateCards(blockID core.ID) ([]core.Card, error) {
 // CreateCard makes the first card a block's text asks for, minting the block's
 // marker in the note. A block that asks several makes them all with CreateCards.
 func (l *Library) CreateCard(blockID core.ID) (core.Card, error) {
-	cards, err := l.CreateCards(blockID)
+	l.mu.Lock()
+	if l.index == nil {
+		l.mu.Unlock()
+		return core.Card{}, ErrClosed
+	}
+	ref, ok := l.index.block(blockID)
+	l.mu.Unlock()
+	if !ok {
+		return core.Card{}, fmt.Errorf("store: no block %q", blockID)
+	}
+	cards, err := l.CreateCards(blockID, core.Derive(ref.block.Text))
 	if err != nil {
 		return core.Card{}, err
 	}

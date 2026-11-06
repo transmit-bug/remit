@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 var fakePath string
@@ -51,7 +52,9 @@ func startFake(t *testing.T) *Runner {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	r, err := Start(ext)
+	// The machine can be busy with every other package's tests: the fake speaks
+	// at once, and this only waits for it to be scheduled.
+	r, err := Start(ext, StartOptions{Timeout: 10 * time.Second})
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -119,8 +122,19 @@ func TestExtensionErrorIsReturned(t *testing.T) {
 }
 
 func TestTimeoutKillsTheExtension(t *testing.T) {
-	r := startFake(t)
-	err := r.Call("slow", nil, nil)
+	// This one wants the timeout to arrive, so it sets its own budget rather
+	// than the generous one the other tests use while the machine is loaded.
+	dir := writeExtension(t, t.TempDir(), "slow", `{"name":"slow","version":"1","protocol":1,"entrypoint":["`+fakePath+`"]}`)
+	ext, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	r, err := Start(ext, StartOptions{Timeout: 100 * time.Millisecond})
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+	err = r.Call("slow", nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "timed out") {
 		t.Fatalf("Call(slow) = %v, want a timeout", err)
 	}

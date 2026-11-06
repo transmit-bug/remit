@@ -17,6 +17,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/update"
 )
@@ -42,6 +43,12 @@ type Options struct {
 	// ImportAnki imports the package at path into the open library. It is
 	// importanki.Import unless a test replaces it.
 	ImportAnki func(path string) (importanki.Report, error)
+	// Cards replaces the card plugin the app ships. A test hands in one that
+	// throws, to prove the review goes on without it.
+	Cards *ext.JSRunner
+	// WithoutCards opens the library with no card plugin at all: no paragraph
+	// makes a new card, and a card reads its paragraph's own words.
+	WithoutCards bool
 	// BindHotkey binds the global shortcut, replacing the one bound now, and
 	// reports a combination that is invalid or already taken. cmd registers it
 	// on MyGo's GlobalShortcut; a test replaces it.

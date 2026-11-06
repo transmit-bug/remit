@@ -315,6 +315,26 @@ func TestClozeAndBothWaySides(t *testing.T) {
 	}
 }
 
+// A paragraph that holds both separators divides at the both-ways one: the
+// earlier :: belongs to the prompt.
+func TestBothWaysWithAnEarlierSeparator(t *testing.T) {
+	blocks := BlockSet{"block_x": {ID: "block_x", Text: "a :: b ::: c"}}
+	derived := Derive("a :: b ::: c")
+	if len(derived) != 2 {
+		t.Fatalf("derived %d cards, want 2", len(derived))
+	}
+	for i, want := range []struct{ probe, answer string }{{"a :: b", "c"}, {"c", "a :: b"}} {
+		card := Card{Ref: Reference{Block: "block_x"}, Kind: KindBidirectional, Ordinal: i}
+		prompt, answer, _ := card.Sides(blocks)
+		if prompt != want.probe || answer != want.answer {
+			t.Errorf("card %d asks %q / %q, want %q / %q", i, prompt, answer, want.probe, want.answer)
+		}
+		if derived[i].Prompt != prompt || derived[i].Answer != answer {
+			t.Errorf("card %d derives %q / %q but reads %q / %q", i, derived[i].Prompt, derived[i].Answer, prompt, answer)
+		}
+	}
+}
+
 // A frozen card asks the text it kept, and a lost one asks its overrides or
 // nothing: the paragraph's changes do not reach either.
 func TestFrozenAndLostSides(t *testing.T) {
