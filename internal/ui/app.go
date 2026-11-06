@@ -43,6 +43,10 @@ type App struct {
 	// remaining is told the queue's length whenever it is rebuilt, so the
 	// tray can show it without asking the window.
 	remaining func(int)
+
+	// opened is told about the library once it opens, so a service that
+	// serves it (the agent API) can start without a second open.
+	opened func(*store.Library)
 }
 
 // NewApp returns an app on the library in opts.LibraryDir, or on Remit's own

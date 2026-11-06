@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"log/slog"
 	"runtime"
@@ -14,13 +15,31 @@ import (
 )
 
 func main() {
+	library := flag.String("library", "", "the library directory (default: Remit in Documents)")
+	export := flag.String("export", "", "write the library to a .remitlib file and exit")
+	importPath := flag.String("import", "", "unpack a .remitlib into the library directory and exit")
+	flag.Parse()
+
+	dir := *library
+	if dir == "" {
+		var err error
+		dir, err = appui.DefaultLibraryDir()
+		if err != nil {
+			log.Fatalf("library directory: %v", err)
+		}
+	}
+	if runOffline(dir, *export, *importPath) {
+		return
+	}
+
 	// One instance per user: a second launch forwards its URLs and exits, and
 	// opening a library never races the running app.
 	if !mygo.App.RequestSingleInstanceLock() {
 		return
 	}
 
-	a := appui.NewApp()
+	a := appui.NewApp(appui.Options{LibraryDir: dir})
+	a.OnLibraryOpen(startAgentServer)
 	mygo.App.SetName(appui.Name)
 	mygo.App.SetVersion(appui.Version)
 

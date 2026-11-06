@@ -22,6 +22,10 @@ type Settings struct {
 	// LibraryDir is the library the app opens on launch; empty means the
 	// default location.
 	LibraryDir string `json:"library_dir,omitempty"`
+	// AgentServer serves the local agent API while the app runs. Off by
+	// default: an open port is a decision the user makes, not one an update
+	// makes for them.
+	AgentServer bool `json:"agent_server,omitempty"`
 }
 
 // Load reads the settings in dir, returning the defaults when the file does
