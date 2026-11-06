@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"testing"
 	"time"
@@ -31,7 +32,7 @@ func TestAgentRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("serve: %v", err)
 	}
-	base := "http://" + ln.Addr().String()
+	base := (&url.URL{Scheme: "http", Host: ln.Addr().String()}).String()
 
 	get := func(path string) (*http.Response, error) { return http.Get(base + path) }
 	resp, err := get("/v1/library")
