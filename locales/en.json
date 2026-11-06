@@ -332,24 +332,6 @@
   "@statsTitle": {
     "description": "Heading of the statistics page, and the palette action that opens it."
   },
-  "statsReviews": "Reviews per day",
-  "@statsReviews": {
-    "description": "Heading of the reviews-per-day plot."
-  },
-  "statsReviewsRange": "Last 30 days · {count, plural, =0 {no reviews} one {# review} other {# reviews}}",
-  "@statsReviewsRange": {
-    "description": "How many reviews the last 30 days hold.",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "example": "42"
-      }
-    }
-  },
-  "statsReviewsEmpty": "No reviews in the last 30 days.",
-  "@statsReviewsEmpty": {
-    "description": "The reviews plot's empty state."
-  },
   "statsRetention": "Retention by predicted chance",
   "@statsRetention": {
     "description": "Heading of the retention plot."
@@ -455,5 +437,161 @@
         "example": "3"
       }
     }
+  },
+  "startTitle": "Start your library",
+  "@startTitle": {
+    "description": "Heading of the window before a library is open."
+  },
+  "startBody": "Remit keeps every note in one folder. Make a library where it shows below, or open one you already have.",
+  "@startBody": {
+    "description": "Explains the two actions of the start view."
+  },
+  "createLibrary": "Create library",
+  "@createLibrary": {
+    "description": "Start view action: make a library in the named folder."
+  },
+  "openLibrary": "Open library…",
+  "@openLibrary": {
+    "description": "Start view action, and the native folder picker it opens: choose a library already on disk."
+  },
+  "noLibraryPlace": "Remit could not find a place for its library.",
+  "@noLibraryPlace": {
+    "description": "The start view could not resolve a default library folder."
+  },
+  "noteTitle": "Note title",
+  "@noteTitle": {
+    "description": "Accessible label of the editor’s title field."
+  },
+  "blockActions": "Block actions",
+  "@blockActions": {
+    "description": "Button that opens one block’s menu of changes."
+  },
+  "blockActionsFor": "Block {number} actions",
+  "@blockActionsFor": {
+    "description": "Accessible label of one block’s menu button.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "addBlockBelow": "Add block below",
+  "@addBlockBelow": {
+    "description": "Block menu: add an empty block after this one."
+  },
+  "splitAtCursor": "Split at cursor",
+  "@splitAtCursor": {
+    "description": "Block menu: divide the block where the caret is."
+  },
+  "moveBlockUp": "Move up",
+  "@moveBlockUp": {
+    "description": "Block menu: move the block before its neighbour."
+  },
+  "moveBlockDown": "Move down",
+  "@moveBlockDown": {
+    "description": "Block menu: move the block after its neighbour."
+  },
+  "deleteBlock": "Delete block",
+  "@deleteBlock": {
+    "description": "Block menu: remove the block; cards that pointed at it become lost."
+  },
+  "blockDeleted": "Block deleted. {cards, plural, =0 {No card pointed at it} one {# card lost its source} other {# cards lost their source}}",
+  "@blockDeleted": {
+    "description": "One-shot notice after deleting a block, saying what happened to the cards that read it.",
+    "placeholders": {
+      "cards": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "actionEditTitle": "Edit note title",
+  "@actionEditTitle": {
+    "description": "Command palette action: put the caret in the note’s title."
+  },
+  "actionAddBlock": "Add block",
+  "@actionAddBlock": {
+    "description": "Command palette action: add a block to the note open."
+  },
+  "actionSplitBlock": "Split block at cursor",
+  "@actionSplitBlock": {
+    "description": "Command palette action: divide the block the user was in at the caret."
+  },
+  "actionMoveBlockUp": "Move block up",
+  "@actionMoveBlockUp": {
+    "description": "Command palette action: move the block up."
+  },
+  "actionMoveBlockDown": "Move block down",
+  "@actionMoveBlockDown": {
+    "description": "Command palette action: move the block down."
+  },
+  "actionDeleteBlock": "Delete block",
+  "@actionDeleteBlock": {
+    "description": "Command palette action: delete the block."
+  },
+  "relink": "Re-link",
+  "@relink": {
+    "description": "Action that points a lost card at another block."
+  },
+  "relinkTitle": "Re-link card",
+  "@relinkTitle": {
+    "description": "Accessible label of the block picker."
+  },
+  "relinkSearch": "Search blocks",
+  "@relinkSearch": {
+    "description": "Accessible label and placeholder of the block picker’s search field."
+  },
+  "noBlocks": "No blocks match.",
+  "@noBlocks": {
+    "description": "The block picker’s empty state."
+  },
+  "relinked": "Card re-linked",
+  "@relinked": {
+    "description": "One-shot notice after re-linking a lost card."
+  },
+  "statsHeat": "Review heatmap",
+  "@statsHeat": {
+    "description": "Heading of the calendar heatmap of reviews."
+  },
+  "statsHeatRange": "{from, date, medium} – {to, date, medium} · {count, plural, =0 {no reviews} one {# review} other {# reviews}}",
+  "@statsHeatRange": {
+    "description": "The days the heatmap covers and how many reviews they hold.",
+    "placeholders": {
+      "from": {
+        "type": "DateTime",
+        "example": "2026-05-11"
+      },
+      "to": {
+        "type": "DateTime",
+        "example": "2026-11-06"
+      },
+      "count": {
+        "type": "int",
+        "example": "42"
+      }
+    }
+  },
+  "statsHeatEmpty": "No reviews yet. Grade a card and the map fills in.",
+  "@statsHeatEmpty": {
+    "description": "The heatmap’s empty state."
+  },
+  "statsHeatWeekday": "{date, date, ::EEE}",
+  "@statsHeatWeekday": {
+    "description": "One weekday name beside the heatmap’s rows.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-11-02"
+      }
+    }
+  },
+  "statsHeatLess": "Less",
+  "@statsHeatLess": {
+    "description": "The heatmap legend’s quiet end."
+  },
+  "statsHeatMore": "More",
+  "@statsHeatMore": {
+    "description": "The heatmap legend’s busy end."
   }
 }

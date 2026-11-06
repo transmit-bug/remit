@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // seedStatsLibrary writes a library with reviews to replay: one card reviewed
@@ -60,6 +62,7 @@ func seedStatsLibrary(t *testing.T) *App {
 func openStats(t *testing.T, tt *ui.Tester) {
 	t.Helper()
 	tt.Key(ui.Cmd, ui.KeyK)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
 	tt.Type("stat")
 	tt.Key(0, ui.KeyEnter)
 	if tt.HasText("Search actions") {
@@ -67,20 +70,22 @@ func openStats(t *testing.T, tt *ui.Tester) {
 	}
 }
 
-// The page replays the log into its three datasets: reviews per day, retention
-// per predicted bucket, and the forecast.
+// The page replays the log into its three datasets: the review heatmap,
+// retention per predicted bucket, and the forecast.
 func TestStatsPage(t *testing.T) {
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
 			a := seedStatsLibrary(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			tt.Frame()
+			tt.Advance(200 * time.Millisecond) // the opening card's entry
 			openStats(t, tt)
 
 			for _, want := range []string{
 				"Statistics",
-				"Reviews per day",
-				"Last 30 days · 3 reviews",
+				"Review heatmap",
+				"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun",
+				"Less", "More",
 				"Retention by predicted chance",
 				"100% remembered over 1 review",
 				"Next 30 days",
@@ -90,8 +95,29 @@ func TestStatsPage(t *testing.T) {
 					t.Fatalf("the statistics page is missing %q; texts %q", want, tt.Texts())
 				}
 			}
+			if !containsText(tt.Texts(), "3 reviews") {
+				t.Errorf("the heatmap does not say how many reviews it holds; texts %q", tt.Texts())
+			}
+			// Every day the log holds a review on has its own square, named
+			// with that day and its count.
+			labelled, counted := 0, 0
+			for _, week := range a.stats.heat {
+				for _, day := range week {
+					if day.count == 0 {
+						continue
+					}
+					labelled++
+					counted += day.count
+					if want := locales.In("en").StatsDayCount(day.day, day.count); !tt.HasText(want) {
+						t.Errorf("the heatmap has no square for %q; texts %q", want, tt.Texts())
+					}
+				}
+			}
+			if counted != a.stats.heatTotal || labelled == 0 {
+				t.Errorf("%d labelled squares hold %d reviews, the log %d", labelled, counted, a.stats.heatTotal)
+			}
 			for _, gone := range []string{
-				"No reviews in the last 30 days.",
+				"No reviews yet. Grade a card and the map fills in.",
 				"No reviews to compare yet.",
 				"Nothing scheduled in the next 30 days.",
 			} {
@@ -111,15 +137,22 @@ func TestStatsPage(t *testing.T) {
 func TestStatsEmptyLibrary(t *testing.T) {
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
-			a := NewApp(Options{LibraryDir: t.TempDir()})
+			dir := t.TempDir()
+			lib, err := store.Create(dir, store.Options{})
+			if err != nil {
+				t.Fatalf("create library: %v", err)
+			}
+			lib.Close()
+			a := NewApp(Options{LibraryDir: dir})
 			tt := ui.NewTester(a.View, size.w, size.h)
 			tt.Frame()
+			tt.Advance(200 * time.Millisecond) // the empty queue settles
 			openStats(t, tt)
 
 			for _, want := range []string{
 				"Statistics",
-				"Reviews per day",
-				"No reviews in the last 30 days.",
+				"Review heatmap",
+				"No reviews yet. Grade a card and the map fills in.",
 				"Retention by predicted chance",
 				"No reviews to compare yet.",
 				"Next 30 days",
@@ -136,6 +169,16 @@ func TestStatsEmptyLibrary(t *testing.T) {
 	}
 }
 
+// containsText reports whether any of texts holds want.
+func containsText(texts []string, want string) bool {
+	for _, text := range texts {
+		if strings.Contains(text, want) {
+			return true
+		}
+	}
+	return false
+}
+
 // Chinese labels do not clip at the smallest window: browse's controls and the
 // statistics headings have a box of their own inside it.
 func TestZhHansAtMinimum(t *testing.T) {
@@ -144,7 +187,14 @@ func TestZhHansAtMinimum(t *testing.T) {
 	tt.SetLocale("zh-Hans")
 	tt.Frame()
 
-	for _, label := range []string{"笔记", "复习", "浏览", "统计", "新建笔记", "笔记本", "建卡"} {
+	for _, label := range []string{"复习", "新建笔记", "显示答案", "撤销 (U)", "暂停 (S)", "编辑笔记 (E)"} {
+		assertControl(t, tt, 720, 520, label)
+	}
+	tt.Advance(200 * time.Millisecond) // the card's entry
+
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(200 * time.Millisecond) // the card's exit
+	for _, label := range []string{"笔记", "浏览", "统计", "笔记本", "建卡", "块操作"} {
 		assertControl(t, tt, 720, 520, label)
 	}
 
@@ -155,9 +205,10 @@ func TestZhHansAtMinimum(t *testing.T) {
 	assertControl(t, tt, 720, 520, "Spacing beats cramming")
 
 	tt.Key(ui.Cmd, ui.KeyK)
+	tt.Advance(200 * time.Millisecond) // the card's exit
 	tt.Type("统计")
 	tt.Key(0, ui.KeyEnter)
-	for _, label := range []string{"统计数据", "每日复习", "按预测记忆率看正确率"} {
+	for _, label := range []string{"统计数据", "复习热力图", "按预测记忆率看正确率", "少", "多"} {
 		assertControl(t, tt, 720, 520, label)
 	}
 	if tt.HasText("Search actions") {

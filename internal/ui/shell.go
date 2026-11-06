@@ -19,10 +19,15 @@ const (
 )
 
 // toolbar is the window's one row of controls, the same in every mode so that
-// switching never moves what the user is aiming at.
+// switching never moves what the user is aiming at. Before a library is open
+// there is nothing to switch between, so the row holds the app's name alone.
 func (a *App) toolbar(c *ui.Context, tk tokens) {
 	ui.Toolbar(c, func() {
 		ui.Text(c, Name).FontSize(tk.typeHeading).Bold()
+		if a.lib == nil {
+			ui.Spacer(c)
+			return
+		}
 
 		chosen := int(a.mode)
 		if ui.Segmented(c, &chosen, m(c).ModeNotes(), m(c).ModeReview(), m(c).ModeBrowse(), m(c).ModeStats()).
@@ -163,15 +168,31 @@ func (a *App) openPalette(c *ui.Context) {
 	a.palette.field.Focus(c)
 }
 
-// paletteActions lists what the app can do from anywhere.
+// paletteActions lists what the app can do from anywhere, with the block
+// actions of the note open in the editor. They are listed whenever the library
+// holds a note; each runs against the note the editor has loaded, loading it
+// first when the user has not been there yet.
 func (a *App) paletteActions(c *ui.Context) []paletteAction {
-	return []paletteAction{
+	actions := []paletteAction{
 		{label: m(c).ActionReviewCards(), run: func() { a.setMode(modeReview) }},
 		{label: m(c).ActionEditNotes(), run: func() { a.setMode(modeNotes) }},
 		{label: m(c).BrowseTitle(), run: func() { a.setMode(modeBrowse) }},
 		{label: m(c).StatsTitle(), run: func() { a.setMode(modeStats) }},
 		{label: m(c).NewNote(), run: func() { a.newNote(c) }},
 	}
+	if a.lib == nil {
+		return actions
+	}
+	actions = append(actions,
+		paletteAction{label: m(c).ActionEditTitle(), run: func() { a.focusTitle() }},
+		paletteAction{label: m(c).ActionAddBlock(), run: func() { a.blockFromPalette(c, a.addBlockAfter) }},
+		paletteAction{label: m(c).ActionSplitBlock(), run: func() { a.splitActiveBlock(c) }},
+		paletteAction{label: m(c).ActionMoveBlockUp(), run: func() { a.blockFromPalette(c, func(c *ui.Context, i int) { a.moveBlock(c, i, -1) }) }},
+		paletteAction{label: m(c).ActionMoveBlockDown(), run: func() { a.blockFromPalette(c, func(c *ui.Context, i int) { a.moveBlock(c, i, 1) }) }},
+		paletteAction{label: m(c).ActionDeleteBlock(), run: func() { a.blockFromPalette(c, a.deleteBlock) }},
+		paletteAction{label: m(c).MakeCard(), run: func() { a.blockFromPalette(c, a.makeCard) }},
+	)
+	return actions
 }
 
 // paletteView draws the palette over the window. DialogBase keeps the keyboard

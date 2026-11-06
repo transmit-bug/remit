@@ -140,6 +140,15 @@ func (tk tokens) ratingEdge(r ui.Color) ui.Color {
 	return tk.border.Mix(r, 0.5)
 }
 
+// heatFill is one step of the review heatmap's scale: the quiet paper with
+// more and more accent in it, from the legend's empty box to its busiest.
+func (tk tokens) heatFill(level int) ui.Color {
+	if level <= 0 {
+		return tk.surfaceSunken
+	}
+	return tk.surfaceSunken.Mix(tk.accent, 0.16*float32(min(level, 4)))
+}
+
 // linkFill and linkInk colour a badge that reports a card's link state.
 func (tk tokens) linkFill(r ui.Color) ui.Color { return r.Alpha(0.12) }
 func (tk tokens) linkInk(r ui.Color) ui.Color  { return r.Mix(tk.text, 0.35) }

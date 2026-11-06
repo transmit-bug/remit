@@ -220,8 +220,9 @@ func (a *App) browseRows(c *ui.Context, tk tokens, open *int) {
 	}
 }
 
-// browseRowView draws one card: its prompt, the note it came from, and the
-// state of its reference. It is a row of ui.List, not a widget of its own.
+// browseRowView draws one card: its prompt, the note it came from, the state
+// of its reference, and — for a lost one — the action that repairs it. It is a
+// row of ui.List, not a widget of its own.
 func (a *App) browseRowView(c *ui.Context, tk tokens, row browseRow) {
 	ui.Row(c).Gap(tk.spaceM).AlignItems(ui.Center).Padding(tk.spaceS, tk.spaceM).Children(func() {
 		ui.Column(c).Grow(1).Gap(tk.spaceXS).Children(func() {
@@ -237,6 +238,8 @@ func (a *App) browseRowView(c *ui.Context, tk tokens, row browseRow) {
 		switch {
 		case row.state == core.LinkLost:
 			stateBadge(c, tk, m(c).Lost(), tk.danger)
+			ui.Button(c, m(c).Relink()).MinHeight(tk.control).
+				OnClick(func() { a.openRelink(c, row.card.ID) })
 		case row.state == core.LinkFrozen:
 			stateBadge(c, tk, m(c).Frozen(), tk.warning)
 		}

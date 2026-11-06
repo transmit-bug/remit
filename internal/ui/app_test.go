@@ -2,6 +2,8 @@ package ui
 
 import (
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/settings"
 )
 
 // windowSizes are the sizes every mode has to hold at: the one the window
@@ -118,8 +121,8 @@ func newTestApp(t *testing.T) (*App, testLibrary) {
 	return NewApp(Options{LibraryDir: dir}), seed
 }
 
-// The two modes are one window: the notes list beside the note, or the queue
-// alone, switched by the real keys.
+// A library opens on today's review queue, and the notes are one key away:
+// the two modes are one window, switched by the real keys.
 func TestModes(t *testing.T) {
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
@@ -127,13 +130,7 @@ func TestModes(t *testing.T) {
 			tt := ui.NewTester(a.View, size.w, size.h)
 			tt.Frame()
 
-			for _, want := range []string{"Notebook", "Memory and recall", "Make card"} {
-				if !tt.HasText(want) {
-					t.Fatalf("notes mode: missing %q; texts %q", want, tt.Texts())
-				}
-			}
-
-			tt.Key(ui.Cmd, ui.Key1)
+			// The first screen is the review queue (decision #11).
 			for _, want := range []string{"Show answer", "Spacing beats cramming", "4 cards left"} {
 				if !tt.HasText(want) {
 					t.Fatalf("review mode: missing %q; texts %q", want, tt.Texts())
@@ -141,27 +138,37 @@ func TestModes(t *testing.T) {
 			}
 			for _, gone := range []string{"Notebook", "Make card", "A daily habit"} {
 				if tt.HasText(gone) {
-					t.Errorf("review mode still shows %q", gone)
+					t.Errorf("review mode shows %q", gone)
 				}
 			}
 
 			tt.Key(ui.Cmd, ui.Key2)
-			if !tt.HasText("Notebook") || !tt.HasText("Make card") {
-				t.Fatalf("notes mode did not come back; texts %q", tt.Texts())
+			tt.Advance(200 * time.Millisecond) // the card's exit
+			for _, want := range []string{"Notebook", "Memory and recall", "Make card"} {
+				if !tt.HasText(want) {
+					t.Fatalf("notes mode: missing %q; texts %q", want, tt.Texts())
+				}
 			}
 			if tt.HasText("Show answer") {
 				t.Error("review stayed up after Cmd+2")
 			}
-			tt.Advance(200 * time.Millisecond) // the card's exit
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
 
-			// Esc leaves review too.
+			// Cmd+1 comes back, and Esc leaves review for the notes.
 			tt.Key(ui.Cmd, ui.Key1)
+			if !tt.HasText("Show answer") {
+				t.Fatalf("Cmd+1 did not return to review; texts %q", tt.Texts())
+			}
+			tt.Advance(200 * time.Millisecond) // the card's entry
 			tt.Key(0, ui.KeyEscape)
+			tt.Advance(200 * time.Millisecond) // the card's exit
 			if !tt.HasText("Notebook") {
 				t.Fatalf("Esc did not return to notes; texts %q", tt.Texts())
+			}
+			if tt.FramePending() {
+				t.Error("view still requests frames after it should settle")
 			}
 		})
 	}
@@ -304,6 +311,8 @@ func TestPalette(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
 
 	const field = "Block 1 · A daily habit"
 	if err := tt.Click(field); err != nil {
@@ -364,6 +373,8 @@ func TestEditBlock(t *testing.T) {
 	a, seed := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("Memory and recall"); err != nil {
 		t.Fatal(err)
@@ -402,6 +413,8 @@ func TestNotesList(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("Writing cards"); err != nil {
 		t.Fatal(err)
@@ -426,6 +439,7 @@ func TestMakeCard(t *testing.T) {
 	a, seed := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key2)
 
 	if err := tt.Click("Make card"); err != nil {
 		t.Fatal(err)
@@ -462,9 +476,16 @@ func TestMinimumSizeControls(t *testing.T) {
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
-	for _, label := range []string{"New note", "Notebook", "A daily habit", "Block 1 · A daily habit", "Make card"} {
+	// The queue the window opens on is usable at the smallest size.
+	assertControl(t, tt, 720, 520, "Show answer")
+	tt.Advance(200 * time.Millisecond) // the card's entry
+
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(200 * time.Millisecond) // the card's exit
+	for _, label := range []string{"New note", "Notebook", "A daily habit", "Block 1 · A daily habit", "Make card", "Block 2 · A daily habit"} {
 		assertControl(t, tt, 720, 520, label)
 	}
+	assertControl(t, tt, 720, 520, "Block 2 actions")
 
 	if err := tt.Click("Make card"); err != nil {
 		t.Fatal(err)
@@ -509,6 +530,12 @@ func TestDark(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.SetDark(true)
 	tt.Frame()
+	if !tt.HasText("Show answer") {
+		t.Fatalf("dark review mode is incomplete; texts %q", tt.Texts())
+	}
+
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(200 * time.Millisecond) // the card's exit
 	if !tt.HasText("Notebook") || !tt.HasText("Make card") {
 		t.Fatalf("dark notes mode is incomplete; texts %q", tt.Texts())
 	}
@@ -524,23 +551,64 @@ func TestDark(t *testing.T) {
 	}
 }
 
-// A first run has no library: the window creates one and says the notebook is
-// empty, and what it adds is there for the next run.
+// A first run has no library: the window asks whether to make one or open one,
+// and only makes the one the user chose. The choice is remembered, so the next
+// start opens the library without asking again.
 func TestFirstRun(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "Remit")
-	a := NewApp(Options{LibraryDir: dir})
+	data := t.TempDir()
+	a := NewApp(Options{LibraryDir: dir, DataDir: data})
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.Frame()
 
-	if _, err := os.Stat(filepath.Join(dir, "remit.json")); err != nil {
-		t.Fatalf("the first run did not create its library: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, "remit.json")); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("the window made a library before it was asked: %v", err)
 	}
-	for _, want := range []string{"Notebook", "No notes yet.", "New note"} {
+	for _, want := range []string{"Start your library", "Create library", "Open library…", dir} {
 		if !tt.HasText(want) {
-			t.Fatalf("the empty library is missing %q; texts %q", want, tt.Texts())
+			t.Fatalf("the start view is missing %q; texts %q", want, tt.Texts())
 		}
 	}
+	if tt.HasText("Notebook") {
+		t.Error("the start view drew a library that is not there")
+	}
 
+	if err := tt.Click("Create library"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "remit.json")); err != nil {
+		t.Fatalf("Create library did not make one: %v", err)
+	}
+	if !tt.HasText("No cards left to review.") || !tt.HasText("Back to notes") {
+		t.Fatalf("a new library did not open on its empty queue; texts %q", tt.Texts())
+	}
+
+	// The choice is in the settings for the next start.
+	s, err := settings.Load(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.LibraryDir != dir {
+		t.Fatalf("the settings name %q, want %q", s.LibraryDir, dir)
+	}
+
+	// The next start opens the remembered library, not the start view.
+	next := NewApp(Options{DataDir: data})
+	tt = ui.NewTester(next.View, 1024, 720)
+	tt.Frame()
+	if tt.HasText("Start your library") {
+		t.Fatalf("the remembered library was not opened; texts %q", tt.Texts())
+	}
+	if !tt.HasText("No cards left to review.") {
+		t.Fatalf("the remembered library's queue is not up; texts %q", tt.Texts())
+	}
+
+	if err := tt.Click("Back to notes"); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText("No notes yet.") {
+		t.Fatalf("the empty library does not say it is empty; texts %q", tt.Texts())
+	}
 	if err := tt.Click("New note"); err != nil {
 		t.Fatal(err)
 	}
@@ -548,9 +616,11 @@ func TestFirstRun(t *testing.T) {
 		t.Fatalf("the first note did not open for typing; texts %q", tt.Texts())
 	}
 
-	next := NewApp(Options{LibraryDir: dir})
-	tt = ui.NewTester(next.View, 1024, 720)
+	third := NewApp(Options{DataDir: data})
+	tt = ui.NewTester(third.View, 1024, 720)
 	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
 	if !tt.HasText("Block 1 · Untitled note") {
 		t.Fatalf("the new note did not survive a restart; texts %q", tt.Texts())
 	}
@@ -585,7 +655,7 @@ func TestCorruptLibrary(t *testing.T) {
 	if err := tt.Click("Try again"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("Notebook") || tt.HasText("Remit could not open its library") {
+	if !tt.HasText("No cards left to review.") || tt.HasText("Remit could not open its library") {
 		t.Fatalf("trying again did not open the repaired library; texts %q", tt.Texts())
 	}
 	if tt.FramePending() {
@@ -657,15 +727,23 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 
 	tt.SetLocale("zh-Hans")
 	tt.Frame()
-	for _, want := range []string{"笔记", "复习", "新建笔记", "笔记本"} {
+	for _, want := range []string{"复习", "显示答案", "新建笔记"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing Chinese text %q; texts %q", want, tt.Texts())
 		}
 	}
 
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
+	for _, want := range []string{"笔记", "笔记本"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing Chinese text %q in the notes; texts %q", want, tt.Texts())
+		}
+	}
+
 	tt.SetLocale("en")
 	tt.Frame()
-	for _, want := range []string{"Notes", "Review", "New note", "Notebook"} {
+	for _, want := range []string{"Notes", "Notebook", "New note"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing English text %q after switching back; texts %q", want, tt.Texts())
 		}
