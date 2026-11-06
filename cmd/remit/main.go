@@ -19,6 +19,7 @@ func main() {
 	library := flag.String("library", "", "the library directory (default: Remit in Documents)")
 	export := flag.String("export", "", "write the library to a .remitlib file and exit")
 	importPath := flag.String("import", "", "unpack a .remitlib into the library directory and exit")
+	ankiPath := flag.String("import-apkg", "", "import an Anki .apkg into the library and exit")
 	flag.Parse()
 
 	dir := *library
@@ -30,6 +31,9 @@ func main() {
 		}
 	}
 	if runOffline(dir, *export, *importPath) {
+		return
+	}
+	if runImportAnki(dir, *ankiPath) {
 		return
 	}
 

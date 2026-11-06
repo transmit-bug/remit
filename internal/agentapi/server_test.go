@@ -241,3 +241,25 @@ func TestScheduleParamsKeepDefaults(t *testing.T) {
 		t.Errorf("desired retention = %v, want %v", got, schedule.DefaultRetention)
 	}
 }
+
+func TestRotateTokenReplaces(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "agent-token")
+	first, err := LoadOrCreateToken(path)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	second, err := RotateToken(path)
+	if err != nil {
+		t.Fatalf("rotate: %v", err)
+	}
+	if second == first {
+		t.Error("rotation kept the old token")
+	}
+	again, err := LoadOrCreateToken(path)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if again != second {
+		t.Errorf("reload = %q, want the rotated token", again)
+	}
+}
