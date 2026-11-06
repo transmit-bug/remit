@@ -22,8 +22,8 @@ const (
 // toolbar is the window's one row of controls, the same in every mode so that
 // switching never moves what the user is aiming at. Before a library is open
 // there is nothing to switch between, so the row holds the app's name alone.
-func (a *App) toolbar(c *ui.Context, tk tokens) {
-	ui.Toolbar(c, func() {
+func (a *App) toolbar(c *ui.Context, tk tokens) ui.Element {
+	toolbar := ui.Toolbar(c, func() {
 		ui.Text(c, Name).FontSize(tk.typeHeading).Bold()
 		if a.lib == nil {
 			ui.Spacer(c)
@@ -43,6 +43,7 @@ func (a *App) toolbar(c *ui.Context, tk tokens) {
 	}).Label(m(c).Toolbar(Name)).
 		Padding(tk.spaceS, tk.spaceL).
 		Background(tk.Surface)
+	return toolbar
 }
 
 // notesView is editing mode: the notes list beside the selected note.
@@ -107,6 +108,9 @@ func (a *App) shortcuts(c *ui.Context) {
 // mode derives from the store is loaded here, never in its view, and leaving
 // the settings page this way is the same as any other switch.
 func (a *App) setMode(m mode) {
+	if m != a.mode {
+		a.anim.mode++
+	}
 	a.mode = m
 	a.loadCurrent()
 }
@@ -170,6 +174,7 @@ type paletteState struct {
 // the dialog is built: AutoFocus would take it before the dialog recorded what
 // had it, and Escape would then have nowhere to give it back.
 func (a *App) openPalette(c *ui.Context) {
+	a.anim.palette++
 	a.palette.open = true
 	a.palette.query = ""
 	a.palette.sel = 0
@@ -218,6 +223,11 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 		backdrop.Background(tk.scrim)
 		panel = tk.panel(panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM))
 		panel.Label(m(c).CommandPalette())
+		// The palette arrives a little small over a scrim that fades in.
+		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.palette})
+		scale := design.PanelScale + (1-design.PanelScale)*arriving
+		panel.Opacity(arriving).Scale(scale, scale)
+		backdrop.Opacity(arriving)
 
 		panel.Children(func() {
 			field := ui.TextInput(c, &a.palette.query).

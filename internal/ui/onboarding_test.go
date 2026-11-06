@@ -32,7 +32,7 @@ func TestOpenLibraryPicker(t *testing.T) {
 		},
 	})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 
 	if !tt.HasText("Open library…") {
 		t.Fatalf("the start view offers no way to open one; texts %q", tt.Texts())
@@ -70,7 +70,7 @@ func TestOpenLibraryPicker(t *testing.T) {
 		},
 	})
 	tt = ui.NewTester(next.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	if !tt.HasText("4 cards left") || tt.HasText("Start your library") {
 		t.Fatalf("the remembered library did not open; texts %q", tt.Texts())
 	}
@@ -91,7 +91,7 @@ func TestOpenLibraryPickerCancelled(t *testing.T) {
 		ChooseLibrary: func() (string, error) { return "", nil },
 	})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 
 	if err := tt.Click("Open library…"); err != nil {
 		t.Fatal(err)
@@ -109,7 +109,7 @@ func TestOpenLibraryPickerCancelled(t *testing.T) {
 func TestStartViewWithNoSetting(t *testing.T) {
 	a := NewApp(Options{DataDir: t.TempDir()})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 
 	if !tt.HasText("Start your library") {
 		t.Fatalf("no library and no setting: texts %q", tt.Texts())
@@ -133,6 +133,7 @@ func TestStartViewAtMinimumInChinese(t *testing.T) {
 	for _, label := range []string{"从笔记库开始", "新建笔记库", "打开笔记库…"} {
 		assertControl(t, tt, 720, 520, label)
 	}
+	tt.Advance(300 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after the locale switch")
 	}

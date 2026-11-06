@@ -168,7 +168,7 @@ func TestImportAnkiFromThePalette(t *testing.T) {
 	t.Cleanup(func() { slog.SetDefault(previous) })
 
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
 
@@ -209,7 +209,7 @@ func TestImportAnkiCanceled(t *testing.T) {
 	notes := len(a.Library().Notes())
 
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
 	tt.Key(ui.Cmd, ui.KeyK)
@@ -239,7 +239,7 @@ func TestImportAnkiFailure(t *testing.T) {
 	notes := len(a.Library().Notes())
 
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
 	tt.Key(ui.Cmd, ui.KeyK)

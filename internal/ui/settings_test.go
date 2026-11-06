@@ -77,7 +77,7 @@ func TestSettingsPage(t *testing.T) {
 			agent := newFakeAgent()
 			a := settingsApp(t, Options{AgentControls: agent})
 			tt := ui.NewTester(a.View, size.w, size.h)
-			tt.Frame()
+			settle(tt)
 			tt.Key(ui.Cmd, ui.Key2)
 			tt.Advance(200 * time.Millisecond) // the review card's exit
 
@@ -116,6 +116,7 @@ func TestSettingsPage(t *testing.T) {
 			if a.mode != modeSettings || !tt.HasText("Rotate token") {
 				t.Fatalf("the palette did not open the settings page; texts %q", tt.Texts())
 			}
+			tt.Advance(200 * time.Millisecond) // the screen's entrance
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
@@ -130,7 +131,7 @@ func TestSettingsSurviveRestart(t *testing.T) {
 	data := t.TempDir()
 	a := settingsApp(t, Options{DataDir: data, AgentControls: agent})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(200 * time.Millisecond) // the review card's exit
 	tt.Key(ui.Cmd, ui.KeyComma)
@@ -177,7 +178,7 @@ func TestAgentSwitchesNow(t *testing.T) {
 	agent := newFakeAgent()
 	a := settingsApp(t, Options{AgentControls: agent})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.KeyComma)
 
 	if err := tt.Click("Serve to agents"); err != nil {
@@ -227,7 +228,7 @@ func TestAgentFailureKeepsTheSwitch(t *testing.T) {
 	data := t.TempDir()
 	a := settingsApp(t, Options{DataDir: data, AgentControls: agent})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.KeyComma)
 
 	if err := tt.Click("Serve to agents"); err != nil {
@@ -313,7 +314,7 @@ func TestCheckNow(t *testing.T) {
 				}
 			}
 			tt := ui.NewTester(a.View, 1024, 720)
-			tt.Frame()
+			settle(tt)
 			tt.Key(ui.Cmd, ui.KeyComma)
 			if err := tt.Click("Check now"); err != nil {
 				t.Fatal(err)
@@ -346,7 +347,7 @@ func TestHotkeyApply(t *testing.T) {
 		return nil
 	}})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.KeyComma)
 
 	// The page starts on the default accelerator; typing a new one binds it and
@@ -456,7 +457,7 @@ func TestRemainingReachesAService(t *testing.T) {
 	var got []int
 	a.OnRemaining(func(n int) { got = append(got, n) })
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	if len(got) == 0 || got[len(got)-1] != 4 {
 		t.Fatalf("a service was told %v, want the queue's 4 cards", got)
 	}
@@ -474,7 +475,7 @@ func TestSettingsWithoutALibrary(t *testing.T) {
 	data := t.TempDir()
 	a := NewApp(Options{LibraryDir: filepath.Join(t.TempDir(), "Remit"), DataDir: data})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	if !tt.HasText("Start your library") {
 		t.Fatalf("the window is not on the start view; texts %q", tt.Texts())
 	}
@@ -528,7 +529,7 @@ func TestSettingsWriteFailureRevertsTheSwitch(t *testing.T) {
 	t.Cleanup(func() { os.Chmod(data, 0o700) })
 
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 	tt.Key(ui.Cmd, ui.KeyComma)
 	if err := tt.Click("Daily reminder"); err != nil {
 		t.Fatal(err)

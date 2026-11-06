@@ -7,6 +7,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
+	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
 // reviewWidth caps the review column: a comfortable measure, centred in the
@@ -246,7 +247,7 @@ func (a *App) gradeRow(c *ui.Context, tk tokens) {
 	ui.Row(c).Gap(tk.spaceM).Children(func() {
 		for g := ratingAgain; g <= ratingEasy; g++ {
 			face := g.colour(tk)
-			ui.ButtonBase(c).Grow(1).MinHeight(tk.control).
+			key := ui.ButtonBase(c).Grow(1).MinHeight(tk.control).
 				Gap(tk.spaceS).Padding(tk.spaceXS, tk.spaceS).
 				Background(tk.ratingFill(face)).Border(tk.hairline, tk.ratingEdge(face)).
 				Radius(tk.radiusControl).Label(g.label(c)).
@@ -255,6 +256,17 @@ func (a *App) gradeRow(c *ui.Context, tk tokens) {
 					ui.Text(c, g.key()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 					ui.Text(c, g.label(c)).FontSize(tk.typeBody).TextColor(tk.Text)
 				})
+			// The face eases under the pointer, and a press shrinks the key
+			// without changing the room it takes.
+			if key.Hovered() {
+				key.Background(tk.ratingFill(face).Mix(face, 0.08)).
+					Transition(ui.ElementTransition{Colors: true, Animation: &design.Hover})
+			}
+			pose := ui.Pose{Scale: 1}
+			if key.Pressed() {
+				pose.Scale = design.PressScale
+			}
+			key.AnimatePose(pose, design.Press)
 		}
 	})
 }

@@ -79,6 +79,7 @@ func TestEditNoteTitle(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(seed.dir, "notes", "a-daily-habit-"+string(seed.habit.ID)+".md")); err != nil {
 		t.Errorf("the note file moved with its title: %v", err)
 	}
+	tt.Advance(200 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -125,6 +126,7 @@ func TestAddBlock(t *testing.T) {
 		}
 		ids[block.ID] = true
 	}
+	tt.Advance(200 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
 	}
@@ -358,7 +360,7 @@ func TestSettingsKeepPreferences(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "Remit")
 	a := NewApp(Options{LibraryDir: dir, DataDir: data})
 	tt := ui.NewTester(a.View, 1024, 720)
-	tt.Frame()
+	settle(tt)
 
 	if err := tt.Click("Create library"); err != nil {
 		t.Fatal(err)
