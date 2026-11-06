@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -56,7 +57,7 @@ func TestAgentServiceLifecycle(t *testing.T) {
 
 	// A client finds the API from the files alone: the address is enough to
 	// read the library.
-	resp, err := http.Get("http://" + status.Address + "/v1/library")
+	resp, err := http.Get((&url.URL{Scheme: "http", Host: status.Address}).String() + "/v1/library")
 	if err != nil {
 		t.Fatalf("GET /v1/library: %v", err)
 	}

@@ -18,9 +18,13 @@ This is the list a person runs before calling a build good.
 
 - [ ] The tray icon appears, shows `Remit · N`, and the number drops after a
       review.
-- [ ] The tray menu's Start review brings the window forward in review mode.
-- [ ] `Cmd/Ctrl+Shift+R` starts a review from another app. With a combination
-      already taken, the log names it and the shortcut stays unbound.
+- [ ] The tray menu's Start review brings the window forward in review mode;
+      Pause reminders flips the checkbox and survives a restart.
+- [ ] The default hotkey starts a review from another app and focuses the
+      window; changing it in Settings re-binds it; a taken combination shows an
+      inline error and the old binding keeps working.
+- [ ] With notifications on, a due card produces at most one reminder a day;
+      pausing produces none.
 - [ ] Clicking `remit://note/<id>`, `remit://card/<id>`, `remit://queue` opens
       the right place in the running app; an unknown link logs and does nothing.
 - [ ] Double-clicking a `.remitlib` in Finder imports it once and opens it; the
@@ -33,8 +37,10 @@ This is the list a person runs before calling a build good.
       link opens the browser.
 - [ ] An installed build launches without a Gatekeeper prompt (signed and
       notarized), or with the documented warning when unsigned.
-- [ ] An agent token created by the app is readable only by its owner, and the
-      address file points at a live loopback port.
+- [ ] Settings start and stop the agent API live; the token can be rotated and
+      the address file points at a live loopback port.
+- [ ] Check now says what it found, and with the setting off no request leaves
+      the machine.
 
 ## Data
 
