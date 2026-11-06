@@ -3,33 +3,34 @@ package ui
 import (
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
 
 // Remit runs at one comfortable density: a 1.5 line height, a 32 DIP control,
-// radii of 6, 10 and 14, and the spacing and type scales below. Sizes and
-// colours are named here so that no view spells one out.
+// radii of 6, 10 and 14, and the spacing and type scales below. The values are
+// the design language's; views name them here so that none spells one out.
 const (
-	spaceXS  float32 = 4
-	spaceS   float32 = 8
-	spaceM   float32 = 12
-	spaceL   float32 = 16
-	spaceXL  float32 = 24
-	spaceXXL float32 = 32
+	spaceXS  = design.SpaceXS
+	spaceS   = design.SpaceS
+	spaceM   = design.SpaceM
+	spaceL   = design.SpaceL
+	spaceXL  = design.SpaceXL
+	spaceXXL = design.SpaceXXL
 
-	radiusControl float32 = 6
-	radiusCard    float32 = 10
-	radiusPanel   float32 = 14
+	radiusControl = design.RadiusControl
+	radiusCard    = design.RadiusCard
+	radiusPanel   = design.RadiusPanel
 
-	typeTitle   float32 = 22
-	typeHeading float32 = 17
-	typeBody    float32 = 15
-	typeSmall   float32 = 13
-	typeMono    float32 = 14
+	typeTitle   = design.TypeTitle
+	typeHeading = design.TypeHeading
+	typeBody    = design.TypeBody
+	typeSmall   = design.TypeSmall
+	typeMono    = design.TypeMono
 
-	controlHeight float32 = 32
-	hairline      float32 = 1
-	lineHeight    float32 = 1.5
+	controlHeight = design.ControlHeight
+	hairline      = design.Hairline
+	lineHeight    = design.LineHeight
 )
 
 // tokens is the semantic set the views draw with: the colours resolved from
@@ -71,45 +72,46 @@ type tokens struct {
 	control, hairline                                  float32
 }
 
-// appTheme returns Remit's window theme: the desktop's, at Remit's density.
-func appTheme(base *ui.Theme) *ui.Theme {
-	t := *base
-	t.Spacing = spaceXS
-	t.Radius = radiusControl
-	return &t
+// appTheme resolves Remit's appearance for this frame: the design language's
+// palette, at the text scale the desktop reported. The desktop decides light or
+// dark and how large text is; nothing else of it reaches the window.
+func appTheme(base *ui.Theme) (*ui.Theme, design.Palette) {
+	t := design.Theme(base.Dark)
+	t.FontSize = base.FontSize
+	return t, design.PaletteOf(base.Dark)
 }
 
-// newTokens resolves the semantic tokens from t. Type sizes keep the
-// desktop's text scale by following the theme's font size, without letting the
-// body text become the size of a control's label.
-func newTokens(t *ui.Theme) tokens {
+// newTokens resolves the semantic tokens from the appearance p and its theme t.
+// Type sizes keep the desktop's text scale by following the theme's font size,
+// without letting the body text become the size of a control's label.
+func newTokens(t *ui.Theme, p design.Palette) tokens {
 	scale := t.FontSize / typeSmall
 	if scale <= 0 {
 		scale = 1
 	}
 	return tokens{
-		surface:       t.Background,
-		surfaceRaised: t.Surface,
-		surfaceSunken: sunken(t),
-		scrim:         ui.RGBA(0, 0, 0, 0.28),
+		surface:       p.Page,
+		surfaceRaised: p.Card,
+		surfaceSunken: p.Sunken,
+		scrim:         p.Mask,
 
-		border:       t.Border,
-		borderStrong: t.Border.Mix(t.Text, 0.22),
+		border:       p.Border,
+		borderStrong: p.BorderStrong,
 
-		text:      t.Text,
-		textMuted: t.TextMuted,
-		textFaint: t.TextMuted.Mix(t.Background, 0.35),
-		onAccent:  t.AccentText,
+		text:      p.Text,
+		textMuted: p.Muted,
+		textFaint: p.Faint,
+		onAccent:  p.AccentText,
 
-		accent:  t.Accent,
-		success: t.Success,
-		warning: t.Warning,
-		danger:  t.Danger,
+		accent:  p.Accent,
+		success: p.Success,
+		warning: p.Warning,
+		danger:  p.Danger,
 
-		reviewAgain: t.Danger,
-		reviewHard:  t.Warning,
-		reviewGood:  t.Success,
-		reviewEasy:  t.Accent,
+		reviewAgain: p.Danger,
+		reviewHard:  p.Warning,
+		reviewGood:  p.Success,
+		reviewEasy:  p.Accent,
 
 		spaceXS: spaceXS, spaceS: spaceS, spaceM: spaceM,
 		spaceL: spaceL, spaceXL: spaceXL, spaceXXL: spaceXXL,
@@ -119,14 +121,6 @@ func newTokens(t *ui.Theme) tokens {
 		typeMono: typeMono * scale,
 		control:  controlHeight, hairline: hairline,
 	}
-}
-
-// sunken is a field's face: one step below the page in either appearance.
-func sunken(t *ui.Theme) ui.Color {
-	if t.Dark {
-		return t.Background.Mix(ui.RGB(0, 0, 0), 0.45)
-	}
-	return t.Background.Mix(t.Text, 0.06)
 }
 
 // ratingFill is the face of a grade button for its rating colour: the quiet
