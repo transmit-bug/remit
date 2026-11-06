@@ -79,9 +79,11 @@ type Library struct {
 	applier *schedule.Applier
 	nextSeq int64
 
-	notes  map[core.ID]noteEntry
-	cards  map[core.ID]cardEntry
-	blocks map[core.ID]blockRef
+	notes      map[core.ID]noteEntry
+	cards      map[core.ID]cardEntry
+	blocks     map[core.ID]blockRef
+	extensions []string
+	onEvent    func(Event)
 
 	// events is the review log as loaded, kept so a caller can ask what
 	// happened without re-reading the file. Reviews append to it.
@@ -114,6 +116,8 @@ type blockRef struct {
 type configFile struct {
 	Format string          `json:"format"`
 	FSRS   schedule.Params `json:"fsrs"`
+	// Extensions are the extensions this library enabled, by manifest name.
+	Extensions []string `json:"extensions,omitempty"`
 }
 
 // Blocks reports whether a Library can stand in for a card's source of text.
@@ -133,7 +137,7 @@ func Create(dir string, opts Options) (*Library, error) {
 	if err := os.MkdirAll(dir, dirPerms); err != nil {
 		return nil, err
 	}
-	config, err := encodeConfig(library.params)
+	config, err := encodeConfig(library.params, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +159,7 @@ func Open(dir string, opts Options) (*Library, error) {
 	if err != nil {
 		return nil, err
 	}
-	params, err := decodeConfig(data)
+	params, extensions, err := decodeConfig(data)
 	if err != nil {
 		return nil, err
 	}
@@ -165,6 +169,7 @@ func Open(dir string, opts Options) (*Library, error) {
 
 	library := newLibrary(dir, opts)
 	library.params = params
+	library.extensions = extensions
 	if err := library.load(); err != nil {
 		library.Close()
 		return nil, err
@@ -482,6 +487,7 @@ func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 	if err != nil {
 		return core.Note{}, err
 	}
+	l.emit(EventNoteSaved, note.ID)
 	return cloneNote(note), nil
 }
 
@@ -596,6 +602,7 @@ func (l *Library) CreateCard(blockID core.ID) (core.Card, error) {
 	if err := l.reindexCard(card.ID); err != nil {
 		return core.Card{}, err
 	}
+	l.emit(EventCardCreated, card.ID)
 	return card, nil
 }
 
@@ -661,7 +668,11 @@ func (l *Library) record(event schedule.Event, card core.ID) error {
 	if err := l.applier.Apply(event); err != nil {
 		return err
 	}
-	return l.reindexCard(card)
+	if err := l.reindexCard(card); err != nil {
+		return err
+	}
+	l.emit(EventReviewRecorded, card)
+	return nil
 }
 
 // Events returns the review log in order, void events included, so a caller
@@ -836,21 +847,82 @@ func slugify(title string) string {
 
 // encodeConfig renders remit.json, the library's declaration of how it
 // schedules.
-func encodeConfig(params schedule.Params) ([]byte, error) {
-	data, err := json.MarshalIndent(configFile{Format: formatVersion, FSRS: params}, "", "  ")
+func encodeConfig(params schedule.Params, extensions []string) ([]byte, error) {
+	data, err := json.MarshalIndent(configFile{Format: formatVersion, FSRS: params, Extensions: extensions}, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("store: %s: %w", configName, err)
 	}
 	return append(data, '\n'), nil
 }
 
-func decodeConfig(data []byte) (schedule.Params, error) {
+func decodeConfig(data []byte) (schedule.Params, []string, error) {
 	var config configFile
 	if err := json.Unmarshal(data, &config); err != nil {
-		return schedule.Params{}, fmt.Errorf("store: %s: %w", configName, err)
+		return schedule.Params{}, nil, fmt.Errorf("store: %s: %w", configName, err)
 	}
 	if config.Format != formatVersion {
-		return schedule.Params{}, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, formatVersion)
+		return schedule.Params{}, nil, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, formatVersion)
 	}
-	return config.FSRS.Normalized(), nil
+	return config.FSRS.Normalized(), config.Extensions, nil
+}
+
+// Event is something that happened to the library, which an extension may want
+// to see. It carries an ID and nothing else: an extension reads the rest
+// through the agent API.
+type Event struct {
+	Kind string
+	ID   core.ID
+}
+
+const (
+	// EventNoteSaved fires after a note's file is written.
+	EventNoteSaved = "note.saved"
+	// EventCardCreated fires after a card file is written.
+	EventCardCreated = "card.created"
+	// EventReviewRecorded fires after a review enters the log.
+	EventReviewRecorded = "review.recorded"
+)
+
+// SetEventHandler registers the function told about events, replacing any
+// previous one. The handler runs on the writing thread, so it must not block.
+func (l *Library) SetEventHandler(fn func(Event)) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.onEvent = fn
+}
+
+// EnabledExtensions lists the extensions this library enabled, by name.
+func (l *Library) EnabledExtensions() []string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return append([]string(nil), l.extensions...)
+}
+
+// SetEnabledExtensions records which extensions this library runs, in
+// remit.json. Enabling is per library and deliberate: an extension installed
+// on the machine does nothing until a library names it.
+func (l *Library) SetEnabledExtensions(names []string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return ErrClosed
+	}
+	data, err := encodeConfig(l.params, names)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(l.dir, configName)
+	if err := writeFileAtomic(path, data); err != nil {
+		return err
+	}
+	l.extensions = append([]string(nil), names...)
+	return nil
+}
+
+// emit tells the handler about an event, if one is registered.
+func (l *Library) emit(kind string, id core.ID) {
+	if l.onEvent == nil {
+		return
+	}
+	l.onEvent(Event{Kind: kind, ID: id})
 }

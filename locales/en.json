@@ -8,6 +8,14 @@
   "@modeReview": {
     "description": "The review side of the mode switch."
   },
+  "modeBrowse": "Browse",
+  "@modeBrowse": {
+    "description": "The browse side of the mode switch."
+  },
+  "modeStats": "Stats",
+  "@modeStats": {
+    "description": "The statistics side of the mode switch."
+  },
   "newNote": "New note",
   "@newNote": {
     "description": "Button that creates a note."
@@ -283,5 +291,169 @@
   "trayTooltip": "Remit",
   "@trayTooltip": {
     "description": "Tray tooltip."
+  },
+  "browseTitle": "Browse cards",
+  "@browseTitle": {
+    "description": "Heading of browse mode, and the palette action that opens it."
+  },
+  "browseSearch": "Search cards",
+  "@browseSearch": {
+    "description": "Accessible label and placeholder of browse's search field."
+  },
+  "browseFilters": "Filter cards",
+  "@browseFilters": {
+    "description": "Accessible label of browse's filter control."
+  },
+  "browseAll": "All",
+  "@browseAll": {
+    "description": "Browse filter: every card."
+  },
+  "browseDue": "Due",
+  "@browseDue": {
+    "description": "Browse filter: the cards the queue has for today."
+  },
+  "browseNew": "New",
+  "@browseNew": {
+    "description": "Browse filter: cards that were never reviewed."
+  },
+  "browseSuspended": "Suspended",
+  "@browseSuspended": {
+    "description": "Browse filter and row badge: cards taken out of the queue."
+  },
+  "browseOpen": "Open (Enter)",
+  "@browseOpen": {
+    "description": "Opens the card chosen in browse."
+  },
+  "browseEmpty": "No cards match.",
+  "@browseEmpty": {
+    "description": "Browse's empty state."
+  },
+  "statsTitle": "Statistics",
+  "@statsTitle": {
+    "description": "Heading of the statistics page, and the palette action that opens it."
+  },
+  "statsReviews": "Reviews per day",
+  "@statsReviews": {
+    "description": "Heading of the reviews-per-day plot."
+  },
+  "statsReviewsRange": "Last 30 days · {count, plural, =0 {no reviews} one {# review} other {# reviews}}",
+  "@statsReviewsRange": {
+    "description": "How many reviews the last 30 days hold.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "42"
+      }
+    }
+  },
+  "statsReviewsEmpty": "No reviews in the last 30 days.",
+  "@statsReviewsEmpty": {
+    "description": "The reviews plot's empty state."
+  },
+  "statsRetention": "Retention by predicted chance",
+  "@statsRetention": {
+    "description": "Heading of the retention plot."
+  },
+  "statsRetentionSummary": "{rate} remembered over {reviews, plural, one {# review} other {# reviews}}",
+  "@statsRetentionSummary": {
+    "description": "How well recall matched what the schedule predicted.",
+    "placeholders": {
+      "rate": {
+        "type": "String",
+        "example": "83%"
+      },
+      "reviews": {
+        "type": "int",
+        "example": "42"
+      }
+    }
+  },
+  "statsRetentionEmpty": "No reviews to compare yet.",
+  "@statsRetentionEmpty": {
+    "description": "The retention plot's empty state: no review had a prediction."
+  },
+  "statsForecast": "Next 30 days",
+  "@statsForecast": {
+    "description": "Heading of the forecast plot."
+  },
+  "statsForecastEmpty": "Nothing scheduled in the next 30 days.",
+  "@statsForecastEmpty": {
+    "description": "The forecast plot's empty state."
+  },
+  "statsBucket": "{low, number}–{high, number}%",
+  "@statsBucket": {
+    "description": "Label of a predicted-retention range, as \"70–80%\".",
+    "placeholders": {
+      "low": {
+        "type": "int",
+        "example": "70"
+      },
+      "high": {
+        "type": "int",
+        "example": "80"
+      }
+    }
+  },
+  "statsBucketReviews": "{bucket}: {reviews, plural, one {# review} other {# reviews}}",
+  "@statsBucketReviews": {
+    "description": "Tooltip of a retention bar: how many reviews its range holds.",
+    "placeholders": {
+      "bucket": {
+        "type": "String",
+        "example": "70–80%"
+      },
+      "reviews": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "statsPercent": "{value, number, percent}",
+  "@statsPercent": {
+    "description": "A share, as \"83%\".",
+    "placeholders": {
+      "value": {
+        "type": "num",
+        "example": "0.83"
+      }
+    }
+  },
+  "statsDay": "{date, date, short}",
+  "@statsDay": {
+    "description": "A day of a plot's time axis.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-11-06"
+      }
+    }
+  },
+  "statsDayCount": "{date, date, medium}: {count, plural, one {# review} other {# reviews}}",
+  "@statsDayCount": {
+    "description": "Tooltip of a reviews-per-day bar.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-11-06"
+      },
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "statsDueCount": "{date, date, medium}: {count, plural, one {# card} other {# cards}}",
+  "@statsDueCount": {
+    "description": "Tooltip of a forecast bar.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-11-06"
+      },
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
   }
 }

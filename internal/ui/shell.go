@@ -18,14 +18,15 @@ const (
 	paletteWidth float32 = 480
 )
 
-// toolbar is the window's one row of controls, the same in both modes so that
+// toolbar is the window's one row of controls, the same in every mode so that
 // switching never moves what the user is aiming at.
 func (a *App) toolbar(c *ui.Context, tk tokens) {
 	ui.Toolbar(c, func() {
 		ui.Text(c, Name).FontSize(tk.typeHeading).Bold()
 
 		chosen := int(a.mode)
-		if ui.Segmented(c, &chosen, m(c).ModeNotes(), m(c).ModeReview()).Label(m(c).ModeLabel()).Changed() {
+		if ui.Segmented(c, &chosen, m(c).ModeNotes(), m(c).ModeReview(), m(c).ModeBrowse(), m(c).ModeStats()).
+			Label(m(c).ModeLabel()).Changed() {
 			a.setMode(mode(chosen))
 		}
 
@@ -70,25 +71,39 @@ func (a *App) shortcuts(c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.KeyK, func() { a.openPalette(c) })
 	c.OnShortcut(ui.Cmd, ui.Key1, func() { a.setMode(modeReview) })
 	c.OnShortcut(ui.Cmd, ui.Key2, func() { a.setMode(modeNotes) })
+	c.OnShortcut(ui.Cmd, ui.Key3, func() { a.setMode(modeBrowse) })
+	c.OnShortcut(ui.Cmd, ui.KeyF, func() { a.focusSearch(c) })
 	c.OnShortcut(ui.Cmd, ui.KeyN, func() { a.newNote(c) })
 
-	if a.mode != modeReview {
-		return
+	switch a.mode {
+	case modeReview:
+		c.OnShortcut(0, ui.KeySpace, func() { a.review.reveal() })
+		c.OnShortcut(0, ui.Key1, func() { a.grade(c, ratingAgain) })
+		c.OnShortcut(0, ui.Key2, func() { a.grade(c, ratingHard) })
+		c.OnShortcut(0, ui.Key3, func() { a.grade(c, ratingGood) })
+		c.OnShortcut(0, ui.Key4, func() { a.grade(c, ratingEasy) })
+		c.OnShortcut(0, ui.KeyU, func() { a.undo(c) })
+		c.OnShortcut(0, ui.KeyS, func() { a.suspend(c) })
+		c.OnShortcut(0, ui.KeyE, a.editCurrent)
+		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
+	case modeBrowse, modeStats:
+		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
 	}
-	c.OnShortcut(0, ui.KeySpace, func() { a.review.reveal() })
-	c.OnShortcut(0, ui.Key1, func() { a.grade(c, ratingAgain) })
-	c.OnShortcut(0, ui.Key2, func() { a.grade(c, ratingHard) })
-	c.OnShortcut(0, ui.Key3, func() { a.grade(c, ratingGood) })
-	c.OnShortcut(0, ui.Key4, func() { a.grade(c, ratingEasy) })
-	c.OnShortcut(0, ui.KeyU, func() { a.undo(c) })
-	c.OnShortcut(0, ui.KeyS, func() { a.suspend(c) })
-	c.OnShortcut(0, ui.KeyE, a.editCurrent)
-	c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
 }
 
-// setMode switches the window's face. Review keeps its own queue, so going to
-// the notes and back never starts over.
-func (a *App) setMode(m mode) { a.mode = m }
+// setMode switches the window's face and loads what the new one reads. What a
+// mode derives from the store is loaded here, never in its view.
+func (a *App) setMode(m mode) {
+	a.mode = m
+	a.loadCurrent()
+}
+
+// focusSearch shows browse and puts the caret in its search field, from any
+// mode: the one way to search the library by text.
+func (a *App) focusSearch(c *ui.Context) {
+	a.setMode(modeBrowse)
+	a.browse.field.Focus(c)
+}
 
 // newNote adds an empty note, selects it and puts the caret in its first
 // block. The note exists on disk before it is shown, so what the user types
@@ -108,7 +123,7 @@ func (a *App) newNote(c *ui.Context) {
 	}
 	a.reload()
 	a.editor.selected = string(note.ID)
-	a.mode = modeNotes
+	a.setMode(modeNotes)
 	a.editor.focusFirst = true
 }
 
@@ -153,6 +168,8 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 	return []paletteAction{
 		{label: m(c).ActionReviewCards(), run: func() { a.setMode(modeReview) }},
 		{label: m(c).ActionEditNotes(), run: func() { a.setMode(modeNotes) }},
+		{label: m(c).BrowseTitle(), run: func() { a.setMode(modeBrowse) }},
+		{label: m(c).StatsTitle(), run: func() { a.setMode(modeStats) }},
 		{label: m(c).NewNote(), run: func() { a.newNote(c) }},
 	}
 }

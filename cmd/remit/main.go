@@ -41,6 +41,7 @@ func main() {
 
 	a := appui.NewApp(appui.Options{LibraryDir: dir})
 	a.OnLibraryOpen(startAgentServer)
+	a.OnLibraryOpen(startExtensions)
 	mygo.App.SetName(appui.Name)
 	mygo.App.SetVersion(appui.Version)
 
