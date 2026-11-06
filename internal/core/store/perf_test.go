@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -102,13 +103,27 @@ func TestPerformanceBudget(t *testing.T) {
 		t.Errorf("due-queue read of %d cards took %s, budget %s", len(due), readFor, budgetRead)
 	}
 
-	write := time.Now()
+	// The first write after opening pays SQLite's first page writes and a cold
+	// fsync, which is a startup cost rather than the steady state a budget
+	// describes. Warm up, then take the median of five.
+	cold := time.Now()
 	if err := lib.Review(due[0].ID, schedule.Good, now); err != nil {
 		t.Fatalf("review: %v", err)
 	}
-	writeFor := time.Since(write)
+	coldFor := time.Since(cold)
+
+	samples := make([]time.Duration, 0, 5)
+	for i := 1; i <= 5; i++ {
+		start := time.Now()
+		if err := lib.Review(due[i].ID, schedule.Good, now); err != nil {
+			t.Fatalf("review %d: %v", i, err)
+		}
+		samples = append(samples, time.Since(start))
+	}
+	sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
+	writeFor := samples[len(samples)/2]
 	if writeFor > budgetWrite {
-		t.Errorf("review write took %s, budget %s", writeFor, budgetWrite)
+		t.Errorf("review write took %s (median of 5), budget %s", writeFor, budgetWrite)
 	}
 
 	// The queue and the statistics read the index, not the cards: they are what
@@ -125,9 +140,9 @@ func TestPerformanceBudget(t *testing.T) {
 	}
 	countsFor := time.Since(counts)
 
-	t.Logf("%d cards: due read %s (%d due), review write %s, queue %s (%d cards), counts %s",
+	t.Logf("%d cards: due read %s (%d due), review write %s (first write %s), queue %s (%d cards), counts %s",
 		n, readFor.Round(time.Microsecond), len(due), writeFor.Round(time.Microsecond),
-		todayFor.Round(time.Millisecond), len(cards), countsFor.Round(time.Millisecond))
+		coldFor.Round(time.Millisecond), todayFor.Round(time.Millisecond), len(cards), countsFor.Round(time.Millisecond))
 }
 
 // writeFixture writes a library's sources without the store: one note file per
