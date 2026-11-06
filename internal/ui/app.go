@@ -8,6 +8,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/settings"
 )
 
 // Name and Version are the app's identity: the About page shows them, the
@@ -35,6 +36,7 @@ type App struct {
 	lib     *store.Library // the open library, nil until open succeeds
 	dir     string         // where the library lives, once resolved
 	openErr error          // why the library did not open, or nil
+	start   bool           // no library yet: the start view asks where to put one
 	data    libraryData    // the library as the view reads it
 	due     []core.ID      // today's queue, as the last reload derived it
 
@@ -44,7 +46,15 @@ type App struct {
 	browse   browseState
 	stats    statsState
 	palette  paletteState
+	relink   relinkState
 	aboutWin *mygo.Window // the open About window, or nil
+
+	// settingsDir is where settings.json lives, empty when the app keeps no
+	// settings; defaultLibrary is <Documents>/Remit, resolved once.
+	settingsDir    string
+	settings       settings.Settings
+	defaultLibrary string
+	pickLibrary    func() (string, error)
 
 	// remaining is told the queue's length whenever it is rebuilt, so the
 	// tray can show it without asking the window.
@@ -55,16 +65,30 @@ type App struct {
 	opened func(*store.Library)
 }
 
-// NewApp returns an app on the library in opts.LibraryDir, or on Remit's own
-// library in the user's Documents folder when no option is given, in notes
-// mode. A library that cannot be opened leaves the window showing that, with
-// the one action that tries again; it never panics over a damaged library.
+// NewApp returns an app on the library in opts.LibraryDir, or on the one a
+// previous run remembered in its settings, in review mode. With no library at
+// either place it shows the start view — Create library or Open library… —
+// rather than creating one the user did not ask for. A library that cannot be
+// opened leaves the window showing that, with the one action that tries again;
+// it never panics over a damaged library.
 func NewApp(opts ...Options) *App {
-	a := &App{}
-	a.browse.selected = -1
+	a := &App{
+		browse:      browseState{selected: -1},
+		editor:      editorState{addAfter: -1},
+		relink:      relinkState{selected: -1},
+		pickLibrary: pickLibraryDir,
+	}
 	if len(opts) > 0 {
 		a.dir = opts[0].LibraryDir
+		a.settingsDir = opts[0].DataDir
+		if opts[0].ChooseLibrary != nil {
+			a.pickLibrary = opts[0].ChooseLibrary
+		}
 	}
+	if dir, err := DefaultLibraryDir(); err == nil {
+		a.defaultLibrary = dir
+	}
+	a.loadSettings()
 	a.open()
 	return a
 }
@@ -85,6 +109,8 @@ func (a *App) View(c *ui.Context) {
 		switch {
 		case a.openErr != nil:
 			a.libraryErrorView(c, tk)
+		case a.start:
+			a.startView(c, tk)
 		case a.mode == modeReview:
 			a.reviewView(c, tk)
 		case a.mode == modeBrowse:
@@ -95,5 +121,6 @@ func (a *App) View(c *ui.Context) {
 			a.notesView(c, tk)
 		}
 		a.paletteView(c, tk)
+		a.relinkView(c, tk)
 	})
 }

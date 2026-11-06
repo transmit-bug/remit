@@ -13,14 +13,24 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/settings"
 )
 
 // Options configures an App.
 type Options struct {
-	// LibraryDir is the directory the library lives in. Empty means Remit's
-	// own place, <Documents>/Remit, which is also where a person looks for
-	// their notes; tests pass t.TempDir() so they never touch it.
+	// LibraryDir is the directory the library lives in. Empty means the one a
+	// previous run remembered, and with none remembered the window opens on
+	// the start view instead of creating a library behind the user's back.
+	// Tests pass t.TempDir() so they never touch the user's Documents.
 	LibraryDir string
+	// DataDir is the app's user data directory, where settings.json lives
+	// (main passes mygo.App.Path(mygo.PathUserData)). Empty means settings are
+	// neither read nor written, as in a test that drives the window alone.
+	DataDir string
+	// ChooseLibrary picks the folder a library lives in. It is mygo.Dialog's
+	// folder picker unless a test replaces it: a native dialog cannot be
+	// answered headlessly.
+	ChooseLibrary func() (string, error)
 }
 
 // libraryData is the library as the views read it: a snapshot the app retakes
@@ -100,27 +110,39 @@ func (d libraryData) titleOf(note core.ID) string { return d.titles[note] }
 // the error state's one line, centred in the window.
 const messageWidth float32 = 520
 
-// open opens the library, creating it the first time, and reads it into the
-// app. A library that cannot be opened is a state the window explains, never a
-// reason to panic: what the user sees is one line and one action.
+// open opens the library the app was given or a previous run remembered, and
+// reads it into the app. No library at that place is the start view, not a
+// library created silently: creating or opening one is the user's choice. A
+// library that cannot be opened is a state the window explains, never a reason
+// to panic: what the user sees is one line and one action.
 func (a *App) open() {
-	a.openErr = nil
-	dir, err := a.libraryDir()
-	if err != nil {
-		a.openErr = err
-		slog.Error("remit: locate library", "err", err)
+	a.openErr, a.start = nil, false
+	if a.dir == "" {
+		a.start = true
 		return
 	}
-	lib, err := store.Open(dir, store.Options{})
+	lib, err := store.Open(a.dir, store.Options{})
 	if errors.Is(err, fs.ErrNotExist) {
-		lib, err = store.Create(dir, store.Options{})
+		// The place has no library: the start view offers to make one here or
+		// to open another.
+		a.start = true
+		return
 	}
 	if err != nil {
 		a.openErr = err
-		slog.Error("remit: open library", "dir", dir, "err", err)
+		slog.Error("remit: open library", "dir", a.dir, "err", err)
 		return
 	}
+	a.apply(lib, a.dir)
+}
+
+// apply makes lib the open library and shows the review queue, which is the
+// window's first screen once a library is open (decision #11). Notes are one
+// key away.
+func (a *App) apply(lib *store.Library, dir string) {
 	a.lib, a.dir = lib, dir
+	a.openErr, a.start = nil, false
+	a.mode = modeReview
 	a.review.reset()
 	a.reload()
 	if a.opened != nil {
@@ -128,17 +150,76 @@ func (a *App) open() {
 	}
 }
 
-// libraryDir is where the library lives: the directory the app was given, or
-// Remit's own folder in the user's Documents. It is resolved once and kept, so
-// trying again after a failure opens the same place.
-func (a *App) libraryDir() (string, error) {
-	if a.dir != "" {
-		return a.dir, nil
+// install opens the library at dir, creating one when the folder holds none,
+// remembers it for the next start, and says so where the action was when it
+// could not. It is what the start view's two actions run.
+func (a *App) install(c *ui.Context, dir string) {
+	lib, err := openOrCreate(dir)
+	if err != nil {
+		a.report(c, "open library", err)
+		return
 	}
-	return DefaultLibraryDir()
+	a.close()
+	a.apply(lib, dir)
+	if err := a.remember(dir); err != nil {
+		a.report(c, "remember library", err)
+	}
 }
 
-// DefaultLibraryDir is where a library lives when the caller names none:
+// openOrCreate opens the library at dir, making one when the folder holds
+// none: a place the user picked to be their library.
+func openOrCreate(dir string) (*store.Library, error) {
+	lib, err := store.Open(dir, store.Options{})
+	if errors.Is(err, fs.ErrNotExist) {
+		return store.Create(dir, store.Options{})
+	}
+	return lib, err
+}
+
+// close releases the library open now, if any.
+func (a *App) close() {
+	if a.lib == nil {
+		return
+	}
+	if err := a.lib.Close(); err != nil {
+		slog.Warn("remit: close library", "err", err)
+	}
+	a.lib = nil
+}
+
+// loadSettings reads the app's settings from its data directory, so that a
+// choice made in an earlier run is shown in this one. Settings that cannot be
+// read leave the defaults and a log line: a broken settings file must not keep
+// the window from opening.
+func (a *App) loadSettings() {
+	if a.settingsDir == "" {
+		return
+	}
+	s, err := settings.Load(a.settingsDir)
+	if err != nil {
+		slog.Warn("remit: read settings", "err", err)
+		return
+	}
+	a.settings = s
+	if a.dir == "" {
+		a.dir = s.LibraryDir
+	}
+}
+
+// remember writes the library the user chose into the settings, keeping every
+// other preference, so the next start opens it without asking again.
+func (a *App) remember(dir string) error {
+	a.settings.LibraryDir = dir
+	if a.settingsDir == "" {
+		return nil
+	}
+	if err := settings.Save(a.settingsDir, a.settings); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DefaultLibraryDir is where a library goes when the caller names none:
 // Remit's own folder in the user's Documents.
 func DefaultLibraryDir() (string, error) {
 	docs, err := mygo.App.Path(mygo.PathDocuments)
@@ -153,18 +234,24 @@ func DefaultLibraryDir() (string, error) {
 func (a *App) Library() *store.Library { return a.lib }
 
 // OpenLibrary switches the window to the library at dir, closing the one open
-// now. A missing library is created, so a link or a dropped archive can point
-// at a place the app has not been before.
+// now. A directory without a library becomes one, so a link or a dropped
+// archive can point at a place the app has not been before. The place is
+// remembered for the next start. A library that will not open leaves the one
+// on screen alone, or the error state when there is none.
 func (a *App) OpenLibrary(dir string) {
-	if a.lib != nil {
-		if err := a.lib.Close(); err != nil {
-			slog.Warn("remit: close library", "err", err)
+	lib, err := openOrCreate(dir)
+	if err != nil {
+		slog.Error("remit: open library", "dir", dir, "err", err)
+		if a.lib == nil {
+			a.openErr, a.start = err, false
 		}
-		a.lib = nil
+		return
 	}
-	a.dir = dir
-	a.review.reset()
-	a.open()
+	a.close()
+	if err := a.remember(dir); err != nil {
+		slog.Warn("remit: remember library", "err", err)
+	}
+	a.apply(lib, dir)
 }
 
 // OnLibraryOpen registers a function told about the library once it opens,

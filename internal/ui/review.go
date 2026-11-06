@@ -150,6 +150,14 @@ func (r *reviewState) restore(id core.ID) {
 	r.shown, r.revealed = id, true
 }
 
+// show puts a card at the head of the queue with its answer still hidden, as a
+// card that was just re-linked wants: the user sees the text it follows now,
+// whether or not its due date is today.
+func (r *reviewState) show(id core.ID) {
+	r.queue = append([]core.ID{id}, r.queue...)
+	r.shown, r.revealed = "", false
+}
+
 // forget drops the grade undo has just cancelled.
 func (r *reviewState) forget() { r.graded = r.graded[:len(r.graded)-1] }
 
@@ -183,8 +191,9 @@ func (a *App) reviewView(c *ui.Context, tk tokens) {
 //
 // The lost branch is defensive: today's queue leaves a lost card out, because a
 // queue promises cards that can be reviewed now. It holds if a card's source
-// disappears between the queue being derived and the card being drawn, and
-// suspending it — the one action it can still take — is the way out.
+// disappears between the queue being derived and the card being drawn, and a
+// card opened from browse lands here too. Re-linking is the repair, and
+// suspending — the one action that never touches history — is the way out.
 func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer string, state core.LinkState) {
 	ui.Column(c).Key(string(card.ID)).
 		Padding(tk.spaceXL).Gap(tk.spaceL).
@@ -197,9 +206,12 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 					Background(tk.linkFill(tk.danger)).TextColor(tk.linkInk(tk.danger))
 				ui.Text(c, m(c).LostBody()).
 					FontSize(tk.typeBody).TextColor(tk.textMuted)
-				ui.Button(c, m(c).SuspendCard()).AlignSelf(ui.Start).
-					PaddingX(tk.spaceL).MinHeight(tk.control).
-					OnClick(func() { a.suspend(c) })
+				ui.Row(c).Gap(tk.spaceS).AlignSelf(ui.Start).Children(func() {
+					ui.PrimaryButton(c, m(c).Relink()).MinHeight(tk.control).
+						OnClick(func() { a.openRelink(c, card.ID) })
+					ui.Button(c, m(c).SuspendCard()).MinHeight(tk.control).
+						OnClick(func() { a.suspend(c) })
+				})
 				return
 			case core.LinkFrozen:
 				ui.Row(c).AlignSelf(ui.Start).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {

@@ -23,8 +23,10 @@ func TestBrowseEnter(t *testing.T) {
 			a, _ := newTestApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			tt.Frame()
+			tt.Advance(200 * time.Millisecond) // the opening card's entry
 
 			tt.Key(ui.Cmd, ui.Key3)
+			tt.Advance(200 * time.Millisecond) // the review card's exit
 			for _, want := range []string{"Browse cards", "Search cards", "All", "Due", "Spacing beats cramming", "Memory and recall", "4 cards"} {
 				if !tt.HasText(want) {
 					t.Fatalf("browse is missing %q; texts %q", want, tt.Texts())
@@ -46,8 +48,10 @@ func TestBrowseSearch(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.Frame()
+	tt.Advance(200 * time.Millisecond) // the opening card's entry
 
 	tt.Key(ui.Cmd, ui.KeyF)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
 	if !tt.HasText("Browse cards") {
 		t.Fatalf("Cmd+F did not open browse; texts %q", tt.Texts())
 	}
@@ -143,7 +147,9 @@ func TestBrowseFilters(t *testing.T) {
 			a, _ := seedBrowseLibrary(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			tt.Frame()
+			tt.Advance(200 * time.Millisecond) // the opening card's entry
 			tt.Key(ui.Cmd, ui.Key3)
+			tt.Advance(200 * time.Millisecond) // the review card's exit
 
 			for _, want := range []string{"Due card", "Fresh card", "Suspended card", lostBody} {
 				if !tt.HasText(want) {
@@ -196,7 +202,9 @@ func TestBrowseOpens(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.Frame()
+	tt.Advance(200 * time.Millisecond) // the opening card's entry
 	tt.Key(ui.Cmd, ui.Key3)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("Spacing beats cramming"); err != nil {
 		t.Fatal(err)
@@ -232,7 +240,9 @@ func TestBrowseOpensLostCard(t *testing.T) {
 	a, _ := seedBrowseLibrary(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.Frame()
+	tt.Advance(200 * time.Millisecond) // the opening card's entry
 	tt.Key(ui.Cmd, ui.Key3)
+	tt.Advance(200 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click(lostBody); err != nil {
 		t.Fatal(err)

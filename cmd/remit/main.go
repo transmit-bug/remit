@@ -12,6 +12,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/logging"
+	"github.com/transmit-bug/remit/internal/settings"
 	appui "github.com/transmit-bug/remit/internal/ui"
 )
 
@@ -22,15 +23,31 @@ func main() {
 	ankiPath := flag.String("import-apkg", "", "import an Anki .apkg into the library and exit")
 	flag.Parse()
 
+	// The settings hold the library an earlier run chose; the flag wins over
+	// them. No library at all is the window's start view, not an error.
+	dataDir, err := mygo.App.Path(mygo.PathUserData)
+	if err != nil {
+		log.Fatalf("user data directory: %v", err)
+	}
+	s, err := settings.Load(dataDir)
+	if err != nil {
+		log.Printf("settings: %v", err)
+	}
 	dir := *library
 	if dir == "" {
-		var err error
-		dir, err = appui.DefaultLibraryDir()
+		dir = s.LibraryDir
+	}
+
+	// The offline commands and a dropped archive need a place before the
+	// window exists: the flag's, the remembered one, else Remit's own.
+	place := dir
+	if place == "" {
+		place, err = appui.DefaultLibraryDir()
 		if err != nil {
 			log.Fatalf("library directory: %v", err)
 		}
 	}
-	if runOffline(dir, *export, *importPath) {
+	if runOffline(place, *export, *importPath) {
 		return
 	}
 	if runImportAnki(dir, *ankiPath) {
@@ -43,7 +60,7 @@ func main() {
 		return
 	}
 
-	a := appui.NewApp(appui.Options{LibraryDir: dir})
+	a := appui.NewApp(appui.Options{LibraryDir: dir, DataDir: dataDir})
 	a.OnLibraryOpen(startAgentServer)
 	a.OnLibraryOpen(startExtensions)
 	mygo.App.SetName(appui.Name)
@@ -72,7 +89,7 @@ func main() {
 	}
 
 	installDeepLinks(a)
-	installFileAssociations(a, filepath.Dir(dir))
+	installFileAssociations(a, filepath.Dir(place))
 
 	mygo.App.WhenReady(func() {
 		mainWin = mygo.NewWindow(mygo.WindowOptions{

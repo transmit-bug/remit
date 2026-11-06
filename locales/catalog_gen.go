@@ -905,48 +905,6 @@ func (msgs Messages) StatsTitle() string {
 	return Catalog.Format(msgs.locale, "statsTitle", nil)
 }
 
-// StatsReviews says "Reviews per day"
-// in the language the app shows.
-//
-// Heading of the reviews-per-day plot.
-func StatsReviews() string { return In(i18n.Locale()).StatsReviews() }
-
-// StatsReviews says "Reviews per day"
-// in the language of msgs.
-//
-// Heading of the reviews-per-day plot.
-func (msgs Messages) StatsReviews() string {
-	return Catalog.Format(msgs.locale, "statsReviews", nil)
-}
-
-// StatsReviewsRange says "Last 30 days · {count, plural, =0 {no reviews} one {# review} other {# reviews}}"
-// in the language the app shows.
-//
-// How many reviews the last 30 days hold.
-func StatsReviewsRange(count int) string { return In(i18n.Locale()).StatsReviewsRange(count) }
-
-// StatsReviewsRange says "Last 30 days · {count, plural, =0 {no reviews} one {# review} other {# reviews}}"
-// in the language of msgs.
-//
-// How many reviews the last 30 days hold.
-func (msgs Messages) StatsReviewsRange(count int) string {
-	return Catalog.Format(msgs.locale, "statsReviewsRange", map[string]any{"count": count})
-}
-
-// StatsReviewsEmpty says "No reviews in the last 30 days."
-// in the language the app shows.
-//
-// The reviews plot's empty state.
-func StatsReviewsEmpty() string { return In(i18n.Locale()).StatsReviewsEmpty() }
-
-// StatsReviewsEmpty says "No reviews in the last 30 days."
-// in the language of msgs.
-//
-// The reviews plot's empty state.
-func (msgs Messages) StatsReviewsEmpty() string {
-	return Catalog.Format(msgs.locale, "statsReviewsEmpty", nil)
-}
-
 // StatsRetention says "Retention by predicted chance"
 // in the language the app shows.
 //
@@ -1107,4 +1065,444 @@ func StatsDueCount(date time.Time, count int) string {
 // Tooltip of a forecast bar.
 func (msgs Messages) StatsDueCount(date time.Time, count int) string {
 	return Catalog.Format(msgs.locale, "statsDueCount", map[string]any{"date": date, "count": count})
+}
+
+// StartTitle says "Start your library"
+// in the language the app shows.
+//
+// Heading of the window before a library is open.
+func StartTitle() string { return In(i18n.Locale()).StartTitle() }
+
+// StartTitle says "Start your library"
+// in the language of msgs.
+//
+// Heading of the window before a library is open.
+func (msgs Messages) StartTitle() string {
+	return Catalog.Format(msgs.locale, "startTitle", nil)
+}
+
+// StartBody says "Remit keeps every note in one folder. Make a library where it shows below, or open one you already have."
+// in the language the app shows.
+//
+// Explains the two actions of the start view.
+func StartBody() string { return In(i18n.Locale()).StartBody() }
+
+// StartBody says "Remit keeps every note in one folder. Make a library where it shows below, or open one you already have."
+// in the language of msgs.
+//
+// Explains the two actions of the start view.
+func (msgs Messages) StartBody() string {
+	return Catalog.Format(msgs.locale, "startBody", nil)
+}
+
+// CreateLibrary says "Create library"
+// in the language the app shows.
+//
+// Start view action: make a library in the named folder.
+func CreateLibrary() string { return In(i18n.Locale()).CreateLibrary() }
+
+// CreateLibrary says "Create library"
+// in the language of msgs.
+//
+// Start view action: make a library in the named folder.
+func (msgs Messages) CreateLibrary() string {
+	return Catalog.Format(msgs.locale, "createLibrary", nil)
+}
+
+// OpenLibrary says "Open library…"
+// in the language the app shows.
+//
+// Start view action, and the native folder picker it opens: choose a
+// library already on disk.
+func OpenLibrary() string { return In(i18n.Locale()).OpenLibrary() }
+
+// OpenLibrary says "Open library…"
+// in the language of msgs.
+//
+// Start view action, and the native folder picker it opens: choose a
+// library already on disk.
+func (msgs Messages) OpenLibrary() string {
+	return Catalog.Format(msgs.locale, "openLibrary", nil)
+}
+
+// NoLibraryPlace says "Remit could not find a place for its library."
+// in the language the app shows.
+//
+// The start view could not resolve a default library folder.
+func NoLibraryPlace() string { return In(i18n.Locale()).NoLibraryPlace() }
+
+// NoLibraryPlace says "Remit could not find a place for its library."
+// in the language of msgs.
+//
+// The start view could not resolve a default library folder.
+func (msgs Messages) NoLibraryPlace() string {
+	return Catalog.Format(msgs.locale, "noLibraryPlace", nil)
+}
+
+// NoteTitle says "Note title"
+// in the language the app shows.
+//
+// Accessible label of the editor’s title field.
+func NoteTitle() string { return In(i18n.Locale()).NoteTitle() }
+
+// NoteTitle says "Note title"
+// in the language of msgs.
+//
+// Accessible label of the editor’s title field.
+func (msgs Messages) NoteTitle() string {
+	return Catalog.Format(msgs.locale, "noteTitle", nil)
+}
+
+// BlockActions says "Block actions"
+// in the language the app shows.
+//
+// Button that opens one block’s menu of changes.
+func BlockActions() string { return In(i18n.Locale()).BlockActions() }
+
+// BlockActions says "Block actions"
+// in the language of msgs.
+//
+// Button that opens one block’s menu of changes.
+func (msgs Messages) BlockActions() string {
+	return Catalog.Format(msgs.locale, "blockActions", nil)
+}
+
+// BlockActionsFor says "Block {number} actions"
+// in the language the app shows.
+//
+// Accessible label of one block’s menu button.
+func BlockActionsFor(number int) string { return In(i18n.Locale()).BlockActionsFor(number) }
+
+// BlockActionsFor says "Block {number} actions"
+// in the language of msgs.
+//
+// Accessible label of one block’s menu button.
+func (msgs Messages) BlockActionsFor(number int) string {
+	return Catalog.Format(msgs.locale, "blockActionsFor", map[string]any{"number": number})
+}
+
+// AddBlockBelow says "Add block below"
+// in the language the app shows.
+//
+// Block menu: add an empty block after this one.
+func AddBlockBelow() string { return In(i18n.Locale()).AddBlockBelow() }
+
+// AddBlockBelow says "Add block below"
+// in the language of msgs.
+//
+// Block menu: add an empty block after this one.
+func (msgs Messages) AddBlockBelow() string {
+	return Catalog.Format(msgs.locale, "addBlockBelow", nil)
+}
+
+// SplitAtCursor says "Split at cursor"
+// in the language the app shows.
+//
+// Block menu: divide the block where the caret is.
+func SplitAtCursor() string { return In(i18n.Locale()).SplitAtCursor() }
+
+// SplitAtCursor says "Split at cursor"
+// in the language of msgs.
+//
+// Block menu: divide the block where the caret is.
+func (msgs Messages) SplitAtCursor() string {
+	return Catalog.Format(msgs.locale, "splitAtCursor", nil)
+}
+
+// MoveBlockUp says "Move up"
+// in the language the app shows.
+//
+// Block menu: move the block before its neighbour.
+func MoveBlockUp() string { return In(i18n.Locale()).MoveBlockUp() }
+
+// MoveBlockUp says "Move up"
+// in the language of msgs.
+//
+// Block menu: move the block before its neighbour.
+func (msgs Messages) MoveBlockUp() string {
+	return Catalog.Format(msgs.locale, "moveBlockUp", nil)
+}
+
+// MoveBlockDown says "Move down"
+// in the language the app shows.
+//
+// Block menu: move the block after its neighbour.
+func MoveBlockDown() string { return In(i18n.Locale()).MoveBlockDown() }
+
+// MoveBlockDown says "Move down"
+// in the language of msgs.
+//
+// Block menu: move the block after its neighbour.
+func (msgs Messages) MoveBlockDown() string {
+	return Catalog.Format(msgs.locale, "moveBlockDown", nil)
+}
+
+// DeleteBlock says "Delete block"
+// in the language the app shows.
+//
+// Block menu: remove the block; cards that pointed at it become lost.
+func DeleteBlock() string { return In(i18n.Locale()).DeleteBlock() }
+
+// DeleteBlock says "Delete block"
+// in the language of msgs.
+//
+// Block menu: remove the block; cards that pointed at it become lost.
+func (msgs Messages) DeleteBlock() string {
+	return Catalog.Format(msgs.locale, "deleteBlock", nil)
+}
+
+// BlockDeleted says "Block deleted. {cards, plural, =0 {No card pointed at it} one {# card lost its source} other {# cards lost their sour…"
+// in the language the app shows.
+//
+// One-shot notice after deleting a block, saying what happened to the cards
+// that read it.
+func BlockDeleted(cards int) string { return In(i18n.Locale()).BlockDeleted(cards) }
+
+// BlockDeleted says "Block deleted. {cards, plural, =0 {No card pointed at it} one {# card lost its source} other {# cards lost their sour…"
+// in the language of msgs.
+//
+// One-shot notice after deleting a block, saying what happened to the cards
+// that read it.
+func (msgs Messages) BlockDeleted(cards int) string {
+	return Catalog.Format(msgs.locale, "blockDeleted", map[string]any{"cards": cards})
+}
+
+// ActionEditTitle says "Edit note title"
+// in the language the app shows.
+//
+// Command palette action: put the caret in the note’s title.
+func ActionEditTitle() string { return In(i18n.Locale()).ActionEditTitle() }
+
+// ActionEditTitle says "Edit note title"
+// in the language of msgs.
+//
+// Command palette action: put the caret in the note’s title.
+func (msgs Messages) ActionEditTitle() string {
+	return Catalog.Format(msgs.locale, "actionEditTitle", nil)
+}
+
+// ActionAddBlock says "Add block"
+// in the language the app shows.
+//
+// Command palette action: add a block to the note open.
+func ActionAddBlock() string { return In(i18n.Locale()).ActionAddBlock() }
+
+// ActionAddBlock says "Add block"
+// in the language of msgs.
+//
+// Command palette action: add a block to the note open.
+func (msgs Messages) ActionAddBlock() string {
+	return Catalog.Format(msgs.locale, "actionAddBlock", nil)
+}
+
+// ActionSplitBlock says "Split block at cursor"
+// in the language the app shows.
+//
+// Command palette action: divide the block the user was in at the caret.
+func ActionSplitBlock() string { return In(i18n.Locale()).ActionSplitBlock() }
+
+// ActionSplitBlock says "Split block at cursor"
+// in the language of msgs.
+//
+// Command palette action: divide the block the user was in at the caret.
+func (msgs Messages) ActionSplitBlock() string {
+	return Catalog.Format(msgs.locale, "actionSplitBlock", nil)
+}
+
+// ActionMoveBlockUp says "Move block up"
+// in the language the app shows.
+//
+// Command palette action: move the block up.
+func ActionMoveBlockUp() string { return In(i18n.Locale()).ActionMoveBlockUp() }
+
+// ActionMoveBlockUp says "Move block up"
+// in the language of msgs.
+//
+// Command palette action: move the block up.
+func (msgs Messages) ActionMoveBlockUp() string {
+	return Catalog.Format(msgs.locale, "actionMoveBlockUp", nil)
+}
+
+// ActionMoveBlockDown says "Move block down"
+// in the language the app shows.
+//
+// Command palette action: move the block down.
+func ActionMoveBlockDown() string { return In(i18n.Locale()).ActionMoveBlockDown() }
+
+// ActionMoveBlockDown says "Move block down"
+// in the language of msgs.
+//
+// Command palette action: move the block down.
+func (msgs Messages) ActionMoveBlockDown() string {
+	return Catalog.Format(msgs.locale, "actionMoveBlockDown", nil)
+}
+
+// ActionDeleteBlock says "Delete block"
+// in the language the app shows.
+//
+// Command palette action: delete the block.
+func ActionDeleteBlock() string { return In(i18n.Locale()).ActionDeleteBlock() }
+
+// ActionDeleteBlock says "Delete block"
+// in the language of msgs.
+//
+// Command palette action: delete the block.
+func (msgs Messages) ActionDeleteBlock() string {
+	return Catalog.Format(msgs.locale, "actionDeleteBlock", nil)
+}
+
+// Relink says "Re-link"
+// in the language the app shows.
+//
+// Action that points a lost card at another block.
+func Relink() string { return In(i18n.Locale()).Relink() }
+
+// Relink says "Re-link"
+// in the language of msgs.
+//
+// Action that points a lost card at another block.
+func (msgs Messages) Relink() string {
+	return Catalog.Format(msgs.locale, "relink", nil)
+}
+
+// RelinkTitle says "Re-link card"
+// in the language the app shows.
+//
+// Accessible label of the block picker.
+func RelinkTitle() string { return In(i18n.Locale()).RelinkTitle() }
+
+// RelinkTitle says "Re-link card"
+// in the language of msgs.
+//
+// Accessible label of the block picker.
+func (msgs Messages) RelinkTitle() string {
+	return Catalog.Format(msgs.locale, "relinkTitle", nil)
+}
+
+// RelinkSearch says "Search blocks"
+// in the language the app shows.
+//
+// Accessible label and placeholder of the block picker’s search field.
+func RelinkSearch() string { return In(i18n.Locale()).RelinkSearch() }
+
+// RelinkSearch says "Search blocks"
+// in the language of msgs.
+//
+// Accessible label and placeholder of the block picker’s search field.
+func (msgs Messages) RelinkSearch() string {
+	return Catalog.Format(msgs.locale, "relinkSearch", nil)
+}
+
+// NoBlocks says "No blocks match."
+// in the language the app shows.
+//
+// The block picker’s empty state.
+func NoBlocks() string { return In(i18n.Locale()).NoBlocks() }
+
+// NoBlocks says "No blocks match."
+// in the language of msgs.
+//
+// The block picker’s empty state.
+func (msgs Messages) NoBlocks() string {
+	return Catalog.Format(msgs.locale, "noBlocks", nil)
+}
+
+// Relinked says "Card re-linked"
+// in the language the app shows.
+//
+// One-shot notice after re-linking a lost card.
+func Relinked() string { return In(i18n.Locale()).Relinked() }
+
+// Relinked says "Card re-linked"
+// in the language of msgs.
+//
+// One-shot notice after re-linking a lost card.
+func (msgs Messages) Relinked() string {
+	return Catalog.Format(msgs.locale, "relinked", nil)
+}
+
+// StatsHeat says "Review heatmap"
+// in the language the app shows.
+//
+// Heading of the calendar heatmap of reviews.
+func StatsHeat() string { return In(i18n.Locale()).StatsHeat() }
+
+// StatsHeat says "Review heatmap"
+// in the language of msgs.
+//
+// Heading of the calendar heatmap of reviews.
+func (msgs Messages) StatsHeat() string {
+	return Catalog.Format(msgs.locale, "statsHeat", nil)
+}
+
+// StatsHeatRange says "{from, date, medium} – {to, date, medium} · {count, plural, =0 {no reviews} one {# review} other {# reviews}}"
+// in the language the app shows.
+//
+// The days the heatmap covers and how many reviews they hold.
+func StatsHeatRange(from time.Time, to time.Time, count int) string {
+	return In(i18n.Locale()).StatsHeatRange(from, to, count)
+}
+
+// StatsHeatRange says "{from, date, medium} – {to, date, medium} · {count, plural, =0 {no reviews} one {# review} other {# reviews}}"
+// in the language of msgs.
+//
+// The days the heatmap covers and how many reviews they hold.
+func (msgs Messages) StatsHeatRange(from time.Time, to time.Time, count int) string {
+	return Catalog.Format(msgs.locale, "statsHeatRange", map[string]any{"from": from, "to": to, "count": count})
+}
+
+// StatsHeatEmpty says "No reviews yet. Grade a card and the map fills in."
+// in the language the app shows.
+//
+// The heatmap’s empty state.
+func StatsHeatEmpty() string { return In(i18n.Locale()).StatsHeatEmpty() }
+
+// StatsHeatEmpty says "No reviews yet. Grade a card and the map fills in."
+// in the language of msgs.
+//
+// The heatmap’s empty state.
+func (msgs Messages) StatsHeatEmpty() string {
+	return Catalog.Format(msgs.locale, "statsHeatEmpty", nil)
+}
+
+// StatsHeatWeekday says "{date, date, ::EEE}"
+// in the language the app shows.
+//
+// One weekday name beside the heatmap’s rows.
+func StatsHeatWeekday(date time.Time) string { return In(i18n.Locale()).StatsHeatWeekday(date) }
+
+// StatsHeatWeekday says "{date, date, ::EEE}"
+// in the language of msgs.
+//
+// One weekday name beside the heatmap’s rows.
+func (msgs Messages) StatsHeatWeekday(date time.Time) string {
+	return Catalog.Format(msgs.locale, "statsHeatWeekday", map[string]any{"date": date})
+}
+
+// StatsHeatLess says "Less"
+// in the language the app shows.
+//
+// The heatmap legend’s quiet end.
+func StatsHeatLess() string { return In(i18n.Locale()).StatsHeatLess() }
+
+// StatsHeatLess says "Less"
+// in the language of msgs.
+//
+// The heatmap legend’s quiet end.
+func (msgs Messages) StatsHeatLess() string {
+	return Catalog.Format(msgs.locale, "statsHeatLess", nil)
+}
+
+// StatsHeatMore says "More"
+// in the language the app shows.
+//
+// The heatmap legend’s busy end.
+func StatsHeatMore() string { return In(i18n.Locale()).StatsHeatMore() }
+
+// StatsHeatMore says "More"
+// in the language of msgs.
+//
+// The heatmap legend’s busy end.
+func (msgs Messages) StatsHeatMore() string {
+	return Catalog.Format(msgs.locale, "statsHeatMore", nil)
 }
