@@ -8,13 +8,19 @@
 //	reviews.jsonl         append-only review events, the only scheduling source
 //	.remit/index.sqlite   derived index: delete it and it comes back
 //
-// The text files are the truth. The index is a cache of what they say, so a
-// rebuild costs a replay of the log and a walk over the notes, never a loss.
-// Nothing here reads the clock: time arrives through Options.Now.
+// The text files are the truth. The index is a cache of what they say: it holds
+// every card and its replayed schedule, the text of every note block, and the
+// watermark of the log it has applied. An open reads the sources only when the
+// index has fallen behind them, so a library of a hundred thousand cards opens
+// by reading one file and no cards. A rebuild costs a replay of the log and a
+// walk over the notes, never a loss. Nothing here reads the clock: time arrives
+// through Options.Now.
 package store
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,8 +73,13 @@ type Options struct {
 	Params schedule.Params
 }
 
-// Library is an open library. It is safe for concurrent use; every write takes
-// the lock, and a read only ever returns values it has already loaded.
+// Library is an open library. It is safe for concurrent use: every call takes
+// the lock, so a reader never sees half of a write.
+//
+// What it keeps in memory is the index's answer to "what cards are there and
+// when is each due" — the catalog — because that is what listing and the queue
+// ask for on every write. Note and block text stay on disk, read when a caller
+// names a note, a block or a card file.
 type Library struct {
 	mu     sync.Mutex
 	dir    string
@@ -76,40 +87,41 @@ type Library struct {
 	params schedule.Params
 
 	index   *index
-	applier *schedule.Applier
 	nextSeq int64
+	digest  string
 
-	notes      map[core.ID]noteEntry
-	cards      map[core.ID]cardEntry
-	blocks     map[core.ID]blockRef
+	// sources counts what this handle has read off the disk, which a test uses
+	// to prove an open with a current index reads no source file.
+	sources sourceReads
+
+	cards map[core.ID]*cardMeta
+	// byDue is the review queue as the index orders it: every card that can be
+	// reviewed, soonest first. It is kept in step with the catalog one card at
+	// a time, so a review does not re-sort a hundred thousand cards.
+	byDue     []dueEntry
+	dueOK     bool
+	byCreated []core.ID
+	createdOK bool
+
 	extensions []string
 	onEvent    func(Event)
-
-	// events is the review log as loaded, kept so a caller can ask what
-	// happened without re-reading the file. Reviews append to it.
-	events []schedule.Event
 }
 
-// noteEntry is a note and where its source lives.
-type noteEntry struct {
-	note core.Note
-	slug string
-	path string
-}
-
-// cardEntry is a card and the moment it was created, which the card itself does
-// not carry.
-type cardEntry struct {
-	card    core.Card
+// cardMeta is one card as the index holds it: the file's definition, the
+// lifecycle the log gives it, and whether its block still resolves.
+type cardMeta struct {
+	card    core.Card   // Status is the effective one, not the file's
+	stored  core.Status // the status the card file carries
 	created time.Time
+	live    bool
+	state   schedule.State // zero when no live review
+	lastSeq int64          // sequence of the newest live review
 }
 
-// blockRef is where a referencable block was found: which note, the block
-// itself, and its position in the note, which is where its marker would go.
-type blockRef struct {
-	note  core.ID
-	block core.Block
-	at    int
+// dueEntry is one card in the queue order: when it comes up, and which card.
+type dueEntry struct {
+	at int64
+	id core.ID
 }
 
 // configFile is remit.json.
@@ -183,21 +195,23 @@ func newLibrary(dir string, opts Options) *Library {
 		now = time.Now
 	}
 	return &Library{
-		dir:    dir,
-		now:    now,
-		notes:  map[core.ID]noteEntry{},
-		cards:  map[core.ID]cardEntry{},
-		blocks: map[core.ID]blockRef{},
+		dir:   dir,
+		now:   now,
+		cards: map[core.ID]*cardMeta{},
 	}
 }
 
-// Close releases the index. Notes and cards stay readable; open handles see
-// ErrClosed from anything that has to touch the disk.
+// Close releases the index. Everything a library answers comes from it, so a
+// closed handle reports ErrClosed, and a read that has no error to report says
+// it found nothing.
 func (l *Library) Close() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	err := l.index.close()
 	l.index = nil
+	l.cards = map[core.ID]*cardMeta{}
+	l.byDue, l.byCreated = nil, nil
+	l.dueOK, l.createdOK = false, false
 	return err
 }
 
@@ -219,15 +233,78 @@ func (l *Library) Rebuild() error {
 	return l.load()
 }
 
-// load reads every source of truth and derives the index from them. It is the
-// whole of what opening and rebuilding do, so the two cannot disagree.
+// load opens the index and reads it. A first attempt that fails is retried once
+// from an empty index: the index is a cache, never a reason to refuse a library.
 func (l *Library) load() error {
 	for _, dir := range []string{notesDir, cardsDir, indexDir} {
 		if err := os.MkdirAll(filepath.Join(l.dir, dir), dirPerms); err != nil {
 			return err
 		}
 	}
+	err := l.loadIndex()
+	if err == nil {
+		return nil
+	}
+	l.index.close()
+	l.index = nil
+	if removeErr := os.RemoveAll(filepath.Join(l.dir, indexDir)); removeErr != nil {
+		return removeErr
+	}
+	if retry := l.loadIndex(); retry != nil {
+		return retry
+	}
+	return nil
+}
 
+func (l *Library) loadIndex() error {
+	l.digest = paramsDigest(l.params)
+	idx, err := openIndex(l.indexPath())
+	if err != nil {
+		return err
+	}
+	l.index = idx
+	if err := l.sync(); err != nil {
+		return err
+	}
+	if err := idx.checkpoint(); err != nil {
+		return err
+	}
+	return l.loadCatalog()
+}
+
+// sync brings the index in step with the text sources. The index records what
+// the sources looked like when it read them, so an open with nothing changed on
+// disk reads no note, no card and no log line; a log that only grew costs its
+// new lines, and anything else costs a rebuild.
+func (l *Library) sync() error {
+	marks, err := l.sourceMarks()
+	if err != nil {
+		return err
+	}
+	meta, err := l.index.readMeta()
+	if err != nil {
+		return l.rebuildIndex(marks)
+	}
+	if meta[metaSchema] != schemaVersion ||
+		meta[metaParams] != paramsDigest(l.params) ||
+		meta[metaNotes] != formatInt(marks.notes) ||
+		meta[metaCards] != formatInt(marks.cards) {
+		return l.rebuildIndex(marks)
+	}
+	applied, ok := parseLogMark(meta[metaLog])
+	if !ok || marks.log.size < applied.size {
+		return l.rebuildIndex(marks)
+	}
+	if marks.log == applied.fileMark {
+		l.nextSeq = applied.seq
+		return nil
+	}
+	return l.replayLogTail(applied)
+}
+
+// rebuildIndex derives the whole index from the text sources: the notes, the
+// cards, and a replay of the log.
+func (l *Library) rebuildIndex(marks sourceMarks) error {
 	notes, err := l.readNotes()
 	if err != nil {
 		return err
@@ -236,7 +313,7 @@ func (l *Library) load() error {
 	if err != nil {
 		return err
 	}
-	events, err := readLog(l.logPath())
+	events, applied, err := l.readLogFrom(0)
 	if err != nil {
 		return err
 	}
@@ -245,80 +322,210 @@ func (l *Library) load() error {
 	if err := applier.Apply(events...); err != nil {
 		return fmt.Errorf("store: review log: %w", err)
 	}
+	states := applier.States()
 
-	l.notes = notes
-	l.cards = cards
-	l.applier = applier
-	l.events = events
-	l.nextSeq = 0
-	for _, event := range events {
-		if event.Seq > l.nextSeq {
-			l.nextSeq = event.Seq
+	live := make(map[core.ID]bool, len(notes)*4)
+	for _, entry := range notes {
+		for _, block := range entry.note.Blocks {
+			if block.ID != "" {
+				live[block.ID] = true
+			}
 		}
 	}
-	l.blocks = map[core.ID]blockRef{}
-	for id, entry := range l.notes {
-		noteBlocks(&l.blocks, id, entry.note)
+
+	// The newest live review of each card is what an undo cancels, so it is
+	// kept beside the state instead of being looked up in the log again.
+	lastSeq := make(map[core.ID]int64, len(states))
+	liveEvents := liveBetween(events, time.Time{}, time.Time{})
+	for _, event := range liveEvents {
+		lastSeq[event.Card] = event.Seq
 	}
-	return l.deriveIndex()
+	l.nextSeq = 0
+	if len(events) > 0 {
+		l.nextSeq = events[len(events)-1].Seq
+	}
+
+	if err := l.index.reset(); err != nil {
+		return err
+	}
+	written, logOK := l.logMarkAfter(applied, l.nextSeq)
+
+	return l.index.write(func(e execer) error {
+		for id, entry := range notes {
+			if err := putNote(e, noteRow{id: id, slug: entry.slug, title: entry.note.Title}); err != nil {
+				return err
+			}
+			for at, block := range entry.note.Blocks {
+				if err := putBlock(e, id, at, block); err != nil {
+					return err
+				}
+			}
+		}
+		for id, entry := range cards {
+			state := states[id]
+			row := cardRow{
+				card:    entry.card,
+				stored:  entry.card.Status,
+				created: entry.created,
+				live:    entry.card.Ref.Frozen != nil || live[entry.card.Ref.Block],
+				state:   state,
+				lastSeq: lastSeq[id],
+			}
+			row.card.Status = effectiveStatus(entry.card.Status, state)
+			if err := putCard(e, row); err != nil {
+				return err
+			}
+			if state.Reviews > 0 {
+				if err := putState(e, id, state, lastSeq[id]); err != nil {
+					return err
+				}
+			}
+		}
+		if err := l.putMarks(e, marks); err != nil {
+			return err
+		}
+		if logOK {
+			return l.putLogMark(e, written)
+		}
+		return clearLogMark(e)
+	})
 }
 
-// deriveIndex builds the index from what is loaded. A first attempt that fails
-// on a damaged index file is retried once from an empty one: the index is a
-// cache, never a reason to refuse a library.
-func (l *Library) deriveIndex() error {
-	err := l.buildIndex()
-	if err == nil {
+// replayLogTail applies the lines appended since the index last read the log.
+// A review advances the card's cached schedule on its own; a void sends the
+// library back to a full replay, because undoing one event needs that card's
+// whole history and a tail that carries a void is a crash recovery, not a path
+// worth carrying state for.
+func (l *Library) replayLogTail(from logMark) error {
+	var tail []schedule.Event
+	applied, err := l.streamLog(from.size, func(ev schedule.Event) error {
+		tail = append(tail, ev)
 		return nil
-	}
-	if err := os.RemoveAll(filepath.Join(l.dir, indexDir)); err != nil {
-		return err
-	}
-	if retry := l.buildIndex(); retry != nil {
-		return err
-	}
-	return nil
-}
-
-func (l *Library) buildIndex() error {
-	if err := l.index.close(); err != nil {
-		return err
-	}
-	l.index = nil
-
-	idx, err := openIndex(l.indexPath())
+	})
 	if err != nil {
 		return err
 	}
-	if err := idx.reset(); err != nil {
-		idx.close()
-		return err
-	}
-	l.index = idx
-
-	return idx.write(func(e execer) error {
-		for id, entry := range l.notes {
-			for _, block := range entry.note.Blocks {
-				if block.ID == "" {
-					continue
-				}
-				if err := putBlock(e, id, block); err != nil {
-					return err
-				}
-			}
-		}
-		for id, entry := range l.cards {
-			if err := putCard(e, l.effective(entry.card), entry.created); err != nil {
+	for _, ev := range tail {
+		if ev.IsVoid() {
+			marks, err := l.sourceMarks()
+			if err != nil {
 				return err
 			}
-			if state, ok := l.applier.State(id); ok {
-				if err := putState(e, id, state); err != nil {
-					return err
-				}
+			return l.rebuildIndex(marks)
+		}
+	}
+
+	marks, err := l.sourceMarks()
+	if err != nil {
+		return err
+	}
+	nextSeq := l.nextSeq
+	for _, ev := range tail {
+		if ev.Seq > nextSeq {
+			nextSeq = ev.Seq
+		}
+	}
+	written, logOK := l.logMarkAfter(applied, nextSeq)
+
+	// The cards are read before the transaction: the index has one connection,
+	// and a read inside the write would wait for itself.
+	type advance struct {
+		card   core.ID
+		seq    int64
+		state  schedule.State
+		status core.Status
+	}
+	advances := make([]advance, 0, len(tail))
+	for _, ev := range tail {
+		row, ok := l.index.cardRow(ev.Card)
+		if !ok {
+			continue // the card file is gone; its reviews schedule nothing
+		}
+		state := l.params.Step(row.state, ev)
+		advances = append(advances, advance{
+			card:   ev.Card,
+			seq:    ev.Seq,
+			state:  state,
+			status: effectiveStatus(row.stored, state),
+		})
+	}
+
+	err = l.index.write(func(e execer) error {
+		for _, next := range advances {
+			if err := putState(e, next.card, next.state, next.seq); err != nil {
+				return err
+			}
+			if err := setCardStatus(e, next.card, next.status); err != nil {
+				return err
 			}
 		}
-		return nil
+		if err := l.putMarks(e, marks); err != nil {
+			return err
+		}
+		if logOK {
+			return l.putLogMark(e, written)
+		}
+		return clearLogMark(e)
 	})
+	if err != nil {
+		return err
+	}
+	l.nextSeq = nextSeq
+	return nil
+}
+
+// appliedLogMark is the log mark to store right after this handle appended one
+// event: the file's state now that the line is in it.
+func (l *Library) appliedLogMark(seq int64) (logMark, bool) {
+	mark, err := l.logFileMark()
+	if err != nil {
+		return logMark{}, false
+	}
+	return logMark{fileMark: mark, seq: seq}, true
+}
+
+// logMarkAfter is the mark to store once everything up to offset has been
+// applied. The size stored is the offset, not the file's: a torn last line — a
+// write that never finished — stays past the mark, so the next open re-reads
+// those few bytes and ignores them again instead of rebuilding the index for a
+// line the log cannot parse. A file that shrank under the read leaves no mark
+// at all, so the next open replays it from the beginning.
+func (l *Library) logMarkAfter(offset, seq int64) (logMark, bool) {
+	mark, err := l.logFileMark()
+	if err != nil || mark.size < offset {
+		return logMark{}, false
+	}
+	mark.size = offset
+	return logMark{fileMark: mark, seq: seq}, true
+}
+
+// loadCatalog reads the index into memory: every card, and the queue order.
+func (l *Library) loadCatalog() error {
+	rows, err := l.index.cardRows()
+	if err != nil {
+		return err
+	}
+	l.cards = make(map[core.ID]*cardMeta, len(rows))
+	l.byCreated = make([]core.ID, 0, len(rows))
+	l.byDue = make([]dueEntry, 0, len(rows))
+	for _, row := range rows {
+		meta := &cardMeta{
+			card:    row.card,
+			stored:  row.stored,
+			created: row.created,
+			live:    row.live,
+			state:   row.state,
+			lastSeq: row.lastSeq,
+		}
+		l.cards[meta.card.ID] = meta
+		l.byCreated = append(l.byCreated, meta.card.ID)
+		if eligible(meta) {
+			l.byDue = append(l.byDue, dueEntry{at: dueNano(meta), id: meta.card.ID})
+		}
+	}
+	sort.Slice(l.byDue, func(i, j int) bool { return dueLess(l.byDue[i], l.byDue[j]) })
+	l.dueOK, l.createdOK = true, true
+	return nil
 }
 
 func (l *Library) readNotes() (map[core.ID]noteEntry, error) {
@@ -334,6 +541,7 @@ func (l *Library) readNotes() (map[core.ID]noteEntry, error) {
 		}
 		path := filepath.Join(l.dir, notesDir, entry.Name())
 		data, err := os.ReadFile(path)
+		l.sources.notes++
 		if err != nil {
 			return nil, err
 		}
@@ -359,6 +567,7 @@ func (l *Library) readCards() (map[core.ID]cardEntry, error) {
 			continue
 		}
 		data, err := os.ReadFile(filepath.Join(l.dir, cardsDir, entry.Name()))
+		l.sources.cards++
 		if err != nil {
 			return nil, err
 		}
@@ -369,6 +578,20 @@ func (l *Library) readCards() (map[core.ID]cardEntry, error) {
 		cards[id] = cardEntry{card: card, created: created}
 	}
 	return cards, nil
+}
+
+// noteEntry is a note and where its source lives.
+type noteEntry struct {
+	note core.Note
+	slug string
+	path string
+}
+
+// cardEntry is a card and the moment it was created, which the card itself does
+// not carry.
+type cardEntry struct {
+	card    core.Card
+	created time.Time
 }
 
 // splitNoteName reads the ID and the frozen slug out of <slug>-<id>.md.
@@ -400,24 +623,42 @@ func splitCardName(name string) (core.ID, bool) {
 	return id, true
 }
 
-// Note returns a note and its blocks.
+// Note returns a note and its blocks, as the index read them.
 func (l *Library) Note(id core.ID) (core.Note, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	entry, ok := l.notes[id]
+	if l.index == nil {
+		return core.Note{}, false
+	}
+	row, ok := l.index.note(id)
 	if !ok {
 		return core.Note{}, false
 	}
-	return cloneNote(entry.note), true
+	blocks, err := l.index.blocksOfNote(id)
+	if err != nil {
+		return core.Note{}, false
+	}
+	return core.Note{ID: id, Title: row.title, Blocks: blocks}, true
 }
 
 // Notes returns every note, by title.
 func (l *Library) Notes() []core.Note {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	notes := make([]core.Note, 0, len(l.notes))
-	for _, entry := range l.notes {
-		notes = append(notes, cloneNote(entry.note))
+	if l.index == nil {
+		return nil
+	}
+	rows, err := l.index.notes()
+	if err != nil {
+		return nil
+	}
+	blocks, err := l.index.allBlocks()
+	if err != nil {
+		return nil
+	}
+	notes := make([]core.Note, 0, len(rows))
+	for _, row := range rows {
+		notes = append(notes, core.Note{ID: row.id, Title: row.title, Blocks: blocks[row.id]})
 	}
 	sort.Slice(notes, func(i, j int) bool {
 		a, b := strings.ToLower(notes[i].Title), strings.ToLower(notes[j].Title)
@@ -447,48 +688,102 @@ func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 		return core.Note{}, fmt.Errorf("store: %q is not a note ID", note.ID)
 	}
 
-	entry, exists := l.notes[note.ID]
+	entry, exists := l.index.note(note.ID)
 	slug := slugify(note.Title)
 	path := l.notePath(slug, note.ID)
 	if exists {
-		// The slug is minted once: a renamed note keeps its path, and a file
-		// renamed by hand is written back where it is.
-		slug, path = entry.slug, entry.path
+		// The slug is minted once: a renamed note keeps its path.
+		slug, path = entry.slug, l.notePath(entry.slug, note.ID)
 	}
 	note = normalizeNote(note)
 
+	before, err := l.index.blocksOfNote(note.ID)
+	if err != nil {
+		return core.Note{}, err
+	}
 	if err := writeFileAtomic(path, renderNote(note)); err != nil {
 		return core.Note{}, err
 	}
-	if exists {
-		for _, block := range entry.note.Blocks {
-			if block.ID != "" {
-				delete(l.blocks, block.ID)
-			}
-		}
-	}
-	l.notes[note.ID] = noteEntry{note: note, slug: slug, path: path}
-	noteBlocks(&l.blocks, note.ID, note)
 
-	err := l.index.write(func(e execer) error {
+	marks, err := l.sourceMarks()
+	if err != nil {
+		return core.Note{}, err
+	}
+	moved := movedBlocks(before, note.Blocks)
+	err = l.index.write(func(e execer) error {
+		if err := putNote(e, noteRow{id: note.ID, slug: slug, title: note.Title}); err != nil {
+			return err
+		}
 		if err := deleteBlocksOfNote(e, note.ID); err != nil {
 			return err
 		}
-		for _, block := range note.Blocks {
-			if block.ID == "" {
-				continue
-			}
-			if err := putBlock(e, note.ID, block); err != nil {
+		for at, block := range note.Blocks {
+			if err := putBlock(e, note.ID, at, block); err != nil {
 				return err
 			}
 		}
-		return nil
+		if err := resolveBlocks(e, moved); err != nil {
+			return err
+		}
+		return l.putMarks(e, marks)
 	})
 	if err != nil {
 		return core.Note{}, err
 	}
+	if err := l.refreshCards(moved); err != nil {
+		return core.Note{}, err
+	}
 	l.emit(EventNoteSaved, note.ID)
 	return cloneNote(note), nil
+}
+
+// movedBlocks is the block IDs a note save can have changed the reachability
+// of: every card pointing at one of these may have lost or found its source.
+func movedBlocks(before, after []core.Block) []core.ID {
+	ids := make([]core.ID, 0, len(before)+len(after))
+	for _, block := range before {
+		if block.ID != "" {
+			ids = append(ids, block.ID)
+		}
+	}
+	for _, block := range after {
+		if block.ID != "" {
+			ids = append(ids, block.ID)
+		}
+	}
+	return ids
+}
+
+// refreshCards re-reads the named cards from the index, which is what a note
+// save changes: a block that is gone leaves its cards lost, a block that came
+// back makes them live.
+func (l *Library) refreshCards(blockIDs []core.ID) error {
+	if len(blockIDs) == 0 {
+		return nil
+	}
+	ids, err := l.index.cardsOfBlocks(blockIDs)
+	if err != nil {
+		return err
+	}
+	rows, err := l.index.cardRowsByID(ids)
+	if err != nil {
+		return err
+	}
+	if len(rows) > bulkQueueUpdate {
+		l.markQueueStale()
+	}
+	for _, row := range rows {
+		meta := &cardMeta{
+			card:    row.card,
+			stored:  row.stored,
+			created: row.created,
+			live:    row.live,
+			state:   row.state,
+			lastSeq: row.lastSeq,
+		}
+		l.storeCard(meta)
+	}
+	return nil
 }
 
 // CreateNote makes an empty note with a title.
@@ -497,42 +792,59 @@ func (l *Library) CreateNote(title string) (core.Note, error) {
 }
 
 // Block returns a referencable block, so a card can render itself from the
-// library it lives in.
+// library it lives in. The text comes from the index; the note file is read
+// only when a caller names the note.
 func (l *Library) Block(id core.ID) (core.Block, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	ref, ok := l.blocks[id]
-	return ref.block, ok
+	if l.index == nil {
+		return core.Block{}, false
+	}
+	ref, ok := l.index.block(id)
+	if !ok {
+		return core.Block{}, false
+	}
+	return ref.block, true
 }
 
-// Card returns a card with the lifecycle status it is in now.
+// Card returns a card as its file says, with the lifecycle its log gives it.
+// It is the one read that opens the file: a listing, a search or the queue
+// answers from the index, and a caller asking for one card gets what is on
+// disk, including an edit made by hand since the index was read.
 func (l *Library) Card(id core.ID) (core.Card, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	entry, ok := l.cards[id]
-	if !ok {
+	if l.index == nil {
 		return core.Card{}, false
 	}
-	return l.effective(entry.card), true
+	data, err := os.ReadFile(l.cardPath(id))
+	if err != nil {
+		return core.Card{}, false
+	}
+	l.sources.cards++
+	card, _, err := decodeCard(id, data)
+	if err != nil {
+		return core.Card{}, false
+	}
+	if meta, ok := l.cards[id]; ok {
+		card.Status = effectiveStatus(card.Status, meta.state)
+	}
+	return card, true
 }
 
 // Cards returns every card, oldest first.
 func (l *Library) Cards() []core.Card {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	entries := make([]cardEntry, 0, len(l.cards))
-	for _, entry := range l.cards {
-		entries = append(entries, entry)
+	if l.index == nil {
+		return nil
 	}
-	sort.Slice(entries, func(i, j int) bool {
-		if !entries[i].created.Equal(entries[j].created) {
-			return entries[i].created.Before(entries[j].created)
+	l.ensureCreated()
+	cards := make([]core.Card, 0, len(l.byCreated))
+	for _, id := range l.byCreated {
+		if meta, ok := l.cards[id]; ok {
+			cards = append(cards, meta.card)
 		}
-		return entries[i].card.ID < entries[j].card.ID
-	})
-	cards := make([]core.Card, len(entries))
-	for i, entry := range entries {
-		cards[i] = l.effective(entry.card)
 	}
 	return cards
 }
@@ -549,10 +861,11 @@ func (l *Library) SaveCard(card core.Card) error {
 		return fmt.Errorf("store: %q is not a card ID", card.ID)
 	}
 
-	entry, exists := l.cards[card.ID]
+	meta, exists := l.cards[card.ID]
 	created := l.now().UTC()
+	stored := card.Status
 	if exists {
-		created = entry.created
+		created = meta.created
 	}
 	encoded, err := encodeCard(card, created)
 	if err != nil {
@@ -561,8 +874,47 @@ func (l *Library) SaveCard(card core.Card) error {
 	if err := writeFileAtomic(l.cardPath(card.ID), encoded); err != nil {
 		return err
 	}
-	l.cards[card.ID] = cardEntry{card: card, created: created}
-	return l.reindexCard(card.ID)
+
+	state := schedule.State{}
+	lastSeq := int64(0)
+	if exists {
+		state, lastSeq = meta.state, meta.lastSeq
+	}
+	live := card.Ref.Frozen != nil
+	if !live {
+		_, live = l.index.block(card.Ref.Block)
+	}
+	row := cardRow{card: card, stored: stored, created: created, live: live, state: state}
+	row.card.Status = effectiveStatus(stored, state)
+	row.lastSeq = lastSeq
+
+	marks, err := l.sourceMarks()
+	if err != nil {
+		return err
+	}
+	err = l.index.write(func(e execer) error {
+		if err := putCard(e, row); err != nil {
+			return err
+		}
+		if state.Reviews > 0 {
+			if err := putState(e, card.ID, state, lastSeq); err != nil {
+				return err
+			}
+		}
+		return l.putMarks(e, marks)
+	})
+	if err != nil {
+		return err
+	}
+	l.storeCard(&cardMeta{
+		card:    row.card,
+		stored:  stored,
+		created: created,
+		live:    live,
+		state:   state,
+		lastSeq: lastSeq,
+	})
+	return nil
 }
 
 // CreateCard makes the first card for a block, minting the block's marker in
@@ -573,15 +925,15 @@ func (l *Library) CreateCard(blockID core.ID) (core.Card, error) {
 	if l.index == nil {
 		return core.Card{}, ErrClosed
 	}
-	ref, ok := l.blocks[blockID]
+	ref, ok := l.index.block(blockID)
 	if !ok {
 		return core.Card{}, fmt.Errorf("store: no block %q", blockID)
 	}
-	entry, ok := l.notes[ref.note]
+	entry, ok := l.index.note(ref.note)
 	if !ok {
 		return core.Card{}, fmt.Errorf("store: no note %q", ref.note)
 	}
-	if err := l.markBlock(entry, ref); err != nil {
+	if err := l.markBlock(entry.slug, ref); err != nil {
 		return core.Card{}, err
 	}
 
@@ -598,21 +950,40 @@ func (l *Library) CreateCard(blockID core.ID) (core.Card, error) {
 	if err := writeFileAtomic(l.cardPath(card.ID), encoded); err != nil {
 		return core.Card{}, err
 	}
-	l.cards[card.ID] = cardEntry{card: card, created: created}
-	if err := l.reindexCard(card.ID); err != nil {
+
+	row := cardRow{card: card, stored: card.Status, created: created, live: true}
+	marks, err := l.sourceMarks()
+	if err != nil {
 		return core.Card{}, err
 	}
+	err = l.index.write(func(e execer) error {
+		if err := putCard(e, row); err != nil {
+			return err
+		}
+		return l.putMarks(e, marks)
+	})
+	if err != nil {
+		return core.Card{}, err
+	}
+	l.storeCard(&cardMeta{
+		card:    row.card,
+		stored:  card.Status,
+		created: created,
+		live:    true,
+	})
 	l.emit(EventCardCreated, card.ID)
 	return card, nil
 }
 
 // markBlock appends a block's marker to its note source, leaving every other
 // byte of the file as it was.
-func (l *Library) markBlock(entry noteEntry, ref blockRef) error {
-	data, err := os.ReadFile(entry.path)
+func (l *Library) markBlock(slug string, ref blockRef) error {
+	path := l.notePath(slug, ref.note)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
+	l.sources.notes++
 	marked, err := withMarker(data, ref.block.ID, ref.block.Text, ref.at)
 	if err != nil {
 		return err
@@ -620,7 +991,7 @@ func (l *Library) markBlock(entry noteEntry, ref blockRef) error {
 	if bytes.Equal(marked, data) {
 		return nil
 	}
-	return writeFileAtomic(entry.path, marked)
+	return writeFileAtomic(path, marked)
 }
 
 // Review records that a card was reviewed, and schedules it again.
@@ -630,14 +1001,15 @@ func (l *Library) Review(cardID core.ID, rating schedule.Rating, at time.Time) e
 	if l.index == nil {
 		return ErrClosed
 	}
-	if _, ok := l.cards[cardID]; !ok {
+	meta, ok := l.cards[cardID]
+	if !ok {
 		return fmt.Errorf("store: no card %q", cardID)
 	}
 	if !rating.Valid() {
 		return fmt.Errorf("store: unknown rating %d", uint8(rating))
 	}
 	event := schedule.Event{Seq: l.nextSeq + 1, Card: cardID, Rating: rating, At: l.instant(at)}
-	return l.record(event, cardID)
+	return l.record(event, meta)
 }
 
 // UndoLast cancels a card's newest review by appending the void that names it.
@@ -648,40 +1020,156 @@ func (l *Library) UndoLast(cardID core.ID) error {
 	if l.index == nil {
 		return ErrClosed
 	}
-	if _, ok := l.cards[cardID]; !ok {
+	meta, ok := l.cards[cardID]
+	if !ok {
 		return fmt.Errorf("store: no card %q", cardID)
 	}
-	last, ok := l.applier.Last(cardID)
-	if !ok {
+	if meta.lastSeq == 0 {
 		return fmt.Errorf("%w: card %q", ErrNoReview, cardID)
 	}
-	return l.record(schedule.Event{Seq: l.nextSeq + 1, Void: last.Seq}, cardID)
+	event := schedule.Event{Seq: l.nextSeq + 1, Void: meta.lastSeq}
+	return l.record(event, meta)
 }
 
 // record appends an event to the log and brings the card's schedule with it.
-func (l *Library) record(event schedule.Event, card core.ID) error {
+// The log line is written first: a review that survives a crash is replayed,
+// and one that does not was never confirmed to the caller.
+func (l *Library) record(event schedule.Event, meta *cardMeta) error {
 	if err := appendLog(l.logPath(), event); err != nil {
 		return err
 	}
+
+	var (
+		state  schedule.State
+		status core.Status
+		seq    int64
+	)
+	if event.IsVoid() {
+		// An undo needs the card's whole history. Read it before the write, so
+		// the void that was just appended is in it.
+		history, last, err := l.cardHistory(meta.card.ID)
+		if err != nil {
+			return err
+		}
+		state, seq = history, last
+	} else {
+		state = l.params.Step(meta.state, event)
+		seq = event.Seq
+	}
+	status = effectiveStatus(meta.stored, state)
+
+	marks, err := l.sourceMarks()
+	if err != nil {
+		return err
+	}
+	applied, ok := l.appliedLogMark(event.Seq)
+	err = l.index.write(func(e execer) error {
+		if state.Reviews == 0 {
+			if err := deleteState(e, meta.card.ID); err != nil {
+				return err
+			}
+		} else if err := putState(e, meta.card.ID, state, seq); err != nil {
+			return err
+		}
+		if err := setCardStatus(e, meta.card.ID, status); err != nil {
+			return err
+		}
+		if err := l.putMarks(e, marks); err != nil {
+			return err
+		}
+		if !ok {
+			return clearLogMark(e)
+		}
+		return l.putLogMark(e, applied)
+	})
+	if err != nil {
+		return err
+	}
+
 	l.nextSeq = event.Seq
-	l.events = append(l.events, event)
-	if err := l.applier.Apply(event); err != nil {
-		return err
-	}
-	if err := l.reindexCard(card); err != nil {
-		return err
-	}
-	l.emit(EventReviewRecorded, card)
+	updated := *meta
+	updated.state = state
+	updated.lastSeq = seq
+	updated.card.Status = status
+	l.storeCard(&updated)
+	l.emit(EventReviewRecorded, meta.card.ID)
 	return nil
+}
+
+// cardHistory replays one card's live reviews out of the log, and names the
+// newest of them: the sequence the next undo cancels.
+func (l *Library) cardHistory(cardID core.ID) (schedule.State, int64, error) {
+	var events []schedule.Event
+	if _, err := l.streamLog(0, func(ev schedule.Event) error {
+		if ev.IsVoid() || ev.Card == cardID {
+			events = append(events, ev)
+		}
+		return nil
+	}); err != nil {
+		return schedule.State{}, 0, err
+	}
+	applier := schedule.NewApplier(l.params)
+	if err := applier.Apply(events...); err != nil {
+		return schedule.State{}, 0, fmt.Errorf("store: review log: %w", err)
+	}
+	state, _ := applier.State(cardID)
+	last, _ := applier.Last(cardID)
+	return state, last.Seq, nil
 }
 
 // Events returns the review log in order, void events included, so a caller
 // can compute what the schedule cannot answer on its own (counts per day,
-// predictions against outcomes).
+// predictions against outcomes). Every call reads the log: a caller that only
+// wants a range asks LiveReviews, and one that wants one card asks CardHistory.
 func (l *Library) Events() []schedule.Event {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return append([]schedule.Event(nil), l.events...)
+	if l.index == nil {
+		return nil
+	}
+	events, _, err := l.readLogFrom(0)
+	if err != nil {
+		return nil
+	}
+	return events
+}
+
+// LiveReviews returns the reviews in [from, to) that the log still counts:
+// void events and the reviews they cancel are left out. A zero bound is open —
+// LiveReviews(time.Time{}, time.Time{}) is the whole live history.
+func (l *Library) LiveReviews(from, to time.Time) ([]schedule.Event, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, ErrClosed
+	}
+	events, _, err := l.readLogFrom(0)
+	if err != nil {
+		return nil, err
+	}
+	return liveBetween(events, from, to), nil
+}
+
+// CardHistory returns one card's live reviews, oldest first: the reviews an
+// undo or a "what happened" view asks for.
+func (l *Library) CardHistory(cardID core.ID) ([]schedule.Event, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, ErrClosed
+	}
+	events, _, err := l.readLogFrom(0)
+	if err != nil {
+		return nil, err
+	}
+	live := liveBetween(events, time.Time{}, time.Time{})
+	out := make([]schedule.Event, 0, 4)
+	for _, ev := range live {
+		if ev.Card == cardID {
+			out = append(out, ev)
+		}
+	}
+	return out, nil
 }
 
 // CardState returns a card's replayed schedule, and whether it has been
@@ -689,7 +1177,61 @@ func (l *Library) Events() []schedule.Event {
 func (l *Library) CardState(cardID core.ID) (schedule.State, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return l.applier.State(cardID)
+	meta, ok := l.cards[cardID]
+	if !ok || meta.state.Reviews == 0 {
+		return schedule.State{}, false
+	}
+	return meta.state, true
+}
+
+// CountReviewed reports how many cards have a live review in [from, to). The
+// queue asks it for the day's new-card allowance: a card counts as started on
+// the day of its newest review.
+func (l *Library) CountReviewed(from, to time.Time) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return 0, ErrClosed
+	}
+	count := 0
+	for _, meta := range l.cards {
+		if meta.state.Reviews == 0 {
+			continue
+		}
+		at := meta.state.LastReview
+		if at.Before(from) || !at.Before(to) {
+			continue
+		}
+		count++
+	}
+	return count, nil
+}
+
+// Scheduled is a card the queue can show, with the schedule its log gives it.
+// State is zero for a card that has never been reviewed.
+type Scheduled struct {
+	Card  core.Card
+	State schedule.State
+}
+
+// Scheduled returns the cards a queue can hold — stored as new, learning or
+// review, with a live or frozen source — soonest first, each with its schedule.
+// It is what the queue and the forecast read: one pass over the index's answer,
+// with no card file opened and no log line replayed.
+func (l *Library) Scheduled() ([]Scheduled, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, ErrClosed
+	}
+	l.ensureDue()
+	out := make([]Scheduled, 0, len(l.byDue))
+	for _, entry := range l.byDue {
+		if meta, ok := l.cards[entry.id]; ok {
+			out = append(out, Scheduled{Card: meta.card, State: meta.state})
+		}
+	}
+	return out, nil
 }
 
 // Due returns the cards to review now, soonest first. A limit of zero or less
@@ -700,11 +1242,17 @@ func (l *Library) Due(now time.Time, limit int) ([]core.Card, error) {
 	if l.index == nil {
 		return nil, ErrClosed
 	}
-	ids, err := l.index.due(l.instant(now), limit)
-	if err != nil {
-		return nil, err
+	cut := l.dueBefore(l.instant(now))
+	if limit > 0 && cut > limit {
+		cut = limit
 	}
-	return l.cardsByID(ids), nil
+	cards := make([]core.Card, 0, cut)
+	for _, entry := range l.byDue[:cut] {
+		if meta, ok := l.cards[entry.id]; ok {
+			cards = append(cards, meta.card)
+		}
+	}
+	return cards, nil
 }
 
 // Remaining counts the cards due now, without materialising them.
@@ -714,7 +1262,7 @@ func (l *Library) Remaining(now time.Time) (int, error) {
 	if l.index == nil {
 		return 0, ErrClosed
 	}
-	return l.index.remaining(l.instant(now))
+	return l.dueBefore(l.instant(now)), nil
 }
 
 // LostCards returns the cards whose block is gone and which kept no snapshot,
@@ -725,58 +1273,54 @@ func (l *Library) LostCards() ([]core.Card, error) {
 	if l.index == nil {
 		return nil, ErrClosed
 	}
-	ids, err := l.index.lost()
-	if err != nil {
-		return nil, err
-	}
-	return l.cardsByID(ids), nil
-}
-
-func (l *Library) cardsByID(ids []core.ID) []core.Card {
-	cards := make([]core.Card, 0, len(ids))
-	for _, id := range ids {
-		if entry, ok := l.cards[id]; ok {
-			cards = append(cards, l.effective(entry.card))
+	l.ensureCreated()
+	var cards []core.Card
+	for _, id := range l.byCreated {
+		meta, ok := l.cards[id]
+		if !ok || meta.live {
+			continue
 		}
+		cards = append(cards, meta.card)
 	}
-	return cards
+	return cards, nil
 }
 
 // effective is the lifecycle a card is in. A review never rewrites a card file
 // (ADR 0003), so the step out of "new" is derived from the log: a card with live
 // reviews has been learned, and the last rating says whether it is still being
 // learned.
-func (l *Library) effective(card core.Card) core.Card {
-	if card.Status != core.StatusNew && card.Status != core.StatusLearning {
-		return card
+func effectiveStatus(stored core.Status, state schedule.State) core.Status {
+	if stored != core.StatusNew && stored != core.StatusLearning {
+		return stored
 	}
-	last, ok := l.applier.Last(card.ID)
-	if !ok {
-		return card
+	if state.Reviews == 0 {
+		return stored
 	}
-	if last.Rating == schedule.Again {
-		card.Status = core.StatusLearning
-	} else {
-		card.Status = core.StatusReview
+	if state.LastRating == schedule.Again {
+		return core.StatusLearning
 	}
-	return card
+	return core.StatusReview
 }
 
-func (l *Library) reindexCard(cardID core.ID) error {
-	return l.index.write(func(e execer) error {
-		entry, ok := l.cards[cardID]
-		if !ok {
-			return deleteCard(e, cardID)
-		}
-		if err := putCard(e, l.effective(entry.card), entry.created); err != nil {
-			return err
-		}
-		state, ok := l.applier.State(cardID)
-		if !ok {
-			return deleteState(e, cardID)
-		}
-		return putState(e, cardID, state)
-	})
+// eligible reports whether a card belongs in the review queue.
+func eligible(meta *cardMeta) bool {
+	return meta.card.Status.Scheduled() && meta.live
+}
+
+// dueNano is when a card comes up: its schedule's due time, or the moment it
+// was created when it has never been reviewed.
+func dueNano(meta *cardMeta) int64 {
+	if meta.state.Reviews > 0 {
+		return meta.state.Due.UnixNano()
+	}
+	return meta.created.UnixNano()
+}
+
+func dueLess(a, b dueEntry) bool {
+	if a.at != b.at {
+		return a.at < b.at
+	}
+	return a.id < b.id
 }
 
 // instant is the moment to act at: the one given, or now when none was. Every
@@ -803,16 +1347,6 @@ func (l *Library) logPath() string {
 
 func (l *Library) indexPath() string {
 	return filepath.Join(l.dir, indexDir, indexName)
-}
-
-// noteBlocks indexes a note's referencable blocks.
-func noteBlocks(into *map[core.ID]blockRef, note core.ID, n core.Note) {
-	for i, block := range n.Blocks {
-		if block.ID == "" {
-			continue
-		}
-		(*into)[block.ID] = blockRef{note: note, block: block, at: i}
-	}
 }
 
 func cloneNote(note core.Note) core.Note {
@@ -864,6 +1398,17 @@ func decodeConfig(data []byte) (schedule.Params, []string, error) {
 		return schedule.Params{}, nil, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, formatVersion)
 	}
 	return config.FSRS.Normalized(), config.Extensions, nil
+}
+
+// paramsDigest fingerprints the scheduling parameters: a library that changed
+// its FSRS weights has to be replayed, because every due date moves with them.
+func paramsDigest(params schedule.Params) string {
+	data, err := json.Marshal(params.Normalized())
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:8])
 }
 
 // Event is something that happened to the library, which an extension may want

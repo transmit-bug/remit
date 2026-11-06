@@ -1,11 +1,16 @@
 package store
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
@@ -19,6 +24,38 @@ type logRecord struct {
 	Rating string  `json:"rating,omitempty"`
 	At     string  `json:"at,omitempty"`
 	Void   int64   `json:"void,omitempty"`
+}
+
+// fileMark is a file's size and modification time: enough to tell whether it
+// has changed since a reader saw it. A missing file is a zero mark.
+type fileMark struct {
+	size  int64
+	mtime int64
+}
+
+// logMark is how far into the log the index has applied: the file mark it had
+// when the events were read, and the last sequence it applied there.
+type logMark struct {
+	fileMark
+	seq int64
+}
+
+func (m logMark) String() string {
+	return fmt.Sprintf("%d:%d:%d", m.size, m.mtime, m.seq)
+}
+
+func parseLogMark(s string) (logMark, bool) {
+	parts := strings.Split(s, ":")
+	if len(parts) != 3 {
+		return logMark{}, false
+	}
+	size, sizeErr := strconv.ParseInt(parts[0], 10, 64)
+	mtime, mtimeErr := strconv.ParseInt(parts[1], 10, 64)
+	seq, seqErr := strconv.ParseInt(parts[2], 10, 64)
+	if sizeErr != nil || mtimeErr != nil || seqErr != nil {
+		return logMark{}, false
+	}
+	return logMark{fileMark: fileMark{size: size, mtime: mtime}, seq: seq}, true
 }
 
 func marshalRecord(event schedule.Event) ([]byte, error) {
@@ -62,33 +99,96 @@ func decodeRecord(line []byte) (schedule.Event, bool, error) {
 	return schedule.Event{Seq: rec.Seq, Card: rec.Card, Rating: rating, At: at}, true, nil
 }
 
-// readLog reads the review log in the order it was written. A final line that
-// does not parse is a write that never finished, so it is dropped rather than
-// made to fail the whole library; anything broken earlier is an error.
-func readLog(path string) ([]schedule.Event, error) {
-	data, err := os.ReadFile(path)
+// streamLog calls fn for every event from byte offset to the end of the log,
+// in the order it was written, and returns the offset just past the last event
+// it applied. A final line without a newline is a write that never finished: it
+// is not applied and it does not count, so the offset stops at its first byte.
+// A line that does not parse anywhere else is an error: the log is the only
+// record of what happened.
+func (l *Library) streamLog(offset int64, fn func(schedule.Event) error) (int64, error) {
+	file, err := os.Open(l.logPath())
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return offset, nil
 	}
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
+	defer file.Close()
+	l.sources.log++
 
-	lines := bytes.Split(data, []byte("\n"))
-	var events []schedule.Event
-	for i, line := range lines {
-		event, ok, err := decodeRecord(line)
+	if offset > 0 {
+		if _, err := file.Seek(offset, io.SeekStart); err != nil {
+			return 0, err
+		}
+	}
+	reader := bufio.NewReaderSize(file, 64*1024)
+	applied := offset
+	for {
+		line, err := reader.ReadBytes('\n')
+		if len(line) > 0 {
+			if line[len(line)-1] != '\n' {
+				break // a torn last line: leave it, and stop before it
+			}
+			event, ok, decodeErr := decodeRecord(line)
+			if decodeErr != nil {
+				return 0, decodeErr
+			}
+			if ok {
+				if applyErr := fn(event); applyErr != nil {
+					return 0, applyErr
+				}
+			}
+			applied += int64(len(line))
+		}
 		if err != nil {
-			if i == len(lines)-1 && !bytes.HasSuffix(data, []byte("\n")) {
+			if errors.Is(err, io.EOF) {
 				break
 			}
-			return nil, err
-		}
-		if ok {
-			events = append(events, event)
+			return 0, err
 		}
 	}
-	return events, nil
+	return applied, nil
+}
+
+// readLogFrom reads the log from an offset, and says how far it got: the
+// offset just past the last event it applied.
+func (l *Library) readLogFrom(offset int64) ([]schedule.Event, int64, error) {
+	var events []schedule.Event
+	applied, err := l.streamLog(offset, func(ev schedule.Event) error {
+		events = append(events, ev)
+		return nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	return events, applied, nil
+}
+
+// liveBetween keeps the reviews the log still counts, in the order it holds
+// them: void events and the reviews they name are both left out, and so is
+// everything outside [from, to). A zero bound is open, so
+// liveBetween(events, time.Time{}, time.Time{}) is the whole live history.
+func liveBetween(events []schedule.Event, from, to time.Time) []schedule.Event {
+	voided := map[int64]bool{}
+	for _, ev := range events {
+		if ev.IsVoid() {
+			voided[ev.Void] = true
+		}
+	}
+	out := make([]schedule.Event, 0, len(events))
+	for _, ev := range events {
+		if ev.IsVoid() || voided[ev.Seq] {
+			continue
+		}
+		if !from.IsZero() && ev.At.Before(from) {
+			continue
+		}
+		if !to.IsZero() && !ev.At.Before(to) {
+			continue
+		}
+		out = append(out, ev)
+	}
+	return out
 }
 
 // appendLog writes one event and makes sure it survives a crash: the log is the

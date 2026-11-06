@@ -19,15 +19,19 @@ func (l *Library) CardsWithStatus(s core.Status) ([]core.Card, error) {
 	if l.index == nil {
 		return nil, ErrClosed
 	}
-	ids, err := l.index.byStatus(s.String())
-	if err != nil {
-		return nil, err
+	l.ensureCreated()
+	var cards []core.Card
+	for _, id := range l.byCreated {
+		if meta, ok := l.cards[id]; ok && meta.card.Status == s {
+			cards = append(cards, meta.card)
+		}
 	}
-	return l.cardsByID(ids), nil
+	return cards, nil
 }
 
 // SearchCards returns the cards whose source block contains text, ignoring
-// case. The search runs on the derived index, so it costs nothing on the files.
+// case. The search runs on the derived index, so it costs nothing on the files
+// and needs no block text in memory.
 func (l *Library) SearchCards(text string) ([]core.Card, error) {
 	query := strings.TrimSpace(text)
 	if query == "" {
@@ -42,30 +46,13 @@ func (l *Library) SearchCards(text string) ([]core.Card, error) {
 	if err != nil {
 		return nil, err
 	}
-	return l.cardsByID(ids), nil
-}
-
-// byStatus lists cards stored with a status.
-func (x *index) byStatus(status string) ([]core.ID, error) {
-	rows, err := x.db.Query(`SELECT id FROM cards WHERE status = ? ORDER BY created, id`, status)
-	if err != nil {
-		return nil, fmt.Errorf("store: status query: %w", err)
+	cards := make([]core.Card, 0, len(ids))
+	for _, id := range ids {
+		if meta, ok := l.cards[id]; ok {
+			cards = append(cards, meta.card)
+		}
 	}
-	defer rows.Close()
-	return scanIDs(rows)
-}
-
-// searchCards matches the block text a card renders from.
-func (x *index) searchCards(text string) ([]core.ID, error) {
-	rows, err := x.db.Query(`
-		SELECT c.id FROM cards c JOIN blocks b ON b.id = c.block_id
-		WHERE b.text LIKE ? ESCAPE '\'
-		ORDER BY c.created, c.id`, "%"+escapeLike(text)+"%")
-	if err != nil {
-		return nil, fmt.Errorf("store: search query: %w", err)
-	}
-	defer rows.Close()
-	return scanIDs(rows)
+	return cards, nil
 }
 
 // escapeLike makes a user's text a literal pattern: a search for "50%" should
@@ -74,4 +61,17 @@ func escapeLike(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, "%", `\%`)
 	return strings.ReplaceAll(s, "_", `\_`)
+}
+
+// searchCards matches the block text a card renders from.
+func (x *index) searchCards(text string) ([]core.ID, error) {
+	rows, err := x.db.Query(`
+		SELECT c.id FROM cards c
+		WHERE EXISTS (SELECT 1 FROM blocks b WHERE b.id = c.block_id AND b.text LIKE ? ESCAPE '\')
+		ORDER BY c.created, c.id`, "%"+escapeLike(text)+"%")
+	if err != nil {
+		return nil, fmt.Errorf("store: search query: %w", err)
+	}
+	defer rows.Close()
+	return scanIDs(rows)
 }

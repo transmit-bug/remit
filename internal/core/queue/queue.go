@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
 )
 
@@ -29,10 +30,11 @@ type Counts struct {
 // Today returns the cards to review now, ordered learning, then due, then new,
 // each by due time and then by ID so the order is stable.
 func Today(lib *store.Library, now time.Time, opts Options) ([]core.Card, error) {
-	learning, due, fresh, err := partition(lib, now)
+	scheduled, err := lib.Scheduled()
 	if err != nil {
 		return nil, err
 	}
+	learning, due, fresh := partition(scheduled, now)
 	fresh = introduce(lib, fresh, now, opts.NewPerDay)
 
 	out := append(append(learning, due...), fresh...)
@@ -44,10 +46,11 @@ func Today(lib *store.Library, now time.Time, opts Options) ([]core.Card, error)
 
 // CountsOf reports what Today would return, without building it.
 func CountsOf(lib *store.Library, now time.Time) (Counts, error) {
-	learning, due, fresh, err := partition(lib, now)
+	scheduled, err := lib.Scheduled()
 	if err != nil {
 		return Counts{}, err
 	}
+	learning, due, fresh := partition(scheduled, now)
 	return Counts{
 		Due:       len(due),
 		Learning:  len(learning),
@@ -58,73 +61,42 @@ func CountsOf(lib *store.Library, now time.Time) (Counts, error) {
 
 // partition splits the queue into learning, due and new, each already ordered.
 // A card that is suspended, reading, or lost from its source is in none: a
-// queue is a promise that these cards can be reviewed now.
-func partition(lib *store.Library, now time.Time) (learning, due, fresh []core.Card, err error) {
-	last := lastRatings(lib)
-	for _, card := range lib.Cards() {
-		if !card.Status.Scheduled() {
-			continue
-		}
-		if _, link := card.Ref.Text(lib); link == core.LinkLost {
-			continue
-		}
-		state, ok := lib.CardState(card.ID)
+// queue is a promise that these cards can be reviewed now, and the store leaves
+// those out of what it lists.
+//
+// The store hands the cards over in due order, so learning and due need no sort
+// of their own: each keeps that order, and only the never-reviewed cards are
+// put by ID.
+func partition(scheduled []store.Scheduled, now time.Time) (learning, due, fresh []core.Card) {
+	for _, card := range scheduled {
 		switch {
-		case !ok || state.Reviews == 0:
-			fresh = append(fresh, card)
-		case state.Due.After(now):
+		case card.State.Reviews == 0:
+			fresh = append(fresh, card.Card)
+		case card.State.Due.After(now):
 			continue
-		case last[card.ID] == "again":
-			learning = append(learning, card)
+		case card.State.LastRating == schedule.Again:
+			learning = append(learning, card.Card)
 		default:
-			due = append(due, card)
+			due = append(due, card.Card)
 		}
 	}
-	sortCards(learning, lib)
-	sortCards(due, lib)
 	sort.Slice(fresh, func(i, j int) bool { return fresh[i].ID < fresh[j].ID })
-	return learning, due, fresh, nil
-}
-
-func sortCards(cards []core.Card, lib *store.Library) {
-	sort.Slice(cards, func(i, j int) bool {
-		si, _ := lib.CardState(cards[i].ID)
-		sj, _ := lib.CardState(cards[j].ID)
-		if !si.Due.Equal(sj.Due) {
-			return si.Due.Before(sj.Due)
-		}
-		return cards[i].ID < cards[j].ID
-	})
-}
-
-// lastRatings is each card's last live rating, by name.
-func lastRatings(lib *store.Library) map[core.ID]string {
-	out := map[core.ID]string{}
-	for _, ev := range lib.Events() {
-		if ev.IsVoid() {
-			continue
-		}
-		out[ev.Card] = ev.Rating.String()
-	}
-	return out
+	return learning, due, fresh
 }
 
 // introduce keeps at most NewPerDay cards that have never been reviewed, when
 // that many were already started today. A card counts as started on the day of
-// its first live review.
+// its newest live review, whatever its status since.
 func introduce(lib *store.Library, fresh []core.Card, now time.Time, perDay int) []core.Card {
 	if perDay <= 0 || len(fresh) == 0 {
 		return fresh
 	}
-	started := map[core.ID]bool{}
-	day := now.Format("2006-01-02")
-	for _, ev := range lib.Events() {
-		if ev.IsVoid() || ev.At.Format("2006-01-02") != day {
-			continue
-		}
-		started[ev.Card] = true
+	day := startOfDay(now)
+	started, err := lib.CountReviewed(day, day.AddDate(0, 0, 1))
+	if err != nil {
+		return fresh
 	}
-	room := perDay - len(started)
+	room := perDay - started
 	if room <= 0 {
 		return nil
 	}
@@ -132,6 +104,12 @@ func introduce(lib *store.Library, fresh []core.Card, now time.Time, perDay int)
 		return fresh
 	}
 	return fresh[:room]
+}
+
+// startOfDay is midnight of the day now falls on, in now's own location.
+func startOfDay(now time.Time) time.Time {
+	y, m, d := now.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, now.Location())
 }
 
 // String names a time for a log line.
