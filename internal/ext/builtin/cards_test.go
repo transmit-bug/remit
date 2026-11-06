@@ -1,9 +1,11 @@
 package builtin_test
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
@@ -14,6 +16,45 @@ type derived struct {
 	Ordinal int    `json:"ordinal"`
 	Front   string `json:"front"`
 	Back    string `json:"back"`
+}
+
+// frozen is the answer set #100 froze, read as the evidence it is: the plugin's
+// cards are held to it, word for word, rather than to any rule this package
+// still carries.
+type frozen struct {
+	Note  string `json:"note"`
+	Faces []struct {
+		Proves  string `json:"proves"`
+		Text    string `json:"text"`
+		Kind    string `json:"kind"`
+		Ordinal int    `json:"ordinal"`
+		Prompt  string `json:"prompt"`
+		Answer  string `json:"answer"`
+		State   string `json:"state"`
+		// What the card carries of its own, which the plugin does not answer.
+		OverridePrompt string `json:"override_prompt"`
+		OverrideAnswer string `json:"override_answer"`
+		FrozenText     string `json:"frozen_text"`
+		Lost           bool   `json:"lost"`
+	} `json:"faces"`
+}
+
+// frozenSet reads the frozen answers the content model and the schedule were
+// pinned with.
+func frozenSet(t *testing.T) frozen {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "golden", "testdata", "golden.json"))
+	if err != nil {
+		t.Fatalf("read the frozen answers: %v", err)
+	}
+	var set frozen
+	if err := json.Unmarshal(data, &set); err != nil {
+		t.Fatalf("decode the frozen answers: %v", err)
+	}
+	if len(set.Faces) == 0 {
+		t.Fatal("the frozen answers hold no faces")
+	}
+	return set
 }
 
 // The texts the golden set freezes, and the shape each one takes.
@@ -39,55 +80,105 @@ func cards(t *testing.T) *ext.JSRunner {
 	return runner
 }
 
-// The plugin answers every text the golden set freezes exactly as the content
-// model does: the same cards, the same order, the same faces.
+// Every card the plugin derives is a face the frozen set holds, word for word:
+// the shapes cannot drift from the evidence, and the plugin cannot invent one.
 func TestCardsMatchTheGoldenFaces(t *testing.T) {
 	runner := cards(t)
-	for _, text := range texts {
-		t.Run(text, func(t *testing.T) {
+	set := frozenSet(t)
+
+	seen := map[string]bool{}
+	for _, face := range set.Faces {
+		if face.Text == "" || seen[face.Text] {
+			continue
+		}
+		seen[face.Text] = true
+		t.Run(face.Text, func(t *testing.T) {
 			var got []derived
-			if err := runner.Call("derive", map[string]any{"id": "block_1", "text": text}, &got); err != nil {
+			if err := runner.Call("derive", map[string]any{"id": "block_1", "text": face.Text}, &got); err != nil {
 				t.Fatalf("derive: %v", err)
 			}
-			want := core.Derive(text)
-			if len(got) != len(want) {
-				t.Fatalf("the plugin answered %d cards, the model %d: %+v", len(got), len(want), got)
-			}
-			for i, w := range want {
-				if got[i].Kind != w.Kind.String() || got[i].Ordinal != w.Ordinal {
-					t.Errorf("card %d is %s/%d, want %s/%d", i, got[i].Kind, got[i].Ordinal, w.Kind, w.Ordinal)
+			for _, card := range got {
+				if !frozenHasPlace(set, face.Text, card.Kind, card.Ordinal) {
+					t.Errorf("the plugin answers %s/%d, a place the frozen set does not hold", card.Kind, card.Ordinal)
+					continue
 				}
-				if got[i].Front != w.Prompt || got[i].Back != w.Answer {
-					t.Errorf("card %d asks %q / %q, want %q / %q", i, got[i].Front, got[i].Back, w.Prompt, w.Answer)
+				// Where the set froze the paragraph's own face — no override, no
+				// snapshot — it froze the words too.
+				if !frozenPlain(face.Text, set) {
+					continue
+				}
+				if !frozenHas(set, face.Text, card) {
+					t.Errorf("the plugin answers %s/%d %q / %q, which the frozen set does not hold",
+						card.Kind, card.Ordinal, card.Front, card.Back)
 				}
 			}
 		})
 	}
 }
 
-// The faces a card derives agree with what the review screen shows for the same
-// card: the plugin's front and back are the model's two sides.
-func TestCardsMatchTheModelSides(t *testing.T) {
+// frozenHasPlace reports whether the set froze this place of this text.
+func frozenHasPlace(set frozen, text, kind string, ordinal int) bool {
+	for _, face := range set.Faces {
+		if face.Text == text && face.Kind == kind && face.Ordinal == ordinal {
+			return true
+		}
+	}
+	return false
+}
+
+// frozenPlain reports whether any face of this text was frozen without an
+// override, a snapshot or a lost block: only then is its wording the plugin's.
+func frozenPlain(text string, set frozen) bool {
+	for _, face := range set.Faces {
+		if face.Text == text && face.OverridePrompt == "" && face.OverrideAnswer == "" &&
+			face.FrozenText == "" && !face.Lost {
+			return true
+		}
+	}
+	return false
+}
+
+// frozenHas reports whether the frozen set holds this card of this text.
+func frozenHas(set frozen, text string, card derived) bool {
+	for _, face := range set.Faces {
+		if face.Text != text || face.Kind != card.Kind || face.Ordinal != card.Ordinal {
+			continue
+		}
+		if face.Prompt == card.Front && face.Answer == card.Back {
+			return true
+		}
+	}
+	return false
+}
+
+// The plugin's faces for a card that exists agree with the same frozen set: the
+// shapes live in one place only if both doors answer alike. A face the set
+// recorded with an override, a snapshot or a lost block is left out — those are
+// the card's own, laid on top of what the plugin answers.
+func TestCardsFacesMatchTheGoldens(t *testing.T) {
 	runner := cards(t)
-	for _, text := range texts {
-		var got []derived
-		if err := runner.Call("derive", map[string]any{"id": "block_1", "text": text}, &got); err != nil {
-			t.Fatalf("derive %q: %v", text, err)
+	set := frozenSet(t)
+	for _, face := range set.Faces {
+		if face.OverridePrompt != "" || face.OverrideAnswer != "" || face.FrozenText != "" || face.Lost {
+			continue
 		}
-		blocks := core.BlockSet{"block_1": {ID: "block_1", Text: text}}
-		for _, card := range got {
-			kind, _ := core.ParseKind(card.Kind)
-			prompt, answer, _ := core.Card{Ref: core.Reference{Block: "block_1"}, Kind: kind, Ordinal: card.Ordinal}.Sides(blocks)
-			if prompt != card.Front || answer != card.Back {
-				t.Errorf("%q %s/%d: the model asks %q / %q, the plugin %q / %q",
-					text, card.Kind, card.Ordinal, prompt, answer, card.Front, card.Back)
+		t.Run(face.Kind+"/"+face.Text, func(t *testing.T) {
+			var got struct {
+				Front string `json:"front"`
+				Back  string `json:"back"`
 			}
-		}
+			params := map[string]any{"text": face.Text, "kind": face.Kind, "ordinal": face.Ordinal}
+			if err := runner.Call("faces", params, &got); err != nil {
+				t.Fatalf("faces: %v", err)
+			}
+			if got.Front != face.Prompt || got.Back != face.Answer {
+				t.Errorf("the plugin asks %q / %q, the frozen set %q / %q (%s)",
+					got.Front, got.Back, face.Prompt, face.Answer, face.Proves)
+			}
+		})
 	}
 }
 
-// The built-in plugin is held to the rules every extension is: a manifest this
-// build cannot run is refused, and it declares no capability it does not need.
 func TestBuiltinFollowsTheExtensionRules(t *testing.T) {
 	manifest, err := builtin.CardsManifest()
 	if err != nil {

@@ -16,6 +16,8 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
 
 // fixedNow is the library's clock, so a created card reads the same on every
@@ -357,12 +359,35 @@ func readReviews(t *testing.T, dir string) []logRecord {
 	return records
 }
 
+// cardsByPrompt groups a library's cards by the prompt the card plugin shapes for
+// them: the shapes belong to the plugin, so a test asks it rather than splitting
+// text itself.
 func cardsByPrompt(t *testing.T, lib *store.Library) map[string]core.Card {
 	t.Helper()
+	runner, err := builtin.Cards(ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open the card plugin: %v", err)
+	}
+	t.Cleanup(func() { _ = runner.Close() })
+
 	cards := make(map[string]core.Card)
 	for _, card := range lib.Cards() {
-		prompt, _, _ := card.Sides(lib)
-		cards[prompt] = card
+		block, ok := lib.Block(card.Ref.Block)
+		if !ok {
+			continue
+		}
+		var answered struct {
+			Front string `json:"front"`
+		}
+		params := map[string]any{"text": block.Text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
+		if err := runner.Call("faces", params, &answered); err != nil {
+			t.Fatalf("shape a card: %v", err)
+		}
+		front := answered.Front
+		if card.Prompt != "" {
+			front = card.Prompt
+		}
+		cards[front] = card
 	}
 	return cards
 }
@@ -384,4 +409,36 @@ func hasWarning(report importanki.Report, want string) bool {
 		}
 	}
 	return false
+}
+
+// cardFaces is what the card plugin shapes for one card: the shapes are its
+// decision, so a test asks rather than splitting text itself.
+func cardFaces(t *testing.T, lib *store.Library, card core.Card) (prompt, answer string, state core.LinkState) {
+	t.Helper()
+	runner, err := builtin.Cards(ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open the card plugin: %v", err)
+	}
+	t.Cleanup(func() { _ = runner.Close() })
+
+	block, ok := lib.Block(card.Ref.Block)
+	if !ok {
+		return "", "", core.LinkLost
+	}
+	var answered struct {
+		Front string `json:"front"`
+		Back  string `json:"back"`
+	}
+	params := map[string]any{"text": block.Text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
+	if err := runner.Call("faces", params, &answered); err != nil {
+		t.Fatalf("shape a card: %v", err)
+	}
+	prompt, answer = answered.Front, answered.Back
+	if card.Prompt != "" {
+		prompt = card.Prompt
+	}
+	if card.Answer != "" {
+		answer = card.Answer
+	}
+	return prompt, answer, core.LinkLive
 }

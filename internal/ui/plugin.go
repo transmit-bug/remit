@@ -187,3 +187,51 @@ func (a *App) renderCard(card core.ID, prompt, answer string) (string, string, b
 	a.rendered[card] = got
 	return got.front, got.back, true
 }
+
+// facesAnswer is one card's shaping from the plugin, with what it was asked.
+type facesAnswer struct {
+	askedText      string
+	askedKind      core.Kind
+	askedOrdinal   int
+	prompt, answer string
+}
+
+// faces is what a card asks: the plugin's shaping of its paragraph, with the
+// card's own overrides on top. A plugin that is absent or failed leaves the
+// paragraph's own words — unsplit, because splitting is the plugin's rule and
+// not the app's.
+//
+// The answer is kept per card and per question: a card is shaped once, not once a
+// frame.
+func (a *App) faces(card core.Card) (prompt, answer string, state core.LinkState) {
+	text, state := card.Ref.Text(a.data.blocks)
+	prompt, answer = text, ""
+	if a.cards != nil {
+		if got, ok := a.facesCache[card.ID]; ok && got.askedText == text &&
+			got.askedKind == card.Kind && got.askedOrdinal == card.Ordinal {
+			prompt, answer = got.prompt, got.answer
+		} else {
+			var answered struct {
+				Front string `json:"front"`
+				Back  string `json:"back"`
+			}
+			params := map[string]any{"text": text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
+			got := facesAnswer{askedText: text, askedKind: card.Kind, askedOrdinal: card.Ordinal,
+				prompt: text, answer: ""}
+			if err := a.cards.runner.Call("faces", params, &answered); err != nil {
+				slog.Error("remit: the card plugin could not shape a card", "err", err)
+			} else {
+				got.prompt, got.answer = answered.Front, answered.Back
+			}
+			a.facesCache[card.ID] = got
+			prompt, answer = got.prompt, got.answer
+		}
+	}
+	if card.Prompt != "" {
+		prompt = card.Prompt
+	}
+	if card.Answer != "" {
+		answer = card.Answer
+	}
+	return prompt, answer, state
+}

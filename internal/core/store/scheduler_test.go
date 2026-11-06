@@ -27,7 +27,7 @@ func scheduledLibrary(t *testing.T, scheduler string) (*store.Library, string, c
 	if err != nil {
 		t.Fatal(err)
 	}
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -119,7 +119,7 @@ func (a *App) cardsWithStatus(s core.Status) []core.Card {
 // browseRowOf reads one card into a row: its prompt and the note the prompt
 // lives in, both empty when its block is gone.
 func (a *App) browseRowOf(card core.Card) browseRow {
-	prompt, _, state := card.Sides(a.data.blocks)
+	prompt, _, state := a.faces(card)
 	row := browseRow{card: card, prompt: prompt, state: state}
 	if note, ok := a.data.noteOfBlock(card.Ref.Block); ok {
 		row.note = a.data.titleOf(note)

@@ -250,7 +250,8 @@ func (a *App) makeCard(c *ui.Context, i int) {
 		return
 	}
 	block := a.editor.draft.Blocks[i]
-	if prompt, _ := core.Split(block.Text); prompt == "" {
+	derived, ok := a.deriveCards(block.Text)
+	if !ok || len(derived) == 0 || derived[0].Prompt == "" {
 		c.Toast(m(c).BlockEmpty())
 		return
 	}
@@ -262,7 +263,7 @@ func (a *App) makeCard(c *ui.Context, i int) {
 		}
 		block = a.editor.draft.Blocks[i]
 	}
-	if _, err := a.lib.CreateCard(block.ID); err != nil {
+	if _, err := a.lib.CreateCards(block.ID, derived); err != nil {
 		a.report(c, "make card", err)
 		return
 	}

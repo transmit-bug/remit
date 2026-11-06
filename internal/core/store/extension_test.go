@@ -51,7 +51,7 @@ func TestEventsFireOnWrites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("note: %v", err)
 	}
-	card, err := lib.CreateCard(note.Blocks[0].ID)
+	card, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("card: %v", err)
 	}

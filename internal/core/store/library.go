@@ -1015,26 +1015,6 @@ func (l *Library) CreateCards(blockID core.ID, derived []core.Derived) ([]core.C
 	return out, nil
 }
 
-// CreateCard makes the first card a block's text asks for, minting the block's
-// marker in the note. A block that asks several makes them all with CreateCards.
-func (l *Library) CreateCard(blockID core.ID) (core.Card, error) {
-	l.mu.Lock()
-	if l.index == nil {
-		l.mu.Unlock()
-		return core.Card{}, ErrClosed
-	}
-	ref, ok := l.index.block(blockID)
-	l.mu.Unlock()
-	if !ok {
-		return core.Card{}, fmt.Errorf("store: no block %q", blockID)
-	}
-	cards, err := l.CreateCards(blockID, core.Derive(ref.block.Text))
-	if err != nil {
-		return core.Card{}, err
-	}
-	return cards[0], nil
-}
-
 // markBlock appends a block's marker to its note source, leaving every other
 // byte of the file as it was.
 func (l *Library) markBlock(slug string, ref blockRef) error {

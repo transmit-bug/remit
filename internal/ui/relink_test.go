@@ -59,7 +59,7 @@ func TestRelinkFromReview(t *testing.T) {
 	if card.Ref.Block != seed.fresh.Ref.Block {
 		t.Errorf("the card reads %q, want %q", card.Ref.Block, seed.fresh.Ref.Block)
 	}
-	if _, _, state := card.Sides(a.Library()); state != core.LinkLive {
+	if _, _, state := a.faces(card); state != core.LinkLive {
 		t.Errorf("the re-linked card is %s, want live", state)
 	}
 	after, ok := a.Library().CardState(seed.lost.ID)
@@ -103,7 +103,7 @@ func TestRelinkFromBrowseRow(t *testing.T) {
 	if card.Ref.Block == seed.lost.Ref.Block {
 		t.Error("the re-linked card still points at its old block")
 	}
-	if _, _, state := card.Sides(a.Library()); state != core.LinkLive {
+	if _, _, state := a.faces(card); state != core.LinkLive {
 		t.Errorf("the re-linked card is %s, want live", state)
 	}
 	if !tt.HasText("No cards match.") {

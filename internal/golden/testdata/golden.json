@@ -1,5 +1,5 @@
 {
-  "note": "Frozen answers of the Go implementation (ADR 0005/0007): the faces a paragraph gives, and the schedule each answer leaves. Regenerate with go test ./internal/core/golden -update only when the answers are meant to change.",
+  "note": "Frozen answers of the Go implementation (ADR 0005/0007): the faces a paragraph gives, and the schedule each answer leaves. Regenerate with go test ./internal/golden -update only when the answers are meant to change.",
   "faces": [
     {
       "proves": "a paragraph with no separator asks everything and answers nothing",

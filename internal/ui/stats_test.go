@@ -33,11 +33,11 @@ func seedStatsLibrary(t *testing.T) *App {
 	if err != nil {
 		t.Fatalf("save note: %v", err)
 	}
-	first, err := lib.CreateCard(note.Blocks[0].ID)
+	first, err := firstCard(lib, note.Blocks[0].ID)
 	if err != nil {
 		t.Fatalf("create card: %v", err)
 	}
-	second, err := lib.CreateCard(note.Blocks[1].ID)
+	second, err := firstCard(lib, note.Blocks[1].ID)
 	if err != nil {
 		t.Fatalf("create card: %v", err)
 	}

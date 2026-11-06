@@ -41,6 +41,9 @@ type Library interface {
 	Due(time.Time, int) ([]core.Card, error)
 	Remaining(time.Time) (int, error)
 	Block(core.ID) (core.Block, bool)
+	// Faces is what a card asks, as the card plugin shapes it — this package
+	// has no splitting rules of its own.
+	Faces(core.Card) (prompt, answer string, link string)
 }
 
 // Options configures a Server.
@@ -333,14 +336,14 @@ type cardJSON struct {
 }
 
 func (s *Server) newCardJSON(c core.Card) cardJSON {
-	prompt, answer, link := c.Sides(s.lib)
+	prompt, answer, link := s.lib.Faces(c)
 	out := cardJSON{
 		ID:     string(c.ID),
 		Block:  string(c.Ref.Block),
 		Prompt: prompt,
 		Answer: answer,
 		Status: c.Status.String(),
-		Link:   link.String(),
+		Link:   link,
 	}
 	if state, ok := s.lib.CardState(c.ID); ok {
 		due, last := state.Due, state.LastReview
