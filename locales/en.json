@@ -243,5 +243,23 @@
   "modeLabel": "Mode",
   "@modeLabel": {
     "description": "Accessible label of the notes/review mode switch."
+  },
+  "libraryError": "Remit could not open its library: {reason}",
+  "@libraryError": {
+    "description": "The window's error state when the library cannot be opened.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "remit.json: format \"rust/1\", want \"remit/1\""
+      }
+    }
+  },
+  "retryLibrary": "Try again",
+  "@retryLibrary": {
+    "description": "The error state's one action: open the library again."
+  },
+  "saveFailed": "Could not save the change.",
+  "@saveFailed": {
+    "description": "A write to the library failed."
   }
 }

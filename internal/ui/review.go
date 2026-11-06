@@ -6,6 +6,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 )
 
 // reviewWidth caps the review column: a comfortable measure, centred in the
@@ -32,6 +33,10 @@ const (
 	ratingEasy
 )
 
+// schedule is the store's rating for this answer: the same four in the same
+// order, counted from one.
+func (g rating) schedule() schedule.Rating { return schedule.Rating(g) + 1 }
+
 func (g rating) key() string {
 	return [...]string{"1", "2", "3", "4"}[g]
 }
@@ -53,103 +58,100 @@ func (g rating) colour(tk tokens) ui.Color {
 	return [...]ui.Color{tk.reviewAgain, tk.reviewHard, tk.reviewGood, tk.reviewEasy}[g]
 }
 
-// gradeRecord is what undo needs to put a graded card back as it was.
-type gradeRecord struct {
-	card   core.ID
-	status core.Status
-}
-
-// reviewState is the queue and where the user is in it. Progress survives
-// leaving review for notes, so coming back does not start over.
+// reviewState is the queue and where the user is in it. What belongs in it is
+// the store's answer (queue.Today); the order is the session's, so progress
+// survives leaving review for notes, and undo can put the card just graded
+// back at the head where the user left it.
 type reviewState struct {
-	started  bool
 	queue    []core.ID // the card shown, then those after it
+	shown    core.ID   // the card revealed reports on
 	revealed bool
-	history  []gradeRecord
+	graded   []core.ID // cards graded this session, newest last
 }
 
-// begin seeds the queue the first time review opens.
-func (r *reviewState) begin(lib *demoLibrary) {
-	if r.started {
-		return
+// reset forgets the queue and the session's progress.
+func (r *reviewState) reset() {
+	r.queue, r.shown, r.revealed, r.graded = nil, "", false, nil
+}
+
+// sync takes the library's answer to what is due now: a card that is still due
+// keeps its place, one that is no longer due leaves, and one that became due —
+// a card made just now, a card returned by undo — joins the end. Membership is
+// the store's; the order the user is working through stays.
+func (r *reviewState) sync(due []core.ID) {
+	live := make(map[core.ID]bool, len(due))
+	for _, id := range due {
+		live[id] = true
 	}
-	r.started = true
-	for _, c := range lib.cards {
-		if c.Status.Scheduled() {
-			r.queue = append(r.queue, c.ID)
+	kept := make([]core.ID, 0, len(due))
+	for _, id := range r.queue {
+		if live[id] {
+			kept = append(kept, id)
+			delete(live, id)
 		}
 	}
+	for _, id := range due {
+		if live[id] {
+			kept = append(kept, id)
+			delete(live, id)
+		}
+	}
+	r.queue = kept
 }
 
 // remaining is how many cards are still to grade.
 func (r *reviewState) remaining() int { return len(r.queue) }
 
 // current is the card on screen.
-func (r *reviewState) current(lib *demoLibrary) (core.Card, bool) {
+func (r *reviewState) current(d libraryData) (core.Card, bool) {
 	if len(r.queue) == 0 {
 		return core.Card{}, false
 	}
-	c, ok := lib.card(r.queue[0])
-	if !ok {
-		return core.Card{}, false
-	}
-	return *c, true
+	return d.card(r.queue[0])
 }
 
 // reveal shows the card's answer.
 func (r *reviewState) reveal() {
 	if len(r.queue) > 0 {
-		r.revealed = true
+		r.shown, r.revealed = r.queue[0], true
 	}
 }
 
-// grade records the rating, advances and hides the next card's answer.
-func (r *reviewState) grade(lib *demoLibrary, g rating) {
-	if !r.revealed || len(r.queue) == 0 {
-		return
-	}
-	c, ok := lib.card(r.queue[0])
-	if !ok {
-		r.queue = r.queue[1:]
-		return
-	}
-	r.history = append(r.history, gradeRecord{card: c.ID, status: c.Status})
-	if g == ratingAgain || g == ratingHard {
-		c.Status = core.StatusLearning
-	} else {
-		c.Status = core.StatusReview
-	}
-	r.queue = r.queue[1:]
-	r.revealed = false
+// answered reports whether the answer on screen is the card's.
+func (r *reviewState) answered() bool {
+	return r.revealed && len(r.queue) > 0 && r.shown == r.queue[0]
 }
 
-// undo puts the last graded card back, answer shown, and restores its status.
-func (r *reviewState) undo(lib *demoLibrary) bool {
-	if len(r.history) == 0 {
-		return false
-	}
-	last := r.history[len(r.history)-1]
-	r.history = r.history[:len(r.history)-1]
-	if c, ok := lib.card(last.card); ok {
-		c.Status = last.status
-	}
-	r.queue = append([]core.ID{last.card}, r.queue...)
-	r.revealed = true
-	return true
-}
-
-// suspend takes the card shown out of the queue without touching its history.
-func (r *reviewState) suspend(lib *demoLibrary) bool {
+// advance moves past the card on screen, remembering it when it was graded
+// rather than suspended.
+func (r *reviewState) advance(graded bool) {
 	if len(r.queue) == 0 {
-		return false
+		return
 	}
-	if c, ok := lib.card(r.queue[0]); ok {
-		c.Status = core.StatusSuspended
+	if graded {
+		r.graded = append(r.graded, r.queue[0])
 	}
 	r.queue = r.queue[1:]
-	r.revealed = false
-	return true
+	r.shown, r.revealed = "", false
 }
+
+// last is the card the newest grade belongs to.
+func (r *reviewState) last() (core.ID, bool) {
+	if len(r.graded) == 0 {
+		return "", false
+	}
+	return r.graded[len(r.graded)-1], true
+}
+
+// restore puts a card back on screen with its answer shown, the way it was
+// when it was graded.
+func (r *reviewState) restore(id core.ID) {
+	r.queue = append([]core.ID{id}, r.queue...)
+	r.shown, r.revealed = id, true
+}
+
+// forget drops the grade undo has just cancelled.
+func (r *reviewState) forget() { r.graded = r.graded[:len(r.graded)-1] }
 
 // reviewView draws review mode: one card, centred.
 func (a *App) reviewView(c *ui.Context, tk tokens) {
@@ -161,14 +163,14 @@ func (a *App) reviewView(c *ui.Context, tk tokens) {
 				ui.Badge(c, m(c).Remaining(a.review.remaining()))
 			})
 
-			card, ok := a.review.current(a.library)
+			card, ok := a.review.current(a.data)
 			if !ok {
 				a.reviewEmpty(c, tk)
 				return
 			}
-			prompt, answer, state := card.Sides(a.library.blocks())
+			prompt, answer, state := card.Sides(a.data.blocks)
 			a.flipCard(c, tk, card, prompt, answer, state)
-			if state != core.LinkLost && a.review.revealed {
+			if state != core.LinkLost && a.review.answered() {
 				a.gradeRow(c, tk)
 			}
 			a.reviewFooter(c, tk, card, state)
@@ -178,6 +180,11 @@ func (a *App) reviewView(c *ui.Context, tk tokens) {
 
 // flipCard draws the review card: its link state, the prompt, and the answer
 // once revealed. It is a wrapper, not a copied widget: see RECONCILE.md.
+//
+// The lost branch is defensive: today's queue leaves a lost card out, because a
+// queue promises cards that can be reviewed now. It holds if a card's source
+// disappears between the queue being derived and the card being drawn, and
+// suspending it — the one action it can still take — is the way out.
 func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer string, state core.LinkState) {
 	ui.Column(c).Key(string(card.ID)).
 		Padding(tk.spaceXL).Gap(tk.spaceL).
@@ -192,7 +199,7 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 					FontSize(tk.typeBody).TextColor(tk.textMuted)
 				ui.Button(c, m(c).SuspendCard()).AlignSelf(ui.Start).
 					PaddingX(tk.spaceL).MinHeight(tk.control).
-					OnClick(a.suspend)
+					OnClick(func() { a.suspend(c) })
 				return
 			case core.LinkFrozen:
 				ui.Row(c).AlignSelf(ui.Start).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
@@ -205,7 +212,7 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 
 			ui.Text(c, prompt).FontSize(tk.typeHeading).Bold()
 			ui.Divider(c)
-			if !a.review.revealed {
+			if !a.review.answered() {
 				ui.Text(c, m(c).RevealHint()).
 					FontSize(tk.typeSmall).TextColor(tk.textMuted)
 				ui.PrimaryButton(c, m(c).ShowAnswer()).AlignSelf(ui.Start).
@@ -231,7 +238,7 @@ func (a *App) gradeRow(c *ui.Context, tk tokens) {
 				Gap(tk.spaceS).Padding(tk.spaceXS, tk.spaceS).
 				Background(tk.ratingFill(face)).Border(tk.hairline, tk.ratingEdge(face)).
 				Radius(tk.radiusControl).Label(g.label(c)).
-				OnClick(func() { a.grade(g) }).
+				OnClick(func() { a.grade(c, g) }).
 				Children(func() {
 					ui.Text(c, g.key()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
 					ui.Text(c, g.label(c)).FontSize(tk.typeBody).TextColor(tk.text)
@@ -243,14 +250,14 @@ func (a *App) gradeRow(c *ui.Context, tk tokens) {
 // reviewFooter holds the actions beside the card's grades.
 func (a *App) reviewFooter(c *ui.Context, tk tokens, card core.Card, state core.LinkState) {
 	ui.Row(c).Gap(tk.spaceS).AlignItems(ui.Center).Children(func() {
-		undo := ui.Button(c, m(c).Undo()).MinHeight(tk.control)
-		undo.Disabled(len(a.review.history) == 0)
-		undo.OnClick(func() { a.undo(c) })
+		_, canUndo := a.review.last()
+		ui.Button(c, m(c).Undo()).MinHeight(tk.control).Disabled(!canUndo).
+			OnClick(func() { a.undo(c) })
 
 		if state == core.LinkLost {
 			return
 		}
-		ui.Button(c, m(c).Suspend()).MinHeight(tk.control).OnClick(a.suspend)
+		ui.Button(c, m(c).Suspend()).MinHeight(tk.control).OnClick(func() { a.suspend(c) })
 		ui.Button(c, m(c).EditNote()).MinHeight(tk.control).OnClick(func() { a.editNote(card) })
 	})
 }
@@ -266,34 +273,60 @@ func (a *App) reviewEmpty(c *ui.Context, tk tokens) {
 	})
 }
 
-// grade rates the card shown and moves to the next. A lost card has no sides
-// to rate; it can be suspended instead.
-func (a *App) grade(g rating) {
-	card, ok := a.review.current(a.library)
+// grade rates the card shown, records the review in the store and moves on. A
+// card is graded only once its answer is up, and a lost one has no sides to
+// rate: it can be suspended instead.
+func (a *App) grade(c *ui.Context, g rating) {
+	card, ok := a.review.current(a.data)
+	if !ok || !a.review.answered() {
+		return
+	}
+	if _, _, state := card.Sides(a.data.blocks); state == core.LinkLost {
+		return
+	}
+	if err := a.lib.Review(card.ID, g.schedule(), time.Now()); err != nil {
+		a.report(c, "review", err)
+		return
+	}
+	a.review.advance(true)
+	a.reload()
+}
+
+// undo cancels the newest review, puts its card back on screen with the answer
+// shown and says so once.
+func (a *App) undo(c *ui.Context) {
+	id, ok := a.review.last()
 	if !ok {
 		return
 	}
-	if _, _, state := card.Sides(a.library.blocks()); state == core.LinkLost {
+	if err := a.lib.UndoLast(id); err != nil {
+		a.report(c, "undo", err)
 		return
 	}
-	a.review.grade(a.library, g)
+	a.review.forget()
+	a.review.restore(id)
+	a.reload()
+	c.Toast(m(c).GradeUndone())
 }
 
-// undo puts the last graded card back and says so once.
-func (a *App) undo(c *ui.Context) {
-	if a.review.undo(a.library) {
-		c.Toast(m(c).GradeUndone())
+// suspend takes the card shown out of the queue without touching its history.
+func (a *App) suspend(c *ui.Context) {
+	card, ok := a.review.current(a.data)
+	if !ok {
+		return
 	}
-}
-
-// suspend takes the card shown out of the queue.
-func (a *App) suspend() {
-	a.review.suspend(a.library)
+	card.Status = core.StatusSuspended
+	if err := a.lib.SaveCard(card); err != nil {
+		a.report(c, "suspend", err)
+		return
+	}
+	a.review.advance(false)
+	a.reload()
 }
 
 // editCurrent opens the note behind the card shown.
 func (a *App) editCurrent() {
-	card, ok := a.review.current(a.library)
+	card, ok := a.review.current(a.data)
 	if !ok {
 		return
 	}

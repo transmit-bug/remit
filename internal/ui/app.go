@@ -5,6 +5,8 @@ package ui
 import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+
+	"github.com/transmit-bug/remit/internal/core/store"
 )
 
 // Name and Version are the app's identity: the About page shows them, the
@@ -27,7 +29,11 @@ const (
 // App is the state the window shows. The view rebuilds the interface from it
 // on every frame; handlers change it.
 type App struct {
-	library  *demoLibrary
+	lib     *store.Library // the open library, nil until open succeeds
+	dir     string         // where the library lives, once resolved
+	openErr error          // why the library did not open, or nil
+	data    libraryData    // the library as the view reads it
+
 	mode     mode
 	review   reviewState
 	editor   editorState
@@ -35,12 +41,16 @@ type App struct {
 	aboutWin *mygo.Window // the open About window, or nil
 }
 
-// NewApp returns an app on an in-memory demo library, in notes mode.
-func NewApp() *App {
-	a := &App{library: newDemoLibrary()}
-	if len(a.library.notes) > 0 {
-		a.editor.selected = string(a.library.notes[0].ID)
+// NewApp returns an app on the library in opts.LibraryDir, or on Remit's own
+// library in the user's Documents folder when no option is given, in notes
+// mode. A library that cannot be opened leaves the window showing that, with
+// the one action that tries again; it never panics over a damaged library.
+func NewApp(opts ...Options) *App {
+	a := &App{}
+	if len(opts) > 0 {
+		a.dir = opts[0].LibraryDir
 	}
+	a.open()
 	return a
 }
 
@@ -57,8 +67,10 @@ func (a *App) View(c *ui.Context) {
 
 	ui.Column(c).Fill().Background(tk.surface).LineHeight(lineHeight).Children(func() {
 		a.toolbar(c, tk)
-		switch a.mode {
-		case modeReview:
+		switch {
+		case a.openErr != nil:
+			a.libraryErrorView(c, tk)
+		case a.mode == modeReview:
 			a.reviewView(c, tk)
 		default:
 			a.notesView(c, tk)

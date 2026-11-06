@@ -637,3 +637,45 @@ func ModeLabel() string { return In(i18n.Locale()).ModeLabel() }
 func (msgs Messages) ModeLabel() string {
 	return Catalog.Format(msgs.locale, "modeLabel", nil)
 }
+
+// LibraryError says "Remit could not open its library: {reason}"
+// in the language the app shows.
+//
+// The window's error state when the library cannot be opened.
+func LibraryError(reason string) string { return In(i18n.Locale()).LibraryError(reason) }
+
+// LibraryError says "Remit could not open its library: {reason}"
+// in the language of msgs.
+//
+// The window's error state when the library cannot be opened.
+func (msgs Messages) LibraryError(reason string) string {
+	return Catalog.Format(msgs.locale, "libraryError", map[string]any{"reason": reason})
+}
+
+// RetryLibrary says "Try again"
+// in the language the app shows.
+//
+// The error state's one action: open the library again.
+func RetryLibrary() string { return In(i18n.Locale()).RetryLibrary() }
+
+// RetryLibrary says "Try again"
+// in the language of msgs.
+//
+// The error state's one action: open the library again.
+func (msgs Messages) RetryLibrary() string {
+	return Catalog.Format(msgs.locale, "retryLibrary", nil)
+}
+
+// SaveFailed says "Could not save the change."
+// in the language the app shows.
+//
+// A write to the library failed.
+func SaveFailed() string { return In(i18n.Locale()).SaveFailed() }
+
+// SaveFailed says "Could not save the change."
+// in the language of msgs.
+//
+// A write to the library failed.
+func (msgs Messages) SaveFailed() string {
+	return Catalog.Format(msgs.locale, "saveFailed", nil)
+}
