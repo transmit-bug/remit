@@ -390,6 +390,11 @@ func (a *App) loadCurrent() {
 		a.loadBrowse()
 	case modeStats:
 		a.loadStats()
+	case modeNotes:
+		a.backlinks = nil
+		if a.lib != nil && a.editor.draft.ID != "" {
+			a.backlinks = a.lib.Backlinks(a.editor.draft.ID)
+		}
 	case modeReview:
 		a.preview, a.hasPreview = a.previewFor()
 		a.summary, a.hasSummary = a.summaryFor()

@@ -1747,6 +1747,78 @@ func (msgs Messages) CheckNow() string {
 	return Catalog.Format(msgs.locale, "checkNow", nil)
 }
 
+// Outline says "Outline"
+// in the language the app shows.
+//
+// The note panel's first view: the note's headings.
+func Outline() string { return In(i18n.Locale()).Outline() }
+
+// Outline says "Outline"
+// in the language of msgs.
+//
+// The note panel's first view: the note's headings.
+func (msgs Messages) Outline() string {
+	return Catalog.Format(msgs.locale, "outline", nil)
+}
+
+// Backlinks says "Backlinks"
+// in the language the app shows.
+//
+// The note panel's second view: the notes that point at this one.
+func Backlinks() string { return In(i18n.Locale()).Backlinks() }
+
+// Backlinks says "Backlinks"
+// in the language of msgs.
+//
+// The note panel's second view: the notes that point at this one.
+func (msgs Messages) Backlinks() string {
+	return Catalog.Format(msgs.locale, "backlinks", nil)
+}
+
+// OutlineEmpty says "No headings yet."
+// in the language the app shows.
+//
+// Shown in the outline when the note has no heading.
+func OutlineEmpty() string { return In(i18n.Locale()).OutlineEmpty() }
+
+// OutlineEmpty says "No headings yet."
+// in the language of msgs.
+//
+// Shown in the outline when the note has no heading.
+func (msgs Messages) OutlineEmpty() string {
+	return Catalog.Format(msgs.locale, "outlineEmpty", nil)
+}
+
+// BacklinksEmpty says "Nothing points here yet."
+// in the language the app shows.
+//
+// Shown in the backlinks when no note names this one.
+func BacklinksEmpty() string { return In(i18n.Locale()).BacklinksEmpty() }
+
+// BacklinksEmpty says "Nothing points here yet."
+// in the language of msgs.
+//
+// Shown in the backlinks when no note names this one.
+func (msgs Messages) BacklinksEmpty() string {
+	return Catalog.Format(msgs.locale, "backlinksEmpty", nil)
+}
+
+// BacklinkAt says "{note} ¶{paragraph}"
+// in the language the app shows.
+//
+// One backlink: the note that names this one, and the paragraph it is in.
+func BacklinkAt(note string, paragraph int) string {
+	return In(i18n.Locale()).BacklinkAt(note, paragraph)
+}
+
+// BacklinkAt says "{note} ¶{paragraph}"
+// in the language of msgs.
+//
+// One backlink: the note that names this one, and the paragraph it is in.
+func (msgs Messages) BacklinkAt(note string, paragraph int) string {
+	return Catalog.Format(msgs.locale, "backlinkAt", map[string]any{"note": note, "paragraph": paragraph})
+}
+
 // Today says "Today"
 // in the language the app shows.
 //

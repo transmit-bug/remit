@@ -686,6 +686,36 @@
   "@checkNow": {
     "description": "Button: run an update check now."
   },
+  "outline": "Outline",
+  "@outline": {
+    "description": "The note panel's first view: the note's headings."
+  },
+  "backlinks": "Backlinks",
+  "@backlinks": {
+    "description": "The note panel's second view: the notes that point at this one."
+  },
+  "outlineEmpty": "No headings yet.",
+  "@outlineEmpty": {
+    "description": "Shown in the outline when the note has no heading."
+  },
+  "backlinksEmpty": "Nothing points here yet.",
+  "@backlinksEmpty": {
+    "description": "Shown in the backlinks when no note names this one."
+  },
+  "backlinkAt": "{note} ¶{paragraph}",
+  "@backlinkAt": {
+    "description": "One backlink: the note that names this one, and the paragraph it is in.",
+    "placeholders": {
+      "note": {
+        "type": "String",
+        "example": "Habits"
+      },
+      "paragraph": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
   "today": "Today",
   "@today": {
     "description": "The first row of the notebook's list: what is due today."

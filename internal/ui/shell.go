@@ -99,6 +99,14 @@ func (a *App) panelShown(narrow bool) bool {
 	return !narrow
 }
 
+// showPanel opens the note's panel on one of its views, from the keyboard.
+func (a *App) showPanel(tab panelTab) {
+	if a.mode != modeNotes {
+		a.setMode(modeNotes)
+	}
+	a.panel, a.panelTab = panelOpen, tab
+}
+
 // togglePanel opens or closes the note's panel, whatever the window's width.
 func (a *App) togglePanel() {
 	if a.panelShown(true) {
@@ -108,24 +116,148 @@ func (a *App) togglePanel() {
 	a.panel = panelOpen
 }
 
-// notePanel is the column beside the document: what the note feeds, and the way
-// to put it away.
+// panelTab is which of the panel's two views is showing.
+type panelTab uint8
+
+const (
+	panelOutline panelTab = iota
+	panelBacklinks
+)
+
+// notePanel is the column beside the document: the note's outline or the notes
+// that point at it, then what the note feeds. It scrolls on its own and takes
+// the focus only when one of its rows is chosen.
 func (a *App) notePanel(c *ui.Context, tk tokens) {
 	msgs := m(c)
 	ui.Column(c).Width(panelWidth).MaxWidth(panelWidth).Padding(tk.spaceM).Gap(tk.spaceM).Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
-			ui.Text(c, msgs.PanelTitle()).FontSize(tk.typeSmall).Bold().
-				TextColor(tk.TextMuted).Grow(1)
+			chosen := int(a.panelTab)
+			if ui.Segmented(c, &chosen, msgs.Outline(), msgs.Backlinks()).Label(msgs.PanelTitle()).Changed() {
+				a.panelTab = panelTab(chosen)
+			}
+			ui.Spacer(c)
 			ui.Button(c, "").Label(msgs.Close()).Tooltip(msgs.Close()).
 				Children(func() { tk.icon(c, "x", iconSmall) }).
 				OnClick(func() { a.panel = panelClosed })
 		})
+
 		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Gap(tk.spaceS).Children(func() {
-				a.cardsStrip(c, tk, a.editor.draft)
+			ui.Column(c).Gap(tk.spaceXS).Children(func() {
+				if a.panelTab == panelBacklinks {
+					a.backlinkList(c, tk)
+				} else {
+					a.outlineList(c, tk)
+				}
 			})
 		})
+
+		a.cardsStrip(c, tk, a.editor.draft)
 	})
+}
+
+// outlineEntry is one heading of the note: what it says, and where it starts in
+// the document the editor holds.
+type outlineEntry struct {
+	label  string
+	offset int
+}
+
+// outline reads a note's blocks into its headings, in document order. The
+// blocks carry the Markdown source — the editor keeps a heading's hashes as
+// style, not text — and the offset is where the heading starts in the document
+// the editor holds.
+func outline(blocks []core.Block) []outlineEntry {
+	var out []outlineEntry
+	offset := 0
+	for i, block := range blocks {
+		if i > 0 {
+			offset += 2 // the blank line between blocks
+		}
+		if level, label := heading(strings.TrimSpace(block.Text)); level > 0 {
+			out = append(out, outlineEntry{label: label, offset: offset})
+		}
+		offset += len(block.Text)
+	}
+	return out
+}
+
+// heading reads a Markdown heading, returning its level and its text.
+func heading(body string) (level int, label string) {
+	for level < len(body) && body[level] == '#' {
+		level++
+	}
+	if level == 0 || level > 6 || level >= len(body) || body[level] != ' ' {
+		return 0, ""
+	}
+	// A heading is its first line: what follows a blank line is the paragraph
+	// under it, not part of its name.
+	label = body[level+1:]
+	if end := strings.IndexByte(label, '\n'); end >= 0 {
+		label = label[:end]
+	}
+	return level, strings.TrimSpace(label)
+}
+
+// outlineList shows the note's headings; choosing one puts the caret on its
+// paragraph, which is what scrolls it into view.
+func (a *App) outlineList(c *ui.Context, tk tokens) {
+	if a.editor.doc == nil {
+		ui.Text(c, m(c).OutlineEmpty()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+		return
+	}
+	entries := outline(a.editor.draft.Blocks)
+	if len(entries) == 0 {
+		ui.Text(c, m(c).OutlineEmpty()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+		return
+	}
+	for _, entry := range entries {
+		at := entry.offset
+		ui.ButtonBase(c).Key(entry.label).Justify(ui.Start).
+			Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control - tk.spaceS).
+			Radius(tk.radiusControl).Label(entry.label).
+			OnClick(func() { a.jumpInDocument(c, at) }).
+			Children(func() {
+				ui.Text(c, entry.label).FontSize(tk.typeSmall).TextColor(tk.Text).SingleLine()
+			})
+	}
+}
+
+// jumpInDocument puts the caret on a paragraph of the note open now, which the
+// editor scrolls into view.
+func (a *App) jumpInDocument(c *ui.Context, offset int) {
+	if a.editor.doc == nil {
+		return
+	}
+	a.editor.doc.SetSelection(offset, offset)
+	a.editor.body.Focus(c)
+}
+
+// backlinkList shows the notes that name this one, with the paragraph that names
+// it; choosing one opens that note on that paragraph.
+func (a *App) backlinkList(c *ui.Context, tk tokens) {
+	msgs := m(c)
+	if len(a.backlinks) == 0 {
+		ui.Text(c, msgs.BacklinksEmpty()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+		return
+	}
+	for _, link := range a.backlinks {
+		label := msgs.BacklinkAt(link.NoteTitle, link.Paragraph)
+		target := link
+		ui.ButtonBase(c).Key(string(link.Block)).Justify(ui.Start).
+			Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control - tk.spaceS).
+			Radius(tk.radiusControl).Label(label).
+			OnClick(func() {
+				a.editor.selected = string(target.Note)
+				a.editor.jumpTo = target.Paragraph
+				a.reload()
+			}).
+			Children(func() {
+				ui.Column(c).Gap(0).Children(func() {
+					ui.Text(c, label).FontSize(tk.typeSmall).TextColor(tk.Text).SingleLine()
+					ui.Text(c, target.Text).FontSize(tk.typeSmall).TextColor(tk.TextMuted).SingleLine()
+				})
+			})
+	}
 }
 
 // notesList is the source list of notes: today at the top, then every note
@@ -164,6 +296,8 @@ func (a *App) shortcuts(c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.Key3, func() { a.setMode(modeBrowse) })
 	c.OnShortcut(ui.Cmd, ui.KeyF, func() { a.focusSearch(c) })
 	c.OnShortcut(ui.Cmd, ui.KeyN, func() { a.newNote(c) })
+	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyO, func() { a.showPanel(panelOutline) })
+	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyB, func() { a.showPanel(panelBacklinks) })
 
 	switch a.mode {
 	case modeReview:

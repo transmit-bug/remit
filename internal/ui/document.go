@@ -71,3 +71,19 @@ func paragraphAt(text string, offset int) (start, end int) {
 	}
 	return start, offset + end
 }
+
+// paragraphOffset is where a paragraph starts in the document's text, counted
+// from one as the panel counts; -1 when the note has fewer paragraphs.
+func paragraphOffset(text string, paragraph int) int {
+	if paragraph < 1 {
+		return -1
+	}
+	at := 0
+	for i, part := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n\n") {
+		if i+1 == paragraph {
+			return at
+		}
+		at += len(part) + 2
+	}
+	return -1
+}
