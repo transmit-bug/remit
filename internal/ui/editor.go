@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/egoist/mygo/ui/markdown"
 	"github.com/egoist/mygo/ui/richtext"
 
 	"github.com/transmit-bug/remit/internal/core"
@@ -185,6 +186,25 @@ func findMatches(text, query string) (int, [][2]int) {
 		from = start + len(needle)
 	}
 	return len(spans), spans
+}
+
+// secondPane is the right-hand side of a split: the note as it reads, in its own
+// scroll, so that two places can be compared while the left side is edited.
+//
+// It is a reading view because v0.7.4's richtext editor keeps one view per
+// document: two editors over the same Document do not both report their edits
+// (checked: richtext.Editor, EditorBase, Document.SetText, Document.Selection —
+// the view state that notices a change is per editor, and the second one never
+// sees the first's). Editing the right side needs a second document and a merge,
+// which is a design of its own.
+func (a *App) secondPane(c *ui.Context, tk tokens) {
+	a.editor.follow(a.data)
+	if a.editor.draft.ID == "" {
+		return
+	}
+	ui.Scroll(c).Grow(1).Padding(tk.spaceXL).Children(func() {
+		markdown.View(c, documentText(a.editor.draft), nil)
+	})
 }
 
 // saveDocument writes what the editor holds: its paragraphs back into blocks,

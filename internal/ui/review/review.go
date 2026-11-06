@@ -15,6 +15,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
+	"github.com/transmit-bug/remit/internal/ui/maths"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -336,7 +337,7 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 				})
 			}
 
-			ui.Text(c, card.Prompt).FontSize(design.TypeHeading).Bold()
+			ui.Text(c, maths.Render(card.Prompt)).FontSize(design.TypeHeading).Bold()
 			ui.Divider(c)
 			if !s.Answered() {
 				ui.Text(c, msgs.RevealHint()).
@@ -351,7 +352,9 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 					FontSize(design.TypeBody).TextColor(c.Theme().TextMuted)
 				return
 			}
-			ui.Text(c, card.Answer).FontSize(design.TypeBody).TextColor(c.Theme().Text)
+			// The answer's formulas are set for reading; the note keeps the
+			// source.
+			ui.Text(c, maths.Render(card.Answer)).FontSize(design.TypeBody).TextColor(c.Theme().Text)
 		})
 }
 

@@ -413,3 +413,24 @@ func TestSummaryTones(t *testing.T) {
 		})
 	}
 }
+
+// A formula is set on the card: review reads the answer as a formula, and never
+// as the TeX source.
+func TestFormulaIsSetOnTheCard(t *testing.T) {
+	f := &fake{cards: map[core.ID]review.Card{
+		"c1": {ID: "c1", Prompt: `the area of a circle`, Answer: `$\pi r^2$`},
+	}, state: &review.State{}}
+	f.state.Sync([]core.ID{"c1"})
+	state, deps := f.state, f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
+
+	if err := tt.Click(locales.In("en").ShowAnswer()); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText("πr²") {
+		t.Fatalf("the answer is not set as a formula; texts %q", tt.Texts())
+	}
+	if tt.HasText(`$\pi r^2$`) {
+		t.Error("the card shows the TeX source")
+	}
+}

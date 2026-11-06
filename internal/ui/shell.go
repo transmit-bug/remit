@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 
@@ -75,8 +76,8 @@ func (a *App) notesView(c *ui.Context, tk tokens) {
 	})
 }
 
-// narrowWindow is the width below which the notebook drops its panel and
-// narrows its notes column.
+// narrowWindow is the width below which the notebook drops its panel, puts the
+// split away and narrows its notes column.
 const narrowWindow float32 = 900
 
 // panelMode is what the user said about the note's panel, when they said
@@ -371,6 +372,7 @@ func (a *App) shortcuts(c *ui.Context) {
 		a.focusSearch(c)
 	})
 	c.OnShortcut(ui.Cmd, ui.KeyN, func() { a.newNote(c) })
+	c.OnShortcut(ui.Cmd, ui.KeyD, func() { a.openDailyNote(c) })
 	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyO, func() { a.showPanel(panelOutline) })
 	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyB, func() { a.showPanel(panelBacklinks) })
 
@@ -422,6 +424,40 @@ func (a *App) newNote(c *ui.Context) {
 	})
 	if err != nil {
 		a.report(c, "new note", err)
+		return
+	}
+	a.reload()
+	a.editor.selected = string(note.ID)
+	a.editor.focus = true
+	a.setMode(modeNotes)
+}
+
+// dailyTitle is a day's note title: the date, which is also what its file is
+// slugged from, so the day's note is found again by name.
+func dailyTitle(now time.Time) string { return now.Format("2006-01-02") }
+
+// openDailyNote shows today's note, writing it the first time the day is opened.
+// It joins the library like any other note: no separate store, no separate
+// format.
+func (a *App) openDailyNote(c *ui.Context) {
+	if a.lib == nil {
+		return
+	}
+	title := dailyTitle(time.Now())
+	for _, note := range a.data.notes {
+		if note.Title == title {
+			a.editor.selected = string(note.ID)
+			a.setMode(modeNotes)
+			return
+		}
+	}
+	note, err := a.lib.SaveNote(core.Note{
+		ID:     core.NewID("note"),
+		Title:  title,
+		Blocks: []core.Block{{ID: core.NewID(core.BlockKind)}},
+	})
+	if err != nil {
+		a.report(c, "open today's note", err)
 		return
 	}
 	a.reload()
