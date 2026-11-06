@@ -196,7 +196,7 @@ func TestZhHansAtMinimum(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
-	for _, label := range []string{"笔记", "浏览", "统计", "笔记本", "建卡", "块操作"} {
+	for _, label := range []string{"笔记", "浏览", "统计", "笔记本", "笔记标题"} {
 		assertControl(t, tt, 720, 520, label)
 	}
 

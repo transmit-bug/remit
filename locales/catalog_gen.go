@@ -1747,6 +1747,34 @@ func (msgs Messages) CheckNow() string {
 	return Catalog.Format(msgs.locale, "checkNow", nil)
 }
 
+// NoteBody says "Note"
+// in the language the app shows.
+//
+// Accessible label of the note's document editor.
+func NoteBody() string { return In(i18n.Locale()).NoteBody() }
+
+// NoteBody says "Note"
+// in the language of msgs.
+//
+// Accessible label of the note's document editor.
+func (msgs Messages) NoteBody() string {
+	return Catalog.Format(msgs.locale, "noteBody", nil)
+}
+
+// EditorHint says "Type :: to make a card of a paragraph."
+// in the language the app shows.
+//
+// One quiet line above the document, saying how a paragraph becomes a card.
+func EditorHint() string { return In(i18n.Locale()).EditorHint() }
+
+// EditorHint says "Type :: to make a card of a paragraph."
+// in the language of msgs.
+//
+// One quiet line above the document, saying how a paragraph becomes a card.
+func (msgs Messages) EditorHint() string {
+	return Catalog.Format(msgs.locale, "editorHint", nil)
+}
+
 // SummaryTitle says "Today's review"
 // in the language the app shows.
 //

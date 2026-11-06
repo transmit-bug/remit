@@ -42,7 +42,7 @@ func blocksOfDocument(text string, prev []core.Block) []core.Block {
 		if body == "" {
 			continue
 		}
-		id, rest, ok := core.SplitBlockMarker(body)
+		id, rest, ok := core.CutBlockMarker(body)
 		if ok && id.Kind() == core.BlockKind {
 			body = strings.TrimSpace(rest)
 		} else {

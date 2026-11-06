@@ -32,7 +32,7 @@ func TestChineseFitsTheSmallestWindow(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
-	for _, label := range []string{"笔记", "笔记本", "第 1 块 · A daily habit"} {
+	for _, label := range []string{"笔记", "笔记本", "笔记标题"} {
 		inside(label)
 	}
 	if tt.FramePending() {

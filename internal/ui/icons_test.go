@@ -15,9 +15,17 @@ func lostCardWindow(t *testing.T) (*ui.Tester, testLibrary) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 
-	notesMode(t, a, tt)
-	openNote(t, tt, "Memory and recall")
-	chooseFromMenu(t, tt, 1, "Delete block")
+	// Deleting a paragraph is an edit of the document now: save the note
+	// without the block its card points at, and the card loses its source.
+	note, ok := a.Library().Note(seed.memory.ID)
+	if !ok {
+		t.Fatal("the seeded note is gone")
+	}
+	note.Blocks = note.Blocks[1:]
+	if _, err := a.Library().SaveNote(note); err != nil {
+		t.Fatalf("drop the block: %v", err)
+	}
+	a.reload()
 
 	tt.Key(ui.Cmd, ui.Key3)
 	tt.Advance(320 * time.Millisecond) // the card's exit
