@@ -1,0 +1,1 @@
+{ "name": "cards-basic", "version": "1.0.0", "protocol": 1, "runtime": "js", "entrypoint": ["main.js"] }
