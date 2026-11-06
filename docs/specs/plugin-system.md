@@ -6,7 +6,7 @@
 
 | 原则 | 出处 | 我们怎么落 |
 |---|---|---|
-| **静态声明 + 惰性激活** | VS Code：`contributes`（静态）+ `activationEvents`（何时加载） | manifest 声明 hooks 与 capabilities；宿主只在需要某个角色时加载对应插件 |
+| **静态声明 + 惰性激活** | VS Code：`contributes`（静态）+ `activationEvents`（何时加载） | manifest 用**宿主定义的钩子词汇表**声明 `implements` 与 capabilities；宿主不启动插件即可展示、校验与索引它的全部表面 |
 | **能力即对象，不是权限弹窗** | Obsidian：没有沙箱，API 面（Vault / MetadataCache）本身就是边界 | JS 全局只有 `remit`，标准库冻结；拿不到 `fs` / `net` / 定时器以外的宿主能力 |
 | **安装时授权，运行时不再问** | VS Code：扩展信任在安装时建立 | 启用插件时展示它声明的 capabilities 并让用户批准；运行期只安装已批准的 `remit.*` |
 | **插件失败不得阻塞主流程** | Anki：add-on 出错不影响复习 | 抛错/超时/内存超限 → 回退**内置默认插件**，计数，三次停用 |
@@ -31,13 +31,13 @@
   "runtime": "js",
   "entrypoint": "main.js",
   "capabilities": ["notes:read", "cards:write", "review:read", "schedule:fsrs"],
-  "provides": { "derive": "deriveBlock", "render": "renderCard", "schedule": "scheduleGrade" },
+  "implements": { "cards.derive": 1, "cards.render": 1, "review.schedule": 1 },
   "activation": ["onReview", "onNoteSaved"],
   "contributes": { "settings": [] }
 }
 ```
 
-- `provides` 的值是 **导出的函数名**；宿主解析一次，之后按名调用（同 VS Code 的 hook 名解析）。
+- `implements` 的键是**宿主词汇表里的钩子 ID**，值是**该钩子的契约版本**。导出函数名由宿主固定（`deriveBlock` / `renderCard` / `scheduleGrade`），插件不能自定义——这样宿主可以在不加载插件的情况下校验它「声称实现了什么」，也避免 Anki 那种「运行时追加的全局钩子列表」退化成的隐式顺序契约（研究 #70）。
 - `activation` 只决定**何时加载**，不决定加载谁——角色（derive/render/schedule）决定谁被选中。
 - `contributes.settings` 声明**由宿主渲染**的设置项（插件不做 UI，见 #9）。v1 允许为空数组。
 
@@ -65,6 +65,12 @@ export function scheduleGrade(input: {
 
 **为什么 state 不透明**：FSRS 在宿主（`remit.fsrs.*`），插件能做的是策略（步长、上限、fuzz、降级）。state 一旦让插件解释，就等于把调度数学又复制一份。
 
+## 3.5 产出即建议
+
+- 三个钩子的返回值都是**建议**：宿主校验结构、夹取边界（间隔上限、非负）、然后由宿主自己写库。插件永远不直接写。
+- 每条派生数据都带**生产者标识与版本**（`producer: {id, version}`），卸载插件后数据仍可读、可解释（研究 #70 的第三条"该抄"）。
+- 渲染钩子的产出**不落库**：每次从卡片数据重新渲染；渲染插件缺失时回退到块的原文，而不是空白。
+
 ## 4. Capabilities
 
 | 能力 | 授予的宿主面 | 拒绝时 |
@@ -78,6 +84,10 @@ export function scheduleGrade(input: {
 
 **没有** `fs` / `net` / `ui` / 任意 SQL。需要联网的插件是 v2 议题（那时加 `net:fetch` + allowlist）。
 
+## 4.5 爆炸半径（与 #9 的差异，必须写进 ADR）
+
+`#9` 用「独立进程 + 只能经协议改状态」把插件出错的爆炸半径压住；进程内 JS 换了这份隔离。补偿是三件事：能力面（拿不到 `fs`/`net`/`ui`）、`Interrupt`（19–25 µs 打断）、`MemoryLimit`（真实拦停）。**但不能声称等价**：引擎自身的内存安全 bug 仍会带崩 app。这一点由 #68 的 ADR 0006 记录为已知风险，不靠"沙箱"两个字带过（研究 #70 的"不该抄"第一条）。
+
 ## 5. 错误、超时、内存、停用
 
 | 情况 | 宿主行为 |
@@ -88,12 +98,13 @@ export function scheduleGrade(input: {
 | 超 64 MiB | `ErrMemoryLimit`；记一次失败 |
 | 连续 3 次失败 | 停用该插件，通知用户，复习继续走内置默认插件 |
 | 加载失败（语法错） | 只影响该插件；库照常打开 |
+| 渲染插件缺失 | 卡片面回退到块的原文（`::` 切分后的两段），不显示空白 |
 
 `#67` 实测：打断死循环 19–25 µs，host panic 返回 `*InternalError` 且进程存活。
 
 ## 6. 版本
 
-- `apiVersion`：整数。宿主拒绝加载 `apiVersion > 自身` 的插件。
+- `apiVersion`：整数，是**契约产物 `remit.d.ts` 的版本**（与 VS Code 的 `vscode.d.ts` 同位）。宿主按**最低版本**语义接受：插件声明的 `apiVersion` ≤ 宿主即可加载，不要求精确匹配（`#9` 的 `protocol: 1` 精确匹配只能硬失败，这是要改掉的地方——研究 #70）。
 - 破坏性变更 +1；旧版插件继续可用一个大版本（deprecation 窗口），之后拒绝加载。
 - `protocol`（#9 的 exec 线协议）与 `apiVersion`（JS 宿主面）分开：前者是传输，后者是数据契约。
 - 复习记录里写 `scheduler: { id, version }`：换调度插件后历史仍可读，只是不再可比（#72 的规则）。
