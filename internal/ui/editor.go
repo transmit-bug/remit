@@ -6,6 +6,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 )
 
 // editorState is editing mode's state: the note the list chose, the draft of
@@ -105,9 +106,7 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	a.editor.follow(a.data)
 	note := &a.editor.draft
 	if note.ID == "" {
-		ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Children(func() {
-			tk.icon(c, "file-text", iconLarge).TextColor(tk.TextMuted)
-			ui.Text(c, m(c).NoNotes()).FontSize(tk.typeHeading).TextColor(tk.TextMuted)
+		kit.Empty(c, "file-text", m(c).NoNotes(), func() {
 			ui.Button(c, m(c).NewNote()).MinHeight(tk.control).OnClick(func() { a.newNote(c) })
 		})
 		return

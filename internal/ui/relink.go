@@ -7,6 +7,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 )
 
 // relinkPanel is the picker's height: enough rows to scan, short enough that
@@ -78,7 +79,7 @@ func (a *App) relinkView(c *ui.Context, tk tokens) {
 
 	ui.DialogBase(c, &a.relink.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.scrim)
-		panel = tk.panel(panel.Width(paletteWidth).MaxHeight(relinkPanel).Padding(tk.spaceL).Gap(tk.spaceM))
+		panel = kit.StylePanel(c, panel.Width(paletteWidth).MaxHeight(relinkPanel).Padding(tk.spaceL).Gap(tk.spaceM))
 		panel.Label(msgs.RelinkTitle())
 		// The picker arrives the way the palette does.
 		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.relink})
