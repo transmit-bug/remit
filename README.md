@@ -32,6 +32,30 @@ Packaging and release builds go through MyGo's CLI:
 go tool mygo build .
 ```
 
+## Your library
+
+A library is one directory of plain text; the app's derived index lives beside
+it and may be deleted at any time.
+
+```
+<library>/
+  remit.json              format version, FSRS weights, desired retention
+  notes/<slug>-<id>.md    notes; a referencable block ends with ^block_<hex>
+  cards/<id>.json         card definitions: block reference, overrides, status
+  reviews.jsonl           append-only review log — the only scheduling source
+  .remit/index.sqlite     derived index, rebuilt from the files above
+```
+
+`notes/`, `cards/`, `reviews.jsonl` and `remit.json` are the truth. Deleting
+`.remit/` loses nothing: the app replays the log and reindexes the text.
+
+## Moving a library
+
+A `.remitlib` file is a zip of those plaintext sources — never the index — so
+it can be inspected, versioned or handed to someone else. Writing and reading
+one lives in `internal/core/transfer`; unpacking refuses an archive that
+escapes its target directory or one that would overwrite a library.
+
 ## License
 
 Remit is licensed under the GNU Affero General Public License, version 3. See
