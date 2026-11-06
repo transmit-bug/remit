@@ -211,7 +211,7 @@ func TestBrowseOpens(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Key(0, ui.KeyEnter)
-	for _, want := range []string{"Notebook", "Block 1 · Memory and recall"} {
+	for _, want := range []string{"Notebook", "Note title"} {
 		if !tt.HasText(want) {
 			t.Fatalf("Enter did not open the card's note: missing %q; texts %q", want, tt.Texts())
 		}
@@ -225,11 +225,8 @@ func TestBrowseOpens(t *testing.T) {
 	if err := tt.Click("Open (Enter)"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("Block 1 · Writing cards") {
+	if !tt.HasText("Note title") || tt.HasText("When to review") {
 		t.Fatalf("Open did not show the card's note; texts %q", tt.Texts())
-	}
-	if tt.HasText("Block 1 · Memory and recall") {
-		t.Error("the editor still shows the note opened before")
 	}
 	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {

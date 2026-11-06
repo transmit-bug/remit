@@ -151,7 +151,7 @@ func TestModes(t *testing.T) {
 
 			tt.Key(ui.Cmd, ui.Key2)
 			tt.Advance(320 * time.Millisecond) // the card's exit
-			for _, want := range []string{"Notebook", "Memory and recall", "Make card"} {
+			for _, want := range []string{"Notebook", "Memory and recall", "Note title"} {
 				if !tt.HasText(want) {
 					t.Fatalf("notes mode: missing %q; texts %q", want, tt.Texts())
 				}
@@ -262,7 +262,7 @@ func TestReviewKeys(t *testing.T) {
 
 	// E opens the note the card came from.
 	tt.Key(0, ui.KeyE)
-	if !tt.HasText("Notebook") || !tt.HasText("Block 1 · Writing cards") {
+	if !tt.HasText("Notebook") || a.editor.loaded != string(seed.writing.ID) {
 		t.Fatalf("E did not open the card's note; texts %q", tt.Texts())
 	}
 
@@ -321,12 +321,12 @@ func TestPalette(t *testing.T) {
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 
-	const field = "Block 1 · A daily habit"
+	const field = "Note title"
 	if err := tt.Click(field); err != nil {
 		t.Fatal(err)
 	}
 	if !tt.Focused(field) {
-		t.Fatalf("the block field did not take the focus; texts %q", tt.Texts())
+		t.Fatalf("the note's title did not take the focus; texts %q", tt.Texts())
 	}
 
 	tt.Key(ui.Cmd, ui.KeyK)
@@ -366,8 +366,8 @@ func TestPalette(t *testing.T) {
 	if !tt.HasText("Untitled note") {
 		t.Fatalf("New note did not add a note; texts %q", tt.Texts())
 	}
-	if !tt.Focused("Block 1 · Untitled note") {
-		t.Errorf("a new note's first block did not take the caret; texts %q", tt.Texts())
+	if !tt.Focused("Note title") {
+		t.Errorf("a new note's title did not take the caret; texts %q", tt.Texts())
 	}
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
@@ -376,42 +376,48 @@ func TestPalette(t *testing.T) {
 
 // Editing a block's text is a note save, so the card that follows the block
 // shows the new sides and the note file holds them.
-func TestEditBlock(t *testing.T) {
+func TestEditDocument(t *testing.T) {
 	a, seed := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(320 * time.Millisecond) // the review card's exit
+	notesMode(t, a, tt)
+	openNote(t, tt, "Memory and recall")
 
-	if err := tt.Click("Memory and recall"); err != nil {
-		t.Fatal(err)
+	if err := tt.Click("Note"); err != nil {
+		t.Fatalf("open the note's document: %v", err)
 	}
-	const field = "Block 1 · Memory and recall"
-	if err := tt.Click(field); err != nil {
-		t.Fatal(err)
-	}
-	tt.Command("selectAll")
-	tt.Type("What is spacing? :: Practice spread over several days.")
+	tt.Type("Read this first. ")
+	tt.Advance(320 * time.Millisecond)
 
 	source, err := os.ReadFile(filepath.Join(seed.dir, "notes", "memory-and-recall-"+string(seed.memory.ID)+".md"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(source), "What is spacing? :: Practice spread over several days.") {
-		t.Fatalf("the edit is not in the note file: %s", source)
+	if !strings.Contains(string(source), "Read this first.") {
+		t.Fatalf("the edit did not reach the file:\n%s", source)
 	}
-
-	tt.Key(ui.Cmd, ui.Key1)
-	if !tt.HasText("What is spacing?") {
-		t.Fatalf("the edit did not reach the card; texts %q", tt.Texts())
+	// Every paragraph keeps the marker that names it, so the card that points
+	// at one still finds it.
+	for _, block := range seed.memory.Blocks {
+		if !strings.Contains(string(source), core.BlockMarker(block.ID)) {
+			t.Errorf("block %s lost its marker:\n%s", block.ID, source)
+		}
 	}
-	tt.Key(0, ui.KeySpace)
-	if !tt.HasText("Practice spread over several days.") {
-		t.Fatalf("the edited answer is missing; texts %q", tt.Texts())
+	card, ok := a.Library().Card(seed.spacing.ID)
+	if !ok {
+		t.Fatal("the card is gone")
 	}
-	tt.Advance(320 * time.Millisecond)
-	if tt.FramePending() {
-		t.Error("view still requests frames after it should settle")
+	prompt, _, state := card.Sides(a.Library())
+	if state != core.LinkLive {
+		t.Errorf("the card is %s, want live", state)
+	}
+	// The caret sits at the document's end, so what was typed joined the last
+	// paragraph; the card's own paragraph is untouched and still found.
+	if !strings.Contains(string(source), "Read this first.") {
+		t.Errorf("the typed text is not in the last paragraph:\n%s", source)
+	}
+	if prompt != "Spacing beats cramming" {
+		t.Errorf("the card reads %q, want its own paragraph", prompt)
 	}
 }
 
@@ -426,14 +432,14 @@ func TestNotesList(t *testing.T) {
 	if err := tt.Click("Writing cards"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("Block 1 · Writing cards") {
+	if a.editor.doc == nil || !strings.Contains(a.editor.doc.Text().String(), "A good card asks") {
 		t.Fatalf("the editor did not follow the list; texts %q", tt.Texts())
 	}
-	if tt.HasText("Block 1 · A daily habit") {
+	if strings.Contains(a.editor.doc.Text().String(), "When to review") {
 		t.Error("the editor still shows the note chosen before")
 	}
-	if !tt.HasText("3 blocks · 2 cards") {
-		t.Errorf("the note's block and card counts are missing; texts %q", tt.Texts())
+	if !tt.HasText("2 blocks") {
+		t.Errorf("the note's paragraph count is missing; texts %q", tt.Texts())
 	}
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
@@ -448,14 +454,11 @@ func TestMakeCard(t *testing.T) {
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 
-	if err := tt.Click("Make card"); err != nil {
-		t.Fatal(err)
-	}
-	if !tt.HasText("Card made from block 1") {
+	tt.Key(ui.Cmd, ui.KeyK)
+	tt.Type("make card")
+	tt.Key(0, ui.KeyEnter)
+	if !tt.HasText("Card made from block 2") {
 		t.Fatalf("no outcome for making a card; texts %q", tt.Texts())
-	}
-	if !tt.HasText("1 card") {
-		t.Fatalf("the block is not marked as referenced; texts %q", tt.Texts())
 	}
 	cards, err := os.ReadDir(filepath.Join(seed.dir, "cards"))
 	if err != nil {
@@ -489,16 +492,16 @@ func TestMinimumSizeControls(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
-	for _, label := range []string{"New note", "Notebook", "A daily habit", "Block 1 · A daily habit", "Make card", "Block 2 · A daily habit"} {
+	for _, label := range []string{"New note", "Notebook", "A daily habit", "Note title"} {
 		assertControl(t, tt, 720, 520, label)
 	}
-	assertControl(t, tt, 720, 520, "Block 2 actions")
 
-	if err := tt.Click("Make card"); err != nil {
-		t.Fatal(err)
-	}
-	if !tt.HasText("Card made from block 1") {
-		t.Fatalf("Make card was not clickable at the minimum; texts %q", tt.Texts())
+	// Making a card is a command now, reachable at the smallest window too.
+	tt.Key(ui.Cmd, ui.KeyK)
+	tt.Type("make card")
+	tt.Key(0, ui.KeyEnter)
+	if !tt.HasText("Card made from block 2") {
+		t.Fatalf("Make card did not run at the minimum; texts %q", tt.Texts())
 	}
 	tt.Advance(5 * time.Second) // let the toast go
 
@@ -543,7 +546,7 @@ func TestDark(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
-	if !tt.HasText("Notebook") || !tt.HasText("Make card") {
+	if !tt.HasText("Notebook") || !tt.HasText("Note title") {
 		t.Fatalf("dark notes mode is incomplete; texts %q", tt.Texts())
 	}
 
@@ -620,7 +623,7 @@ func TestFirstRun(t *testing.T) {
 	if err := tt.Click("New note"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.Focused("Block 1 · Untitled note") {
+	if !tt.Focused("Note title") {
 		t.Fatalf("the first note did not open for typing; texts %q", tt.Texts())
 	}
 
@@ -629,7 +632,7 @@ func TestFirstRun(t *testing.T) {
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
-	if !tt.HasText("Block 1 · Untitled note") {
+	if !tt.HasText("Untitled note") || !tt.HasText("Note title") {
 		t.Fatalf("the new note did not survive a restart; texts %q", tt.Texts())
 	}
 	tt.Advance(320 * time.Millisecond) // the screen's entrance

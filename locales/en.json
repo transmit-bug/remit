@@ -686,6 +686,14 @@
   "@checkNow": {
     "description": "Button: run an update check now."
   },
+  "noteBody": "Note",
+  "@noteBody": {
+    "description": "Accessible label of the note's document editor."
+  },
+  "editorHint": "Type :: to make a card of a paragraph.",
+  "@editorHint": {
+    "description": "One quiet line above the document, saying how a paragraph becomes a card."
+  },
   "summaryTitle": "Today's review",
   "@summaryTitle": {
     "description": "Heading of the summary shown when the queue is finished."

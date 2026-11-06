@@ -142,8 +142,8 @@ func (a *App) newNote(c *ui.Context) {
 	}
 	a.reload()
 	a.editor.selected = string(note.ID)
+	a.editor.focus = true
 	a.setMode(modeNotes)
-	a.editor.focusFirst = true
 }
 
 // editNote opens the note a card's block belongs to. A lost card has no note
@@ -201,13 +201,10 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 	}
 	actions = append(actions,
 		paletteAction{label: m(c).ImportAnki(), run: func() { a.importAnkiPackage(c) }},
-		paletteAction{label: m(c).ActionEditTitle(), run: func() { a.focusTitle() }},
-		paletteAction{label: m(c).ActionAddBlock(), run: func() { a.blockFromPalette(c, a.addBlockAfter) }},
-		paletteAction{label: m(c).ActionSplitBlock(), run: func() { a.splitActiveBlock(c) }},
-		paletteAction{label: m(c).ActionMoveBlockUp(), run: func() { a.blockFromPalette(c, func(c *ui.Context, i int) { a.moveBlock(c, i, -1) }) }},
-		paletteAction{label: m(c).ActionMoveBlockDown(), run: func() { a.blockFromPalette(c, func(c *ui.Context, i int) { a.moveBlock(c, i, 1) }) }},
-		paletteAction{label: m(c).ActionDeleteBlock(), run: func() { a.blockFromPalette(c, a.deleteBlock) }},
-		paletteAction{label: m(c).MakeCard(), run: func() { a.blockFromPalette(c, a.makeCard) }},
+		// A note's shape is typed, not commanded: paragraphs are separated by
+		// blank lines. Making a card from the paragraph at the caret stays a
+		// command until the typing gesture lands (#94).
+		paletteAction{label: m(c).MakeCard(), run: func() { a.makeCardAtCaret(c) }},
 	)
 	return actions
 }

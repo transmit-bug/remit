@@ -125,7 +125,7 @@ type App struct {
 func NewApp(opts ...Options) *App {
 	a := &App{
 		browse:      browseState{selected: -1},
-		editor:      editorState{addAfter: -1},
+		editor:      editorState{},
 		relink:      relinkState{selected: -1},
 		pickLibrary: pickLibraryDir,
 		pickAnki:    pickAnkiPackage,

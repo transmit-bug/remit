@@ -10,11 +10,9 @@ import (
 const (
 	// titlePrefix starts the line a note's title is written on.
 	titlePrefix = "# "
-	// markerSigil starts the ID a referencable block ends with.
-	markerSigil = "^"
 	// blockKind is the tag every block ID carries, so a stray ^card_… in the
 	// prose is not mistaken for a marker.
-	blockKind = "block"
+	blockKind = core.BlockKind
 )
 
 // line is one line of a note file and the byte range it occupies there.
@@ -119,21 +117,14 @@ func splitLines(src []byte) []line {
 	return lines
 }
 
-// markerAt reads the ID a line ends with. The marker is the last whitespace
-// separated token, `^` and an ID, and it is not part of the block's text.
+// markerAt reads the ID a line ends with, as the content model defines the
+// marker: this package only checks that it names a block.
 func markerAt(text string) (core.ID, string, bool) {
-	trimmed := strings.TrimRight(text, " \t")
-	cut := strings.LastIndexAny(trimmed, " \t")
-	token := trimmed[cut+1:]
-	id, ok := strings.CutPrefix(token, markerSigil)
-	if !ok {
+	id, rest, ok := core.SplitBlockMarker(text)
+	if !ok || id.Kind() != blockKind {
 		return "", text, false
 	}
-	marker := core.ID(id)
-	if marker.Kind() != blockKind || !marker.Valid() {
-		return "", text, false
-	}
-	return marker, strings.TrimRight(trimmed[:cut+1], " \t"), true
+	return id, rest, true
 }
 
 // normalizeNote is the note as the file can hold it: a trimmed title, trimmed
@@ -175,7 +166,7 @@ func renderNote(note core.Note) []byte {
 		}
 		out.WriteString(block.Text)
 		out.WriteString(" ")
-		out.WriteString(markerSigil)
+		out.WriteString(core.MarkerSigil)
 		out.WriteString(string(block.ID))
 		out.WriteString("\n")
 	}
@@ -215,7 +206,7 @@ func withMarker(src []byte, id core.ID, text string, at int) ([]byte, error) {
 	out := make([]byte, 0, len(src)+len(id)+2)
 	out = append(out, src[:block.end]...)
 	out = append(out, ' ')
-	out = append(out, markerSigil...)
+	out = append(out, core.MarkerSigil...)
 	out = append(out, id...)
 	return append(out, src[block.end:]...), nil
 }
