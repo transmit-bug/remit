@@ -22,8 +22,8 @@ func (a *App) ShowCard(id core.ID) {
 	if _, ok := a.data.byID[id]; !ok {
 		return
 	}
-	a.review.reset()
-	a.review.queue = []core.ID{id}
+	a.review.Reset()
+	a.review.Only(id)
 	a.mode = modeReview
 }
 
@@ -49,6 +49,6 @@ func (a *App) Search(query string) {
 func (a *App) OnRemaining(fn func(int)) {
 	a.remaining = fn
 	if fn != nil {
-		fn(a.review.remaining())
+		fn(a.review.Remaining())
 	}
 }

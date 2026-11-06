@@ -181,7 +181,7 @@ func (a *App) relinkChoose(c *ui.Context, i int) {
 	if a.mode == modeReview {
 		// The card the user just fixed is what they wanted to read: keep it
 		// on screen even though its due date is elsewhere.
-		a.review.show(card.ID)
+		a.review.Show(card.ID)
 	}
 	c.Toast(m(c).Relinked())
 }

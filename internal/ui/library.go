@@ -162,7 +162,7 @@ func (a *App) apply(lib *store.Library, dir string) {
 	a.lib, a.dir = lib, dir
 	a.openErr, a.start = nil, false
 	a.mode = modeReview
-	a.review.reset()
+	a.review.Reset()
 	a.reload()
 	if a.opened != nil {
 		a.opened(lib)
@@ -350,9 +350,9 @@ func (a *App) reload() {
 	}
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
 	a.due = a.dueToday()
-	a.review.sync(a.due)
+	a.review.Sync(a.due)
 	if a.remaining != nil {
-		a.remaining(a.review.remaining())
+		a.remaining(a.review.Remaining())
 	}
 	a.loadCurrent()
 }
