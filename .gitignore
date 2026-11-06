@@ -1,3 +1,5 @@
 /build/
+/dist/
 /.mygo/
+/.pi/
 mygo_windows_*.syso
