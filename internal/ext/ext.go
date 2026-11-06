@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,12 +26,22 @@ const Protocol = 1
 // review flow.
 const Timeout = time.Second
 
-// Manifest is extension.json: what the extension is and how to start it.
+// Manifest is extension.json: what the extension is, what it runs on, and what
+// the host may offer it.
 type Manifest struct {
-	Name       string   `json:"name"`
-	Version    string   `json:"version"`
-	Protocol   int      `json:"protocol"`
+	Name     string `json:"name"`
+	Version  string `json:"version"`
+	Protocol int    `json:"protocol"`
+	// Runtime is "exec" (the default, a process speaking the protocol) or "js"
+	// (JavaScript in this process).
+	Runtime string `json:"runtime"`
+	// Entrypoint starts an exec extension; Entry is a js extension's file, in
+	// its own directory.
 	Entrypoint []string `json:"entrypoint"`
+	Entry      string   `json:"entry"`
+	// Capabilities are what the host offers the extension, by name; an
+	// extension gets nothing it does not declare.
+	Capabilities []string `json:"capabilities"`
 }
 
 // Extension is a discovered extension: its directory and its manifest.
@@ -77,8 +88,21 @@ func Load(dir string) (Extension, error) {
 	if err := json.Unmarshal(data, &m); err != nil {
 		return Extension{}, fmt.Errorf("ext: %s: manifest: %w", dir, err)
 	}
-	if m.Name == "" || len(m.Entrypoint) == 0 {
-		return Extension{}, fmt.Errorf("ext: %s: manifest needs a name and an entrypoint", dir)
+	if m.Name == "" {
+		return Extension{}, fmt.Errorf("ext: %s: manifest needs a name", dir)
+	}
+	switch Runtime(m.Runtime) {
+	case RuntimeJS:
+		if m.Entry == "" {
+			return Extension{}, fmt.Errorf("ext: %s: a js extension needs an entry", dir)
+		}
+		if filepath.IsAbs(m.Entry) || strings.Contains(m.Entry, "..") {
+			return Extension{}, fmt.Errorf("ext: %s: entry %q is outside the extension", dir, m.Entry)
+		}
+	default:
+		if len(m.Entrypoint) == 0 {
+			return Extension{}, fmt.Errorf("ext: %s: manifest needs an entrypoint", dir)
+		}
 	}
 	if m.Protocol != Protocol {
 		return Extension{}, fmt.Errorf("ext: %s: protocol %d, this app speaks %d", dir, m.Protocol, Protocol)
