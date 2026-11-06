@@ -186,6 +186,7 @@ func TestDerivedColors(t *testing.T) {
 		for name, c := range map[string]ui.Color{
 			"faint": p.Faint, "border strong": p.BorderStrong,
 			"accent text": p.AccentText, "mask": p.Mask,
+			"shadow": p.Shadow, "panel shadow": p.ShadowPanel,
 		} {
 			if c.A == 0 {
 				t.Errorf("%s: %s has no alpha", a.name, name)
@@ -193,6 +194,20 @@ func TestDerivedColors(t *testing.T) {
 		}
 		if ratio(p.Faint, p.Page) <= 1 {
 			t.Errorf("%s: faint text is the page's own colour", a.name)
+		}
+	}
+}
+
+// The three planes of the elevation are told apart: a card's shadow is lighter
+// than the one under a panel that floats over it.
+func TestElevation(t *testing.T) {
+	for _, a := range appearances {
+		p := a.pal()
+		if p.Shadow.A >= p.ShadowPanel.A {
+			t.Errorf("%s: a card's shadow %v is not lighter than a panel's %v", a.name, p.Shadow, p.ShadowPanel)
+		}
+		if p.ShadowPanel.A >= p.Mask.A {
+			t.Errorf("%s: a panel's shadow is as heavy as the scrim behind it", a.name)
 		}
 	}
 }

@@ -141,7 +141,7 @@ func (a *App) View(c *ui.Context) {
 	// beside, so that they work with no control focused.
 	a.shortcuts(c)
 
-	ui.Column(c).Fill().Background(tk.surface).LineHeight(lineHeight).Children(func() {
+	ui.Column(c).Fill().Background(tk.Background).LineHeight(lineHeight).Children(func() {
 		a.toolbar(c, tk)
 		switch {
 		case a.openErr != nil:

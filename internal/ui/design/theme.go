@@ -27,6 +27,9 @@ type Palette struct {
 	Warning      ui.Color
 	Danger       ui.Color
 	Mask         ui.Color // behind a panel or a dialog
+	// Shadow lifts a card off the page; ShadowPanel lifts what floats over it.
+	Shadow      ui.Color
+	ShadowPanel ui.Color
 }
 
 // Light is the paper appearance: a warm off-white page, so a long note is
@@ -44,6 +47,9 @@ func Light() Palette {
 		Warning: ui.Hex("#8A5B00"),
 		Danger:  ui.Hex("#B3261E"),
 		Mask:    ui.RGBA(0, 0, 0, 0.28),
+
+		Shadow:      ui.RGBA(0, 0, 0, 0.07),
+		ShadowPanel: ui.RGBA(0, 0, 0, 0.16),
 	}
 	return derived(p)
 }
@@ -63,6 +69,9 @@ func Dark() Palette {
 		Warning: ui.Hex("#E9B949"),
 		Danger:  ui.Hex("#FF8A80"),
 		Mask:    ui.RGBA(0, 0, 0, 0.5),
+
+		Shadow:      ui.RGBA(0, 0, 0, 0.32),
+		ShadowPanel: ui.RGBA(0, 0, 0, 0.45),
 	}
 	return derived(p)
 }

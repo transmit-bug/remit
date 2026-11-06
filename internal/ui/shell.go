@@ -39,9 +39,7 @@ func (a *App) toolbar(c *ui.Context, tk tokens) {
 		ui.Button(c, m(c).NewNote()).OnClick(func() { a.newNote(c) })
 	}).Label(m(c).Toolbar(Name)).
 		Padding(tk.spaceS, tk.spaceL).
-		Background(tk.surface).
-		BorderWidth(0, 0, tk.hairline, 0).
-		BorderColor(tk.border)
+		Background(tk.Surface)
 }
 
 // notesView is editing mode: the notes list beside the selected note.
@@ -215,9 +213,8 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 
 	ui.DialogBase(c, &a.palette.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.scrim)
-		panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM).
-			Background(tk.surfaceRaised).Border(tk.hairline, tk.borderStrong).
-			Radius(tk.radiusPanel).Label(m(c).CommandPalette())
+		panel = tk.panel(panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM))
+		panel.Label(m(c).CommandPalette())
 
 		panel.Children(func() {
 			field := ui.TextInput(c, &a.palette.query).
@@ -233,14 +230,14 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 			c.OnShortcut(0, ui.KeyUp, func() { a.movePalette(len(items), -1) })
 
 			if len(items) == 0 {
-				ui.Text(c, m(c).NoActions()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
+				ui.Text(c, m(c).NoActions()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 			}
 			for i, it := range items {
 				row := ui.ButtonBase(c).Key(it.label).Gap(tk.spaceS).Justify(ui.Start).
 					MinHeight(tk.control).Padding(tk.spaceXS, tk.spaceS).
 					Radius(tk.radiusControl).Label(it.label)
 				if i == sel {
-					row.Background(tk.surfaceSunken)
+					row.Background(tk.sunken)
 				}
 				row.OnClick(func() { a.runPaletteAction(it) })
 				row.Children(func() { ui.Text(c, it.label).FontSize(tk.typeBody) })

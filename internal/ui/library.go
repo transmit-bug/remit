@@ -381,7 +381,7 @@ func (a *App) report(c *ui.Context, what string, err error) {
 func (a *App) libraryErrorView(c *ui.Context, tk tokens) {
 	ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Padding(tk.spaceXXL).Children(func() {
 		ui.Text(c, m(c).LibraryError(a.openErr.Error())).
-			FontSize(tk.typeBody).TextColor(tk.textMuted).MaxWidth(messageWidth)
+			FontSize(tk.typeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)
 		ui.Button(c, m(c).RetryLibrary()).MinHeight(tk.control).
 			OnClick(func() { a.open() })
 	})

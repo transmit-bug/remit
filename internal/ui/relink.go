@@ -76,9 +76,8 @@ func (a *App) relinkView(c *ui.Context, tk tokens) {
 
 	ui.DialogBase(c, &a.relink.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.scrim)
-		panel.Width(paletteWidth).MaxHeight(relinkPanel).Padding(tk.spaceL).Gap(tk.spaceM).
-			Background(tk.surfaceRaised).Border(tk.hairline, tk.borderStrong).
-			Radius(tk.radiusPanel).Label(msgs.RelinkTitle())
+		panel = tk.panel(panel.Width(paletteWidth).MaxHeight(relinkPanel).Padding(tk.spaceL).Gap(tk.spaceM))
+		panel.Label(msgs.RelinkTitle())
 
 		panel.Children(func() {
 			field := ui.TextInput(c, &a.relink.query).
@@ -95,7 +94,7 @@ func (a *App) relinkView(c *ui.Context, tk tokens) {
 			c.OnShortcut(0, ui.KeyUp, func() { a.moveRelink(len(a.relink.rows), -1) })
 
 			if len(a.relink.rows) == 0 {
-				ui.Text(c, msgs.NoBlocks()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
+				ui.Text(c, msgs.NoBlocks()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 			}
 			ui.Scroll(c).Grow(1).Children(func() {
 				ui.Column(c).Gap(tk.spaceXS).Children(func() {
@@ -133,13 +132,13 @@ func (a *App) relinkRowView(c *ui.Context, tk tokens, row relinkRow, chosen bool
 		MinHeight(tk.control).Padding(tk.spaceXS, tk.spaceS).
 		Radius(tk.radiusControl).Label(row.text)
 	if chosen {
-		item.Background(tk.surfaceSunken)
+		item.Background(tk.sunken)
 	}
 	item.OnClick(func() { a.relinkChoose(c, i) })
 	item.Children(func() {
 		ui.Column(c).Gap(tk.spaceXS).Children(func() {
 			ui.Text(c, row.text).FontSize(tk.typeBody).SingleLine()
-			ui.Text(c, row.note).FontSize(tk.typeSmall).TextColor(tk.textMuted).SingleLine()
+			ui.Text(c, row.note).FontSize(tk.typeSmall).TextColor(tk.TextMuted).SingleLine()
 		})
 	})
 }

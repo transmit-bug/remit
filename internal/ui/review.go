@@ -195,17 +195,15 @@ func (a *App) reviewView(c *ui.Context, tk tokens) {
 // card opened from browse lands here too. Re-linking is the repair, and
 // suspending — the one action that never touches history — is the way out.
 func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer string, state core.LinkState) {
-	ui.Column(c).Key(string(card.ID)).
-		Padding(tk.spaceXL).Gap(tk.spaceL).
-		Background(tk.surfaceRaised).Border(tk.hairline, tk.border).
-		Radius(tk.radiusCard).Transition(advance).
+	tk.card(ui.Column(c).Key(string(card.ID)).
+		Padding(tk.spaceXL).Gap(tk.spaceL)).Transition(advance).
 		Children(func() {
 			switch state {
 			case core.LinkLost:
 				ui.Badge(c, m(c).Lost()).AlignSelf(ui.Start).
-					Background(tk.linkFill(tk.danger)).TextColor(tk.linkInk(tk.danger))
+					Background(tk.linkFill(tk.Danger)).TextColor(tk.linkInk(tk.Danger))
 				ui.Text(c, m(c).LostBody()).
-					FontSize(tk.typeBody).TextColor(tk.textMuted)
+					FontSize(tk.typeBody).TextColor(tk.TextMuted)
 				ui.Row(c).Gap(tk.spaceS).AlignSelf(ui.Start).Children(func() {
 					ui.PrimaryButton(c, m(c).Relink()).MinHeight(tk.control).
 						OnClick(func() { a.openRelink(c, card.ID) })
@@ -216,9 +214,9 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 			case core.LinkFrozen:
 				ui.Row(c).AlignSelf(ui.Start).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
 					ui.Badge(c, m(c).Frozen()).
-						Background(tk.linkFill(tk.warning)).TextColor(tk.linkInk(tk.warning))
+						Background(tk.linkFill(tk.Warning)).TextColor(tk.linkInk(tk.Warning))
 					ui.Text(c, m(c).SnapshotTaken(card.Ref.Frozen.At.Format("2 January 2006"))).
-						FontSize(tk.typeSmall).TextColor(tk.textMuted)
+						FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 				})
 			}
 
@@ -226,7 +224,7 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 			ui.Divider(c)
 			if !a.review.answered() {
 				ui.Text(c, m(c).RevealHint()).
-					FontSize(tk.typeSmall).TextColor(tk.textMuted)
+					FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 				ui.PrimaryButton(c, m(c).ShowAnswer()).AlignSelf(ui.Start).
 					PaddingX(tk.spaceL).MinHeight(tk.control).
 					OnClick(func() { a.review.reveal() })
@@ -234,10 +232,10 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 			}
 			if answer == "" {
 				ui.Text(c, m(c).EmptyAnswer()).
-					FontSize(tk.typeBody).TextColor(tk.textMuted)
+					FontSize(tk.typeBody).TextColor(tk.TextMuted)
 				return
 			}
-			ui.Text(c, answer).FontSize(tk.typeBody).TextColor(tk.text)
+			ui.Text(c, answer).FontSize(tk.typeBody).TextColor(tk.Text)
 		})
 }
 
@@ -252,8 +250,8 @@ func (a *App) gradeRow(c *ui.Context, tk tokens) {
 				Radius(tk.radiusControl).Label(g.label(c)).
 				OnClick(func() { a.grade(c, g) }).
 				Children(func() {
-					ui.Text(c, g.key()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
-					ui.Text(c, g.label(c)).FontSize(tk.typeBody).TextColor(tk.text)
+					ui.Text(c, g.key()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+					ui.Text(c, g.label(c)).FontSize(tk.typeBody).TextColor(tk.Text)
 				})
 		}
 	})
@@ -276,10 +274,8 @@ func (a *App) reviewFooter(c *ui.Context, tk tokens, card core.Card, state core.
 
 // reviewEmpty is the state after the last card.
 func (a *App) reviewEmpty(c *ui.Context, tk tokens) {
-	ui.Column(c).Padding(tk.spaceXL).Gap(tk.spaceM).
-		Background(tk.surfaceRaised).Border(tk.hairline, tk.border).
-		Radius(tk.radiusCard).Children(func() {
-		ui.Text(c, m(c).NoCards()).FontSize(tk.typeHeading).TextColor(tk.textMuted)
+	tk.card(ui.Column(c).Padding(tk.spaceXL).Gap(tk.spaceM)).Children(func() {
+		ui.Text(c, m(c).NoCards()).FontSize(tk.typeHeading).TextColor(tk.TextMuted)
 		ui.Button(c, m(c).BackToNotes()).MinHeight(tk.control).
 			OnClick(func() { a.setMode(modeNotes) })
 	})

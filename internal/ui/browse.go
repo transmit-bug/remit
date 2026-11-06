@@ -184,7 +184,7 @@ func (a *App) browseView(c *ui.Context, tk tokens) {
 				open = a.browse.selected
 			}
 			if len(a.browse.rows) == 0 {
-				ui.Text(c, m(c).BrowseEmpty()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
+				ui.Text(c, m(c).BrowseEmpty()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 			}
 		})
 	})
@@ -226,22 +226,22 @@ func (a *App) browseRows(c *ui.Context, tk tokens, open *int) {
 func (a *App) browseRowView(c *ui.Context, tk tokens, row browseRow) {
 	ui.Row(c).Gap(tk.spaceM).AlignItems(ui.Center).Padding(tk.spaceS, tk.spaceM).Children(func() {
 		ui.Column(c).Grow(1).Gap(tk.spaceXS).Children(func() {
-			text, colour := row.prompt, tk.text
+			text, colour := row.prompt, tk.Text
 			if row.state == core.LinkLost {
-				text, colour = m(c).LostBody(), tk.textMuted
+				text, colour = m(c).LostBody(), tk.TextMuted
 			}
 			ui.Text(c, text).FontSize(tk.typeBody).TextColor(colour).SingleLine()
 			if row.note != "" {
-				ui.Text(c, row.note).FontSize(tk.typeSmall).TextColor(tk.textMuted).SingleLine()
+				ui.Text(c, row.note).FontSize(tk.typeSmall).TextColor(tk.TextMuted).SingleLine()
 			}
 		})
 		switch {
 		case row.state == core.LinkLost:
-			stateBadge(c, tk, m(c).Lost(), tk.danger)
+			stateBadge(c, tk, m(c).Lost(), tk.Danger)
 			ui.Button(c, m(c).Relink()).MinHeight(tk.control).
 				OnClick(func() { a.openRelink(c, row.card.ID) })
 		case row.state == core.LinkFrozen:
-			stateBadge(c, tk, m(c).Frozen(), tk.warning)
+			stateBadge(c, tk, m(c).Frozen(), tk.Warning)
 		}
 		if row.card.Status == core.StatusSuspended {
 			ui.Badge(c, m(c).BrowseSuspended())

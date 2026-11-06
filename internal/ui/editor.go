@@ -106,7 +106,7 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	note := &a.editor.draft
 	if note.ID == "" {
 		ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Children(func() {
-			ui.Text(c, m(c).NoNotes()).FontSize(tk.typeHeading).TextColor(tk.textMuted)
+			ui.Text(c, m(c).NoNotes()).FontSize(tk.typeHeading).TextColor(tk.TextMuted)
 			ui.Button(c, m(c).NewNote()).MinHeight(tk.control).OnClick(func() { a.newNote(c) })
 		})
 		return
@@ -130,7 +130,7 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 			}
 
 			ui.Text(c, m(c).NoteSummary(blockCount(c, len(note.Blocks)), cardCount(c, a.data.cardsInNote(*note)))).
-				FontSize(tk.typeSmall).TextColor(tk.textMuted)
+				FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 			ui.Divider(c)
 			for i := range note.Blocks {
 				out := a.blockRow(c, tk, note, i)
@@ -214,7 +214,7 @@ func (a *App) blockRow(c *ui.Context, tk tokens, note *core.Note, i int) blockOu
 	ui.Column(c).Key(string(block.ID)).Gap(tk.spaceS).Children(func() {
 		field := ui.TextArea(c, &block.Text).Grow(1).
 			Label(m(c).BlockLabel(i+1, note.Title)).
-			FontSize(tk.typeBody).Background(tk.surfaceSunken)
+			FontSize(tk.typeBody).Background(tk.sunken)
 		if i == 0 {
 			field.Bind(&a.editor.first)
 		}
@@ -239,7 +239,7 @@ func (a *App) blockRow(c *ui.Context, tk tokens, note *core.Note, i int) blockOu
 		ui.Row(c).Gap(tk.spaceS).AlignItems(ui.Center).Children(func() {
 			if cards > 0 {
 				badge := ui.Badge(c, cardCount(c, cards)).
-					Background(tk.linkFill(tk.accent)).TextColor(tk.linkInk(tk.accent))
+					Background(tk.linkFill(tk.Accent)).TextColor(tk.linkInk(tk.Accent))
 				badge.Label(m(c).CardBadge(cardCount(c, cards), note.Title))
 			} else {
 				ui.Button(c, m(c).MakeCard()).MinHeight(tk.control).
