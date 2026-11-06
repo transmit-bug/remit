@@ -4,6 +4,7 @@ package locales
 
 import (
 	"embed"
+	"time"
 
 	"github.com/egoist/mygo/i18n"
 
@@ -60,6 +61,34 @@ func ModeReview() string { return In(i18n.Locale()).ModeReview() }
 // The review side of the mode switch.
 func (msgs Messages) ModeReview() string {
 	return Catalog.Format(msgs.locale, "modeReview", nil)
+}
+
+// ModeBrowse says "Browse"
+// in the language the app shows.
+//
+// The browse side of the mode switch.
+func ModeBrowse() string { return In(i18n.Locale()).ModeBrowse() }
+
+// ModeBrowse says "Browse"
+// in the language of msgs.
+//
+// The browse side of the mode switch.
+func (msgs Messages) ModeBrowse() string {
+	return Catalog.Format(msgs.locale, "modeBrowse", nil)
+}
+
+// ModeStats says "Stats"
+// in the language the app shows.
+//
+// The statistics side of the mode switch.
+func ModeStats() string { return In(i18n.Locale()).ModeStats() }
+
+// ModeStats says "Stats"
+// in the language of msgs.
+//
+// The statistics side of the mode switch.
+func (msgs Messages) ModeStats() string {
+	return Catalog.Format(msgs.locale, "modeStats", nil)
 }
 
 // NewNote says "New note"
@@ -734,4 +763,348 @@ func TrayTooltip() string { return In(i18n.Locale()).TrayTooltip() }
 // Tray tooltip.
 func (msgs Messages) TrayTooltip() string {
 	return Catalog.Format(msgs.locale, "trayTooltip", nil)
+}
+
+// BrowseTitle says "Browse cards"
+// in the language the app shows.
+//
+// Heading of browse mode, and the palette action that opens it.
+func BrowseTitle() string { return In(i18n.Locale()).BrowseTitle() }
+
+// BrowseTitle says "Browse cards"
+// in the language of msgs.
+//
+// Heading of browse mode, and the palette action that opens it.
+func (msgs Messages) BrowseTitle() string {
+	return Catalog.Format(msgs.locale, "browseTitle", nil)
+}
+
+// BrowseSearch says "Search cards"
+// in the language the app shows.
+//
+// Accessible label and placeholder of browse's search field.
+func BrowseSearch() string { return In(i18n.Locale()).BrowseSearch() }
+
+// BrowseSearch says "Search cards"
+// in the language of msgs.
+//
+// Accessible label and placeholder of browse's search field.
+func (msgs Messages) BrowseSearch() string {
+	return Catalog.Format(msgs.locale, "browseSearch", nil)
+}
+
+// BrowseFilters says "Filter cards"
+// in the language the app shows.
+//
+// Accessible label of browse's filter control.
+func BrowseFilters() string { return In(i18n.Locale()).BrowseFilters() }
+
+// BrowseFilters says "Filter cards"
+// in the language of msgs.
+//
+// Accessible label of browse's filter control.
+func (msgs Messages) BrowseFilters() string {
+	return Catalog.Format(msgs.locale, "browseFilters", nil)
+}
+
+// BrowseAll says "All"
+// in the language the app shows.
+//
+// Browse filter: every card.
+func BrowseAll() string { return In(i18n.Locale()).BrowseAll() }
+
+// BrowseAll says "All"
+// in the language of msgs.
+//
+// Browse filter: every card.
+func (msgs Messages) BrowseAll() string {
+	return Catalog.Format(msgs.locale, "browseAll", nil)
+}
+
+// BrowseDue says "Due"
+// in the language the app shows.
+//
+// Browse filter: the cards the queue has for today.
+func BrowseDue() string { return In(i18n.Locale()).BrowseDue() }
+
+// BrowseDue says "Due"
+// in the language of msgs.
+//
+// Browse filter: the cards the queue has for today.
+func (msgs Messages) BrowseDue() string {
+	return Catalog.Format(msgs.locale, "browseDue", nil)
+}
+
+// BrowseNew says "New"
+// in the language the app shows.
+//
+// Browse filter: cards that were never reviewed.
+func BrowseNew() string { return In(i18n.Locale()).BrowseNew() }
+
+// BrowseNew says "New"
+// in the language of msgs.
+//
+// Browse filter: cards that were never reviewed.
+func (msgs Messages) BrowseNew() string {
+	return Catalog.Format(msgs.locale, "browseNew", nil)
+}
+
+// BrowseSuspended says "Suspended"
+// in the language the app shows.
+//
+// Browse filter and row badge: cards taken out of the queue.
+func BrowseSuspended() string { return In(i18n.Locale()).BrowseSuspended() }
+
+// BrowseSuspended says "Suspended"
+// in the language of msgs.
+//
+// Browse filter and row badge: cards taken out of the queue.
+func (msgs Messages) BrowseSuspended() string {
+	return Catalog.Format(msgs.locale, "browseSuspended", nil)
+}
+
+// BrowseOpen says "Open (Enter)"
+// in the language the app shows.
+//
+// Opens the card chosen in browse.
+func BrowseOpen() string { return In(i18n.Locale()).BrowseOpen() }
+
+// BrowseOpen says "Open (Enter)"
+// in the language of msgs.
+//
+// Opens the card chosen in browse.
+func (msgs Messages) BrowseOpen() string {
+	return Catalog.Format(msgs.locale, "browseOpen", nil)
+}
+
+// BrowseEmpty says "No cards match."
+// in the language the app shows.
+//
+// Browse's empty state.
+func BrowseEmpty() string { return In(i18n.Locale()).BrowseEmpty() }
+
+// BrowseEmpty says "No cards match."
+// in the language of msgs.
+//
+// Browse's empty state.
+func (msgs Messages) BrowseEmpty() string {
+	return Catalog.Format(msgs.locale, "browseEmpty", nil)
+}
+
+// StatsTitle says "Statistics"
+// in the language the app shows.
+//
+// Heading of the statistics page, and the palette action that opens it.
+func StatsTitle() string { return In(i18n.Locale()).StatsTitle() }
+
+// StatsTitle says "Statistics"
+// in the language of msgs.
+//
+// Heading of the statistics page, and the palette action that opens it.
+func (msgs Messages) StatsTitle() string {
+	return Catalog.Format(msgs.locale, "statsTitle", nil)
+}
+
+// StatsReviews says "Reviews per day"
+// in the language the app shows.
+//
+// Heading of the reviews-per-day plot.
+func StatsReviews() string { return In(i18n.Locale()).StatsReviews() }
+
+// StatsReviews says "Reviews per day"
+// in the language of msgs.
+//
+// Heading of the reviews-per-day plot.
+func (msgs Messages) StatsReviews() string {
+	return Catalog.Format(msgs.locale, "statsReviews", nil)
+}
+
+// StatsReviewsRange says "Last 30 days · {count, plural, =0 {no reviews} one {# review} other {# reviews}}"
+// in the language the app shows.
+//
+// How many reviews the last 30 days hold.
+func StatsReviewsRange(count int) string { return In(i18n.Locale()).StatsReviewsRange(count) }
+
+// StatsReviewsRange says "Last 30 days · {count, plural, =0 {no reviews} one {# review} other {# reviews}}"
+// in the language of msgs.
+//
+// How many reviews the last 30 days hold.
+func (msgs Messages) StatsReviewsRange(count int) string {
+	return Catalog.Format(msgs.locale, "statsReviewsRange", map[string]any{"count": count})
+}
+
+// StatsReviewsEmpty says "No reviews in the last 30 days."
+// in the language the app shows.
+//
+// The reviews plot's empty state.
+func StatsReviewsEmpty() string { return In(i18n.Locale()).StatsReviewsEmpty() }
+
+// StatsReviewsEmpty says "No reviews in the last 30 days."
+// in the language of msgs.
+//
+// The reviews plot's empty state.
+func (msgs Messages) StatsReviewsEmpty() string {
+	return Catalog.Format(msgs.locale, "statsReviewsEmpty", nil)
+}
+
+// StatsRetention says "Retention by predicted chance"
+// in the language the app shows.
+//
+// Heading of the retention plot.
+func StatsRetention() string { return In(i18n.Locale()).StatsRetention() }
+
+// StatsRetention says "Retention by predicted chance"
+// in the language of msgs.
+//
+// Heading of the retention plot.
+func (msgs Messages) StatsRetention() string {
+	return Catalog.Format(msgs.locale, "statsRetention", nil)
+}
+
+// StatsRetentionSummary says "{rate} remembered over {reviews, plural, one {# review} other {# reviews}}"
+// in the language the app shows.
+//
+// How well recall matched what the schedule predicted.
+func StatsRetentionSummary(rate string, reviews int) string {
+	return In(i18n.Locale()).StatsRetentionSummary(rate, reviews)
+}
+
+// StatsRetentionSummary says "{rate} remembered over {reviews, plural, one {# review} other {# reviews}}"
+// in the language of msgs.
+//
+// How well recall matched what the schedule predicted.
+func (msgs Messages) StatsRetentionSummary(rate string, reviews int) string {
+	return Catalog.Format(msgs.locale, "statsRetentionSummary", map[string]any{"rate": rate, "reviews": reviews})
+}
+
+// StatsRetentionEmpty says "No reviews to compare yet."
+// in the language the app shows.
+//
+// The retention plot's empty state: no review had a prediction.
+func StatsRetentionEmpty() string { return In(i18n.Locale()).StatsRetentionEmpty() }
+
+// StatsRetentionEmpty says "No reviews to compare yet."
+// in the language of msgs.
+//
+// The retention plot's empty state: no review had a prediction.
+func (msgs Messages) StatsRetentionEmpty() string {
+	return Catalog.Format(msgs.locale, "statsRetentionEmpty", nil)
+}
+
+// StatsForecast says "Next 30 days"
+// in the language the app shows.
+//
+// Heading of the forecast plot.
+func StatsForecast() string { return In(i18n.Locale()).StatsForecast() }
+
+// StatsForecast says "Next 30 days"
+// in the language of msgs.
+//
+// Heading of the forecast plot.
+func (msgs Messages) StatsForecast() string {
+	return Catalog.Format(msgs.locale, "statsForecast", nil)
+}
+
+// StatsForecastEmpty says "Nothing scheduled in the next 30 days."
+// in the language the app shows.
+//
+// The forecast plot's empty state.
+func StatsForecastEmpty() string { return In(i18n.Locale()).StatsForecastEmpty() }
+
+// StatsForecastEmpty says "Nothing scheduled in the next 30 days."
+// in the language of msgs.
+//
+// The forecast plot's empty state.
+func (msgs Messages) StatsForecastEmpty() string {
+	return Catalog.Format(msgs.locale, "statsForecastEmpty", nil)
+}
+
+// StatsBucket says "{low, number}–{high, number}%"
+// in the language the app shows.
+//
+// Label of a predicted-retention range, as "70–80%".
+func StatsBucket(low int, high int) string { return In(i18n.Locale()).StatsBucket(low, high) }
+
+// StatsBucket says "{low, number}–{high, number}%"
+// in the language of msgs.
+//
+// Label of a predicted-retention range, as "70–80%".
+func (msgs Messages) StatsBucket(low int, high int) string {
+	return Catalog.Format(msgs.locale, "statsBucket", map[string]any{"low": low, "high": high})
+}
+
+// StatsBucketReviews says "{bucket}: {reviews, plural, one {# review} other {# reviews}}"
+// in the language the app shows.
+//
+// Tooltip of a retention bar: how many reviews its range holds.
+func StatsBucketReviews(bucket string, reviews int) string {
+	return In(i18n.Locale()).StatsBucketReviews(bucket, reviews)
+}
+
+// StatsBucketReviews says "{bucket}: {reviews, plural, one {# review} other {# reviews}}"
+// in the language of msgs.
+//
+// Tooltip of a retention bar: how many reviews its range holds.
+func (msgs Messages) StatsBucketReviews(bucket string, reviews int) string {
+	return Catalog.Format(msgs.locale, "statsBucketReviews", map[string]any{"bucket": bucket, "reviews": reviews})
+}
+
+// StatsPercent says "{value, number, percent}"
+// in the language the app shows.
+//
+// A share, as "83%".
+func StatsPercent(value float64) string { return In(i18n.Locale()).StatsPercent(value) }
+
+// StatsPercent says "{value, number, percent}"
+// in the language of msgs.
+//
+// A share, as "83%".
+func (msgs Messages) StatsPercent(value float64) string {
+	return Catalog.Format(msgs.locale, "statsPercent", map[string]any{"value": value})
+}
+
+// StatsDay says "{date, date, short}"
+// in the language the app shows.
+//
+// A day of a plot's time axis.
+func StatsDay(date time.Time) string { return In(i18n.Locale()).StatsDay(date) }
+
+// StatsDay says "{date, date, short}"
+// in the language of msgs.
+//
+// A day of a plot's time axis.
+func (msgs Messages) StatsDay(date time.Time) string {
+	return Catalog.Format(msgs.locale, "statsDay", map[string]any{"date": date})
+}
+
+// StatsDayCount says "{date, date, medium}: {count, plural, one {# review} other {# reviews}}"
+// in the language the app shows.
+//
+// Tooltip of a reviews-per-day bar.
+func StatsDayCount(date time.Time, count int) string {
+	return In(i18n.Locale()).StatsDayCount(date, count)
+}
+
+// StatsDayCount says "{date, date, medium}: {count, plural, one {# review} other {# reviews}}"
+// in the language of msgs.
+//
+// Tooltip of a reviews-per-day bar.
+func (msgs Messages) StatsDayCount(date time.Time, count int) string {
+	return Catalog.Format(msgs.locale, "statsDayCount", map[string]any{"date": date, "count": count})
+}
+
+// StatsDueCount says "{date, date, medium}: {count, plural, one {# card} other {# cards}}"
+// in the language the app shows.
+//
+// Tooltip of a forecast bar.
+func StatsDueCount(date time.Time, count int) string {
+	return In(i18n.Locale()).StatsDueCount(date, count)
+}
+
+// StatsDueCount says "{date, date, medium}: {count, plural, one {# card} other {# cards}}"
+// in the language of msgs.
+//
+// Tooltip of a forecast bar.
+func (msgs Messages) StatsDueCount(date time.Time, count int) string {
+	return Catalog.Format(msgs.locale, "statsDueCount", map[string]any{"date": date, "count": count})
 }

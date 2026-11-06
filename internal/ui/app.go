@@ -6,6 +6,7 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
 )
 
@@ -17,13 +18,15 @@ const (
 	Version = "0.1.0"
 )
 
-// mode is which of Remit's two faces the window shows: editing notes, or
-// reviewing the queue pulled from them.
+// mode is which of Remit's faces the window shows: editing notes, reviewing
+// the queue pulled from them, browsing every card, or the statistics page.
 type mode uint8
 
 const (
 	modeNotes mode = iota
 	modeReview
+	modeBrowse
+	modeStats
 )
 
 // App is the state the window shows. The view rebuilds the interface from it
@@ -33,10 +36,13 @@ type App struct {
 	dir     string         // where the library lives, once resolved
 	openErr error          // why the library did not open, or nil
 	data    libraryData    // the library as the view reads it
+	due     []core.ID      // today's queue, as the last reload derived it
 
 	mode     mode
 	review   reviewState
 	editor   editorState
+	browse   browseState
+	stats    statsState
 	palette  paletteState
 	aboutWin *mygo.Window // the open About window, or nil
 
@@ -51,6 +57,7 @@ type App struct {
 // the one action that tries again; it never panics over a damaged library.
 func NewApp(opts ...Options) *App {
 	a := &App{}
+	a.browse.selected = -1
 	if len(opts) > 0 {
 		a.dir = opts[0].LibraryDir
 	}
@@ -76,6 +83,10 @@ func (a *App) View(c *ui.Context) {
 			a.libraryErrorView(c, tk)
 		case a.mode == modeReview:
 			a.reviewView(c, tk)
+		case a.mode == modeBrowse:
+			a.browseView(c, tk)
+		case a.mode == modeStats:
+			a.statsView(c, tk)
 		default:
 			a.notesView(c, tk)
 		}

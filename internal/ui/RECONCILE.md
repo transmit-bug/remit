@@ -25,6 +25,14 @@ of the two wrappers documented below.
 | The command palette over the window | `ui.DialogBase` + `ui.TextInput` + `ui.ButtonBase` rows + `ui.Spacer` |
 | Filtering the palette by typing | App state + `ui.TextInput` (`ui.SearchField` is not used: its Escape clears the query before the dialog sees it) |
 | The palette keeping and returning the keyboard focus | `ui.DialogBase` with the field focused through a `ui.Handle` request |
+| Searching every card by its text | `ui.SearchField` (its Escape clears the query, then leaves browse), focused from anywhere through a `ui.Handle` request |
+| One of a few card filters | `ui.Segmented` over All, Due, New, Suspended, Lost, labelled "Filter cards" |
+| A long list of matching cards, keyboard-driven | `ui.List` + `ui.ListState` (`Key` by card ID, `Selected`, `Submitted` to open, `Label`) |
+| Opening the note behind a card, or the lost card in review | App handlers calling `setMode`, never the row's own click |
+| Reviews per day and the forecast, over the next or last 30 days | `ui/chart`: `Plot` + `NewTime` + `Rect` marks; day labels through `Time.Format` and the catalogs' `{date, date, short}` |
+| Retention per predicted chance bucket | `ui/chart`: `Plot` + `NewBand` + `Rect` marks |
+| Switching to browse or statistics | `ui.Segmented` (two more segments) + palette actions; statistics needs no key of its own |
+| A section a statistics series has no data for | one `ui.Text` empty line per section, and no axis: a rate with no reviews is not divided by zero |
 | Grading advancing as a short slide and fade | `Element.Transition` + `ui.Motion` (reduce motion honoured by the framework) |
 | Separating panes, prompt and answer | `ui.Divider` |
 | Theme, accent and dark mode following the system | `c.Theme()` resolved into tokens; `c.SetTheme` for one density |
@@ -78,10 +86,18 @@ focus and keyboard entirely to `ui.TextArea`.
 ## Audit notes
 
 - The inventory grep ran against `/Users/pony/go/pkg/mod/github.com/egoist/mygo@v0.7.4`.
+- The charts use `ui/chart`'s plot, scales and `Rect` marks only: no bar or
+  row table was hand-built, and no pixel is painted. `Axes.Label` and
+  `Time.Format` carry the window's language, so axis labels follow the locale
+  like every other text.
+- Browse lists cards through `store.SearchCards`, `store.CardsWithStatus` and
+  the queue's buckets, all through `loadBrowse` on the app's load path: no view
+  builds rows from a store call.
 - Literal geometry audit: the only fixed sizes outside `tokens.go` are
   `sidebarWidth` (260 DIP, a real fixed column), `reviewWidth` (680 DIP, the
-  review column's maximum) and `messageWidth` (520 DIP, the error state's
-  line); all are named and commented.
+  review column's maximum), `messageWidth` (520 DIP, the error state's line),
+  `statsWidth` (760 DIP, the statistics page's measure) and
+  `statsChartHeight` (150 DIP, one plot's height); all are named and commented.
 - Colours and spacing used by the views come from `tokens.go`; widgets keep
   their own theme-derived look.
 - `ui.Mix` documented on the site is not exported at v0.7.4; the tokens blend
