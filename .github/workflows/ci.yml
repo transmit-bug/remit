@@ -23,6 +23,11 @@ jobs:
         run: go test ./...
       - name: test without cgo
         run: CGO_ENABLED=0 go test ./...
+      - name: catalogs
+        run: |
+          go tool mygo i18n check .
+          go tool mygo generate
+          git diff --exit-code -- locales
       - name: mygo vet
         run: go tool mygo vet .
 

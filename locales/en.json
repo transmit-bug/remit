@@ -1,0 +1,247 @@
+{
+  "@@locale": "en",
+  "modeNotes": "Notes",
+  "@modeNotes": {
+    "description": "The notes side of the mode switch."
+  },
+  "modeReview": "Review",
+  "@modeReview": {
+    "description": "The review side of the mode switch."
+  },
+  "newNote": "New note",
+  "@newNote": {
+    "description": "Button that creates a note."
+  },
+  "notebook": "Notebook",
+  "@notebook": {
+    "description": "Sidebar section holding the notes list."
+  },
+  "untitledNote": "Untitled note",
+  "@untitledNote": {
+    "description": "Title a new note starts with."
+  },
+  "toolbar": "{name} toolbar",
+  "@toolbar": {
+    "description": "Accessible label of the window toolbar.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Remit"
+      }
+    }
+  },
+  "commandPalette": "Command palette",
+  "@commandPalette": {
+    "description": "Accessible label of the command palette."
+  },
+  "searchActions": "Search actions",
+  "@searchActions": {
+    "description": "Placeholder of the command palette's field."
+  },
+  "noActions": "No matching actions.",
+  "@noActions": {
+    "description": "The palette's empty state."
+  },
+  "actionReviewCards": "Review cards",
+  "@actionReviewCards": {
+    "description": "Command palette action: enter review mode."
+  },
+  "actionEditNotes": "Edit notes",
+  "@actionEditNotes": {
+    "description": "Command palette action: enter notes mode."
+  },
+  "reviewTitle": "Review",
+  "@reviewTitle": {
+    "description": "Heading of the review column."
+  },
+  "remaining": "{count, plural, =0 {Nothing due} one {# card left} other {# cards left}}",
+  "@remaining": {
+    "description": "How many cards are left in the queue.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "lost": "Lost",
+  "@lost": {
+    "description": "Badge on a card whose source block is gone."
+  },
+  "lostBody": "The note block this card came from is gone.",
+  "@lostBody": {
+    "description": "Explains a lost reference."
+  },
+  "suspendCard": "Suspend card",
+  "@suspendCard": {
+    "description": "Suspends the lost card shown."
+  },
+  "frozen": "Frozen",
+  "@frozen": {
+    "description": "Badge on a card that shows a snapshot."
+  },
+  "snapshotTaken": "Snapshot taken {date}",
+  "@snapshotTaken": {
+    "description": "Says when a frozen card's snapshot was taken.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "6 November 2026"
+      }
+    }
+  },
+  "revealHint": "Press Space to reveal.",
+  "@revealHint": {
+    "description": "Hint shown before a card's answer is revealed."
+  },
+  "showAnswer": "Show answer",
+  "@showAnswer": {
+    "description": "Reveals the current card's answer."
+  },
+  "emptyAnswer": "This block has nothing after its first ::.",
+  "@emptyAnswer": {
+    "description": "Shown when a card's block has no answer side."
+  },
+  "undo": "Undo (U)",
+  "@undo": {
+    "description": "Undoes the last grade."
+  },
+  "suspend": "Suspend (S)",
+  "@suspend": {
+    "description": "Suspends the current card."
+  },
+  "editNote": "Edit note (E)",
+  "@editNote": {
+    "description": "Opens the current card's note in the editor."
+  },
+  "noCards": "No cards left to review.",
+  "@noCards": {
+    "description": "The queue's empty state."
+  },
+  "backToNotes": "Back to notes",
+  "@backToNotes": {
+    "description": "Leaves the empty queue for the editor."
+  },
+  "gradeUndone": "Grade undone",
+  "@gradeUndone": {
+    "description": "One-shot notice after an undo."
+  },
+  "again": "Again",
+  "@again": {
+    "description": "Rating button: the card was not recalled."
+  },
+  "hard": "Hard",
+  "@hard": {
+    "description": "Rating button: recalled with difficulty."
+  },
+  "good": "Good",
+  "@good": {
+    "description": "Rating button: recalled."
+  },
+  "easy": "Easy",
+  "@easy": {
+    "description": "Rating button: recalled effortlessly."
+  },
+  "noNotes": "No notes yet.",
+  "@noNotes": {
+    "description": "The notes list's empty state."
+  },
+  "blockCount": "{count, plural, one {# block} other {# blocks}}",
+  "@blockCount": {
+    "description": "Count of blocks in a note.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "cardCount": "{count, plural, one {# card} other {# cards}}",
+  "@cardCount": {
+    "description": "Count of cards in a note.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "noteSummary": "{blocks} · {cards}",
+  "@noteSummary": {
+    "description": "A note's block and card counts, side by side.",
+    "placeholders": {
+      "blocks": {
+        "type": "String",
+        "example": "4 blocks"
+      },
+      "cards": {
+        "type": "String",
+        "example": "2 cards"
+      }
+    }
+  },
+  "blockLabel": "Block {number} · {title}",
+  "@blockLabel": {
+    "description": "Accessible label of one block's field.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "2"
+      },
+      "title": {
+        "type": "String",
+        "example": "Memory"
+      }
+    }
+  },
+  "cardBadge": "{cards}, {title}",
+  "@cardBadge": {
+    "description": "Badge saying how many cards a block has.",
+    "placeholders": {
+      "cards": {
+        "type": "String",
+        "example": "1 card"
+      },
+      "title": {
+        "type": "String",
+        "example": "Memory"
+      }
+    }
+  },
+  "makeCard": "Make card",
+  "@makeCard": {
+    "description": "Makes a card from the block beside it."
+  },
+  "blockEmpty": "This block is empty.",
+  "@blockEmpty": {
+    "description": "A card cannot be made from an empty block."
+  },
+  "cardMade": "Card made from block {number}",
+  "@cardMade": {
+    "description": "One-shot notice after making a card.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "version": "Version {version}",
+  "@version": {
+    "description": "The About page's version line.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.1.0"
+      }
+    }
+  },
+  "licenseLink": "GNU AGPL-3.0",
+  "@licenseLink": {
+    "description": "The About page's license link text."
+  },
+  "modeLabel": "Mode",
+  "@modeLabel": {
+    "description": "Accessible label of the notes/review mode switch."
+  }
+}

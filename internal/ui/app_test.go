@@ -36,7 +36,7 @@ func TestModes(t *testing.T) {
 			}
 
 			tt.Key(ui.Cmd, ui.Key1)
-			for _, want := range []string{"Show answer", "Spacing beats cramming", "5 left"} {
+			for _, want := range []string{"Show answer", "Spacing beats cramming", "5 cards left"} {
 				if !tt.HasText(want) {
 					t.Fatalf("review mode: missing %q; texts %q", want, tt.Texts())
 				}
@@ -91,7 +91,7 @@ func TestReviewKeys(t *testing.T) {
 	if tt.HasText(answer) {
 		t.Error("the graded card's answer is still shown")
 	}
-	for _, want := range []string{"Lost", "The note block this card came from is gone.", "4 left"} {
+	for _, want := range []string{"Lost", "The note block this card came from is gone.", "4 cards left"} {
 		if !tt.HasText(want) {
 			t.Fatalf("missing %q after grading; texts %q", want, tt.Texts())
 		}
@@ -99,13 +99,13 @@ func TestReviewKeys(t *testing.T) {
 
 	// A card cannot be graded before it is revealed.
 	tt.Key(0, ui.Key3)
-	if !tt.HasText("4 left") || !tt.HasText("Lost") {
+	if !tt.HasText("4 cards left") || !tt.HasText("Lost") {
 		t.Error("a grade moved the queue before the answer was revealed")
 	}
 
 	// Undo goes back one card and says so once.
 	tt.Key(0, ui.KeyU)
-	for _, want := range []string{answer, "5 left", "Grade undone"} {
+	for _, want := range []string{answer, "5 cards left", "Grade undone"} {
 		if !tt.HasText(want) {
 			t.Fatalf("missing %q after undo; texts %q", want, tt.Texts())
 		}
@@ -115,7 +115,7 @@ func TestReviewKeys(t *testing.T) {
 	// snapshot instead of the block's current text.
 	tt.Key(0, ui.Key3)
 	tt.Key(0, ui.KeyS)
-	for _, want := range []string{"Frozen", "A good card asks", "3 left"} {
+	for _, want := range []string{"Frozen", "A good card asks", "3 cards left"} {
 		if !tt.HasText(want) {
 			t.Fatalf("missing %q after suspend; texts %q", want, tt.Texts())
 		}
@@ -130,7 +130,7 @@ func TestReviewKeys(t *testing.T) {
 
 	// Easy grades and moves on.
 	tt.Key(0, ui.Key4)
-	for _, want := range []string{"The testing effect", "2 left"} {
+	for _, want := range []string{"The testing effect", "2 cards left"} {
 		if !tt.HasText(want) {
 			t.Fatalf("missing %q after grading; texts %q", want, tt.Texts())
 		}
@@ -408,5 +408,31 @@ func assertControl(t *testing.T, tt *ui.Tester, w, h int, s string) {
 	}
 	if r.X < 0 || r.Y < 0 || r.X+r.W > float32(w) || r.Y+r.H > float32(h) {
 		t.Errorf("%q is outside the window: %.1f,%.1f %.1fx%.1f in %dx%d", s, r.X, r.Y, r.W, r.H, w, h)
+	}
+}
+
+// Every message comes from a catalog, so switching the language switches what
+// the view says, without a restart and without a second code path.
+func TestLocaleSwitchesTheLanguage(t *testing.T) {
+	a := NewApp()
+	tt := ui.NewTester(a.View, 1024, 720)
+
+	tt.SetLocale("zh-Hans")
+	tt.Frame()
+	for _, want := range []string{"笔记", "复习", "新建笔记", "笔记本"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing Chinese text %q; texts %q", want, tt.Texts())
+		}
+	}
+
+	tt.SetLocale("en")
+	tt.Frame()
+	for _, want := range []string{"Notes", "Review", "New note", "Notebook"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing English text %q after switching back; texts %q", want, tt.Texts())
+		}
+	}
+	if tt.FramePending() {
+		t.Error("view still requests frames after a locale switch")
 	}
 }

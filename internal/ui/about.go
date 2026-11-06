@@ -24,8 +24,8 @@ func About(c *ui.Context) {
 
 	ui.Column(c).Fill().Center().Gap(tk.spaceS).Padding(tk.spaceXXL).Children(func() {
 		ui.Text(c, Name).FontSize(tk.typeTitle).Bold()
-		ui.Text(c, "Version "+Version).FontSize(tk.typeBody).TextColor(tk.textMuted)
-		ui.Link(c.Key("license"), "GNU AGPL-3.0", licenseURL)
+		ui.Text(c, m(c).Version(Version)).FontSize(tk.typeBody).TextColor(tk.textMuted)
+		ui.Link(c.Key("license"), m(c).LicenseLink(), licenseURL)
 	})
 }
 

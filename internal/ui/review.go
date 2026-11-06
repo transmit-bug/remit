@@ -1,10 +1,10 @@
 package ui
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/egoist/mygo/ui"
+
 	"github.com/transmit-bug/remit/internal/core"
 )
 
@@ -36,8 +36,17 @@ func (g rating) key() string {
 	return [...]string{"1", "2", "3", "4"}[g]
 }
 
-func (g rating) label() string {
-	return [...]string{"Again", "Hard", "Good", "Easy"}[g]
+func (g rating) label(c *ui.Context) string {
+	switch g {
+	case ratingAgain:
+		return m(c).Again()
+	case ratingHard:
+		return m(c).Hard()
+	case ratingGood:
+		return m(c).Good()
+	default:
+		return m(c).Easy()
+	}
 }
 
 func (g rating) colour(tk tokens) ui.Color {
@@ -147,9 +156,9 @@ func (a *App) reviewView(c *ui.Context, tk tokens) {
 	ui.Column(c).Grow(1).AlignItems(ui.Center).Padding(tk.spaceXL).Children(func() {
 		ui.Column(c).FillWidth().MaxWidth(reviewWidth).Gap(tk.spaceL).Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Children(func() {
-				ui.Text(c, "Review").FontSize(tk.typeTitle).Bold()
+				ui.Text(c, m(c).ReviewTitle()).FontSize(tk.typeTitle).Bold()
 				ui.Spacer(c)
-				ui.Badge(c, fmt.Sprintf("%d left", a.review.remaining()))
+				ui.Badge(c, m(c).Remaining(a.review.remaining()))
 			})
 
 			card, ok := a.review.current(a.library)
@@ -177,19 +186,19 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 		Children(func() {
 			switch state {
 			case core.LinkLost:
-				ui.Badge(c, "Lost").AlignSelf(ui.Start).
+				ui.Badge(c, m(c).Lost()).AlignSelf(ui.Start).
 					Background(tk.linkFill(tk.danger)).TextColor(tk.linkInk(tk.danger))
-				ui.Text(c, "The note block this card came from is gone.").
+				ui.Text(c, m(c).LostBody()).
 					FontSize(tk.typeBody).TextColor(tk.textMuted)
-				ui.Button(c, "Suspend card").AlignSelf(ui.Start).
+				ui.Button(c, m(c).SuspendCard()).AlignSelf(ui.Start).
 					PaddingX(tk.spaceL).MinHeight(tk.control).
 					OnClick(a.suspend)
 				return
 			case core.LinkFrozen:
 				ui.Row(c).AlignSelf(ui.Start).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
-					ui.Badge(c, "Frozen").
+					ui.Badge(c, m(c).Frozen()).
 						Background(tk.linkFill(tk.warning)).TextColor(tk.linkInk(tk.warning))
-					ui.Text(c, "Snapshot taken "+card.Ref.Frozen.At.Format("2 January 2006")).
+					ui.Text(c, m(c).SnapshotTaken(card.Ref.Frozen.At.Format("2 January 2006"))).
 						FontSize(tk.typeSmall).TextColor(tk.textMuted)
 				})
 			}
@@ -197,15 +206,15 @@ func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer 
 			ui.Text(c, prompt).FontSize(tk.typeHeading).Bold()
 			ui.Divider(c)
 			if !a.review.revealed {
-				ui.Text(c, "Press Space to reveal.").
+				ui.Text(c, m(c).RevealHint()).
 					FontSize(tk.typeSmall).TextColor(tk.textMuted)
-				ui.PrimaryButton(c, "Show answer").AlignSelf(ui.Start).
+				ui.PrimaryButton(c, m(c).ShowAnswer()).AlignSelf(ui.Start).
 					PaddingX(tk.spaceL).MinHeight(tk.control).
 					OnClick(func() { a.review.reveal() })
 				return
 			}
 			if answer == "" {
-				ui.Text(c, "This block has nothing after its first ::.").
+				ui.Text(c, m(c).EmptyAnswer()).
 					FontSize(tk.typeBody).TextColor(tk.textMuted)
 				return
 			}
@@ -221,11 +230,11 @@ func (a *App) gradeRow(c *ui.Context, tk tokens) {
 			ui.ButtonBase(c).Grow(1).MinHeight(tk.control).
 				Gap(tk.spaceS).Padding(tk.spaceXS, tk.spaceS).
 				Background(tk.ratingFill(face)).Border(tk.hairline, tk.ratingEdge(face)).
-				Radius(tk.radiusControl).Label(g.label()).
+				Radius(tk.radiusControl).Label(g.label(c)).
 				OnClick(func() { a.grade(g) }).
 				Children(func() {
 					ui.Text(c, g.key()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
-					ui.Text(c, g.label()).FontSize(tk.typeBody).TextColor(tk.text)
+					ui.Text(c, g.label(c)).FontSize(tk.typeBody).TextColor(tk.text)
 				})
 		}
 	})
@@ -234,15 +243,15 @@ func (a *App) gradeRow(c *ui.Context, tk tokens) {
 // reviewFooter holds the actions beside the card's grades.
 func (a *App) reviewFooter(c *ui.Context, tk tokens, card core.Card, state core.LinkState) {
 	ui.Row(c).Gap(tk.spaceS).AlignItems(ui.Center).Children(func() {
-		undo := ui.Button(c, "Undo (U)").MinHeight(tk.control)
+		undo := ui.Button(c, m(c).Undo()).MinHeight(tk.control)
 		undo.Disabled(len(a.review.history) == 0)
 		undo.OnClick(func() { a.undo(c) })
 
 		if state == core.LinkLost {
 			return
 		}
-		ui.Button(c, "Suspend (S)").MinHeight(tk.control).OnClick(a.suspend)
-		ui.Button(c, "Edit note (E)").MinHeight(tk.control).OnClick(func() { a.editNote(card) })
+		ui.Button(c, m(c).Suspend()).MinHeight(tk.control).OnClick(a.suspend)
+		ui.Button(c, m(c).EditNote()).MinHeight(tk.control).OnClick(func() { a.editNote(card) })
 	})
 }
 
@@ -251,8 +260,8 @@ func (a *App) reviewEmpty(c *ui.Context, tk tokens) {
 	ui.Column(c).Padding(tk.spaceXL).Gap(tk.spaceM).
 		Background(tk.surfaceRaised).Border(tk.hairline, tk.border).
 		Radius(tk.radiusCard).Children(func() {
-		ui.Text(c, "No cards left to review.").FontSize(tk.typeHeading).TextColor(tk.textMuted)
-		ui.Button(c, "Back to notes").MinHeight(tk.control).
+		ui.Text(c, m(c).NoCards()).FontSize(tk.typeHeading).TextColor(tk.textMuted)
+		ui.Button(c, m(c).BackToNotes()).MinHeight(tk.control).
 			OnClick(func() { a.setMode(modeNotes) })
 	})
 }
@@ -273,7 +282,7 @@ func (a *App) grade(g rating) {
 // undo puts the last graded card back and says so once.
 func (a *App) undo(c *ui.Context) {
 	if a.review.undo(a.library) {
-		c.Toast("Grade undone")
+		c.Toast(m(c).GradeUndone())
 	}
 }
 
