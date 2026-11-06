@@ -30,7 +30,7 @@ func (a *App) toolbar(c *ui.Context, tk tokens) {
 		}
 
 		chosen := int(a.mode)
-		if ui.Segmented(c, &chosen, m(c).ModeNotes(), m(c).ModeReview(), m(c).ModeBrowse(), m(c).ModeStats()).
+		if ui.Segmented(c, &chosen, m(c).ModeNotes(), m(c).ModeReview(), m(c).ModeBrowse(), m(c).ModeStats(), m(c).ModeSettings()).
 			Label(m(c).ModeLabel()).Changed() {
 			a.setMode(mode(chosen))
 		}
@@ -68,8 +68,14 @@ func (a *App) notesList(c *ui.Context, tk tokens) {
 }
 
 // shortcuts declares the app's keys. They are window shortcuts, so they wait
-// while the palette is open. With no library open nothing has an action yet.
+// while the palette is open. The settings page is the app's, not the library's,
+// so its key works before one is open; with no library the rest has no action
+// yet.
 func (a *App) shortcuts(c *ui.Context) {
+	c.OnShortcut(ui.Cmd, ui.KeyComma, func() { a.openSettings() })
+	if a.mode == modeSettings {
+		c.OnShortcut(0, ui.KeyEscape, func() { a.closeSettings() })
+	}
 	if a.lib == nil {
 		return
 	}
@@ -97,7 +103,8 @@ func (a *App) shortcuts(c *ui.Context) {
 }
 
 // setMode switches the window's face and loads what the new one reads. What a
-// mode derives from the store is loaded here, never in its view.
+// mode derives from the store is loaded here, never in its view, and leaving
+// the settings page this way is the same as any other switch.
 func (a *App) setMode(m mode) {
 	a.mode = m
 	a.loadCurrent()
@@ -179,11 +186,13 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 		{label: m(c).BrowseTitle(), run: func() { a.setMode(modeBrowse) }},
 		{label: m(c).StatsTitle(), run: func() { a.setMode(modeStats) }},
 		{label: m(c).NewNote(), run: func() { a.newNote(c) }},
+		{label: m(c).OpenSettings(), run: func() { a.openSettings() }},
 	}
 	if a.lib == nil {
 		return actions
 	}
 	actions = append(actions,
+		paletteAction{label: m(c).ImportAnki(), run: func() { a.importAnkiPackage(c) }},
 		paletteAction{label: m(c).ActionEditTitle(), run: func() { a.focusTitle() }},
 		paletteAction{label: m(c).ActionAddBlock(), run: func() { a.blockFromPalette(c, a.addBlockAfter) }},
 		paletteAction{label: m(c).ActionSplitBlock(), run: func() { a.splitActiveBlock(c) }},

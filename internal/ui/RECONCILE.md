@@ -44,6 +44,12 @@ of the two wrappers documented below, or the heatmap's recorded composition.
 | Separating panes, prompt and answer | `ui.Divider` |
 | Theme, accent and dark mode following the system | `c.Theme()` resolved into tokens; `c.SetTheme` for one density |
 | Keyboard: global and review keys | `c.OnShortcut` (window scope) |
+| The settings page: preferences written as they change | `ui.Form` + `ui.Fieldset` + `ui.Field` (label, `Description`, `Error`) |
+| An on/off preference that applies at once | `ui.Switch` in a `ui.Field`, which names it and toggles it when its label is clicked |
+| A shortcut the user types | `ui.TextInput` in a `ui.Field`, with the refusal in the field's `Error` |
+| Outcomes that are not a form value: where the agent listens, what an update check found | `ui.Text` beside the control, muted and small; `c.Toast` when the action is done |
+| A page taller than the window | `ui.Scroll` + the centred `ui.Column` measure the statistics page uses |
+| Importing an Anki package | a palette action that opens `mygo.Dialog.Open` with an `.apkg` filter, then `importanki.Import` from the handler; `c.Toast` for the report |
 | The command palette trapping the pointer and keys | `ui.DialogBase` (`Modal`) over the dimmed window |
 
 ## Wrapper 1 — `flipCard` (`review.go`)
@@ -129,10 +135,17 @@ calendar follows the locale like every other text.
 - Browse lists cards through `store.SearchCards`, `store.CardsWithStatus` and
   the queue's buckets, all through `loadBrowse` on the app's load path: no view
   builds rows from a store call.
+- The settings page needed no wrapper: `ui.Form`, `ui.Fieldset`, `ui.Field`,
+  `ui.Switch`, `ui.TextInput`, `ui.Button` and `ui.Scroll` carry every control
+  and every explanation, and the inline error is `Field.Error`, not a tinted
+  line. Its one composed need — a status line under a control, as "Listening
+  on 127.0.0.1:51234" or what an update check found — is `ui.Text` in the
+  fieldset, because the value belongs to the control rather than the look.
 - Literal geometry audit: the only fixed sizes outside `tokens.go` are
   `sidebarWidth` (260 DIP, a real fixed column), `reviewWidth` (680 DIP, the
   review column's maximum), `messageWidth` (520 DIP, the error state's line),
   `statsWidth` (760 DIP, the statistics page's measure),
+  `settingsWidth` (560 DIP, the settings page's measure),
   `statsChartHeight` (150 DIP, one plot's height), `relinkPanel` (360 DIP, the
   picker's height), and the heatmap's `heatCell`, `heatGap` and
   `heatWeekdayWidth` (12 DIP squares, 3 DIP between them, a 34 DIP label
