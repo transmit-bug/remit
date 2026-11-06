@@ -18,10 +18,13 @@ const (
 // About draws the About page: the app's name and version, and its license. It
 // reads no state; what it shows is the app's identity.
 func About(c *ui.Context) {
-	t := c.Theme()
-	ui.Column(c).Fill().Center().Gap(8).Padding(24).Children(func() {
-		ui.Text(c, Name).FontSize(22).Bold()
-		ui.Text(c, "Version "+Version).TextColor(t.TextMuted)
+	t := appTheme(c.Theme())
+	c.SetTheme(t)
+	tk := newTokens(t)
+
+	ui.Column(c).Fill().Center().Gap(tk.spaceS).Padding(tk.spaceXXL).Children(func() {
+		ui.Text(c, Name).FontSize(tk.typeTitle).Bold()
+		ui.Text(c, "Version "+Version).FontSize(tk.typeBody).TextColor(tk.textMuted)
 		ui.Link(c.Key("license"), "GNU AGPL-3.0", licenseURL)
 	})
 }
