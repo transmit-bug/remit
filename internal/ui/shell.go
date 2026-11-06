@@ -8,6 +8,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -221,7 +222,7 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 
 	ui.DialogBase(c, &a.palette.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.scrim)
-		panel = tk.panel(panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM))
+		panel = kit.StylePanel(c, panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM))
 		panel.Label(m(c).CommandPalette())
 		// The palette arrives a little small over a scrim that fades in.
 		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.palette})

@@ -94,18 +94,6 @@ func newTokens(t *ui.Theme, p design.Palette) tokens {
 	}
 }
 
-// card is a face that sits on the page: the card colour under a small shadow,
-// with no border — the step in tone does the separating, not a line.
-func (tk tokens) card(e ui.Element) ui.Element {
-	return e.Background(tk.Surface).Radius(tk.radiusCard).Shadow(0, 1, 3, 0, tk.shadow)
-}
-
-// panel floats over the page, as the command palette and a dialog do: the card
-// colour under a larger shadow.
-func (tk tokens) panel(e ui.Element) ui.Element {
-	return e.Background(tk.Surface).Radius(tk.radiusPanel).Shadow(0, 8, 24, 0, tk.shadowPanel)
-}
-
 // icon draws the named icon at size DIPs, in the text colour of whatever holds
 // it.
 func (tk tokens) icon(c *ui.Context, name string, size float32) ui.Element {

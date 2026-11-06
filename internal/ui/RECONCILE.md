@@ -132,6 +132,24 @@ sizes it needs are named in `stats.go` (`heatCell`, `heatGap`) and nothing is
 painted; the weekday names and the range come from the catalogs, so the
 calendar follows the locale like every other text.
 
+## The kit's four controls (`internal/ui/kit`)
+
+The design language composes four controls the screens draw more than once. Each
+is a composition over widgets that already carry the behaviour, which is why
+none of them is a wrapper:
+
+| Control | Built from | Why not a widget |
+|---|---|---|
+| `Card`, `Panel` | `ui.Column` + `Background`/`Radius`/`Shadow` | no MyGo widget is "a face on the page"; the elevation is the design language's |
+| `Empty` | `ui.Column` + `ui.Icon` + `ui.Text` + the caller's action | the framework has no empty state, and one that took a picture would be an illustration the spec rules out |
+| `Keycap` | `ui.Text` with the sunken face and a small radius | `ui.Badge` is a pill of a count, not a key's name, and `ui.Toggle` is a control |
+| `Stat` | `ui.Column` + two `ui.Text` | no widget is a number over its name; `ui/chart` plots series, not single values |
+
+Wired: the review card and its empty queue, the palette and re-link panels, the
+notebook's empty state, and the grade keys' 1–4. `Stat`'s landing point is the
+review screen's counter, which #89 owns with that layout — it is built and
+tested here rather than left for a second kit pass.
+
 ## Motion — which mechanism each moment takes (`internal/ui/design/motion.go`)
 
 Every moment of the design language names its mechanism, so nothing here is a

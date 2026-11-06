@@ -8,6 +8,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 )
 
 // reviewWidth caps the review column: a comfortable measure, centred in the
@@ -196,7 +197,7 @@ func (a *App) reviewView(c *ui.Context, tk tokens) {
 // card opened from browse lands here too. Re-linking is the repair, and
 // suspending — the one action that never touches history — is the way out.
 func (a *App) flipCard(c *ui.Context, tk tokens, card core.Card, prompt, answer string, state core.LinkState) {
-	tk.card(ui.Column(c).Key(string(card.ID)).
+	kit.StyleCard(c, ui.Column(c).Key(string(card.ID)).
 		Padding(tk.spaceXL).Gap(tk.spaceL)).Transition(advance).
 		Children(func() {
 			switch state {
@@ -253,7 +254,7 @@ func (a *App) gradeRow(c *ui.Context, tk tokens) {
 				Radius(tk.radiusControl).Label(g.label(c)).
 				OnClick(func() { a.grade(c, g) }).
 				Children(func() {
-					ui.Text(c, g.key()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+					kit.Keycap(c, g.key())
 					ui.Text(c, g.label(c)).FontSize(tk.typeBody).TextColor(tk.Text)
 				})
 			// The face eases under the pointer, and a press shrinks the key
@@ -288,11 +289,11 @@ func (a *App) reviewFooter(c *ui.Context, tk tokens, card core.Card, state core.
 
 // reviewEmpty is the state after the last card.
 func (a *App) reviewEmpty(c *ui.Context, tk tokens) {
-	tk.card(ui.Column(c).Padding(tk.spaceXL).Gap(tk.spaceM)).Children(func() {
-		tk.icon(c, "coffee", iconLarge).TextColor(tk.TextMuted)
-		ui.Text(c, m(c).NoCards()).FontSize(tk.typeHeading).TextColor(tk.TextMuted)
-		ui.Button(c, m(c).BackToNotes()).MinHeight(tk.control).
-			OnClick(func() { a.setMode(modeNotes) })
+	kit.Card(c, func() {
+		kit.Empty(c, "coffee", m(c).NoCards(), func() {
+			ui.Button(c, m(c).BackToNotes()).MinHeight(tk.control).
+				OnClick(func() { a.setMode(modeNotes) })
+		})
 	})
 }
 
