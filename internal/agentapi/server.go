@@ -408,6 +408,19 @@ func LoadOrCreateToken(path string) (string, error) {
 	if !errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("agentapi: read token: %w", err)
 	}
+	return writeToken(path)
+}
+
+// RotateToken writes a fresh token at path, replacing the old one, so a token
+// that leaked can be withdrawn without deleting the file by hand.
+func RotateToken(path string) (string, error) {
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("agentapi: replace token: %w", err)
+	}
+	return writeToken(path)
+}
+
+func writeToken(path string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return "", fmt.Errorf("agentapi: create token directory: %w", err)
 	}

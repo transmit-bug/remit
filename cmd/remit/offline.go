@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net"
@@ -11,6 +13,7 @@ import (
 	"github.com/egoist/mygo"
 
 	"github.com/transmit-bug/remit/internal/agentapi"
+	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/core/transfer"
 	"github.com/transmit-bug/remit/internal/settings"
@@ -106,4 +109,37 @@ func serveAgent(lib *store.Library, token string) (net.Listener, error) {
 		}
 	}()
 	return ln, nil
+}
+
+// runImportAnki imports an Anki package into the library at dir, creating the
+// library when it does not exist yet, and prints what it did.
+func runImportAnki(dir, path string) bool {
+	if path == "" {
+		return false
+	}
+	lib, err := openOrCreate(dir)
+	if err != nil {
+		log.Fatalf("library %s: %v", dir, err)
+	}
+	defer lib.Close()
+
+	report, err := importanki.Import(path, lib)
+	if err != nil {
+		log.Fatalf("import %s: %v", path, err)
+	}
+	fmt.Printf("imported %s: %d notes, %d cards, %d reviews, %d skipped rows, %d unreachable media\n",
+		path, report.Notes, report.Cards, report.Reviews, report.SkippedRows, report.UnreachableMedia)
+	for _, warning := range report.Warnings {
+		fmt.Printf("  warning: %s\n", warning)
+	}
+	return true
+}
+
+// openOrCreate opens the library at dir, creating it when it is absent.
+func openOrCreate(dir string) (*store.Library, error) {
+	lib, err := store.Open(dir, store.Options{})
+	if errors.Is(err, fs.ErrNotExist) {
+		return store.Create(dir, store.Options{})
+	}
+	return lib, err
 }
