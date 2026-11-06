@@ -1,9 +1,8 @@
 package ui
 
 import (
-	"fmt"
-
 	"github.com/egoist/mygo/ui"
+
 	"github.com/transmit-bug/remit/internal/core"
 )
 
@@ -35,8 +34,8 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	note, ok := a.editor.note(a.library)
 	if !ok {
 		ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Children(func() {
-			ui.Text(c, "No notes yet.").FontSize(tk.typeHeading).TextColor(tk.textMuted)
-			ui.Button(c, "New note").MinHeight(tk.control).OnClick(a.newNote)
+			ui.Text(c, m(c).NoNotes()).FontSize(tk.typeHeading).TextColor(tk.textMuted)
+			ui.Button(c, m(c).NewNote()).MinHeight(tk.control).OnClick(a.newNote)
 		})
 		return
 	}
@@ -44,7 +43,7 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	ui.Scroll(c).Grow(1).Padding(tk.spaceXL).Children(func() {
 		ui.Column(c).Gap(tk.spaceL).Children(func() {
 			ui.Text(c, note.Title).FontSize(tk.typeTitle).Bold()
-			ui.Text(c, fmt.Sprintf("%s · %s", blockCount(len(note.Blocks)), cardCount(a.library.cardsInNote(note)))).
+			ui.Text(c, m(c).NoteSummary(blockCount(c, len(note.Blocks)), cardCount(c, a.library.cardsInNote(note)))).
 				FontSize(tk.typeSmall).TextColor(tk.textMuted)
 			ui.Divider(c)
 			for i := range note.Blocks {
@@ -70,7 +69,7 @@ func (a *App) blockRow(c *ui.Context, tk tokens, note core.Note, i int) {
 
 	ui.Row(c).Key(string(block.ID)).Gap(tk.spaceM).AlignItems(ui.Start).Children(func() {
 		field := ui.TextArea(c, &block.Text).Grow(1).
-			Label(fmt.Sprintf("Block %d · %s", i+1, note.Title)).
+			Label(m(c).BlockLabel(i+1, note.Title)).
 			FontSize(tk.typeBody).Background(tk.surfaceSunken)
 		if i == 0 {
 			field.Bind(&a.editor.first)
@@ -78,12 +77,12 @@ func (a *App) blockRow(c *ui.Context, tk tokens, note core.Note, i int) {
 
 		ui.Column(c).Shrink(0).Gap(tk.spaceS).Children(func() {
 			if cards > 0 {
-				badge := ui.Badge(c, cardCount(cards)).
+				badge := ui.Badge(c, cardCount(c, cards)).
 					Background(tk.linkFill(tk.accent)).TextColor(tk.linkInk(tk.accent))
-				badge.Label(fmt.Sprintf("%s, %s", cardCount(cards), note.Title))
+				badge.Label(m(c).CardBadge(cardCount(c, cards), note.Title))
 				return
 			}
-			ui.Button(c, "Make card").MinHeight(tk.control).
+			ui.Button(c, m(c).MakeCard()).MinHeight(tk.control).
 				OnClick(func() { a.makeCard(c, note, i) })
 		})
 	})
@@ -94,7 +93,7 @@ func (a *App) blockRow(c *ui.Context, tk tokens, note core.Note, i int) {
 func (a *App) makeCard(c *ui.Context, note core.Note, i int) {
 	block := note.Blocks[i]
 	if prompt, _ := core.Split(block.Text); prompt == "" {
-		c.Toast("This block is empty.")
+		c.Toast(m(c).BlockEmpty())
 		return
 	}
 	card := core.Card{
@@ -106,21 +105,11 @@ func (a *App) makeCard(c *ui.Context, note core.Note, i int) {
 	if a.review.started {
 		a.review.queue = append(a.review.queue, card.ID)
 	}
-	c.Toast(fmt.Sprintf("Card made from block %d", i+1))
+	c.Toast(m(c).CardMade(i + 1))
 }
 
 // blockCount names how many blocks a note has.
-func blockCount(n int) string {
-	if n == 1 {
-		return "1 block"
-	}
-	return fmt.Sprintf("%d blocks", n)
-}
+func blockCount(c *ui.Context, n int) string { return m(c).BlockCount(n) }
 
 // cardCount names how many cards point at a block or a note.
-func cardCount(n int) string {
-	if n == 1 {
-		return "1 card"
-	}
-	return fmt.Sprintf("%d cards", n)
-}
+func cardCount(c *ui.Context, n int) string { return m(c).CardCount(n) }

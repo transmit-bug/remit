@@ -5,7 +5,9 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo/ui"
+
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/locales"
 )
 
 const (
@@ -23,13 +25,13 @@ func (a *App) toolbar(c *ui.Context, tk tokens) {
 		ui.Text(c, Name).FontSize(tk.typeHeading).Bold()
 
 		chosen := int(a.mode)
-		if ui.Segmented(c, &chosen, "Notes", "Review").Label("Mode").Changed() {
+		if ui.Segmented(c, &chosen, m(c).ModeNotes(), m(c).ModeReview()).Label(m(c).ModeLabel()).Changed() {
 			a.setMode(mode(chosen))
 		}
 
 		ui.Spacer(c)
-		ui.Button(c, "New note").OnClick(a.newNote)
-	}).Label(Name+" toolbar").
+		ui.Button(c, m(c).NewNote()).OnClick(a.newNote)
+	}).Label(m(c).Toolbar(Name)).
 		Padding(tk.spaceS, tk.spaceL).
 		Background(tk.surface).
 		BorderWidth(0, 0, tk.hairline, 0).
@@ -48,7 +50,7 @@ func (a *App) notesView(c *ui.Context, tk tokens) {
 // notesList is the source list of notes, with how many cards each one feeds.
 func (a *App) notesList(c *ui.Context, tk tokens) {
 	ui.Sidebar(c, &a.editor.selected, func() {
-		ui.SidebarSection(c, "Notebook", nil, func() {
+		ui.SidebarSection(c, m(c).Notebook(), nil, func() {
 			for _, n := range a.library.notes {
 				item := ui.SidebarItem(c, string(n.ID), nil, n.Title)
 				if cards := a.library.cardsInNote(n); cards > 0 {
@@ -98,7 +100,7 @@ func (a *App) setMode(m mode) {
 func (a *App) newNote() {
 	n := core.Note{
 		ID:     core.NewID("note"),
-		Title:  "Untitled note",
+		Title:  locales.UntitledNote(),
 		Blocks: []core.Block{{ID: core.NewID("block")}},
 	}
 	a.library.notes = append(a.library.notes, n)
@@ -144,11 +146,11 @@ func (a *App) openPalette(c *ui.Context) {
 }
 
 // paletteActions lists what the app can do from anywhere.
-func (a *App) paletteActions() []paletteAction {
+func (a *App) paletteActions(c *ui.Context) []paletteAction {
 	return []paletteAction{
-		{label: "Review cards", run: func() { a.setMode(modeReview) }},
-		{label: "Edit notes", run: func() { a.setMode(modeNotes) }},
-		{label: "New note", run: a.newNote},
+		{label: m(c).ActionReviewCards(), run: func() { a.setMode(modeReview) }},
+		{label: m(c).ActionEditNotes(), run: func() { a.setMode(modeNotes) }},
+		{label: m(c).NewNote(), run: a.newNote},
 	}
 }
 
@@ -158,19 +160,19 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 	if !a.palette.open {
 		return
 	}
-	items := filterActions(a.paletteActions(), a.palette.query)
+	items := filterActions(a.paletteActions(c), a.palette.query)
 	sel := clamp(a.palette.sel, 0, len(items)-1)
 
 	ui.DialogBase(c, &a.palette.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.scrim)
 		panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM).
 			Background(tk.surfaceRaised).Border(tk.hairline, tk.borderStrong).
-			Radius(tk.radiusPanel).Label("Command palette")
+			Radius(tk.radiusPanel).Label(m(c).CommandPalette())
 
 		panel.Children(func() {
 			field := ui.TextInput(c, &a.palette.query).
-				Placeholder("Search actions").Bind(&a.palette.field).
-				Label("Search actions").MinHeight(tk.control)
+				Placeholder(m(c).SearchActions()).Bind(&a.palette.field).
+				Label(m(c).SearchActions()).MinHeight(tk.control)
 			if field.Changed() {
 				a.palette.sel = 0
 			}
@@ -181,7 +183,7 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 			c.OnShortcut(0, ui.KeyUp, func() { a.movePalette(len(items), -1) })
 
 			if len(items) == 0 {
-				ui.Text(c, "No matching actions.").FontSize(tk.typeSmall).TextColor(tk.textMuted)
+				ui.Text(c, m(c).NoActions()).FontSize(tk.typeSmall).TextColor(tk.textMuted)
 			}
 			for i, it := range items {
 				row := ui.ButtonBase(c).Key(it.label).Gap(tk.spaceS).Justify(ui.Start).
