@@ -19,7 +19,17 @@ func (a *App) reviewView(c *ui.Context, tk tokens) {
 // user can do with it, each recorded by the app on the UI thread.
 func (a *App) reviewDeps(c *ui.Context) review.Deps {
 	return review.Deps{
-		Card:  a.reviewCard,
+		Card: a.reviewCard,
+		Preview: func() ([4]review.Interval, bool) {
+			if !a.hasPreview || len(a.preview) != 4 {
+				return [4]review.Interval{}, false
+			}
+			var out [4]review.Interval
+			for i, o := range a.preview {
+				out[i] = review.Interval{Rating: review.Rating(i), Wait: o.Wait}
+			}
+			return out, true
+		},
 		Grade: func(id core.ID, r review.Rating) { a.grade(c, id, r) },
 		Undo:  func() { a.undo(c) },
 		Suspend: func(id core.ID) {

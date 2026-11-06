@@ -1174,6 +1174,20 @@ func (l *Library) CardHistory(cardID core.ID) ([]schedule.Event, error) {
 
 // CardState returns a card's replayed schedule, and whether it has been
 // reviewed at all.
+// Preview is what each of the four answers would schedule for a card, as the
+// grade keys show it before the user picks one — the scheduling interface's own
+// answer, from the parameters this library reviews with. It changes nothing.
+func (l *Library) Preview(cardID core.ID, now time.Time) ([]schedule.Outlook, bool) {
+	l.mu.Lock()
+	meta, ok := l.cards[cardID]
+	params := l.params
+	l.mu.Unlock()
+	if !ok {
+		return nil, false
+	}
+	return params.Preview(meta.state, now), true
+}
+
 func (l *Library) CardState(cardID core.ID) (schedule.State, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

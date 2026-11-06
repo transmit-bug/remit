@@ -283,3 +283,51 @@ func TestLastIsTheReviewAnUndoCancels(t *testing.T) {
 		t.Errorf("State = (%+v, %v), want one live review", state, ok)
 	}
 }
+
+// The preview on the grade keys is the schedule's own answer: each outlook is
+// the state Step would leave, and asking changes nothing about the card.
+func TestPreviewMatchesStep(t *testing.T) {
+	at := time.Date(2026, time.March, 2, 9, 0, 0, 0, time.UTC)
+	params := schedule.DefaultParams()
+
+	learned := params.Step(schedule.State{}, schedule.Event{Rating: schedule.Good, At: at.Add(-48 * time.Hour)})
+	cases := []struct {
+		name  string
+		state schedule.State
+		now   time.Time
+	}{
+		{"a card never reviewed", schedule.State{}, at},
+		{"a card being learned", learned, at},
+		{"a card learned a week ago", learned, at.Add(7 * 24 * time.Hour)},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			before := c.state
+			got := params.Preview(c.state, c.now)
+			if c.state != before {
+				t.Error("Preview changed the state it was given")
+			}
+			if len(got) != 4 {
+				t.Fatalf("preview has %d outlooks, want 4", len(got))
+			}
+			for i, outlook := range got {
+				r := schedule.Rating(i) + schedule.Again
+				want := params.Step(before, schedule.Event{Rating: r, At: c.now})
+				if !outlook.Due.Equal(want.Due) {
+					t.Errorf("%v: preview due %v, step due %v", r, outlook.Due, want.Due)
+				}
+				if outlook.Rating != r {
+					t.Errorf("outlook %d is labelled %v, want %v", i, outlook.Rating, r)
+				}
+				if outlook.Wait <= 0 {
+					t.Errorf("%v: preview wait %v, want a positive interval", r, outlook.Wait)
+				}
+			}
+			// The four answers differ: a preview showing one interval for every
+			// key would be no preview at all.
+			if got[0].Wait >= got[3].Wait {
+				t.Errorf("Again waits %v, not less than Easy's %v", got[0].Wait, got[3].Wait)
+			}
+		})
+	}
+}

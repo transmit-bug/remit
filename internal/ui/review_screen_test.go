@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+
+	"github.com/transmit-bug/remit/locales"
 )
 
 // Review takes the window whole: no navigation and no notes list, only the card
@@ -143,6 +145,41 @@ func TestReviewAtTheSmallestWindow(t *testing.T) {
 		}
 		if box.X < 0 || box.X+box.W > 720 {
 			t.Errorf("the grade %q box %+v is outside the window", label, box)
+		}
+	}
+}
+
+// The interval on each grade key is the scheduler's own answer: what the store
+// says the answer would schedule, said on the key.
+func TestGradeKeysShowTheSchedulesIntervals(t *testing.T) {
+	a, _ := newTestApp(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	tt.Key(0, ui.KeySpace)
+	tt.Advance(320 * time.Millisecond) // the answer unfolding
+
+	id, ok := a.review.Current()
+	if !ok {
+		t.Fatal("no card on screen")
+	}
+	outlooks, ok := a.Library().Preview(id, time.Now())
+	if !ok {
+		t.Fatal("the store has no preview for the card on screen")
+	}
+	msgs := locales.In("en")
+	want := func(w time.Duration) string {
+		switch {
+		case w < time.Hour:
+			return msgs.IntervalMinutes(max(1, int(w.Round(time.Minute)/time.Minute)))
+		case w < 24*time.Hour:
+			return msgs.IntervalHours(max(1, int(w.Round(time.Hour)/time.Hour)))
+		default:
+			return msgs.IntervalDays(max(1, int(w.Round(24*time.Hour)/(24*time.Hour))))
+		}
+	}
+	for _, o := range outlooks {
+		if !tt.HasText(want(o.Wait)) {
+			t.Errorf("the %v key does not show %q; texts %q", o.Rating, want(o.Wait), tt.Texts())
 		}
 	}
 }

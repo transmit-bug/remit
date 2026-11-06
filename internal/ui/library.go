@@ -14,6 +14,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/queue"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/update"
@@ -357,6 +358,19 @@ func (a *App) reload() {
 	a.loadCurrent()
 }
 
+// previewFor asks the store what each answer would schedule for the card on
+// screen, through the same parameters the review will use.
+func (a *App) previewFor() ([]schedule.Outlook, bool) {
+	if a.lib == nil {
+		return nil, false
+	}
+	id, ok := a.review.Current()
+	if !ok {
+		return nil, false
+	}
+	return a.lib.Preview(id, time.Now())
+}
+
 // loadCurrent derives what the mode on screen reads beyond the snapshot: the
 // browse rows and the statistics replay. It is the only path that asks the
 // store for them, so no frame does.
@@ -366,6 +380,8 @@ func (a *App) loadCurrent() {
 		a.loadBrowse()
 	case modeStats:
 		a.loadStats()
+	case modeReview:
+		a.preview, a.hasPreview = a.previewFor()
 	}
 }
 
