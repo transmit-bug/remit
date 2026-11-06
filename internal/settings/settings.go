@@ -8,13 +8,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // FileName is the settings file inside the app's data directory.
 const FileName = "settings.json"
 
+// DefaultHotkey is the review shortcut the app binds when the user has not
+// chosen one: Cmd+Shift+R on macOS, Ctrl+Shift+R elsewhere.
+const DefaultHotkey = "CmdOrCtrl+Shift+R"
+
 // Settings are the user's preferences. The zero value is the shipped default:
-// no update check, no library path chosen yet.
+// no update check, no agent server, no reminders, the default shortcut, and no
+// library path chosen yet.
 type Settings struct {
 	// UpdateCheck is off by default: Remit sends nothing anywhere unless the
 	// user turns this on.
@@ -26,6 +32,24 @@ type Settings struct {
 	// default: an open port is a decision the user makes, not one an update
 	// makes for them.
 	AgentServer bool `json:"agent_server,omitempty"`
+	// Notifications sends at most one reminder a day while it is on. Off by
+	// default: an operating-system notification is the user's to ask for.
+	Notifications bool `json:"notifications,omitempty"`
+	// Hotkey is the global accelerator that starts a review; empty means
+	// DefaultHotkey.
+	Hotkey string `json:"hotkey,omitempty"`
+	// RemindedOn is the calendar day (2006-01-02) of the last reminder, so
+	// that "once a day" holds across restarts; empty means none yet.
+	RemindedOn string `json:"reminded_on,omitempty"`
+}
+
+// HotkeyAccelerator is the shortcut the app binds: the one the user chose, or
+// DefaultHotkey when they have chosen none.
+func (s Settings) HotkeyAccelerator() string {
+	if acc := strings.TrimSpace(s.Hotkey); acc != "" {
+		return acc
+	}
+	return DefaultHotkey
 }
 
 // Load reads the settings in dir, returning the defaults when the file does

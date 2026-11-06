@@ -3,12 +3,16 @@
 package ui
 
 import (
+	"context"
+
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
+	"github.com/transmit-bug/remit/internal/update"
 )
 
 // Name and Version are the app's identity: the About page shows them, the
@@ -20,7 +24,8 @@ const (
 )
 
 // mode is which of Remit's faces the window shows: editing notes, reviewing
-// the queue pulled from them, browsing every card, or the statistics page.
+// the queue pulled from them, browsing every card, the statistics page, or the
+// settings page.
 type mode uint8
 
 const (
@@ -28,6 +33,7 @@ const (
 	modeReview
 	modeBrowse
 	modeStats
+	modeSettings
 )
 
 // App is the state the window shows. The view rebuilds the interface from it
@@ -47,6 +53,7 @@ type App struct {
 	stats    statsState
 	palette  paletteState
 	relink   relinkState
+	prefs    prefsState
 	aboutWin *mygo.Window // the open About window, or nil
 
 	// settingsDir is where settings.json lives, empty when the app keeps no
@@ -56,6 +63,15 @@ type App struct {
 	defaultLibrary string
 	pickLibrary    func() (string, error)
 
+	// The seams the settings page and the palette's import act through: cmd
+	// registers them and a test replaces them. A nil one leaves the page
+	// saying that this build has no such service.
+	bindHotkey  func(accelerator string) error
+	agentAPI    AgentControls
+	checkUpdate func(context.Context, settings.Settings) (update.Result, error)
+	pickAnki    func() (string, error)
+	importAnki  func(path string) (importanki.Report, error)
+
 	// remaining is told the queue's length whenever it is rebuilt, so the
 	// tray can show it without asking the window.
 	remaining func(int)
@@ -63,6 +79,10 @@ type App struct {
 	// opened is told about the library once it opens, so a service that
 	// serves it (the agent API) can start without a second open.
 	opened func(*store.Library)
+
+	// settingsChanged is told about the settings whenever they are written,
+	// so the tray's pause item follows the page and the page follows the tray.
+	settingsChanged func(settings.Settings)
 }
 
 // NewApp returns an app on the library in opts.LibraryDir, or on the one a
@@ -77,13 +97,30 @@ func NewApp(opts ...Options) *App {
 		editor:      editorState{addAfter: -1},
 		relink:      relinkState{selected: -1},
 		pickLibrary: pickLibraryDir,
+		pickAnki:    pickAnkiPackage,
+		checkUpdate: checkForUpdate,
 	}
+	// The importer reads the library open now, which a dropped archive can
+	// replace, so it takes it at call time rather than at construction.
+	a.importAnki = func(path string) (importanki.Report, error) { return importanki.Import(path, a.lib) }
 	if len(opts) > 0 {
-		a.dir = opts[0].LibraryDir
-		a.settingsDir = opts[0].DataDir
-		if opts[0].ChooseLibrary != nil {
-			a.pickLibrary = opts[0].ChooseLibrary
+		o := opts[0]
+		a.dir = o.LibraryDir
+		a.settingsDir = o.DataDir
+		if o.ChooseLibrary != nil {
+			a.pickLibrary = o.ChooseLibrary
 		}
+		if o.ChooseAnki != nil {
+			a.pickAnki = o.ChooseAnki
+		}
+		if o.ImportAnki != nil {
+			a.importAnki = o.ImportAnki
+		}
+		if o.CheckUpdate != nil {
+			a.checkUpdate = o.CheckUpdate
+		}
+		a.bindHotkey = o.BindHotkey
+		a.agentAPI = o.AgentControls
 	}
 	if dir, err := DefaultLibraryDir(); err == nil {
 		a.defaultLibrary = dir
@@ -109,6 +146,8 @@ func (a *App) View(c *ui.Context) {
 		switch {
 		case a.openErr != nil:
 			a.libraryErrorView(c, tk)
+		case a.mode == modeSettings:
+			a.settingsView(c, tk)
 		case a.start:
 			a.startView(c, tk)
 		case a.mode == modeReview:

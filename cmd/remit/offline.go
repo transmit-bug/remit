@@ -5,18 +5,12 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"log/slog"
-	"net"
 	"os"
 	"path/filepath"
 
-	"github.com/egoist/mygo"
-
-	"github.com/transmit-bug/remit/internal/agentapi"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/core/transfer"
-	"github.com/transmit-bug/remit/internal/settings"
 )
 
 // runOffline performs the two library commands that need no window, and
@@ -59,56 +53,6 @@ func runOffline(dir, exportPath, importPath string) bool {
 	}
 	fmt.Printf("exported %s to %s\n", dir, exportPath)
 	return true
-}
-
-// startAgentServer serves the local agent API when the user enabled it. The
-// port is chosen by the system and written beside the token, so a client finds
-// both without a fixed port; nothing is served otherwise.
-func startAgentServer(lib *store.Library) {
-	dir, err := mygo.App.Path(mygo.PathUserData)
-	if err != nil {
-		slog.Warn("remit: agent api: no data directory", "err", err)
-		return
-	}
-	s, err := settings.Load(dir)
-	if err != nil {
-		slog.Warn("remit: agent api: settings", "err", err)
-		return
-	}
-	if !s.AgentServer {
-		return
-	}
-	token, err := agentapi.LoadOrCreateToken(filepath.Join(dir, "agent-token"))
-	if err != nil {
-		slog.Warn("remit: agent api: token", "err", err)
-		return
-	}
-	ln, err := serveAgent(lib, token)
-	if err != nil {
-		slog.Warn("remit: agent api: listen", "err", err)
-		return
-	}
-	addr := ln.Addr().String()
-	if err := os.WriteFile(filepath.Join(dir, "agent-address"), []byte(addr+"\n"), 0o600); err != nil {
-		slog.Warn("remit: agent api: address file", "err", err)
-	}
-	slog.Info("remit: agent api listening", "addr", addr)
-}
-
-// serveAgent serves the agent API on a loopback port the system chooses, and
-// returns the listener. Loopback only: nothing on the network can reach it.
-func serveAgent(lib *store.Library, token string) (net.Listener, error) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return nil, err
-	}
-	srv := agentapi.New(lib, agentapi.Options{Token: token})
-	go func() {
-		if err := srv.Serve(ln); err != nil {
-			slog.Warn("remit: agent api stopped", "err", err)
-		}
-	}()
-	return ln, nil
 }
 
 // runImportAnki imports an Anki package into the library at dir, creating the

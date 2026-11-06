@@ -14,6 +14,18 @@ func TestDefaultsSendNothing(t *testing.T) {
 	if s.UpdateCheck {
 		t.Error("a fresh install checks for updates")
 	}
+	if s.AgentServer {
+		t.Error("a fresh install opens an agent port")
+	}
+	if s.Notifications {
+		t.Error("a fresh install sends notifications")
+	}
+	if s.RemindedOn != "" {
+		t.Errorf("a fresh install reports a reminder on %q", s.RemindedOn)
+	}
+	if got := s.HotkeyAccelerator(); got != DefaultHotkey {
+		t.Errorf("hotkey = %q, want the default %q", got, DefaultHotkey)
+	}
 
 	called := false
 	if _, err := s.MaybeCheck(func() (string, error) {
@@ -40,7 +52,10 @@ func TestEnabledCheckDoesAsk(t *testing.T) {
 
 func TestRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	want := Settings{UpdateCheck: true, LibraryDir: "/home/ada/Remit"}
+	want := Settings{
+		UpdateCheck: true, LibraryDir: "/home/ada/Remit", AgentServer: true,
+		Notifications: true, Hotkey: "CmdOrCtrl+Shift+J", RemindedOn: "2026-11-06",
+	}
 	if err := Save(dir, want); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
@@ -68,5 +83,16 @@ func TestCorruptSettingsAreReported(t *testing.T) {
 	}
 	if _, err := Load(dir); err == nil {
 		t.Error("Load accepted a corrupt settings file")
+	}
+}
+
+// The shortcut the user typed is used as it stands, and clearing it puts the
+// default back rather than binding nothing.
+func TestHotkeyAccelerator(t *testing.T) {
+	if got := (Settings{Hotkey: " Ctrl+Alt+R "}).HotkeyAccelerator(); got != "Ctrl+Alt+R" {
+		t.Errorf("hotkey = %q, want it trimmed", got)
+	}
+	if got := (Settings{Hotkey: "   "}).HotkeyAccelerator(); got != DefaultHotkey {
+		t.Errorf("blank hotkey = %q, want %q", got, DefaultHotkey)
 	}
 }

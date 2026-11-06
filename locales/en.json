@@ -593,5 +593,255 @@
   "statsHeatMore": "More",
   "@statsHeatMore": {
     "description": "The heatmap legend’s busy end."
+  },
+  "modeSettings": "Settings",
+  "@modeSettings": {
+    "description": "The settings side of the mode switch."
+  },
+  "openSettings": "Settings…",
+  "@openSettings": {
+    "description": "Command palette: open the settings page."
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Title of the settings page."
+  },
+  "settingsAgent": "Agent API",
+  "@settingsAgent": {
+    "description": "Settings section: the loopback agent API."
+  },
+  "settingsAgentServe": "Serve to agents",
+  "@settingsAgentServe": {
+    "description": "Settings field: serve the library to local agents."
+  },
+  "settingsAgentBody": "Serve this library to local agents over a loopback port. Nothing on the network can reach it.",
+  "@settingsAgentBody": {
+    "description": "Description of the agent API switch."
+  },
+  "settingsAgentStopped": "Not listening.",
+  "@settingsAgentStopped": {
+    "description": "The agent API is off."
+  },
+  "settingsAgentAddress": "Listening on {address}",
+  "@settingsAgentAddress": {
+    "description": "The loopback address the agent API bound.",
+    "placeholders": {
+      "address": {
+        "type": "String",
+        "example": "127.0.0.1:52133"
+      }
+    }
+  },
+  "settingsTokenPath": "Token file: {path}",
+  "@settingsTokenPath": {
+    "description": "The file holding the agent API's bearer token.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "/home/ada/Library/Application Support/remit/agent-token"
+      }
+    }
+  },
+  "rotateToken": "Rotate token",
+  "@rotateToken": {
+    "description": "Button: write a new agent token and restart the listener with it."
+  },
+  "tokenRotated": "New token active on the restarted listener.",
+  "@tokenRotated": {
+    "description": "The agent token was rotated."
+  },
+  "tokenRotateFailed": "Could not rotate the token: {reason}",
+  "@tokenRotateFailed": {
+    "description": "Rotating the agent token failed.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "agentFailed": "The agent API did not start: {reason}",
+  "@agentFailed": {
+    "description": "The agent API could not be started or stopped.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "address already in use"
+      }
+    }
+  },
+  "settingsUpdates": "Updates",
+  "@settingsUpdates": {
+    "description": "Settings section: update checks."
+  },
+  "settingsCheckAtLaunch": "Check at launch",
+  "@settingsCheckAtLaunch": {
+    "description": "Settings field: check for a newer version once, after the app opens."
+  },
+  "settingsUpdatesBody": "Remit asks once, after it opens, and never otherwise.",
+  "@settingsUpdatesBody": {
+    "description": "Description of the update switch."
+  },
+  "checkNow": "Check now",
+  "@checkNow": {
+    "description": "Button: run an update check now."
+  },
+  "updateAvailable": "Version {version} is available.",
+  "@updateAvailable": {
+    "description": "An update check found a newer version.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.2.0"
+      }
+    }
+  },
+  "updateUpToDate": "Remit is up to date.",
+  "@updateUpToDate": {
+    "description": "An update check found nothing newer."
+  },
+  "updateCannot": "This build cannot update itself.",
+  "@updateCannot": {
+    "description": "An update check found a build without update support."
+  },
+  "updateFailed": "The check failed: {reason}",
+  "@updateFailed": {
+    "description": "An update check failed.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "network down"
+      }
+    }
+  },
+  "updateOff": "Update checks are off, so nothing was asked.",
+  "@updateOff": {
+    "description": "Check now was used while the setting is off."
+  },
+  "settingsShortcut": "Shortcut",
+  "@settingsShortcut": {
+    "description": "Settings section: the global review shortcut."
+  },
+  "settingsShortcutLabel": "Review shortcut",
+  "@settingsShortcutLabel": {
+    "description": "Settings field: the global accelerator that starts a review."
+  },
+  "settingsShortcutBody": "Works while Remit is in the background, and starts a review.",
+  "@settingsShortcutBody": {
+    "description": "Description of the shortcut field."
+  },
+  "applyShortcut": "Apply",
+  "@applyShortcut": {
+    "description": "Button: bind the accelerator in the shortcut field."
+  },
+  "shortcutUnavailable": "That shortcut is not available: {reason}",
+  "@shortcutUnavailable": {
+    "description": "The accelerator was invalid or another app owns it.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "already registered"
+      }
+    }
+  },
+  "shortcutApplied": "Shortcut set to {accelerator}",
+  "@shortcutApplied": {
+    "description": "The shortcut was bound.",
+    "placeholders": {
+      "accelerator": {
+        "type": "String",
+        "example": "CmdOrCtrl+Shift+J"
+      }
+    }
+  },
+  "settingsReminders": "Reminders",
+  "@settingsReminders": {
+    "description": "Settings section: the daily reminder."
+  },
+  "settingsReminderLabel": "Daily reminder",
+  "@settingsReminderLabel": {
+    "description": "Settings field: one reminder a day when cards are due."
+  },
+  "settingsReminderBody": "One reminder a day, at startup, while cards are due.",
+  "@settingsReminderBody": {
+    "description": "Description of the reminder switch."
+  },
+  "pauseReminders": "Pause reminders",
+  "@pauseReminders": {
+    "description": "Tray menu: turn the daily reminder off or on."
+  },
+  "updateTo": "Update to v{version}",
+  "@updateTo": {
+    "description": "Tray menu: open the releases page of a newer version.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.2.0"
+      }
+    }
+  },
+  "trayTooltipUpdate": "Remit — v{version} is available",
+  "@trayTooltipUpdate": {
+    "description": "Tray tooltip while a newer version exists.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.2.0"
+      }
+    }
+  },
+  "reminderBody": "{count, plural, one {# card is due today.} other {# cards are due today.}}",
+  "@reminderBody": {
+    "description": "The daily reminder's body.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "importAnki": "Import Anki package…",
+  "@importAnki": {
+    "description": "Command palette: import an Anki .apkg into the library."
+  },
+  "ankiPackage": "Anki package",
+  "@ankiPackage": {
+    "description": "File dialog filter for Anki packages."
+  },
+  "importReport": "Imported {notes} notes, {cards} cards, {reviews} reviews, skipped {skipped} rows.",
+  "@importReport": {
+    "description": "What an Anki import wrote.",
+    "placeholders": {
+      "notes": {
+        "type": "int",
+        "example": "2"
+      },
+      "cards": {
+        "type": "int",
+        "example": "3"
+      },
+      "reviews": {
+        "type": "int",
+        "example": "5"
+      },
+      "skipped": {
+        "type": "int",
+        "example": "0"
+      }
+    }
+  },
+  "importFailed": "The import failed: {reason}",
+  "@importFailed": {
+    "description": "An Anki import failed.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "not a zip archive"
+      }
+    }
+  },
+  "settingsUnavailable": "This build has no service for that setting.",
+  "@settingsUnavailable": {
+    "description": "A settings action has no service behind it."
   }
 }

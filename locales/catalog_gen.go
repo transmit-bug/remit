@@ -1506,3 +1506,569 @@ func StatsHeatMore() string { return In(i18n.Locale()).StatsHeatMore() }
 func (msgs Messages) StatsHeatMore() string {
 	return Catalog.Format(msgs.locale, "statsHeatMore", nil)
 }
+
+// ModeSettings says "Settings"
+// in the language the app shows.
+//
+// The settings side of the mode switch.
+func ModeSettings() string { return In(i18n.Locale()).ModeSettings() }
+
+// ModeSettings says "Settings"
+// in the language of msgs.
+//
+// The settings side of the mode switch.
+func (msgs Messages) ModeSettings() string {
+	return Catalog.Format(msgs.locale, "modeSettings", nil)
+}
+
+// OpenSettings says "Settings…"
+// in the language the app shows.
+//
+// Command palette: open the settings page.
+func OpenSettings() string { return In(i18n.Locale()).OpenSettings() }
+
+// OpenSettings says "Settings…"
+// in the language of msgs.
+//
+// Command palette: open the settings page.
+func (msgs Messages) OpenSettings() string {
+	return Catalog.Format(msgs.locale, "openSettings", nil)
+}
+
+// SettingsTitle says "Settings"
+// in the language the app shows.
+//
+// Title of the settings page.
+func SettingsTitle() string { return In(i18n.Locale()).SettingsTitle() }
+
+// SettingsTitle says "Settings"
+// in the language of msgs.
+//
+// Title of the settings page.
+func (msgs Messages) SettingsTitle() string {
+	return Catalog.Format(msgs.locale, "settingsTitle", nil)
+}
+
+// SettingsAgent says "Agent API"
+// in the language the app shows.
+//
+// Settings section: the loopback agent API.
+func SettingsAgent() string { return In(i18n.Locale()).SettingsAgent() }
+
+// SettingsAgent says "Agent API"
+// in the language of msgs.
+//
+// Settings section: the loopback agent API.
+func (msgs Messages) SettingsAgent() string {
+	return Catalog.Format(msgs.locale, "settingsAgent", nil)
+}
+
+// SettingsAgentServe says "Serve to agents"
+// in the language the app shows.
+//
+// Settings field: serve the library to local agents.
+func SettingsAgentServe() string { return In(i18n.Locale()).SettingsAgentServe() }
+
+// SettingsAgentServe says "Serve to agents"
+// in the language of msgs.
+//
+// Settings field: serve the library to local agents.
+func (msgs Messages) SettingsAgentServe() string {
+	return Catalog.Format(msgs.locale, "settingsAgentServe", nil)
+}
+
+// SettingsAgentBody says "Serve this library to local agents over a loopback port. Nothing on the network can reach it."
+// in the language the app shows.
+//
+// Description of the agent API switch.
+func SettingsAgentBody() string { return In(i18n.Locale()).SettingsAgentBody() }
+
+// SettingsAgentBody says "Serve this library to local agents over a loopback port. Nothing on the network can reach it."
+// in the language of msgs.
+//
+// Description of the agent API switch.
+func (msgs Messages) SettingsAgentBody() string {
+	return Catalog.Format(msgs.locale, "settingsAgentBody", nil)
+}
+
+// SettingsAgentStopped says "Not listening."
+// in the language the app shows.
+//
+// The agent API is off.
+func SettingsAgentStopped() string { return In(i18n.Locale()).SettingsAgentStopped() }
+
+// SettingsAgentStopped says "Not listening."
+// in the language of msgs.
+//
+// The agent API is off.
+func (msgs Messages) SettingsAgentStopped() string {
+	return Catalog.Format(msgs.locale, "settingsAgentStopped", nil)
+}
+
+// SettingsAgentAddress says "Listening on {address}"
+// in the language the app shows.
+//
+// The loopback address the agent API bound.
+func SettingsAgentAddress(address string) string {
+	return In(i18n.Locale()).SettingsAgentAddress(address)
+}
+
+// SettingsAgentAddress says "Listening on {address}"
+// in the language of msgs.
+//
+// The loopback address the agent API bound.
+func (msgs Messages) SettingsAgentAddress(address string) string {
+	return Catalog.Format(msgs.locale, "settingsAgentAddress", map[string]any{"address": address})
+}
+
+// SettingsTokenPath says "Token file: {path}"
+// in the language the app shows.
+//
+// The file holding the agent API's bearer token.
+func SettingsTokenPath(path string) string { return In(i18n.Locale()).SettingsTokenPath(path) }
+
+// SettingsTokenPath says "Token file: {path}"
+// in the language of msgs.
+//
+// The file holding the agent API's bearer token.
+func (msgs Messages) SettingsTokenPath(path string) string {
+	return Catalog.Format(msgs.locale, "settingsTokenPath", map[string]any{"path": path})
+}
+
+// RotateToken says "Rotate token"
+// in the language the app shows.
+//
+// Button: write a new agent token and restart the listener with it.
+func RotateToken() string { return In(i18n.Locale()).RotateToken() }
+
+// RotateToken says "Rotate token"
+// in the language of msgs.
+//
+// Button: write a new agent token and restart the listener with it.
+func (msgs Messages) RotateToken() string {
+	return Catalog.Format(msgs.locale, "rotateToken", nil)
+}
+
+// TokenRotated says "New token active on the restarted listener."
+// in the language the app shows.
+//
+// The agent token was rotated.
+func TokenRotated() string { return In(i18n.Locale()).TokenRotated() }
+
+// TokenRotated says "New token active on the restarted listener."
+// in the language of msgs.
+//
+// The agent token was rotated.
+func (msgs Messages) TokenRotated() string {
+	return Catalog.Format(msgs.locale, "tokenRotated", nil)
+}
+
+// TokenRotateFailed says "Could not rotate the token: {reason}"
+// in the language the app shows.
+//
+// Rotating the agent token failed.
+func TokenRotateFailed(reason string) string { return In(i18n.Locale()).TokenRotateFailed(reason) }
+
+// TokenRotateFailed says "Could not rotate the token: {reason}"
+// in the language of msgs.
+//
+// Rotating the agent token failed.
+func (msgs Messages) TokenRotateFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "tokenRotateFailed", map[string]any{"reason": reason})
+}
+
+// AgentFailed says "The agent API did not start: {reason}"
+// in the language the app shows.
+//
+// The agent API could not be started or stopped.
+func AgentFailed(reason string) string { return In(i18n.Locale()).AgentFailed(reason) }
+
+// AgentFailed says "The agent API did not start: {reason}"
+// in the language of msgs.
+//
+// The agent API could not be started or stopped.
+func (msgs Messages) AgentFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "agentFailed", map[string]any{"reason": reason})
+}
+
+// SettingsUpdates says "Updates"
+// in the language the app shows.
+//
+// Settings section: update checks.
+func SettingsUpdates() string { return In(i18n.Locale()).SettingsUpdates() }
+
+// SettingsUpdates says "Updates"
+// in the language of msgs.
+//
+// Settings section: update checks.
+func (msgs Messages) SettingsUpdates() string {
+	return Catalog.Format(msgs.locale, "settingsUpdates", nil)
+}
+
+// SettingsCheckAtLaunch says "Check at launch"
+// in the language the app shows.
+//
+// Settings field: check for a newer version once, after the app opens.
+func SettingsCheckAtLaunch() string { return In(i18n.Locale()).SettingsCheckAtLaunch() }
+
+// SettingsCheckAtLaunch says "Check at launch"
+// in the language of msgs.
+//
+// Settings field: check for a newer version once, after the app opens.
+func (msgs Messages) SettingsCheckAtLaunch() string {
+	return Catalog.Format(msgs.locale, "settingsCheckAtLaunch", nil)
+}
+
+// SettingsUpdatesBody says "Remit asks once, after it opens, and never otherwise."
+// in the language the app shows.
+//
+// Description of the update switch.
+func SettingsUpdatesBody() string { return In(i18n.Locale()).SettingsUpdatesBody() }
+
+// SettingsUpdatesBody says "Remit asks once, after it opens, and never otherwise."
+// in the language of msgs.
+//
+// Description of the update switch.
+func (msgs Messages) SettingsUpdatesBody() string {
+	return Catalog.Format(msgs.locale, "settingsUpdatesBody", nil)
+}
+
+// CheckNow says "Check now"
+// in the language the app shows.
+//
+// Button: run an update check now.
+func CheckNow() string { return In(i18n.Locale()).CheckNow() }
+
+// CheckNow says "Check now"
+// in the language of msgs.
+//
+// Button: run an update check now.
+func (msgs Messages) CheckNow() string {
+	return Catalog.Format(msgs.locale, "checkNow", nil)
+}
+
+// UpdateAvailable says "Version {version} is available."
+// in the language the app shows.
+//
+// An update check found a newer version.
+func UpdateAvailable(version string) string { return In(i18n.Locale()).UpdateAvailable(version) }
+
+// UpdateAvailable says "Version {version} is available."
+// in the language of msgs.
+//
+// An update check found a newer version.
+func (msgs Messages) UpdateAvailable(version string) string {
+	return Catalog.Format(msgs.locale, "updateAvailable", map[string]any{"version": version})
+}
+
+// UpdateUpToDate says "Remit is up to date."
+// in the language the app shows.
+//
+// An update check found nothing newer.
+func UpdateUpToDate() string { return In(i18n.Locale()).UpdateUpToDate() }
+
+// UpdateUpToDate says "Remit is up to date."
+// in the language of msgs.
+//
+// An update check found nothing newer.
+func (msgs Messages) UpdateUpToDate() string {
+	return Catalog.Format(msgs.locale, "updateUpToDate", nil)
+}
+
+// UpdateCannot says "This build cannot update itself."
+// in the language the app shows.
+//
+// An update check found a build without update support.
+func UpdateCannot() string { return In(i18n.Locale()).UpdateCannot() }
+
+// UpdateCannot says "This build cannot update itself."
+// in the language of msgs.
+//
+// An update check found a build without update support.
+func (msgs Messages) UpdateCannot() string {
+	return Catalog.Format(msgs.locale, "updateCannot", nil)
+}
+
+// UpdateFailed says "The check failed: {reason}"
+// in the language the app shows.
+//
+// An update check failed.
+func UpdateFailed(reason string) string { return In(i18n.Locale()).UpdateFailed(reason) }
+
+// UpdateFailed says "The check failed: {reason}"
+// in the language of msgs.
+//
+// An update check failed.
+func (msgs Messages) UpdateFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "updateFailed", map[string]any{"reason": reason})
+}
+
+// UpdateOff says "Update checks are off, so nothing was asked."
+// in the language the app shows.
+//
+// Check now was used while the setting is off.
+func UpdateOff() string { return In(i18n.Locale()).UpdateOff() }
+
+// UpdateOff says "Update checks are off, so nothing was asked."
+// in the language of msgs.
+//
+// Check now was used while the setting is off.
+func (msgs Messages) UpdateOff() string {
+	return Catalog.Format(msgs.locale, "updateOff", nil)
+}
+
+// SettingsShortcut says "Shortcut"
+// in the language the app shows.
+//
+// Settings section: the global review shortcut.
+func SettingsShortcut() string { return In(i18n.Locale()).SettingsShortcut() }
+
+// SettingsShortcut says "Shortcut"
+// in the language of msgs.
+//
+// Settings section: the global review shortcut.
+func (msgs Messages) SettingsShortcut() string {
+	return Catalog.Format(msgs.locale, "settingsShortcut", nil)
+}
+
+// SettingsShortcutLabel says "Review shortcut"
+// in the language the app shows.
+//
+// Settings field: the global accelerator that starts a review.
+func SettingsShortcutLabel() string { return In(i18n.Locale()).SettingsShortcutLabel() }
+
+// SettingsShortcutLabel says "Review shortcut"
+// in the language of msgs.
+//
+// Settings field: the global accelerator that starts a review.
+func (msgs Messages) SettingsShortcutLabel() string {
+	return Catalog.Format(msgs.locale, "settingsShortcutLabel", nil)
+}
+
+// SettingsShortcutBody says "Works while Remit is in the background, and starts a review."
+// in the language the app shows.
+//
+// Description of the shortcut field.
+func SettingsShortcutBody() string { return In(i18n.Locale()).SettingsShortcutBody() }
+
+// SettingsShortcutBody says "Works while Remit is in the background, and starts a review."
+// in the language of msgs.
+//
+// Description of the shortcut field.
+func (msgs Messages) SettingsShortcutBody() string {
+	return Catalog.Format(msgs.locale, "settingsShortcutBody", nil)
+}
+
+// ApplyShortcut says "Apply"
+// in the language the app shows.
+//
+// Button: bind the accelerator in the shortcut field.
+func ApplyShortcut() string { return In(i18n.Locale()).ApplyShortcut() }
+
+// ApplyShortcut says "Apply"
+// in the language of msgs.
+//
+// Button: bind the accelerator in the shortcut field.
+func (msgs Messages) ApplyShortcut() string {
+	return Catalog.Format(msgs.locale, "applyShortcut", nil)
+}
+
+// ShortcutUnavailable says "That shortcut is not available: {reason}"
+// in the language the app shows.
+//
+// The accelerator was invalid or another app owns it.
+func ShortcutUnavailable(reason string) string { return In(i18n.Locale()).ShortcutUnavailable(reason) }
+
+// ShortcutUnavailable says "That shortcut is not available: {reason}"
+// in the language of msgs.
+//
+// The accelerator was invalid or another app owns it.
+func (msgs Messages) ShortcutUnavailable(reason string) string {
+	return Catalog.Format(msgs.locale, "shortcutUnavailable", map[string]any{"reason": reason})
+}
+
+// ShortcutApplied says "Shortcut set to {accelerator}"
+// in the language the app shows.
+//
+// The shortcut was bound.
+func ShortcutApplied(accelerator string) string {
+	return In(i18n.Locale()).ShortcutApplied(accelerator)
+}
+
+// ShortcutApplied says "Shortcut set to {accelerator}"
+// in the language of msgs.
+//
+// The shortcut was bound.
+func (msgs Messages) ShortcutApplied(accelerator string) string {
+	return Catalog.Format(msgs.locale, "shortcutApplied", map[string]any{"accelerator": accelerator})
+}
+
+// SettingsReminders says "Reminders"
+// in the language the app shows.
+//
+// Settings section: the daily reminder.
+func SettingsReminders() string { return In(i18n.Locale()).SettingsReminders() }
+
+// SettingsReminders says "Reminders"
+// in the language of msgs.
+//
+// Settings section: the daily reminder.
+func (msgs Messages) SettingsReminders() string {
+	return Catalog.Format(msgs.locale, "settingsReminders", nil)
+}
+
+// SettingsReminderLabel says "Daily reminder"
+// in the language the app shows.
+//
+// Settings field: one reminder a day when cards are due.
+func SettingsReminderLabel() string { return In(i18n.Locale()).SettingsReminderLabel() }
+
+// SettingsReminderLabel says "Daily reminder"
+// in the language of msgs.
+//
+// Settings field: one reminder a day when cards are due.
+func (msgs Messages) SettingsReminderLabel() string {
+	return Catalog.Format(msgs.locale, "settingsReminderLabel", nil)
+}
+
+// SettingsReminderBody says "One reminder a day, at startup, while cards are due."
+// in the language the app shows.
+//
+// Description of the reminder switch.
+func SettingsReminderBody() string { return In(i18n.Locale()).SettingsReminderBody() }
+
+// SettingsReminderBody says "One reminder a day, at startup, while cards are due."
+// in the language of msgs.
+//
+// Description of the reminder switch.
+func (msgs Messages) SettingsReminderBody() string {
+	return Catalog.Format(msgs.locale, "settingsReminderBody", nil)
+}
+
+// PauseReminders says "Pause reminders"
+// in the language the app shows.
+//
+// Tray menu: turn the daily reminder off or on.
+func PauseReminders() string { return In(i18n.Locale()).PauseReminders() }
+
+// PauseReminders says "Pause reminders"
+// in the language of msgs.
+//
+// Tray menu: turn the daily reminder off or on.
+func (msgs Messages) PauseReminders() string {
+	return Catalog.Format(msgs.locale, "pauseReminders", nil)
+}
+
+// UpdateTo says "Update to v{version}"
+// in the language the app shows.
+//
+// Tray menu: open the releases page of a newer version.
+func UpdateTo(version string) string { return In(i18n.Locale()).UpdateTo(version) }
+
+// UpdateTo says "Update to v{version}"
+// in the language of msgs.
+//
+// Tray menu: open the releases page of a newer version.
+func (msgs Messages) UpdateTo(version string) string {
+	return Catalog.Format(msgs.locale, "updateTo", map[string]any{"version": version})
+}
+
+// TrayTooltipUpdate says "Remit — v{version} is available"
+// in the language the app shows.
+//
+// Tray tooltip while a newer version exists.
+func TrayTooltipUpdate(version string) string { return In(i18n.Locale()).TrayTooltipUpdate(version) }
+
+// TrayTooltipUpdate says "Remit — v{version} is available"
+// in the language of msgs.
+//
+// Tray tooltip while a newer version exists.
+func (msgs Messages) TrayTooltipUpdate(version string) string {
+	return Catalog.Format(msgs.locale, "trayTooltipUpdate", map[string]any{"version": version})
+}
+
+// ReminderBody says "{count, plural, one {# card is due today.} other {# cards are due today.}}"
+// in the language the app shows.
+//
+// The daily reminder's body.
+func ReminderBody(count int) string { return In(i18n.Locale()).ReminderBody(count) }
+
+// ReminderBody says "{count, plural, one {# card is due today.} other {# cards are due today.}}"
+// in the language of msgs.
+//
+// The daily reminder's body.
+func (msgs Messages) ReminderBody(count int) string {
+	return Catalog.Format(msgs.locale, "reminderBody", map[string]any{"count": count})
+}
+
+// ImportAnki says "Import Anki package…"
+// in the language the app shows.
+//
+// Command palette: import an Anki .apkg into the library.
+func ImportAnki() string { return In(i18n.Locale()).ImportAnki() }
+
+// ImportAnki says "Import Anki package…"
+// in the language of msgs.
+//
+// Command palette: import an Anki .apkg into the library.
+func (msgs Messages) ImportAnki() string {
+	return Catalog.Format(msgs.locale, "importAnki", nil)
+}
+
+// AnkiPackage says "Anki package"
+// in the language the app shows.
+//
+// File dialog filter for Anki packages.
+func AnkiPackage() string { return In(i18n.Locale()).AnkiPackage() }
+
+// AnkiPackage says "Anki package"
+// in the language of msgs.
+//
+// File dialog filter for Anki packages.
+func (msgs Messages) AnkiPackage() string {
+	return Catalog.Format(msgs.locale, "ankiPackage", nil)
+}
+
+// ImportReport says "Imported {notes} notes, {cards} cards, {reviews} reviews, skipped {skipped} rows."
+// in the language the app shows.
+//
+// What an Anki import wrote.
+func ImportReport(notes int, cards int, reviews int, skipped int) string {
+	return In(i18n.Locale()).ImportReport(notes, cards, reviews, skipped)
+}
+
+// ImportReport says "Imported {notes} notes, {cards} cards, {reviews} reviews, skipped {skipped} rows."
+// in the language of msgs.
+//
+// What an Anki import wrote.
+func (msgs Messages) ImportReport(notes int, cards int, reviews int, skipped int) string {
+	return Catalog.Format(msgs.locale, "importReport", map[string]any{"notes": notes, "cards": cards, "reviews": reviews, "skipped": skipped})
+}
+
+// ImportFailed says "The import failed: {reason}"
+// in the language the app shows.
+//
+// An Anki import failed.
+func ImportFailed(reason string) string { return In(i18n.Locale()).ImportFailed(reason) }
+
+// ImportFailed says "The import failed: {reason}"
+// in the language of msgs.
+//
+// An Anki import failed.
+func (msgs Messages) ImportFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "importFailed", map[string]any{"reason": reason})
+}
+
+// SettingsUnavailable says "This build has no service for that setting."
+// in the language the app shows.
+//
+// A settings action has no service behind it.
+func SettingsUnavailable() string { return In(i18n.Locale()).SettingsUnavailable() }
+
+// SettingsUnavailable says "This build has no service for that setting."
+// in the language of msgs.
+//
+// A settings action has no service behind it.
+func (msgs Messages) SettingsUnavailable() string {
+	return Catalog.Format(msgs.locale, "settingsUnavailable", nil)
+}

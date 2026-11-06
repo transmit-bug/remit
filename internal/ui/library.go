@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"log/slog"
@@ -11,9 +12,11 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
+	"github.com/transmit-bug/remit/internal/update"
 )
 
 // Options configures an App.
@@ -31,6 +34,22 @@ type Options struct {
 	// folder picker unless a test replaces it: a native dialog cannot be
 	// answered headlessly.
 	ChooseLibrary func() (string, error)
+	// ChooseAnki picks the Anki package the palette's import action reads,
+	// mygo.Dialog's file picker unless a test replaces it.
+	ChooseAnki func() (string, error)
+	// ImportAnki imports the package at path into the open library. It is
+	// importanki.Import unless a test replaces it.
+	ImportAnki func(path string) (importanki.Report, error)
+	// BindHotkey binds the global shortcut, replacing the one bound now, and
+	// reports a combination that is invalid or already taken. cmd registers it
+	// on MyGo's GlobalShortcut; a test replaces it.
+	BindHotkey func(accelerator string) error
+	// AgentControls is the loopback agent API as the settings page drives it.
+	// cmd passes its own; nil leaves the page saying there is no such service.
+	AgentControls AgentControls
+	// CheckUpdate looks for a newer version. It is checkForUpdate unless a
+	// test replaces it.
+	CheckUpdate func(context.Context, settings.Settings) (update.Result, error)
 }
 
 // libraryData is the library as the views read it: a snapshot the app retakes
@@ -193,30 +212,66 @@ func (a *App) close() {
 // the window from opening.
 func (a *App) loadSettings() {
 	if a.settingsDir == "" {
+		a.syncPrefs()
 		return
 	}
 	s, err := settings.Load(a.settingsDir)
 	if err != nil {
 		slog.Warn("remit: read settings", "err", err)
+		a.syncPrefs()
 		return
 	}
 	a.settings = s
 	if a.dir == "" {
 		a.dir = s.LibraryDir
 	}
+	a.syncPrefs()
+}
+
+// Settings returns the app's preferences as the last read from or written to
+// disk. It is a copy: change them with UpdateSettings, so the write, the page
+// and the services that read one preference all see the change.
+func (a *App) Settings() settings.Settings { return a.settings }
+
+// UpdateSettings applies fn to the settings, writes them atomically and with
+// owner-only permissions, reads them back and tells whoever registered
+// OnSettings. What the app and its page show is then what the file holds; a
+// write that fails leaves the settings as they were and returns the error.
+func (a *App) UpdateSettings(fn func(*settings.Settings)) error {
+	next := a.settings
+	fn(&next)
+	if a.settingsDir != "" {
+		if err := settings.Save(a.settingsDir, next); err != nil {
+			return err
+		}
+		saved, err := settings.Load(a.settingsDir)
+		if err != nil {
+			return err
+		}
+		next = saved
+	}
+	a.settings = next
+	a.syncPrefs()
+	if a.settingsChanged != nil {
+		a.settingsChanged(next)
+	}
+	return nil
+}
+
+// OnSettings registers a function told about the settings whenever the app
+// writes them, which is how the tray's pause item follows the page and the page
+// follows the tray. Setting it again replaces the previous one.
+func (a *App) OnSettings(fn func(settings.Settings)) {
+	a.settingsChanged = fn
+	if fn != nil {
+		fn(a.settings)
+	}
 }
 
 // remember writes the library the user chose into the settings, keeping every
 // other preference, so the next start opens it without asking again.
 func (a *App) remember(dir string) error {
-	a.settings.LibraryDir = dir
-	if a.settingsDir == "" {
-		return nil
-	}
-	if err := settings.Save(a.settingsDir, a.settings); err != nil {
-		return err
-	}
-	return nil
+	return a.UpdateSettings(func(s *settings.Settings) { s.LibraryDir = dir })
 }
 
 // DefaultLibraryDir is where a library goes when the caller names none:
