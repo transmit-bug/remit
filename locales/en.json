@@ -686,6 +686,36 @@
   "@checkNow": {
     "description": "Button: run an update check now."
   },
+  "intervalMinutes": "{count}m",
+  "@intervalMinutes": {
+    "description": "How long until a card comes back, on a grade key, when it is minutes.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
+  "intervalHours": "{count}h",
+  "@intervalHours": {
+    "description": "How long until a card comes back, on a grade key, when it is hours.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "6"
+      }
+    }
+  },
+  "intervalDays": "{count}d",
+  "@intervalDays": {
+    "description": "How long until a card comes back, on a grade key, when it is days or more.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
   "close": "Close",
   "@close": {
     "description": "Closes the dialog shown. The button is an icon, so this label is what assistive technology reads and what the pointer shows."

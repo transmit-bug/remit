@@ -334,6 +334,31 @@ func (a *Applier) States() map[core.ID]State {
 	return states
 }
 
+// Outlook is what one answer would do to a card, for the interval a grade key
+// shows: the due time it would leave behind, and how long that is from now.
+type Outlook struct {
+	Rating Rating
+	Due    time.Time
+	Wait   time.Duration
+}
+
+// Preview is what each of the four answers would schedule for a card in state,
+// answered at now. It changes nothing: Step computes the same thing, and a test
+// holds the two to each other.
+//
+// A card with no live review has no state, and Schedule.Preview takes a zero
+// State as a card the applier has never seen — which is what a new card is.
+//
+// The result has one outlook per answer, in the order Again, Hard, Good, Easy.
+func (p Params) Preview(state State, now time.Time) []Outlook {
+	out := make([]Outlook, 0, 4)
+	for r := Again; r <= Easy; r++ {
+		next := p.Step(state, Event{Rating: r, At: now})
+		out = append(out, Outlook{Rating: r, Due: next.Due, Wait: next.Due.Sub(now)})
+	}
+	return out
+}
+
 // elapsedDays is the calendar-day distance FSRS measures a review over. Both
 // days are taken in UTC, which is how the reference implementation counts.
 func elapsedDays(last, now time.Time) uint64 {

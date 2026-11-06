@@ -33,6 +33,7 @@ type fake struct {
 	relinked  []core.ID
 	edited    []core.ID
 	home      int
+	preview   func() ([4]review.Interval, bool)
 }
 
 func (f *fake) deps() review.Deps {
@@ -52,6 +53,7 @@ func (f *fake) deps() review.Deps {
 		Relink:   func(id core.ID) { f.relinked = append(f.relinked, id) },
 		EditNote: func(id core.ID) { f.edited = append(f.edited, id) },
 		Home:     func() { f.home++ },
+		Preview:  f.preview,
 	}
 }
 
@@ -248,5 +250,97 @@ func TestQueueOrderSurvivesSync(t *testing.T) {
 			t.Fatalf("the head is %q, want %q", id, want)
 		}
 		state.Advance(false)
+	}
+}
+
+// withPreview gives the screen the four intervals the app would show, as the
+// schedule would report them.
+func withPreview(f *fake, waits [4]time.Duration) {
+	f.preview = func() ([4]review.Interval, bool) {
+		var out [4]review.Interval
+		for i, w := range waits {
+			out[i] = review.Interval{Rating: review.Rating(i), Wait: w}
+		}
+		return out, true
+	}
+}
+
+// A preview puts each answer's interval on its key: minutes, hours, days.
+func TestGradeKeysShowIntervals(t *testing.T) {
+	msgs := locales.In("en")
+	f, state, _ := open(t, "c1")
+	withPreview(f, [4]time.Duration{
+		10 * time.Minute, 6 * time.Hour, 3 * 24 * time.Hour, 120 * 24 * time.Hour,
+	})
+	state.Reveal()
+	deps := f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
+
+	for _, want := range []string{
+		msgs.IntervalMinutes(10), msgs.IntervalHours(6), msgs.IntervalDays(3), msgs.IntervalDays(120),
+	} {
+		if !tt.HasText(want) {
+			t.Errorf("the grades do not show the interval %q; texts %q", want, tt.Texts())
+		}
+	}
+}
+
+// Without a preview the keys fall back to their own labels, and no placeholder
+// is drawn in the interval's place.
+func TestGradeKeysWithoutPreview(t *testing.T) {
+	msgs := locales.In("en")
+	f, state, _ := open(t, "c1")
+	state.Reveal()
+	deps := f.deps()
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, size.w, size.h)
+			for _, want := range []string{msgs.Again(), msgs.Hard(), msgs.Good(), msgs.Easy()} {
+				if !tt.HasText(want) {
+					t.Fatalf("the grade %q is missing; texts %q", want, tt.Texts())
+				}
+			}
+			for _, text := range tt.Texts() {
+				if len(text) > 1 && (text[len(text)-1] == 'm' || text[len(text)-1] == 'h' || text[len(text)-1] == 'd') {
+					digits := true
+					for _, r := range text[:len(text)-1] {
+						if r < '0' || r > '9' {
+							digits = false
+						}
+					}
+					if digits {
+						t.Errorf("a placeholder interval %q is drawn without a preview", text)
+					}
+				}
+			}
+		})
+	}
+}
+
+// At the smallest window the interval sits inside the window and beside its
+// label rather than over it.
+func TestIntervalsFitTheSmallestWindow(t *testing.T) {
+	msgs := locales.In("en")
+	f, state, _ := open(t, "c1")
+	withPreview(f, [4]time.Duration{10 * time.Minute, 6 * time.Hour, 3 * 24 * time.Hour, 120 * 24 * time.Hour})
+	state.Reveal()
+	deps := f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 720, 520)
+
+	wait := msgs.IntervalDays(120)
+	box, ok := tt.Find(wait)
+	if !ok {
+		t.Fatalf("the longest interval %q is not drawn; texts %q", wait, tt.Texts())
+	}
+	if box.X < 0 || box.X+box.W > 720 || box.Y < 0 || box.Y+box.H > 520 {
+		t.Errorf("the interval box %+v is outside the 720x520 window", box)
+	}
+	label, ok := tt.Find(msgs.Easy())
+	if !ok {
+		t.Fatalf("the Easy label is missing; texts %q", tt.Texts())
+	}
+	// The label is the key itself: the interval sits inside it, past the name.
+	if box.X < label.X || box.X+box.W > label.X+label.W {
+		t.Errorf("the interval %+v is not inside its key %+v", box, label)
 	}
 }

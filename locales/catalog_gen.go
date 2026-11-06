@@ -1747,6 +1747,50 @@ func (msgs Messages) CheckNow() string {
 	return Catalog.Format(msgs.locale, "checkNow", nil)
 }
 
+// IntervalMinutes says "{count}m"
+// in the language the app shows.
+//
+// How long until a card comes back, on a grade key, when it is minutes.
+func IntervalMinutes(count int) string { return In(i18n.Locale()).IntervalMinutes(count) }
+
+// IntervalMinutes says "{count}m"
+// in the language of msgs.
+//
+// How long until a card comes back, on a grade key, when it is minutes.
+func (msgs Messages) IntervalMinutes(count int) string {
+	return Catalog.Format(msgs.locale, "intervalMinutes", map[string]any{"count": count})
+}
+
+// IntervalHours says "{count}h"
+// in the language the app shows.
+//
+// How long until a card comes back, on a grade key, when it is hours.
+func IntervalHours(count int) string { return In(i18n.Locale()).IntervalHours(count) }
+
+// IntervalHours says "{count}h"
+// in the language of msgs.
+//
+// How long until a card comes back, on a grade key, when it is hours.
+func (msgs Messages) IntervalHours(count int) string {
+	return Catalog.Format(msgs.locale, "intervalHours", map[string]any{"count": count})
+}
+
+// IntervalDays says "{count}d"
+// in the language the app shows.
+//
+// How long until a card comes back, on a grade key, when it is days or
+// more.
+func IntervalDays(count int) string { return In(i18n.Locale()).IntervalDays(count) }
+
+// IntervalDays says "{count}d"
+// in the language of msgs.
+//
+// How long until a card comes back, on a grade key, when it is days or
+// more.
+func (msgs Messages) IntervalDays(count int) string {
+	return Catalog.Format(msgs.locale, "intervalDays", map[string]any{"count": count})
+}
+
 // Close says "Close"
 // in the language the app shows.
 //

@@ -10,6 +10,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importanki"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
@@ -72,6 +73,12 @@ type App struct {
 	relink   relinkState
 	prefs    prefsState
 	aboutWin *mygo.Window // the open About window, or nil
+
+	// preview is what the four answers would schedule for the card on screen,
+	// loaded with the rest of what a mode reads so that no frame reads the
+	// store.
+	preview    []schedule.Outlook
+	hasPreview bool
 
 	// anim counts how often each moment played: a screen change, a panel
 	// opening. A counter that moves replays its preset.

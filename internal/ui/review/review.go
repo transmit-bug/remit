@@ -80,16 +80,27 @@ type Card struct {
 	Frozen time.Time
 }
 
+// Interval is what one answer would schedule: how long until the card comes
+// back. The grade keys show it, so the cost of a grade is visible before it is
+// taken.
+type Interval struct {
+	Rating Rating
+	Wait   time.Duration
+}
+
 // Deps is what the screen asks the app for: the card to show, and what the user
 // can do with it. Each runs on the UI thread; the app does the writing.
 type Deps struct {
-	Card     func(core.ID) (Card, bool) // the card shown, false when it is gone
-	Grade    func(core.ID, Rating)      // record the answer and move on
-	Undo     func()                     // take the newest answer back
-	Suspend  func(core.ID)              // out of the queue, history untouched
-	Relink   func(core.ID)              // point a lost card at another block
-	EditNote func(core.ID)              // open the note behind the card
-	Home     func()                     // leave for the notebook
+	Card func(core.ID) (Card, bool) // the card shown, false when it is gone
+	// Preview is the four intervals for the card shown, when the schedule can
+	// give them; false leaves the keys with their plain labels.
+	Preview  func() ([4]Interval, bool)
+	Grade    func(core.ID, Rating) // record the answer and move on
+	Undo     func()                // take the newest answer back
+	Suspend  func(core.ID)         // out of the queue, history untouched
+	Relink   func(core.ID)         // point a lost card at another block
+	EditNote func(core.ID)         // open the note behind the card
+	Home     func()                // leave for the notebook
 }
 
 // State is the queue and where the user is in it. What belongs in it is the
@@ -326,6 +337,10 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 func grades(c *ui.Context, d Deps, id core.ID) {
 	msgs := locales.In(c.Locale())
 	t := c.Theme()
+	intervals, hasPreview := [4]Interval{}, false
+	if d.Preview != nil {
+		intervals, hasPreview = d.Preview()
+	}
 	ui.Row(c).Gap(design.SpaceM).Children(func() {
 		for r := Again; r <= Easy; r++ {
 			face := r.colour(t)
@@ -338,6 +353,12 @@ func grades(c *ui.Context, d Deps, id core.ID) {
 				Children(func() {
 					kit.Keycap(c, r.Key())
 					ui.Text(c, label).FontSize(design.TypeBody).TextColor(t.Text)
+					if hasPreview {
+						if wait := formatWait(msgs, intervals[r].Wait); wait != "" {
+							ui.Spacer(c)
+							ui.Text(c, wait).FontSize(design.TypeSmall).TextColor(t.TextMuted)
+						}
+					}
 				})
 			// The face eases under the pointer, and a press shrinks the key
 			// without changing the room it takes.
@@ -352,6 +373,22 @@ func grades(c *ui.Context, d Deps, id core.ID) {
 			key.AnimatePose(pose, design.Press)
 		}
 	})
+}
+
+// formatWait is how long an interval reads as on a key: minutes below an hour,
+// hours below a day, days after that. A null wait reads as nothing, so the key
+// falls back to its plain label rather than showing a placeholder.
+func formatWait(msgs locales.Messages, wait time.Duration) string {
+	switch {
+	case wait <= 0:
+		return ""
+	case wait < time.Hour:
+		return msgs.IntervalMinutes(max(1, int(wait.Round(time.Minute)/time.Minute)))
+	case wait < 24*time.Hour:
+		return msgs.IntervalHours(max(1, int(wait.Round(time.Hour)/time.Hour)))
+	default:
+		return msgs.IntervalDays(max(1, int(wait.Round(24*time.Hour)/(24*time.Hour))))
+	}
 }
 
 // footer holds the actions beside the card's grades.
