@@ -290,6 +290,9 @@ func (a *App) grade(c *ui.Context, g rating) {
 	}
 	a.review.advance(true)
 	a.reload()
+	// The change is visual first; say it too, so a screen reader hears that
+	// the grade landed and how much is left.
+	c.Announce(m(c).Remaining(a.review.remaining()))
 }
 
 // undo cancels the newest review, puts its card back on screen with the answer
