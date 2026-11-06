@@ -24,6 +24,8 @@ type logRecord struct {
 	Rating string  `json:"rating,omitempty"`
 	At     string  `json:"at,omitempty"`
 	Void   int64   `json:"void,omitempty"`
+	// Scheduler names what wrote this review, once logs carried the name.
+	Scheduler string `json:"scheduler,omitempty"`
 }
 
 // fileMark is a file's size and modification time: enough to tell whether it
@@ -59,7 +61,8 @@ func parseLogMark(s string) (logMark, bool) {
 }
 
 func marshalRecord(event schedule.Event) ([]byte, error) {
-	rec := logRecord{Seq: event.Seq, Card: event.Card, Rating: event.Rating.String(), At: formatTime(event.At)}
+	rec := logRecord{Seq: event.Seq, Card: event.Card, Rating: event.Rating.String(),
+		At: formatTime(event.At), Scheduler: event.Scheduler}
 	if event.IsVoid() {
 		rec = logRecord{Seq: event.Seq, Void: event.Void}
 	}
@@ -96,7 +99,8 @@ func decodeRecord(line []byte) (schedule.Event, bool, error) {
 	if rec.Card == "" {
 		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: no card", rec.Seq)
 	}
-	return schedule.Event{Seq: rec.Seq, Card: rec.Card, Rating: rating, At: at}, true, nil
+	return schedule.Event{Seq: rec.Seq, Card: rec.Card, Rating: rating, At: at,
+		Scheduler: rec.Scheduler}, true, nil
 }
 
 // streamLog calls fn for every event from byte offset to the end of the log,

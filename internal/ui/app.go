@@ -66,22 +66,25 @@ type App struct {
 	data    libraryData    // the library as the view reads it
 	due     []core.ID      // today's queue, as the last reload derived it
 
-	mode      mode
-	review    review.State
-	editor    editorState
-	browse    browseState
-	stats     statsState
-	palette   paletteState
-	relink    relinkState
-	cardEdit  cardEditState
-	prefs     prefsState
-	cards     *cardPlugin          // what a paragraph asks and how a card reads
-	rendered  map[core.ID]rendered // what the plugin last answered for a card
-	panel     panelMode            // what the user said about the note's panel
-	panelTab  panelTab             // outline or backlinks
-	tagFilter string               // the tag the notes are filtered by, empty for none
-	backlinks []store.Backlink     // what points at the note open now
-	aboutWin  *mygo.Window         // the open About window, or nil
+	mode           mode
+	review         review.State
+	editor         editorState
+	browse         browseState
+	stats          statsState
+	palette        paletteState
+	relink         relinkState
+	cardEdit       cardEditState
+	prefs          prefsState
+	cards          *cardPlugin          // what a paragraph asks and how a card reads
+	scheduler      *schedulerPlugin     // what schedules a review, and what a session is worth
+	summaryWord    summaryAnswer        // what the scheduling plugin says about a session
+	summaryWordFor string               // the numbers that answer was given
+	rendered       map[core.ID]rendered // what the plugin last answered for a card
+	panel          panelMode            // what the user said about the note's panel
+	panelTab       panelTab             // outline or backlinks
+	tagFilter      string               // the tag the notes are filtered by, empty for none
+	backlinks      []store.Backlink     // what points at the note open now
+	aboutWin       *mygo.Window         // the open About window, or nil
 
 	// preview is what the four answers would schedule for the card on screen,
 	// loaded with the rest of what a mode reads so that no frame reads the
@@ -144,7 +147,8 @@ func NewApp(opts ...Options) *App {
 	// replace, so it takes it at call time rather than at construction.
 	a.importAnki = func(path string) (importanki.Report, error) { return importanki.Import(path, a.lib) }
 	var chosenCards *ext.JSRunner
-	withoutCards := false
+	var chosenScheduler *ext.JSRunner
+	withoutCards, withoutScheduler := false, false
 	if len(opts) > 0 {
 		o := opts[0]
 		a.dir = o.LibraryDir
@@ -164,8 +168,10 @@ func NewApp(opts ...Options) *App {
 		a.bindHotkey = o.BindHotkey
 		a.agentAPI = o.AgentControls
 		chosenCards, withoutCards = o.Cards, o.WithoutCards
+		chosenScheduler, withoutScheduler = o.Scheduler, o.WithoutScheduler
 	}
 	a.cards = openCards(chosenCards, withoutCards)
+	a.scheduler = openScheduler(chosenScheduler, withoutScheduler)
 	if dir, err := DefaultLibraryDir(); err == nil {
 		a.defaultLibrary = dir
 	}

@@ -49,6 +49,11 @@ type Options struct {
 	// WithoutCards opens the library with no card plugin at all: no paragraph
 	// makes a new card, and a card reads its paragraph's own words.
 	WithoutCards bool
+	// Scheduler replaces the scheduling plugin the app ships.
+	Scheduler *ext.JSRunner
+	// WithoutScheduler schedules with the app's own defaults, and stamps no
+	// scheduler on new reviews.
+	WithoutScheduler bool
 	// BindHotkey binds the global shortcut, replacing the one bound now, and
 	// reports a combination that is invalid or already taken. cmd registers it
 	// on MyGo's GlobalShortcut; a test replaces it.
@@ -164,7 +169,7 @@ func (a *App) open() {
 		a.start = true
 		return
 	}
-	lib, err := store.Open(a.dir, store.Options{})
+	lib, err := store.Open(a.dir, a.storeOptions())
 	if errors.Is(err, fs.ErrNotExist) {
 		// The place has no library: the start view offers to make one here or
 		// to open another.
@@ -177,6 +182,19 @@ func (a *App) open() {
 		return
 	}
 	a.apply(lib, a.dir)
+}
+
+// storeOptions is what the library opens with: the scheduling plugin's policy
+// and the name to stamp on the reviews it records.
+func (a *App) storeOptions() store.Options {
+	options := store.Options{}
+	if policy, ok := a.scheduler.Policy(); ok {
+		options.Scheduler = policy.Identity()
+		if policy.Retention > 0 && policy.Retention <= 1 {
+			options.Params.DesiredRetention = policy.Retention
+		}
+	}
+	return options
 }
 
 // apply makes lib the open library and shows the review queue, which is the

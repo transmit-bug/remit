@@ -12,7 +12,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ext"
 )
 
-//go:embed cards/extension.json cards/main.js
+//go:embed cards/extension.json cards/main.js scheduler/extension.json scheduler/main.js
 var files embed.FS
 
 // Cards is the default card plugin: what a paragraph of a note asks, in the
@@ -45,3 +45,30 @@ func CardsManifest() (ext.Manifest, error) {
 
 // IsBuiltin reports whether a name belongs to an extension this app ships.
 func IsBuiltin(name string) bool { return name == "cards" }
+
+// Scheduler is the default scheduling plugin: it decides policy — retention, and
+// what to call the scheduler — while the schedule's arithmetic stays the app's.
+func Scheduler(limits ext.JSLimits) (*ext.JSRunner, error) {
+	manifest, err := SchedulerManifest()
+	if err != nil {
+		return nil, err
+	}
+	source, err := files.ReadFile("scheduler/main.js")
+	if err != nil {
+		return nil, fmt.Errorf("ext: builtin scheduler: %w", err)
+	}
+	return ext.OpenBuiltin(manifest, source, limits)
+}
+
+// SchedulerManifest is what the scheduler plugin declares.
+func SchedulerManifest() (ext.Manifest, error) {
+	data, err := files.ReadFile("scheduler/extension.json")
+	if err != nil {
+		return ext.Manifest{}, fmt.Errorf("ext: builtin scheduler: %w", err)
+	}
+	var manifest ext.Manifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return ext.Manifest{}, fmt.Errorf("ext: builtin scheduler: manifest: %w", err)
+	}
+	return manifest, nil
+}

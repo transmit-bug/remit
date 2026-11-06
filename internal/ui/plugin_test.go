@@ -167,3 +167,49 @@ func TestTheShippedPluginDerivesCards(t *testing.T) {
 		t.Errorf("the card reads %q / %q", prompt, answer)
 	}
 }
+
+// The scheduling plugin decides what a finished session says beyond its numbers:
+// a line of its own, and whether it is quiet about it.
+func TestSchedulerPluginWordTheSummary(t *testing.T) {
+	dir := t.TempDir()
+	_ = seedLibrary(t, dir)
+	extDir := t.TempDir()
+	manifest := `{"name":"scheduler","version":"1","protocol":1,"runtime":"js","entry":"main.js"}`
+	if err := os.WriteFile(filepath.Join(extDir, "extension.json"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	source := `
+export function policy() { return { family: "test", version: "9", retention: 0.9 }; }
+export function summary(session) {
+  return { tone: "celebrated", lines: ["you reviewed " + session.reviewed + " cards"] };
+}
+`
+	if err := os.WriteFile(filepath.Join(extDir, "main.js"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runner, err := ext.OpenJS(extDir, ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open the test scheduler: %v", err)
+	}
+	t.Cleanup(func() { _ = runner.Close() })
+
+	a := NewApp(Options{LibraryDir: dir, Scheduler: runner})
+	// A library with nothing due: the summary is what the screen shows.
+	for _, card := range a.Library().Cards() {
+		card.Status = core.StatusSuspended
+		if err := a.Library().SaveCard(card); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a.reload()
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+
+	if !tt.HasText("you reviewed 0 cards") {
+		t.Fatalf("the summary does not carry the plugin's line; texts %q", tt.Texts())
+	}
+	// The plugin names the scheduler every review it writes is stamped with.
+	if got := a.Library().Scheduler(); got != "test-9" {
+		t.Errorf("the library schedules with %q, want test-9", got)
+	}
+}
