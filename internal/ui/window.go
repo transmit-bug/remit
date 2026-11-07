@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/screens/about"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 )
 
@@ -108,6 +110,26 @@ func (a *App) shortcuts(c *ui.Context) {
 	case modeBrowse, modeStats:
 		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
 	}
+}
+
+// ShowAbout opens the About window above parent, or brings it back to the
+// front when it is already open. Opening a window is assembly, so it lives
+// here and the page lives in its own package (ADR 0009).
+func (a *App) ShowAbout(parent *mygo.Window) {
+	if a.aboutWin != nil {
+		a.aboutWin.Focus()
+		return
+	}
+	state := about.State{Name: Name, Version: Version}
+	a.aboutWin = mygo.NewWindow(mygo.WindowOptions{
+		Title:         "About " + Name,
+		Parent:        parent,
+		Width:         about.Width,
+		Height:        about.Height,
+		DisableResize: true,
+		Content:       ui.View(func(c *ui.Context) { about.View(c, state, about.Deps{}) }),
+	})
+	a.aboutWin.OnClosed(func() { a.aboutWin = nil })
 }
 
 // focusSearch shows browse and puts the caret in its search field, from any
