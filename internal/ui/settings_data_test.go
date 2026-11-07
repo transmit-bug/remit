@@ -132,3 +132,67 @@ func TestSettingsRolesSnapshot(t *testing.T) {
 		t.Errorf("the page changed the app's roles to %q through the snapshot", got)
 	}
 }
+
+// A refused write explains itself where it was made: the page's words for a
+// field a card holds come from the store's own refusal, not from the page
+// guessing. The type keeps its field and its file.
+func TestSettingsTypeRefusalReachesThePage(t *testing.T) {
+	msgs := locales.In("en")
+	a := settingsApp(t, Options{})
+	typ := core.Type{ID: "type_vocab", Name: "Vocabulary", Fields: []string{"Term", "Meaning", "Extra"}, Front: "{{Term}}", Back: "{{Meaning}}", Version: 1}
+	if _, err := a.lib.SaveType(typ); err != nil {
+		t.Fatalf("SaveType: %v", err)
+	}
+	note, err := a.lib.CreateNote("Words")
+	if err != nil {
+		t.Fatalf("CreateNote: %v", err)
+	}
+	note.Blocks = append(note.Blocks, core.Block{Text: "hola :: hello"})
+	if note, err = a.lib.SaveNote(note); err != nil {
+		t.Fatalf("SaveNote: %v", err)
+	}
+	made, err := a.lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Type: typ.ID}})
+	if err != nil {
+		t.Fatalf("CreateCards: %v", err)
+	}
+	card := made[0]
+	card.Fields = map[string]string{"Term": "hola"}
+	card.Edited = true
+	if err := a.lib.SaveCard(card); err != nil {
+		t.Fatalf("SaveCard: %v", err)
+	}
+	a.reload()
+
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	a.openSettings()
+	settle(tt)
+
+	reveal(t, tt, 1024, 720, typ.Name)
+	if err := tt.Click(typ.Name); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	reveal(t, tt, 1024, 720, msgs.TypeFieldName(1))
+	if err := tt.Click(msgs.TypeFieldName(1)); err != nil {
+		t.Fatal(err)
+	}
+	tt.Key(0, ui.KeyTab)
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	reveal(t, tt, 1024, 720, msgs.TypeSave())
+	if err := tt.Click(msgs.TypeSave()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+
+	want := msgs.TypeFieldHeld("Term", 1)
+	reveal(t, tt, 1024, 720, want)
+	if !tt.HasText(want) {
+		t.Fatalf("the page does not explain the refusal %q; texts %q", want, tt.Texts())
+	}
+	stored, ok := a.lib.Type(typ.ID)
+	if !ok || len(stored.Fields) != 3 || stored.Fields[0] != "Term" {
+		t.Fatalf("the library's type is %+v, want the field kept", stored)
+	}
+}
