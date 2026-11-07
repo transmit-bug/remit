@@ -136,5 +136,5 @@ func (a *App) ShowAbout(parent *mygo.Window) {
 // mode: the one way to search the library by text.
 func (a *App) focusSearch(c *ui.Context) {
 	a.setMode(modeBrowse)
-	a.browse.field.Focus(c)
+	a.browse.Focus(c)
 }

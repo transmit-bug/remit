@@ -16,6 +16,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
+	"github.com/transmit-bug/remit/internal/ui/screens/browse"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
@@ -71,7 +72,8 @@ type App struct {
 	mode           mode
 	review         review.State
 	editor         editorState
-	browse         browseState
+	browse         browse.State
+	browseRows     []browse.Row // the cards browse lists, as loadBrowse derived them
 	stats          screenstats.State
 	palette        paletteState
 	relink         relinkState
@@ -149,7 +151,7 @@ type App struct {
 // it never panics over a damaged library.
 func NewApp(opts ...Options) *App {
 	a := &App{
-		browse:         browseState{selected: -1},
+		browse:         browse.State{Selected: -1},
 		notesWidth:     defaultNotesWidth,
 		editorShare:    defaultEditorShare,
 		readShare:      defaultReadShare,

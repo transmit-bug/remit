@@ -1,6 +1,9 @@
 package ui
 
-import "github.com/transmit-bug/remit/internal/core"
+import (
+	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ui/screens/browse"
+)
 
 // ShowNote opens the editor at a note the library holds, and does nothing when
 // it does not: a link from outside is a request, not a command.
@@ -37,10 +40,10 @@ func (a *App) ShowQueue() {
 // its field. A query that finds nothing leaves its empty state up, which says
 // the search ran.
 func (a *App) Search(query string) {
-	a.browse.query, a.browse.filter, a.browse.selected = query, browseAll, -1
+	a.browse.Query, a.browse.Filter, a.browse.Selected = query, browse.All, -1
 	a.mode = modeBrowse
 	a.reload()
-	a.browse.field.Focus()
+	a.browse.Focus()
 }
 
 // OnRemaining registers a function told how many cards remain whenever the
