@@ -43,7 +43,7 @@ func (a *App) View(c *ui.Context) {
 			case a.mode == modeReview:
 				a.reviewView(c, tk)
 			case a.mode == modeBrowse:
-				a.browseView(c, tk)
+				a.browseView(c)
 			case a.mode == modeStats:
 				screenstats.View(c, a.stats, screenstats.Deps{})
 			default:
