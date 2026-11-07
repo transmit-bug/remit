@@ -72,7 +72,9 @@ app: upgrade there (step 1), rather than wrapping what MyGo is about to ship.
 | Need | Use | The tell it retires |
 |---|---|---|
 | A row of controls along a window | `ui.Toolbar` | `Row` of `Button`s: loses one tab stop, arrow keys, overflow menu |
-| A command with options | `ui.MenuButton`; a menu of choices with their current one ticked `ui.PopoverMenuButton` | `Button` + `Popover` wired by hand |
+| A command with options | `ui.MenuButton`; a menu of choices with their current one ticked `ui.PopoverMenuButton` — `PopoverMenuButtonOptions` places the menu (`At`/`Self`) and `Open` opens it from code | `Button` + `Popover` wired by hand |
+| A menu item that deletes, explains or carries a value | `MenuItem.Danger`, `.Subtitle`, `.Trailing`, `.Content` (anything at all, a download row with a progress bar); `Menu.MaxWidth` caps width; `Icon`/`IconColor` in drawn menus | a hand-drawn menu row; a destructive item the theme reads as safe |
+| Every menu of a window drawn in the window — the table's, the editor's, text inputs' too | `c.SetMenuPresentation(ui.PopoverMenus)` | per-widget menu styling |
 | Right-click on an element, row, cell or header | `Element.ContextMenu`, `ListState.CellMenu`, `ListState.HeaderMenu` | `Popover` placed at the pointer |
 | A button that stays pressed | `ui.Toggle`, `ui.ToggleGroup` | `int` field plus accent tint |
 | One of a few adjacent views | `ui.Segmented` | Row of buttons with an index |
@@ -104,8 +106,8 @@ app: upgrade there (step 1), rather than wrapping what MyGo is about to ship.
 | Tags, recipients | `ui.TokenField` | comma-split string |
 | Find inside a document | `ui.FindBar` | ad-hoc search field plus counts |
 | Code or JSON, read-only | `github.com/egoist/mygo/ui/editor` | `TextArea` with monospace |
-| Code with carets, folding, completions, diagnostics | `editor.View` + `editor.Buffer` | `TextArea` plus a gutter built by hand |
-| The changes between two texts | `editor.DiffView` + `editor.DiffState` (`DiffSplit`/`DiffUnified`) | two text areas and a column of markers |
+| Code with carets, folding, completions, diagnostics, snippets | `editor.View` + `editor.Buffer`; templates with fields and Tab stops: `editor.ParseSnippet`, `State.InsertSnippet` | `TextArea` plus a gutter built by hand |
+| The changes between two texts | `editor.DiffView` + `editor.DiffState` (`DiffSplit`/`DiffUnified`); the split's divider drags, `SplitPercent` holds its share | two text areas and a column of markers |
 | Attributed text with formats, links, headings, lists, images | `richtext.NewDocument`, `richtext.ParseMarkdown`/`ParseHTML`/`ParseRTF`, `richtext.Editor` | `TextArea` behind a row of format toggles |
 | Markdown, read-only | `ui/markdown.View` | pre-split paragraphs of `Text` |
 | Text the app owns: native composition, retained geometry | `ui.TextInputBuffer`, `ui.TextAreaBuffer`, `ui.TextInputClient` | a `Box` wired to `HandleTextInput` by hand |
@@ -122,8 +124,8 @@ app: upgrade there (step 1), rather than wrapping what MyGo is about to ship.
 
 | Need | Use | The tell it retires |
 |---|---|---|
-| A data table | `ui.Table` + `Sortable`, `Fixed`, `RowHeader`, `CellSelect`, `Columns`, `CellMenu`, `Reorder`, `EditableText`, `Key` | header `Row` with literal widths, rows built in a loop |
-| Rows of any height, appending | `ui.List` + `Key`, `FollowEnd`, `Header`, `Reorder`, `DragSelect` | `Scroll` + `Column` + index loops |
+| A data table, a spreadsheet | `ui.Table` + `Sortable`, `Fixed`, `RowHeader`, `CellSelect`, `Columns`, `CellMenu`, `Reorder`, `EditableText`, `Key`; a spreadsheet's chosen cell and stripes: `ListState.HeaderCell`, `CellsStyle` | header `Row` with literal widths, rows built in a loop |
+| Rows of any height, appending; a chat or log | `ui.List` + `Key`, `FollowEnd`, `Header`, `Reorder`, `DragSelect`; a fold opening in the last row: `HoldPlace` keeps the clicked line put; `DragRows` drags rows to targets elsewhere | `Scroll` + `Column` + index loops; scroll anchoring by hand |
 | A tree | `ui.Tree`/`TreeItem`; large or columned `ui.Outline`, `ui.OutlineTable` | indented rows with a bool map |
 | A grid of items | `ui.GridView` (builds what shows); layout grid `ui.Grid` | `Column` of `Row`s |
 | A value dragged within the window, or files dropped on a target | `Element.Draggable`, `ui.DragOver[T]`/`ui.Drop[T]`, `ui.DataDragOver`/`ui.DropData`, `Element.DroppedFiles` | pointer tracking on `InputEvent` plus a bool |
@@ -132,10 +134,12 @@ app: upgrade there (step 1), rather than wrapping what MyGo is about to ship.
 
 | Need | Use | The tell it retires |
 |---|---|---|
-| Two panes the user resizes | `ui.Split`, `ui.SplitVertical`, `ui.SplitPercent`, `ui.SplitVerticalPercent` | `Width(220)`, `HeightPercent`, a bool drag flag |
+| Two panes the user resizes | `ui.Split`, `ui.SplitVertical`, `ui.SplitPercent`, `ui.SplitVerticalPercent`; double-click resets: `SplitReset(v)` | `Width(220)`, `HeightPercent`, a bool drag flag |
 | A section that opens and closes | `ui.Collapsible`; several `ui.Accordion`, `ui.AccordionItem` | bool + chevron glyph + conditional children |
 | A form | `ui.Form` + `ui.Field` + `.Description`/`.Error` + `Fieldset.Disabled` | fields stacked as `Row`s, error text tinted by hand |
 | A scrolling region | `ui.Scroll`, `ui.ScrollBoth`, `ui.ScrollHorizontal` | clipping by fixed height |
+| A carousel or pager that snaps | the scroll container's `ScrollSnap(ui.SnapMandatory)` + the item's `SnapAlign` | drag-end math and a correction animation |
+| A heading that stays until its section passes | `Element.Sticky` | scroll offsets applied by hand |
 | A web page inside the window | `ui.WebView` + `mygo.Window.NewWebView` | a second window that is only a browser |
 
 ### Navigation
@@ -166,7 +170,7 @@ app: upgrade there (step 1), rather than wrapping what MyGo is about to ship.
 | A short count or label | `ui.Badge` | `Box` + `Text` + radius |
 | Several stages on one playhead | `Element.Timeline(key, ui.TimelineOptions)`; a single value `Element.AnimateTo`/`AnimateWith` | percentages recomputed each frame |
 | A trend, bars, an area | `ui/chart`: `Plot`, `Axes`, `NewLinear`/`NewBand`/`NewTime`, `Rect`/`Line`/`Area` marks | showing only the current sample |
-| An icon | `ui.Icon` over `ui.MustParseSVG`/`ui.ParseSVG` (MyGo draws icons, supplies none) | text glyphs as icons |
+| An icon | `ui.Icon` over `ui.MustParseSVG`/`ui.ParseSVG` (MyGo draws icons, supplies none); Apple's symbols on macOS: `sfsymbols.Symbol(c, name)`, which reports none elsewhere — keep an SVG fallback | text glyphs as icons |
 | A picture, a person | `ui.Image`, `ui.Avatar` | — |
 | A clip that plays, or loops behind content | `ui.Video` + `ui.NewVideoPlayer` (`ui.NewGIFDecoder`) | a timer replacing an `Image` each frame |
 
@@ -177,13 +181,15 @@ app: upgrade there (step 1), rather than wrapping what MyGo is about to ship.
 | Theme, accent, density, text scale | `c.SetTheme(&t)` with `Spacing`, `FontSize`, `Radius`, `Accent`; size your own elements with `t.Space(n)`, `t.Rem(n)` |
 | The desktop's settings | `c.Preferences()`: accent, high contrast, text scale — the default theme already follows them |
 | Motion, enter/exit | `Element.Transition(ui.ElementTransition{Enter: &ui.Motion{…}})`, keyframes, `Element.Spring`; reduced motion is honoured by the widgets |
-| A visual move, scale or rotation | `Element.Translate`, `Rotate`, `Scale`, `Skew`, `TransformOrigin` | an absolutely positioned copy that ignores the pointer |
+| A visual move, scale or rotation; depth | `Element.Translate`, `Rotate`, `Scale`, `Skew`, `TransformOrigin`; toward the viewer: `TranslateZ`, `Translation3D` | an absolutely positioned copy that ignores the pointer |
+| Text over art, a heading wrapped evenly | `Element.TextShadow(…)`/`TextStroke`; `Balance`, `Pretty` | a blurred copy of the text behind it, line breaks by hand |
+| Clip or mask an element | `ClipInset`, `Painter.ClipPath`, `MaskLinearGradient` and the radial and conic kin, `Masks` to layer them | stacked faded copies |
 | Pixels painted of your own | `ui.NewCanvas`; painters and shaped text in `docs/ui/drawing.md` |
 | The window's options, or a title bar the view draws | `mygo.WindowOptions` (`StateKey`, min size, `TitleBarStyle`), `c.TitleBar()` | fixed window chrome drawn inside the page |
 | A layout from the right | `Element.Direction`, `MarginStart`/`MarginEnd`, `PaddingStart`/`PaddingEnd` and the other logical edges | mirrored `Left`/`Right` arithmetic |
-| The window's language and regional formats | `c.Locale`, `c.Region`, `Element.Lang`; the widgets' own strings follow them | hardcoded labels and `1/2/2006` |
+| The window's language and regional formats | `c.Locale`, `c.Region`, `Element.Lang`; the widgets' own strings follow them; compact numbers, currency, "3 minutes ago": `i18n.NumberOptions`, `FormatRelativeTime` | hardcoded labels and `1/2/2006` |
 | Names and roles | `.Label()`, `.Role()`, `.Description()`; announce async results with `c.Announce` |
-| See why a box is empty or off by 4px | the window's developer tools (`F12`), `docs/ui/inspector.md` |
+| See why a box is off by 4px, or tune it live | the window's developer tools (`F12`): styles edit live, **Copy as Go** writes the calls; `docs/ui/inspector.md` |
 
 The guides behind these rows: `docs/ui/accessibility.md`,
 `docs/ui/right-to-left.md`, `docs/ui/styling.md`.

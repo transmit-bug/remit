@@ -23,24 +23,32 @@ func notesOnTheNotebook(t *testing.T, w, h int) (*App, *ui.Tester, testLibrary) 
 	return a, tt, seed
 }
 
-// The default window shows three columns: the notes at 260, the note, and the
-// note's panel at 280.
+// The default window shows three panes: the notes, the note, and the note's
+// panel, with the note between the other two.
 func TestThreeColumnsAtTheDefaultSize(t *testing.T) {
-	_, tt, _ := notesOnTheNotebook(t, 1024, 720)
+	msgs := locales.In("en")
+	a, tt, _ := notesOnTheNotebook(t, 1024, 720)
 
 	notes, ok := tt.Find("Notebook")
 	if !ok {
 		t.Fatalf("the notes column is missing; texts %q", tt.Texts())
 	}
-	if notes.X < 0 || notes.X+notes.W > sidebarWidth+1 {
-		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, sidebarWidth)
+	if notes.X < 0 || notes.X+notes.W > a.notesWidth+1 {
+		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notesWidth)
 	}
-	panel, ok := tt.Find(locales.In("en").Close())
+	doc, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the document is missing; texts %q", tt.Texts())
+	}
+	panel, ok := tt.Find(msgs.Close())
 	if !ok {
 		t.Fatalf("the panel is missing; texts %q", tt.Texts())
 	}
-	if panel.X < 1024-panelWidth-1 {
-		t.Errorf("the panel starts at %v, want it at the right %v", panel.X, panelWidth)
+	if panel.X < doc.X+doc.W {
+		t.Errorf("the panel starts at %v, left of the document ending at %v", panel.X, doc.X+doc.W)
+	}
+	if panel.X+panel.W > 1024 {
+		t.Errorf("the panel reaches %v, past the window", panel.X+panel.W)
 	}
 	// The note itself is between them, and typeable.
 	if err := tt.Click("Note"); err != nil {
@@ -48,20 +56,60 @@ func TestThreeColumnsAtTheDefaultSize(t *testing.T) {
 	}
 }
 
-// The smallest window puts the panel away and narrows the notes, and the note is
-// still typeable.
-func TestNarrowWindowDropsThePanel(t *testing.T) {
-	_, tt, seed := notesOnTheNotebook(t, 720, 520)
+// The notes column is a split's pane: the divider resizes it, and the width the
+// user chose is kept when the window changes. A hand-built column could not
+// pass this.
+func TestSplitResizesTheNotesColumn(t *testing.T) {
+	a, tt, _ := notesOnTheNotebook(t, 1024, 720)
 
-	if _, ok := tt.Find(locales.In("en").Close()); ok {
+	drag := a.notesWidth
+	tt.Press(drag, 300)
+	tt.Move(drag+30, 300)
+	tt.Move(drag+80, 300)
+	tt.Release(drag+80, 300)
+	tt.Frame()
+
+	if a.notesWidth < drag+40 {
+		t.Fatalf("the notes column is %v wide after dragging to %v, want it resized", a.notesWidth, drag+80)
+	}
+	notes, ok := tt.Find("Notebook")
+	if !ok {
+		t.Fatalf("the notes column is missing; texts %q", tt.Texts())
+	}
+	if notes.X+notes.W > a.notesWidth+1 {
+		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notesWidth)
+	}
+
+	// The size is the user's: a window change keeps it.
+	chosen := a.notesWidth
+	tt.SetSize(1400, 900)
+	tt.Frame()
+	if a.notesWidth != chosen {
+		t.Errorf("the width moved from %v to %v when the window grew", chosen, a.notesWidth)
+	}
+}
+
+// The smallest window puts the panel away, and the note keeps room to be typed.
+func TestNarrowWindowDropsThePanel(t *testing.T) {
+	msgs := locales.In("en")
+	a, tt, seed := notesOnTheNotebook(t, 720, 520)
+
+	if _, ok := tt.Find(msgs.Close()); ok {
 		t.Error("the panel is open on the smallest window")
 	}
 	notes, ok := tt.Find("Notebook")
 	if !ok {
 		t.Fatalf("the notes column is missing; texts %q", tt.Texts())
 	}
-	if notes.X+notes.W > sidebarNarrow+1 {
-		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, sidebarNarrow)
+	if notes.X+notes.W > a.notesWidth+1 {
+		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notesWidth)
+	}
+	doc, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the document is missing; texts %q", tt.Texts())
+	}
+	if doc.W < 300 {
+		t.Errorf("the document is %v wide, too narrow to type in", doc.W)
 	}
 
 	// The document keeps its room: typing reaches the file.
@@ -169,10 +217,10 @@ func assertNotebookFills(t *testing.T, tt *ui.Tester, msgs locales.Messages, w, 
 	if !ok {
 		t.Fatalf("the document is missing; texts %q", tt.Texts())
 	}
-	// The document sits inside the column's padding: at most 32 DIPs from the
-	// window's bottom edge.
-	if bottom := note.Y + note.H; bottom < float32(h)-32 {
-		t.Errorf("the document ends at %v, want the %v-high window's bottom", bottom, h)
+	// Under the document are the status line and the paper's own padding: at
+	// most 96 DIPs from the window's bottom edge.
+	if bottom := note.Y + note.H; bottom < float32(h)-96 {
+		t.Errorf("the document ends at %v, want it to take the %v-high window it is given", bottom, h)
 	}
 	if note.X+note.W > float32(w) {
 		t.Errorf("the document reaches %v, past the %v-wide window", note.X+note.W, w)

@@ -5,25 +5,25 @@
       "source": "transmit-bug/mygo-skills",
       "sourceType": "github",
       "skillPath": "skills/mygo-components/SKILL.md",
-      "computedHash": "3b0b06598854226ac52313576afb9e251b7db4dff5e3c99b6d246a55014003f0"
+      "computedHash": "18c124d18d649df76099ca24bb4da0d97861fc27383ca01c0b4e907728f21f0b"
     },
     "mygo-desktop": {
       "source": "transmit-bug/mygo-skills",
       "sourceType": "github",
       "skillPath": "skills/mygo-desktop/SKILL.md",
-      "computedHash": "a01efaf9df0c3591ed4fc663b8822f5002a61df7245eb40381eb4f69ad08b2be"
+      "computedHash": "1800fdc39ac03ad8d14e450918712c3772c26dba531fcda1a5e4b220af442c74"
     },
     "mygo-drawing": {
       "source": "transmit-bug/mygo-skills",
       "sourceType": "github",
       "skillPath": "skills/mygo-drawing/SKILL.md",
-      "computedHash": "aa7b05440abdfa39dcb55c0fee902ef2e6a732f9fd05dcd36d0e32ee4802ab65"
+      "computedHash": "d5df3bd0ebe6da58cdd4d0e3e7357cc643f111ef27dd82d0df4ef611d436640b"
     },
     "mygo-motion": {
       "source": "transmit-bug/mygo-skills",
       "sourceType": "github",
       "skillPath": "skills/mygo-motion/SKILL.md",
-      "computedHash": "d3cfe339156cf0ac77803a7a26c52331b4db0d68c77516f82c4f983f4663ac9a"
+      "computedHash": "1ebce5bdf66bcdf9316c68dde44d4aeee71fbab48bf936c36b5c8297e6960c50"
     }
   }
 }

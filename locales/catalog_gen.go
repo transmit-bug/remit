@@ -2418,3 +2418,451 @@ func SettingsUnavailable() string { return In(i18n.Locale()).SettingsUnavailable
 func (msgs Messages) SettingsUnavailable() string {
 	return Catalog.Format(msgs.locale, "settingsUnavailable", nil)
 }
+
+// ViewMode says "View"
+// in the language the app shows.
+//
+// Accessible label of the notebook's view switch.
+func ViewMode() string { return In(i18n.Locale()).ViewMode() }
+
+// ViewMode says "View"
+// in the language of msgs.
+//
+// Accessible label of the notebook's view switch.
+func (msgs Messages) ViewMode() string {
+	return Catalog.Format(msgs.locale, "viewMode", nil)
+}
+
+// ViewEdit says "Edit"
+// in the language the app shows.
+//
+// View switch: write in the document alone.
+func ViewEdit() string { return In(i18n.Locale()).ViewEdit() }
+
+// ViewEdit says "Edit"
+// in the language of msgs.
+//
+// View switch: write in the document alone.
+func (msgs Messages) ViewEdit() string {
+	return Catalog.Format(msgs.locale, "viewEdit", nil)
+}
+
+// ViewSplit says "Split"
+// in the language the app shows.
+//
+// View switch: the document beside the same note as it reads.
+func ViewSplit() string { return In(i18n.Locale()).ViewSplit() }
+
+// ViewSplit says "Split"
+// in the language of msgs.
+//
+// View switch: the document beside the same note as it reads.
+func (msgs Messages) ViewSplit() string {
+	return Catalog.Format(msgs.locale, "viewSplit", nil)
+}
+
+// ViewRead says "Read"
+// in the language the app shows.
+//
+// View switch: the note as it reads, whole.
+func ViewRead() string { return In(i18n.Locale()).ViewRead() }
+
+// ViewRead says "Read"
+// in the language of msgs.
+//
+// View switch: the note as it reads, whole.
+func (msgs Messages) ViewRead() string {
+	return Catalog.Format(msgs.locale, "viewRead", nil)
+}
+
+// FormatBar says "Formatting"
+// in the language the app shows.
+//
+// Accessible label of the row of formatting controls.
+func FormatBar() string { return In(i18n.Locale()).FormatBar() }
+
+// FormatBar says "Formatting"
+// in the language of msgs.
+//
+// Accessible label of the row of formatting controls.
+func (msgs Messages) FormatBar() string {
+	return Catalog.Format(msgs.locale, "formatBar", nil)
+}
+
+// ParagraphStyle says "Paragraph style"
+// in the language the app shows.
+//
+// Label of the menu that sets a paragraph's style.
+func ParagraphStyle() string { return In(i18n.Locale()).ParagraphStyle() }
+
+// ParagraphStyle says "Paragraph style"
+// in the language of msgs.
+//
+// Label of the menu that sets a paragraph's style.
+func (msgs Messages) ParagraphStyle() string {
+	return Catalog.Format(msgs.locale, "paragraphStyle", nil)
+}
+
+// StyleTitle says "Title"
+// in the language the app shows.
+//
+// Paragraph style: the note's title.
+func StyleTitle() string { return In(i18n.Locale()).StyleTitle() }
+
+// StyleTitle says "Title"
+// in the language of msgs.
+//
+// Paragraph style: the note's title.
+func (msgs Messages) StyleTitle() string {
+	return Catalog.Format(msgs.locale, "styleTitle", nil)
+}
+
+// StyleHeading says "Heading"
+// in the language the app shows.
+//
+// Paragraph style: a section heading.
+func StyleHeading() string { return In(i18n.Locale()).StyleHeading() }
+
+// StyleHeading says "Heading"
+// in the language of msgs.
+//
+// Paragraph style: a section heading.
+func (msgs Messages) StyleHeading() string {
+	return Catalog.Format(msgs.locale, "styleHeading", nil)
+}
+
+// StyleSubheading says "Subheading"
+// in the language the app shows.
+//
+// Paragraph style: a heading inside a section.
+func StyleSubheading() string { return In(i18n.Locale()).StyleSubheading() }
+
+// StyleSubheading says "Subheading"
+// in the language of msgs.
+//
+// Paragraph style: a heading inside a section.
+func (msgs Messages) StyleSubheading() string {
+	return Catalog.Format(msgs.locale, "styleSubheading", nil)
+}
+
+// StyleBody says "Body"
+// in the language the app shows.
+//
+// Paragraph style: ordinary text.
+func StyleBody() string { return In(i18n.Locale()).StyleBody() }
+
+// StyleBody says "Body"
+// in the language of msgs.
+//
+// Paragraph style: ordinary text.
+func (msgs Messages) StyleBody() string {
+	return Catalog.Format(msgs.locale, "styleBody", nil)
+}
+
+// FmtBold says "Bold"
+// in the language the app shows.
+//
+// Formatting: bold.
+func FmtBold() string { return In(i18n.Locale()).FmtBold() }
+
+// FmtBold says "Bold"
+// in the language of msgs.
+//
+// Formatting: bold.
+func (msgs Messages) FmtBold() string {
+	return Catalog.Format(msgs.locale, "fmtBold", nil)
+}
+
+// FmtItalic says "Italic"
+// in the language the app shows.
+//
+// Formatting: italic.
+func FmtItalic() string { return In(i18n.Locale()).FmtItalic() }
+
+// FmtItalic says "Italic"
+// in the language of msgs.
+//
+// Formatting: italic.
+func (msgs Messages) FmtItalic() string {
+	return Catalog.Format(msgs.locale, "fmtItalic", nil)
+}
+
+// FmtUnderline says "Underline"
+// in the language the app shows.
+//
+// Formatting: underline.
+func FmtUnderline() string { return In(i18n.Locale()).FmtUnderline() }
+
+// FmtUnderline says "Underline"
+// in the language of msgs.
+//
+// Formatting: underline.
+func (msgs Messages) FmtUnderline() string {
+	return Catalog.Format(msgs.locale, "fmtUnderline", nil)
+}
+
+// FmtStrikethrough says "Strikethrough"
+// in the language the app shows.
+//
+// Formatting: strikethrough.
+func FmtStrikethrough() string { return In(i18n.Locale()).FmtStrikethrough() }
+
+// FmtStrikethrough says "Strikethrough"
+// in the language of msgs.
+//
+// Formatting: strikethrough.
+func (msgs Messages) FmtStrikethrough() string {
+	return Catalog.Format(msgs.locale, "fmtStrikethrough", nil)
+}
+
+// FmtCode says "Code"
+// in the language the app shows.
+//
+// Formatting: inline code.
+func FmtCode() string { return In(i18n.Locale()).FmtCode() }
+
+// FmtCode says "Code"
+// in the language of msgs.
+//
+// Formatting: inline code.
+func (msgs Messages) FmtCode() string {
+	return Catalog.Format(msgs.locale, "fmtCode", nil)
+}
+
+// FmtBullets says "Bulleted list"
+// in the language the app shows.
+//
+// Formatting: a bulleted list.
+func FmtBullets() string { return In(i18n.Locale()).FmtBullets() }
+
+// FmtBullets says "Bulleted list"
+// in the language of msgs.
+//
+// Formatting: a bulleted list.
+func (msgs Messages) FmtBullets() string {
+	return Catalog.Format(msgs.locale, "fmtBullets", nil)
+}
+
+// FmtNumbers says "Numbered list"
+// in the language the app shows.
+//
+// Formatting: a numbered list.
+func FmtNumbers() string { return In(i18n.Locale()).FmtNumbers() }
+
+// FmtNumbers says "Numbered list"
+// in the language of msgs.
+//
+// Formatting: a numbered list.
+func (msgs Messages) FmtNumbers() string {
+	return Catalog.Format(msgs.locale, "fmtNumbers", nil)
+}
+
+// FmtTasks says "Checklist"
+// in the language the app shows.
+//
+// Formatting: a checklist.
+func FmtTasks() string { return In(i18n.Locale()).FmtTasks() }
+
+// FmtTasks says "Checklist"
+// in the language of msgs.
+//
+// Formatting: a checklist.
+func (msgs Messages) FmtTasks() string {
+	return Catalog.Format(msgs.locale, "fmtTasks", nil)
+}
+
+// FmtQuote says "Quote"
+// in the language the app shows.
+//
+// Formatting: a quotation.
+func FmtQuote() string { return In(i18n.Locale()).FmtQuote() }
+
+// FmtQuote says "Quote"
+// in the language of msgs.
+//
+// Formatting: a quotation.
+func (msgs Messages) FmtQuote() string {
+	return Catalog.Format(msgs.locale, "fmtQuote", nil)
+}
+
+// FmtCodeBlock says "Code block"
+// in the language the app shows.
+//
+// Formatting: a block of code.
+func FmtCodeBlock() string { return In(i18n.Locale()).FmtCodeBlock() }
+
+// FmtCodeBlock says "Code block"
+// in the language of msgs.
+//
+// Formatting: a block of code.
+func (msgs Messages) FmtCodeBlock() string {
+	return Catalog.Format(msgs.locale, "fmtCodeBlock", nil)
+}
+
+// More says "More"
+// in the language the app shows.
+//
+// Accessible label of the button that opens the window's extra commands.
+func More() string { return In(i18n.Locale()).More() }
+
+// More says "More"
+// in the language of msgs.
+//
+// Accessible label of the button that opens the window's extra commands.
+func (msgs Messages) More() string {
+	return Catalog.Format(msgs.locale, "more", nil)
+}
+
+// Link says "Link"
+// in the language the app shows.
+//
+// Formatting: the link of the selection.
+func Link() string { return In(i18n.Locale()).Link() }
+
+// Link says "Link"
+// in the language of msgs.
+//
+// Formatting: the link of the selection.
+func (msgs Messages) Link() string {
+	return Catalog.Format(msgs.locale, "link", nil)
+}
+
+// LinkRemove says "Remove link"
+// in the language the app shows.
+//
+// Formatting: takes the link out of the selection.
+func LinkRemove() string { return In(i18n.Locale()).LinkRemove() }
+
+// LinkRemove says "Remove link"
+// in the language of msgs.
+//
+// Formatting: takes the link out of the selection.
+func (msgs Messages) LinkRemove() string {
+	return Catalog.Format(msgs.locale, "linkRemove", nil)
+}
+
+// LinkURL says "Link URL"
+// in the language the app shows.
+//
+// Placeholder of the field a link's address is typed in.
+func LinkURL() string { return In(i18n.Locale()).LinkURL() }
+
+// LinkURL says "Link URL"
+// in the language of msgs.
+//
+// Placeholder of the field a link's address is typed in.
+func (msgs Messages) LinkURL() string {
+	return Catalog.Format(msgs.locale, "linkURL", nil)
+}
+
+// WordCount says "{count, plural, one {# word} other {# words}}"
+// in the language the app shows.
+//
+// Status line: how many words the note holds.
+func WordCount(count int) string { return In(i18n.Locale()).WordCount(count) }
+
+// WordCount says "{count, plural, one {# word} other {# words}}"
+// in the language of msgs.
+//
+// Status line: how many words the note holds.
+func (msgs Messages) WordCount(count int) string {
+	return Catalog.Format(msgs.locale, "wordCount", map[string]any{"count": count})
+}
+
+// ParagraphCount says "{count, plural, one {# paragraph} other {# paragraphs}}"
+// in the language the app shows.
+//
+// Status line: how many paragraphs the note holds.
+func ParagraphCount(count int) string { return In(i18n.Locale()).ParagraphCount(count) }
+
+// ParagraphCount says "{count, plural, one {# paragraph} other {# paragraphs}}"
+// in the language of msgs.
+//
+// Status line: how many paragraphs the note holds.
+func (msgs Messages) ParagraphCount(count int) string {
+	return Catalog.Format(msgs.locale, "paragraphCount", map[string]any{"count": count})
+}
+
+// HeadingCount says "{count, plural, one {# heading} other {# headings}}"
+// in the language the app shows.
+//
+// The line above the document: how many headings the note has.
+func HeadingCount(count int) string { return In(i18n.Locale()).HeadingCount(count) }
+
+// HeadingCount says "{count, plural, one {# heading} other {# headings}}"
+// in the language of msgs.
+//
+// The line above the document: how many headings the note has.
+func (msgs Messages) HeadingCount(count int) string {
+	return Catalog.Format(msgs.locale, "headingCount", map[string]any{"count": count})
+}
+
+// Saved says "Saved"
+// in the language the app shows.
+//
+// Status line: every edit is written to disk at once.
+func Saved() string { return In(i18n.Locale()).Saved() }
+
+// Saved says "Saved"
+// in the language of msgs.
+//
+// Status line: every edit is written to disk at once.
+func (msgs Messages) Saved() string {
+	return Catalog.Format(msgs.locale, "saved", nil)
+}
+
+// NotesSearch says "Search notes"
+// in the language the app shows.
+//
+// Placeholder and label of the sidebar's search field.
+func NotesSearch() string { return In(i18n.Locale()).NotesSearch() }
+
+// NotesSearch says "Search notes"
+// in the language of msgs.
+//
+// Placeholder and label of the sidebar's search field.
+func (msgs Messages) NotesSearch() string {
+	return Catalog.Format(msgs.locale, "notesSearch", nil)
+}
+
+// StatReviewed says "Reviewed"
+// in the language the app shows.
+//
+// Session summary: how many cards were graded.
+func StatReviewed() string { return In(i18n.Locale()).StatReviewed() }
+
+// StatReviewed says "Reviewed"
+// in the language of msgs.
+//
+// Session summary: how many cards were graded.
+func (msgs Messages) StatReviewed() string {
+	return Catalog.Format(msgs.locale, "statReviewed", nil)
+}
+
+// StatDueTomorrow says "Due tomorrow"
+// in the language the app shows.
+//
+// Session summary: how many cards are due tomorrow.
+func StatDueTomorrow() string { return In(i18n.Locale()).StatDueTomorrow() }
+
+// StatDueTomorrow says "Due tomorrow"
+// in the language of msgs.
+//
+// Session summary: how many cards are due tomorrow.
+func (msgs Messages) StatDueTomorrow() string {
+	return Catalog.Format(msgs.locale, "statDueTomorrow", nil)
+}
+
+// StatRemembered says "Remembered"
+// in the language the app shows.
+//
+// Session summary: the share of cards rated as remembered.
+func StatRemembered() string { return In(i18n.Locale()).StatRemembered() }
+
+// StatRemembered says "Remembered"
+// in the language of msgs.
+//
+// Session summary: the share of cards rated as remembered.
+func (msgs Messages) StatRemembered() string {
+	return Catalog.Format(msgs.locale, "statRemembered", nil)
+}

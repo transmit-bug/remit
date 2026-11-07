@@ -55,6 +55,9 @@ the widget or chart that lost.
 | Rectangles, borders, shadows | `p.Fill`, `p.FillGradient`, `p.Stroke`, `p.Shadow`, `p.InsetShadow` |
 | Lines and shapes | `p.Line`, `p.FillPath`, `p.StrokePath`, and the gradient variants |
 | A path drawn in | `path.Trim(from, to)` — animate `to` from 0 to 1, as SwiftUI's `trim` |
+| A path from SVG path data | `ui.ParsePath` / `ui.MustParsePath` |
+| A ring with its hole; a point inside a shape | `Path.FillRule(ui.EvenOdd)`; `Path.Contains(pt)` |
+| The pointer taken only inside a shape | `Element.HitTest(fn)` — a round button hits inside its circle |
 | Stroke details | `Path.Cap` (`ButtCap`/`SquareCap`), `Path.Join` (+`MiterLimit`), `Path.Dash` |
 | Images and sprites | `p.Image`, `p.ImageRegion(bitmap, src, dst, ui.ImageOptions{Tint, FlipX, …})` — a region outside the view draws nothing, so sheets need no own culling |
 | Text | `p.Text`, `p.RichText`, after `p.MeasureText` to centre; `p.Glyphs` for runes placed by hand; `p.TextLayout` for a shaped layout |

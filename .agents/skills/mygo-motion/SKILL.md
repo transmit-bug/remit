@@ -33,7 +33,7 @@ widget mistake:
 | The change | Already moves by |
 |---|---|
 | Element moves, resizes or recolours because layout says so | `Transition(ui.ElementTransition{…})` on each element the change moves |
-| Text, icon or image content swaps | `ContentTransition` — fade, icon grow, or `Numeric` rolling digits |
+| Text, icon or image content swaps | `ContentTransition` — fade, icon grow, `Numeric` rolling digits, or `Morph` turning one text into another character by character |
 | Rows enter or leave a list | `Enter`/`Exit` `ui.Motion` on the rows |
 | Spinner, progress, pressed and hover states | the widget's own — check before adding any |
 
@@ -86,8 +86,10 @@ dismiss from there, never on a timer.
 |---|---|---|
 | A value drives transform, size, opacity or colour | `AnimateTo(key, target, anim)`; `Animate(key, target, d)` for curves; `AnimateColor` for colours | Reading it runs the view every moving frame |
 | Lift on hover, press scale — no relayout | `AnimatePose(ui.Pose{X, Y, Scale, Rotate, Fade}, anim)` | Paint-only frames, the cheapest motion; share one pose among elements that move alike |
-| Appears or disappears | `ElementTransition{Enter, Exit: &ui.Motion{…}}`, `Collapse` | `Enter` plays only in a parent that existed last frame; the exiting element is a copy under its siblings — no pointer, no focus |
-| Flies from where another element showed | `Match:` a shared identity of your own type | One match at a time; the element gone leaves by its own `Exit` |
+| Appears or disappears | `ElementTransition{Enter, Exit: &ui.Motion{…}}`, `Collapse`; `Motion.Blur` blurs the way; `AfterExits` holds one back until its siblings have left | `Enter` plays only in a parent that existed last frame; the exiting element is a copy under its siblings — no pointer, no focus |
+| Flies from where another element showed | `Match:` a shared identity of your own type, `Fly:` the Magic Move — corners, opacity, colours and 3D blend on the way; pages: `Router.Transition = TransitionMatch` | One match at a time; the element gone leaves by its own `Exit` |
+| Brought into view, gliding | `el.ScrollIntoView(…)` — start, center or end | scroll math off the view's own state |
+| Brings itself in as it scrolls | `InView()` → `AnimateTo`; `ScrollState` for scroll-linked | — |
 | Timed sequence on one value | `Keyframes(name, kfs, ui.KeyframeOptions{Run: …})` | A `Run` change replays; first time must be zero, times increasing; `Delay`/`Repeat`/`Alternate` |
 | Many values, one playhead | `card.Timeline(key, ui.TimelineOptions{Run: …})` + `tl.Tween` | Placements `AfterPrevious`/`WithPrevious`/`AtLabel`/`AtTime`; `Paused`/`Reverse`/`Seek`/`Progress` take effect the frame they are said; `Settled`/`Arrived` chain state |
 | Drag, throw, swipe away | `el.Draggable(&offset, ui.DraggableOptions{Axis, Bounds, Snap})` | Remove for real only when `!Transitioning()`; `DragOffset()` follows for backdrops; by hand: `Jump`, `DragEnded`, `Project`, `Rubberband` |
@@ -112,8 +114,8 @@ dismiss from there, never on a timer.
 
 `c.Preferences().ReduceMotion`: values, poses, transitions and timelines
 snap to their ends; colours and fades still ease; `Loop` keeps spinning,
-as the system's spinners do. Motion computed by hand reads the preference
-too.
+as the system's spinners do. A fade or blur that must keep moving under
+it: `NonMotion`. Motion computed by hand reads the preference too.
 
 ## Testing
 

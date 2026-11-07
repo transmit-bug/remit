@@ -995,5 +995,151 @@
   "settingsUnavailable": "This build has no service for that setting.",
   "@settingsUnavailable": {
     "description": "A settings action has no service behind it."
+  },
+  "viewMode": "View",
+  "@viewMode": {
+    "description": "Accessible label of the notebook's view switch."
+  },
+  "viewEdit": "Edit",
+  "@viewEdit": {
+    "description": "View switch: write in the document alone."
+  },
+  "viewSplit": "Split",
+  "@viewSplit": {
+    "description": "View switch: the document beside the same note as it reads."
+  },
+  "viewRead": "Read",
+  "@viewRead": {
+    "description": "View switch: the note as it reads, whole."
+  },
+  "formatBar": "Formatting",
+  "@formatBar": {
+    "description": "Accessible label of the row of formatting controls."
+  },
+  "paragraphStyle": "Paragraph style",
+  "@paragraphStyle": {
+    "description": "Label of the menu that sets a paragraph's style."
+  },
+  "styleTitle": "Title",
+  "@styleTitle": {
+    "description": "Paragraph style: the note's title."
+  },
+  "styleHeading": "Heading",
+  "@styleHeading": {
+    "description": "Paragraph style: a section heading."
+  },
+  "styleSubheading": "Subheading",
+  "@styleSubheading": {
+    "description": "Paragraph style: a heading inside a section."
+  },
+  "styleBody": "Body",
+  "@styleBody": {
+    "description": "Paragraph style: ordinary text."
+  },
+  "fmtBold": "Bold",
+  "@fmtBold": {
+    "description": "Formatting: bold."
+  },
+  "fmtItalic": "Italic",
+  "@fmtItalic": {
+    "description": "Formatting: italic."
+  },
+  "fmtUnderline": "Underline",
+  "@fmtUnderline": {
+    "description": "Formatting: underline."
+  },
+  "fmtStrikethrough": "Strikethrough",
+  "@fmtStrikethrough": {
+    "description": "Formatting: strikethrough."
+  },
+  "fmtCode": "Code",
+  "@fmtCode": {
+    "description": "Formatting: inline code."
+  },
+  "fmtBullets": "Bulleted list",
+  "@fmtBullets": {
+    "description": "Formatting: a bulleted list."
+  },
+  "fmtNumbers": "Numbered list",
+  "@fmtNumbers": {
+    "description": "Formatting: a numbered list."
+  },
+  "fmtTasks": "Checklist",
+  "@fmtTasks": {
+    "description": "Formatting: a checklist."
+  },
+  "fmtQuote": "Quote",
+  "@fmtQuote": {
+    "description": "Formatting: a quotation."
+  },
+  "fmtCodeBlock": "Code block",
+  "@fmtCodeBlock": {
+    "description": "Formatting: a block of code."
+  },
+  "more": "More",
+  "@more": {
+    "description": "Accessible label of the button that opens the window's extra commands."
+  },
+  "link": "Link",
+  "@link": {
+    "description": "Formatting: the link of the selection."
+  },
+  "linkRemove": "Remove link",
+  "@linkRemove": {
+    "description": "Formatting: takes the link out of the selection."
+  },
+  "linkURL": "Link URL",
+  "@linkURL": {
+    "description": "Placeholder of the field a link's address is typed in."
+  },
+  "wordCount": "{count, plural, one {# word} other {# words}}",
+  "@wordCount": {
+    "description": "Status line: how many words the note holds.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "paragraphCount": "{count, plural, one {# paragraph} other {# paragraphs}}",
+  "@paragraphCount": {
+    "description": "Status line: how many paragraphs the note holds.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "headingCount": "{count, plural, one {# heading} other {# headings}}",
+  "@headingCount": {
+    "description": "The line above the document: how many headings the note has.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "saved": "Saved",
+  "@saved": {
+    "description": "Status line: every edit is written to disk at once."
+  },
+  "notesSearch": "Search notes",
+  "@notesSearch": {
+    "description": "Placeholder and label of the sidebar's search field."
+  },
+  "statReviewed": "Reviewed",
+  "@statReviewed": {
+    "description": "Session summary: how many cards were graded."
+  },
+  "statDueTomorrow": "Due tomorrow",
+  "@statDueTomorrow": {
+    "description": "Session summary: how many cards are due tomorrow."
+  },
+  "statRemembered": "Remembered",
+  "@statRemembered": {
+    "description": "Session summary: the share of cards rated as remembered."
   }
 }

@@ -50,6 +50,9 @@ type tokens struct {
 	typeTitle, typeHeading, typeBody, typeSmall float32
 	typeMono                                    float32
 	control, hairline                           float32
+	// The document's scale and the paper it sits on.
+	typeDisplay, typeChrome, typeLabel, typeCaption float32
+	paperWidth, gutter, frameHeight, barHeight      float32
 }
 
 // appTheme resolves Remit's appearance for this frame: the design language's
@@ -91,6 +94,11 @@ func newTokens(t *ui.Theme, p design.Palette) tokens {
 		typeBody: design.TypeBody * scale, typeSmall: design.TypeSmall * scale,
 		typeMono: design.TypeMono * scale,
 		control:  design.ControlHeight, hairline: design.Hairline,
+
+		typeDisplay: design.TypeDisplay * scale, typeChrome: design.TypeChrome * scale,
+		typeLabel: design.TypeLabel * scale, typeCaption: design.TypeCaption * scale,
+		paperWidth: design.PaperWidth, gutter: design.Gutter,
+		frameHeight: design.FrameHeight, barHeight: design.BarHeight,
 	}
 }
 

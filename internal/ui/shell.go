@@ -16,14 +16,19 @@ import (
 )
 
 const (
-	// sidebarWidth is the notes column, a fixed 260 DIP column rather than a
-	// pane the user resizes: review mode hides it instead of sharing space. On
-	// the smallest window it narrows, so that the note keeps room to be typed.
-	sidebarWidth  float32 = 260
-	sidebarNarrow float32 = 220
-	// panelWidth is the note's own panel, to the right of the document: its
-	// cards, and what #97 and #98 will put there.
-	panelWidth float32 = 280
+	// defaultNotesWidth is the notes column's width until the divider moves:
+	// the user's width is kept across frames and window resizes, and the split
+	// gives it back when the window has room again. On the smallest window the
+	// column keeps its room and the note shrinks, which is the divider's job.
+	defaultNotesWidth float32 = 260
+	// defaultEditorShare is the document's percentage of the note's room: the
+	// panel takes the rest, in proportion, so both follow the window.
+	defaultEditorShare float32 = 72
+	// defaultReadShare is the document's percentage when read beside its own
+	// source: half of the note, so two places can be compared.
+	defaultReadShare float32 = 50
+	// narrowWindow is the width below which the notebook drops its panel.
+	narrowWindow float32 = 900
 	// paletteWidth is the command palette's panel.
 	paletteWidth float32 = 480
 )
@@ -32,6 +37,7 @@ const (
 // switching never moves what the user is aiming at. Before a library is open
 // there is nothing to switch between, so the row holds the app's name alone.
 func (a *App) toolbar(c *ui.Context, tk tokens) ui.Element {
+	msgs := m(c)
 	toolbar := ui.Toolbar(c, func() {
 		ui.Text(c, Name).FontSize(tk.typeHeading).Bold()
 		if a.lib == nil {
@@ -40,45 +46,84 @@ func (a *App) toolbar(c *ui.Context, tk tokens) ui.Element {
 		}
 
 		chosen := int(a.mode)
-		if ui.Segmented(c, &chosen, m(c).ModeNotes(), m(c).ModeReview(), m(c).ModeBrowse(), m(c).ModeStats(), m(c).ModeSettings()).
-			Label(m(c).ModeLabel()).Changed() {
+		if ui.Segmented(c, &chosen, msgs.ModeNotes(), msgs.ModeReview(), msgs.ModeBrowse(), msgs.ModeStats(), msgs.ModeSettings()).
+			Label(msgs.ModeLabel()).Changed() {
 			a.setMode(mode(chosen))
 		}
 
 		ui.Spacer(c)
-		ui.Button(c, "").Label(m(c).NewNote()).
-			Children(func() { tk.iconText(c, "plus", m(c).NewNote(), iconSmall) }).
-			OnClick(func() { a.newNote(c) })
-	}).Label(m(c).Toolbar(Name)).
+		if a.mode == modeNotes {
+			view := int(a.view)
+			if ui.Segmented(c, &view, msgs.ViewEdit(), msgs.ViewSplit(), msgs.ViewRead()).
+				Label(msgs.ViewMode()).Changed() {
+				a.view = viewMode(view)
+			}
+			ui.Button(c, "").Label(msgs.PanelTitle()).Tooltip(msgs.PanelTitle()).
+				Children(func() { tk.icon(c, "notebook-pen", iconSmall) }).
+				OnClick(func() { a.togglePanel(c) })
+		}
+		ui.Button(c, "").Label(msgs.More()).Tooltip(msgs.More()).
+			Children(func() { tk.icon(c, "ellipsis", iconSmall) }).
+			Menu(func(menu *ui.Menu) {
+				if menu.Item(msgs.ImportAnki()).Chosen() {
+					a.importAnkiPackage(c)
+				}
+				if menu.Item(msgs.MakeCard()).Chosen() {
+					a.makeCardAtCaret(c)
+				}
+				if menu.Item(msgs.OpenSettings()).Chosen() {
+					a.openSettings()
+				}
+			})
+	}).Label(msgs.Toolbar(Name)).
 		Padding(tk.spaceS, tk.spaceL).
 		Background(tk.Surface)
 	return toolbar
 }
 
-// notesView is editing mode: the notes on the left, the note in the middle, and
-// the note's own panel on the right. A narrow window drops the panel first, then
-// narrows the notes column, so the document always keeps room to be typed.
+// viewMode is how the notebook shows the note: written in, written beside the
+// same note as it reads, or read whole.
+type viewMode uint8
+
+const (
+	viewEdit viewMode = iota
+	viewSplit
+	viewRead
+)
+
+// notesView is editing mode: the notes on the left, and on the right the note
+// written in, read beside its own source, or read whole. Each edge is a pane the
+// user drags — a split remembers the width it was given — and a narrow window
+// drops the note's panel so that the document keeps room to be typed.
 func (a *App) notesView(c *ui.Context, tk tokens) {
 	w, _ := c.Size()
-	narrow := w < narrowWindow
-	side := sidebarWidth
-	if narrow {
-		side = sidebarNarrow
-	}
-	ui.Row(c).Grow(1).AlignItems(ui.Stretch).Children(func() {
-		a.notesList(c, tk, side)
-		ui.Divider(c)
-		a.editorView(c, tk)
-		if a.panelShown(narrow) {
-			ui.Divider(c)
-			a.notePanel(c, tk)
-		}
-	})
+	ui.Split(c, &a.notesWidth, func() {
+		a.notesList(c, tk)
+	}, func() {
+		ui.Column(c).Grow(1).MinWidth(0).Children(func() {
+			switch a.view {
+			case viewRead:
+				a.readView(c, tk)
+			case viewSplit:
+				ui.SplitPercent(c, &a.readShare, func() {
+					a.editorView(c, tk)
+				}, func() {
+					a.secondPane(c, tk)
+				}).SplitReset(defaultReadShare).Fill()
+			default:
+				if !a.panelShown(w) {
+					a.editorView(c, tk)
+					return
+				}
+				ui.SplitPercent(c, &a.editorShare, func() {
+					a.editorView(c, tk)
+				}, func() {
+					a.notePanel(c, tk)
+				}).SplitReset(defaultEditorShare).Fill()
+			}
+		})
+	}).SplitReset(defaultNotesWidth).Fill()
 }
-
-// narrowWindow is the width below which the notebook drops its panel, puts the
-// split away and narrows its notes column.
-const narrowWindow float32 = 900
 
 // panelMode is what the user said about the note's panel, when they said
 // anything: a narrow window closes it until they ask for it.
@@ -91,14 +136,14 @@ const (
 )
 
 // panelShown reports whether the note's panel takes a column this frame.
-func (a *App) panelShown(narrow bool) bool {
+func (a *App) panelShown(w float32) bool {
 	switch a.panel {
 	case panelOpen:
 		return true
 	case panelClosed:
 		return false
 	}
-	return !narrow
+	return w >= narrowWindow
 }
 
 // showPanel opens the note's panel on one of its views, from the keyboard.
@@ -110,8 +155,9 @@ func (a *App) showPanel(tab panelTab) {
 }
 
 // togglePanel opens or closes the note's panel, whatever the window's width.
-func (a *App) togglePanel() {
-	if a.panelShown(true) {
+func (a *App) togglePanel(c *ui.Context) {
+	w, _ := c.Size()
+	if a.panelShown(w) {
 		a.panel = panelClosed
 		return
 	}
@@ -126,12 +172,12 @@ const (
 	panelBacklinks
 )
 
-// notePanel is the column beside the document: the note's outline or the notes
+// notePanel is the pane beside the document: the note's outline or the notes
 // that point at it, then what the note feeds. It scrolls on its own and takes
 // the focus only when one of its rows is chosen.
 func (a *App) notePanel(c *ui.Context, tk tokens) {
 	msgs := m(c)
-	ui.Column(c).Width(panelWidth).MaxWidth(panelWidth).Shrink(0).Padding(tk.spaceM).Gap(tk.spaceM).Children(func() {
+	ui.Column(c).Grow(1).MinWidth(0).Padding(tk.spaceM).Gap(tk.spaceM).Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
 			chosen := int(a.panelTab)
 			if ui.Segmented(c, &chosen, msgs.Outline(), msgs.Backlinks()).Label(msgs.PanelTitle()).Changed() {
@@ -143,40 +189,55 @@ func (a *App) notePanel(c *ui.Context, tk tokens) {
 				OnClick(func() { a.panel = panelClosed })
 		})
 
-		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Gap(tk.spaceXS).Children(func() {
-				if a.panelTab == panelBacklinks {
+		if a.panelTab == panelBacklinks {
+			ui.Scroll(c).Grow(1).Children(func() {
+				ui.Column(c).Gap(tk.spaceXS).Children(func() {
 					a.backlinkList(c, tk)
-				} else {
-					a.outlineList(c, tk)
-				}
+				})
 			})
-		})
+		} else {
+			a.outlineList(c, tk)
+		}
 
 		a.cardsStrip(c, tk, a.editor.draft)
 	})
 }
 
-// outlineEntry is one heading of the note: what it says, and where it starts in
-// the document the editor holds.
+// outlineEntry is one heading of the note: what it says, where it starts in the
+// document the editor holds, how deep it sits, and the heading it is under.
 type outlineEntry struct {
 	label  string
 	offset int
+	level  int
+	parent int // the entry this one sits under, -1 at the top
 }
 
-// outline reads a note's blocks into its headings, in document order. The
+// outlineEntries reads a note's blocks into its headings, in document order. The
 // blocks carry the Markdown source — the editor keeps a heading's hashes as
 // style, not text — and the offset is where the heading starts in the document
-// the editor holds.
-func outline(blocks []core.Block) []outlineEntry {
+// the editor holds. A heading is a child of the last heading above it that is
+// shallower, which is the tree the panel shows.
+func outlineEntries(blocks []core.Block) []outlineEntry {
 	var out []outlineEntry
+	last := [7]int{-1, -1, -1, -1, -1, -1, -1}
 	offset := 0
 	for i, block := range blocks {
 		if i > 0 {
 			offset += 2 // the blank line between blocks
 		}
 		if level, label := heading(strings.TrimSpace(block.Text)); level > 0 {
-			out = append(out, outlineEntry{label: label, offset: offset})
+			parent := -1
+			for l := level - 1; l >= 1; l-- {
+				if last[l] >= 0 {
+					parent = last[l]
+					break
+				}
+			}
+			out = append(out, outlineEntry{label: label, offset: offset, level: level, parent: parent})
+			last[level] = len(out) - 1
+			for l := level + 1; l < len(last); l++ {
+				last[l] = -1
+			}
 		}
 		offset += len(block.Text)
 	}
@@ -200,28 +261,88 @@ func heading(body string) (level int, label string) {
 	return level, strings.TrimSpace(label)
 }
 
-// outlineList shows the note's headings; choosing one puts the caret on its
-// paragraph, which is what scrolls it into view.
+// outlineList shows the note's headings as an outline, the one under the caret
+// marked; choosing one puts the caret on its paragraph, which is what scrolls it
+// into view. A heading is the arrow's to open and close, and the keys are the
+// outline's once a row has the focus.
 func (a *App) outlineList(c *ui.Context, tk tokens) {
+	entries := outlineEntries(a.editor.draft.Blocks)
+	if a.editor.doc == nil || len(entries) == 0 {
+		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Padding(tk.spaceS, 0).Children(func() {
+			tk.icon(c, "notebook-pen", iconSmall).TextColor(tk.textFaint)
+			ui.Text(c, m(c).OutlineEmpty()).FontSize(tk.typeLabel).TextColor(tk.TextMuted)
+		})
+		return
+	}
+	roots := make([]int, 0, len(entries))
+	children := make(map[int][]int, len(entries))
+	for i, entry := range entries {
+		if entry.parent < 0 {
+			roots = append(roots, i)
+		} else {
+			children[entry.parent] = append(children[entry.parent], i)
+		}
+	}
+	a.openOutline(entries)
+	// The caret marks the heading it is under; the choice stays the user's, so a
+	// click on a row is always a choice and never just a remark about the caret.
+	a.outlineCurrent = headingAt(entries, a.caretOffset())
+	a.outline.List.Selected = &a.outlineChosen
+	a.outline.List.Label = func(row int) string { return entries[a.outline.Item(row)].label }
+	list := ui.Outline(c, &a.outline, roots, func(i int) []int { return children[i] }, func(i int) {
+		text := ui.Text(c, entries[i].label).FontSize(tk.typeSmall).SingleLine()
+		if i == a.outlineCurrent {
+			text.TextColor(tk.Accent)
+			return
+		}
+		text.TextColor(tk.Text)
+	}).Grow(1).Label(m(c).Outline())
+	// A choice jumps to the heading; Enter or a double click on the row chosen
+	// jumps again, for a reader who scrolled away from it.
+	if list.Changed() || list.Submitted() {
+		if i := a.outline.Item(a.outlineChosen); i >= 0 && i < len(entries) {
+			a.pendingJump = entries[i].offset
+		}
+	}
+}
+
+// openOutline opens every heading a note's outline lists the first time it is
+// built, and again when the note or its shape changes, so a note reads whole;
+// the user may close what they like after that.
+func (a *App) openOutline(entries []outlineEntry) {
+	if a.outlineFor == a.editor.draft.ID && a.outlineShape == len(entries) {
+		return
+	}
+	if a.outlineFor != a.editor.draft.ID {
+		// Another note's choice means nothing here.
+		a.outlineChosen = -1
+	}
+	a.outline.Open.Clear()
+	for i := range entries {
+		a.outline.Open.Add(i)
+	}
+	a.outlineFor, a.outlineShape = a.editor.draft.ID, len(entries)
+}
+
+// headingAt is the heading the offset falls under, -1 before the first one.
+func headingAt(entries []outlineEntry, offset int) int {
+	at := -1
+	for i, entry := range entries {
+		if entry.offset > offset {
+			break
+		}
+		at = i
+	}
+	return at
+}
+
+// caretOffset is where the caret sits in the document the editor holds.
+func (a *App) caretOffset() int {
 	if a.editor.doc == nil {
-		ui.Text(c, m(c).OutlineEmpty()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
-		return
+		return 0
 	}
-	entries := outline(a.editor.draft.Blocks)
-	if len(entries) == 0 {
-		ui.Text(c, m(c).OutlineEmpty()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
-		return
-	}
-	for _, entry := range entries {
-		at := entry.offset
-		ui.ButtonBase(c.Key(entry.label)).Justify(ui.Start).
-			Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control - tk.spaceS).
-			Radius(tk.radiusControl).Label(entry.label).
-			OnClick(func() { a.jumpInDocument(c, at) }).
-			Children(func() {
-				ui.Text(c, entry.label).FontSize(tk.typeSmall).TextColor(tk.Text).SingleLine()
-			})
-	}
+	_, caret := a.editor.doc.Selection()
+	return caret
 }
 
 // jumpInDocument puts the caret on a paragraph of the note open now, which the
@@ -322,18 +443,28 @@ func hasTag(tags []string, tag string) bool {
 
 // notesList is the source list of notes: today at the top, then every note
 // newest first, with how many cards each one feeds.
-func (a *App) notesList(c *ui.Context, tk tokens, width float32) {
-	ui.Column(c).Width(width).Shrink(0).Children(func() {
+func (a *App) notesList(c *ui.Context, tk tokens) {
+	msgs := m(c)
+	ui.Column(c).Grow(1).MinWidth(0).Gap(tk.spaceS).Children(func() {
+		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Padding(tk.spaceS, tk.spaceM).Children(func() {
+			ui.SearchField(c, &a.notesQuery).Placeholder(msgs.NotesSearch()).Label(msgs.NotesSearch()).Grow(1)
+			ui.Button(c, "").Label(msgs.NewNote()).Tooltip(msgs.NewNote()).
+				Children(func() { tk.icon(c, "plus", iconSmall) }).
+				OnClick(func() { a.newNote(c) })
+		})
 		// The tags are their own row: inside a Sidebar a click belongs to the
 		// list's selection, not to a button.
 		a.tagFilterBar(c, tk)
 		ui.Sidebar(c, &a.editor.selected, func() {
-			ui.SidebarItem(c, "today", design.Icon("layers"), m(c).Today()).
+			ui.SidebarItem(c, "today", design.Icon("layers"), msgs.Today()).
 				Children(func() { ui.Badge(c, fmt.Sprint(a.review.Remaining())) }).
 				OnClick(func() { a.setMode(modeReview) })
-			ui.SidebarSection(c, m(c).Notebook(), nil, func() {
+			ui.SidebarSection(c, msgs.Notebook(), nil, func() {
 				for _, n := range a.data.notes {
 					if a.tagFilter != "" && !hasTag(a.data.noteTags[n.ID], a.tagFilter) {
+						continue
+					}
+					if !a.noteMatches(n) {
 						continue
 					}
 					item := ui.SidebarItem(c, string(n.ID), design.Icon("file-text"), n.Title)
@@ -344,6 +475,31 @@ func (a *App) notesList(c *ui.Context, tk tokens, width float32) {
 			})
 		}).Grow(1)
 	})
+}
+
+// noteMatches reports whether the sidebar's query keeps a note: its title or
+// the first line of its text, as the list reads it.
+func (a *App) noteMatches(n core.Note) bool {
+	query := strings.ToLower(strings.TrimSpace(a.notesQuery))
+	if query == "" {
+		return true
+	}
+	if strings.Contains(strings.ToLower(n.Title), query) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(noteSummary(n)), query)
+}
+
+// noteSummary is the line under a note's title: its first paragraph, flattened
+// to one line.
+func noteSummary(n core.Note) string {
+	for _, block := range n.Blocks {
+		text := strings.Join(strings.Fields(block.Text), " ")
+		if text != "" {
+			return text
+		}
+	}
+	return ""
 }
 
 // shortcuts declares the app's keys. They are window shortcuts, so they wait
@@ -490,6 +646,7 @@ type paletteState struct {
 	query string
 	sel   int
 	field ui.Handle
+	list  ui.ListState
 }
 
 // openPalette opens the palette on a fresh query and asks for the focus before
@@ -563,16 +720,18 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 
 			if len(items) == 0 {
 				ui.Text(c, m(c).NoActions()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+				return
 			}
-			for i, it := range items {
-				row := ui.ButtonBase(c.Key(it.label)).Gap(tk.spaceS).Justify(ui.Start).
-					MinHeight(tk.control).Padding(tk.spaceXS, tk.spaceS).
-					Radius(tk.radiusControl).Label(it.label)
-				if i == sel {
-					row.Background(tk.sunken)
-				}
-				row.OnClick(func() { a.runPaletteAction(it) })
-				row.Children(func() { ui.Text(c, it.label).FontSize(tk.typeBody) })
+			// The rows are a list's: the choice, the keys and what assistive
+			// technology reads come with it, and the filter is the query above.
+			a.palette.sel = clamp(a.palette.sel, 0, len(items)-1)
+			a.palette.list.Selected = &a.palette.sel
+			a.palette.list.Label = func(row int) string { return items[row].label }
+			rows := ui.List(c, &a.palette.list, len(items), func(i int) {
+				ui.Text(c, items[i].label).FontSize(tk.typeBody).Padding(tk.spaceXS, tk.spaceS)
+			}).Grow(1).MaxHeight(tk.control * 8).Label(m(c).CommandPalette())
+			if rows.Changed() || rows.Submitted() {
+				a.runPalette(items, a.palette.sel)
 			}
 		})
 	})

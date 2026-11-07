@@ -358,11 +358,12 @@ func TestSummaryWords(t *testing.T) {
 	state, deps := f.state, f.deps()
 	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
 
+	// Three numbers over their labels, not three sentences.
 	for _, want := range []string{
 		msgs.SummaryTitle(),
-		msgs.SummaryReviewed(24),
-		msgs.SummaryDueTomorrow(6),
-		msgs.SummaryAccuracy(87),
+		"24", msgs.StatReviewed(),
+		"6", msgs.StatDueTomorrow(),
+		"87%", msgs.StatRemembered(),
 	} {
 		if !tt.HasText(want) {
 			t.Errorf("the summary is missing %q; texts %q", want, tt.Texts())
@@ -448,8 +449,8 @@ func TestSummaryLinesAreShown(t *testing.T) {
 	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
 
 	for _, want := range []string{
-		msgs.SummaryReviewed(2),
-		msgs.SummaryDueTomorrow(1),
+		"2", msgs.StatReviewed(),
+		"1", msgs.StatDueTomorrow(),
 		"a quiet word about the day",
 	} {
 		if !tt.HasText(want) {

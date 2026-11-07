@@ -51,6 +51,22 @@ func TestOutlineJumpsToItsParagraph(t *testing.T) {
 	}
 }
 
+// The outline marks the heading the caret is under, so a long note says where
+// the writer is. A hand-built list of buttons had no current row at all.
+func TestOutlineFollowsTheCaret(t *testing.T) {
+	a, tt, _ := headedNote(t, 1024, 720)
+
+	// The editor opens with the caret at the end, under the second heading.
+	if got := a.outlineCurrent; got != 1 {
+		t.Fatalf("the outline marks row %d, want the second heading", got)
+	}
+	a.editor.doc.SetSelection(0, 0)
+	tt.Frame()
+	if got := a.outlineCurrent; got != 0 {
+		t.Errorf("the outline marks row %d after the caret moved to the top, want the first heading", got)
+	}
+}
+
 // A backlink names the note it is in and the paragraph; choosing it opens that
 // note there.
 func TestBacklinkOpensTheSourceAtItsParagraph(t *testing.T) {
