@@ -132,32 +132,46 @@ func (s *agentService) Status() appui.AgentStatus {
 	return status
 }
 
-// cardSource is the library as the agent API sees it. A card is made by asking
-// the shared resolver what the block asks, exactly as the notebook does: the
-// API has no derivation of its own, and neither does the store.
+// cardSource is the library as the agent API sees it — and as a plugin reaches
+// it: the shared read/write layer, plus the one write the store does not do
+// itself, deriving a card from a block. A card is made by asking the shared
+// resolver what the block asks, exactly as the notebook does: neither the API
+// nor a plugin derives on its own.
 type cardSource struct {
 	*store.Library
 	faces *cards.Resolver
 }
 
+// errNoCardPlugin is what a card write answers when the card plugin could not
+// start: reads still work, and a card that cannot be derived says why.
+var errNoCardPlugin = errors.New("remit: the card plugin did not start")
+
 // newCardSource opens the card plugin and the library's types for the API's
-// own use.
+// own use. A plugin that does not start leaves a source that reads the library
+// and cannot make a card, so that what does not need derivation keeps working.
 func newCardSource(lib *store.Library) (cardSource, error) {
-	runner, err := builtin.Cards(ext.JSLimits{})
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
-		return cardSource{}, err
+		return cardSource{Library: lib}, err
 	}
 	return cardSource{Library: lib, faces: cards.New(runner, lib.Types())}, nil
 }
 
 // Faces is what a card asks, as its type's templates render it.
 func (s cardSource) Faces(card core.Card) (front, back, link string) {
+	if s.faces == nil {
+		text, state := card.Ref.Text(blocksOf(s.Library))
+		return text, "", state.String()
+	}
 	return facesOf(s.faces, s.Library, card)
 }
 
 // CreateCard makes the cards the block's text asks for, and answers with the
 // first: what the API's contract asks for.
 func (s cardSource) CreateCard(blockID core.ID) (core.Card, error) {
+	if s.faces == nil {
+		return core.Card{}, errNoCardPlugin
+	}
 	block, ok := s.Block(blockID)
 	if !ok {
 		return core.Card{}, fmt.Errorf("agent api: no block %q", blockID)

@@ -84,6 +84,9 @@ type JSRunner struct {
 	module   *moejs.Module
 	limits   JSLimits
 	caps     map[string]bool
+	// host is what the extension may reach through its capabilities; nil when
+	// it was started without one.
+	host Host
 
 	// pool holds idle runtimes that have loaded the module. A channel is the
 	// whole concurrency story: take is a receive, return is a send, a full
@@ -100,8 +103,9 @@ type JSRunner struct {
 const runtimePoolSize = 2
 
 // OpenJS loads the JavaScript extension in dir: the same manifest, the same
-// capability rules and the same limits as any other, built in or not.
-func OpenJS(dir string, limits JSLimits) (*JSRunner, error) {
+// capability rules and the same limits as any other, built in or not. host is
+// what the extension may reach; nil is a runner that reaches nothing.
+func OpenJS(dir string, host Host, limits JSLimits) (*JSRunner, error) {
 	ext, err := Load(dir)
 	if err != nil {
 		return nil, err
@@ -114,26 +118,26 @@ func OpenJS(dir string, limits JSLimits) (*JSRunner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ext: %s: %w", entry, err)
 	}
-	return compileJS(ext.Manifest, source, limits)
+	return compileJS(ext.Manifest, source, host, limits)
 }
 
 // OpenBuiltin compiles an extension the app ships. It is the same loader as
 // OpenJS — the same manifest rules, the same capability set, the same limits —
 // with the bytes read from the binary rather than from a directory, so that a
 // built-in extension has no door a downloaded one does not.
-func OpenBuiltin(manifest Manifest, source []byte, limits JSLimits) (*JSRunner, error) {
+func OpenBuiltin(manifest Manifest, source []byte, host Host, limits JSLimits) (*JSRunner, error) {
 	if err := Validate(manifest); err != nil {
 		return nil, fmt.Errorf("ext: builtin %s: %w", manifest.Name, err)
 	}
 	if Runtime(manifest.Runtime) != RuntimeJS {
 		return nil, fmt.Errorf("ext: builtin %s: runtime %q, not js", manifest.Name, manifest.Runtime)
 	}
-	return compileJS(manifest, source, limits)
+	return compileJS(manifest, source, host, limits)
 }
 
 // compileJS is the one place a JavaScript extension is compiled and its
 // capabilities read.
-func compileJS(manifest Manifest, source []byte, limits JSLimits) (*JSRunner, error) {
+func compileJS(manifest Manifest, source []byte, host Host, limits JSLimits) (*JSRunner, error) {
 	module, err := moejs.Compile(manifest.Entry, string(source))
 	if err != nil {
 		return nil, fmt.Errorf("ext: %s: compile: %w", manifest.Name, err)
@@ -147,6 +151,7 @@ func compileJS(manifest Manifest, source []byte, limits JSLimits) (*JSRunner, er
 		module:   module,
 		limits:   limits.withDefaults(),
 		caps:     caps,
+		host:     host,
 		pool:     make(chan *moejs.Runtime, runtimePoolSize),
 	}, nil
 }

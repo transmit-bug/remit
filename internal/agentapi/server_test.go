@@ -1,4 +1,7 @@
-package agentapi
+// The API's tests live outside the package: they build a library through the
+// plugin host's side of the shared source, which imports the API package — a
+// test in the package itself would be an import cycle.
+package agentapi_test
 
 import (
 	"bytes"
@@ -13,6 +16,7 @@ import (
 
 	"errors"
 
+	"github.com/transmit-bug/remit/internal/agentapi"
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
@@ -37,7 +41,7 @@ func newLibrary(t *testing.T) *store.Library {
 
 func newServer(t *testing.T, lib *store.Library) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(New(newPluginSource(t, lib), Options{Token: token, Now: func() time.Time { return now }}).Handler())
+	srv := httptest.NewServer(agentapi.New(newPluginSource(t, lib), agentapi.Options{Token: token, Now: func() time.Time { return now }}).Handler())
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -114,7 +118,7 @@ func TestReadsNeedNoTokenWritesDo(t *testing.T) {
 
 func TestNoTokenMakesWritesUnavailable(t *testing.T) {
 	lib := newLibrary(t)
-	srv := httptest.NewServer(New(newPluginSource(t, lib), Options{Now: func() time.Time { return now }}).Handler())
+	srv := httptest.NewServer(agentapi.New(newPluginSource(t, lib), agentapi.Options{Now: func() time.Time { return now }}).Handler())
 	defer srv.Close()
 
 	if code, _ := do(t, http.MethodPost, srv.URL+"/v1/notes", "", map[string]any{"title": "x"}); code != http.StatusServiceUnavailable {
@@ -221,11 +225,11 @@ func TestUnknownRoutesAndMethods(t *testing.T) {
 func TestLoadOrCreateToken(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "agent-token")
 
-	first, err := LoadOrCreateToken(path)
+	first, err := agentapi.LoadOrCreateToken(path)
 	if err != nil {
 		t.Fatalf("first: %v", err)
 	}
-	second, err := LoadOrCreateToken(path)
+	second, err := agentapi.LoadOrCreateToken(path)
 	if err != nil {
 		t.Fatalf("second: %v", err)
 	}
@@ -251,18 +255,18 @@ func TestScheduleParamsKeepDefaults(t *testing.T) {
 
 func TestRotateTokenReplaces(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "agent-token")
-	first, err := LoadOrCreateToken(path)
+	first, err := agentapi.LoadOrCreateToken(path)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	second, err := RotateToken(path)
+	second, err := agentapi.RotateToken(path)
 	if err != nil {
 		t.Fatalf("rotate: %v", err)
 	}
 	if second == first {
 		t.Error("rotation kept the old token")
 	}
-	again, err := LoadOrCreateToken(path)
+	again, err := agentapi.LoadOrCreateToken(path)
 	if err != nil {
 		t.Fatalf("reload: %v", err)
 	}
@@ -281,7 +285,7 @@ type pluginSource struct {
 
 func newPluginSource(t *testing.T, lib *store.Library) pluginSource {
 	t.Helper()
-	runner, err := builtin.Cards(ext.JSLimits{})
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open the card plugin: %v", err)
 	}

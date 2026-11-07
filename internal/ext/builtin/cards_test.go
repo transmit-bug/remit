@@ -64,7 +64,7 @@ func frozenSet(t *testing.T) frozen {
 // against.
 func cards(t *testing.T) (*ext.JSRunner, []any) {
 	t.Helper()
-	runner, err := builtin.Cards(ext.JSLimits{})
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open the built-in card plugin: %v", err)
 	}
@@ -274,12 +274,12 @@ func TestBuiltinFollowsTheExtensionRules(t *testing.T) {
 
 	wrong := manifest
 	wrong.Protocol = 99
-	if _, err := ext.OpenBuiltin(wrong, []byte("export function deriveBlock() { return []; }"), ext.JSLimits{}); err == nil {
+	if _, err := ext.OpenBuiltin(wrong, []byte("export function deriveBlock() { return []; }"), nil, ext.JSLimits{}); err == nil {
 		t.Error("a built-in manifest carrying a wire protocol was accepted")
 	}
 	loose := manifest
 	loose.Entry = "../cards/main.js"
-	if _, err := ext.OpenBuiltin(loose, []byte("export function deriveBlock() { return []; }"), ext.JSLimits{}); err == nil {
+	if _, err := ext.OpenBuiltin(loose, []byte("export function deriveBlock() { return []; }"), nil, ext.JSLimits{}); err == nil {
 		t.Error("a built-in entry outside its own directory was accepted")
 	}
 }

@@ -1,12 +1,14 @@
 package store_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/core/transfer"
 )
 
 func TestPluginDataRoundTrip(t *testing.T) {
@@ -113,5 +115,47 @@ func TestPluginDataSkipsUnchangedWrites(t *testing.T) {
 	}
 	if got, ok := lib.PluginData("remit.cards.standard"); !ok || got != "different" {
 		t.Fatalf("get = %q, %v", got, ok)
+	}
+}
+
+// A plugin's data is part of the library: the archive carries it, and it is
+// still plaintext on the other side, under the id that stored it.
+func TestPluginDataTravelsWithTheArchive(t *testing.T) {
+	dir := t.TempDir()
+	lib, err := store.Create(dir, store.Options{})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := lib.SetPluginData("remit.cards.standard", `{"streak":3}`); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	if err := lib.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+
+	var archive bytes.Buffer
+	if err := transfer.Write(dir, &archive); err != nil {
+		t.Fatalf("write archive: %v", err)
+	}
+
+	restored := t.TempDir()
+	if err := transfer.Read(bytes.NewReader(archive.Bytes()), int64(archive.Len()), restored); err != nil {
+		t.Fatalf("read archive: %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(restored, "plugins-data", "remit.cards.standard.json"))
+	if err != nil {
+		t.Fatalf("read restored data: %v", err)
+	}
+	if !strings.Contains(string(raw), `"value": "{\"streak\":3}"`) {
+		t.Errorf("the restored file is not the plaintext value: %s", raw)
+	}
+
+	reopened, err := store.Open(restored, store.Options{})
+	if err != nil {
+		t.Fatalf("open restored: %v", err)
+	}
+	defer reopened.Close()
+	if got, ok := reopened.PluginData("remit.cards.standard"); !ok || got != `{"streak":3}` {
+		t.Errorf("after the archive get = %q, %v", got, ok)
 	}
 }

@@ -13,10 +13,18 @@ import (
 // startExtensions runs the extensions this library enabled. A broken or
 // missing extension is reported and skipped: enabling one must never keep the
 // app from opening.
+//
+// The runners reach the library through the same source the loopback API uses:
+// the store's read/write layer plus card derivation, so a plugin's cards.create
+// makes what the app would.
 func startExtensions(lib *store.Library) {
 	enabled := lib.EnabledExtensions()
 	if len(enabled) == 0 {
 		return
+	}
+	host, err := newCardSource(lib)
+	if err != nil {
+		slog.Warn("remit: extensions: the card plugin did not start", "err", err)
 	}
 	root, err := mygo.App.Path(mygo.PathUserData)
 	if err != nil {
@@ -39,7 +47,7 @@ func startExtensions(lib *store.Library) {
 			slog.Warn("remit: extension enabled but not installed", "name", name)
 			continue
 		}
-		r, err := ext.Open(e)
+		r, err := ext.Open(e, host)
 		if err != nil {
 			slog.Warn("remit: extension did not start", "name", name, "err", err)
 			continue

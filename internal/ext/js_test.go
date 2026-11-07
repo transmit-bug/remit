@@ -56,7 +56,7 @@ export function cards(block) {
   return [{ block: block.id, front: text.slice(0, at).trim(), back: text.slice(at + 2).trim() }];
 }
 `)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestJSCapabilitiesGateTheHost(t *testing.T) {
 export function echo(x) { return remit.echo(x); }
 `
 	without := writeJS(t, manifestFor("quiet"), source)
-	quiet, err := ext.OpenJS(without, ext.JSLimits{})
+	quiet, err := ext.OpenJS(without, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -111,7 +111,7 @@ export function echo(x) { return remit.echo(x); }
 	}
 
 	with := writeJS(t, manifestFor("loud", ext.CapEcho), source)
-	loud, err := ext.OpenJS(with, ext.JSLimits{})
+	loud, err := ext.OpenJS(with, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -127,7 +127,7 @@ export function echo(x) { return remit.echo(x); }
 // A hook that never returns is interrupted, and the caller gets its time back.
 func TestJSTimeout(t *testing.T) {
 	dir := writeJS(t, manifestFor("spin"), `export function spin() { for (;;) {} }`)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{Timeout: 50 * time.Millisecond})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{Timeout: 50 * time.Millisecond})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -152,7 +152,7 @@ export function hungry() {
   for (;;) kept.push(new Array(4096).fill(7));
 }
 `)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{Memory: 2 << 20, Timeout: 5 * time.Second})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{Memory: 2 << 20, Timeout: 5 * time.Second})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -167,7 +167,7 @@ export function hungry() {
 // Dynamic code is off: a hook cannot build code to run.
 func TestJSNoDynamicCode(t *testing.T) {
 	dir := writeJS(t, manifestFor("dynamic"), `export function dynamic() { return eval("1 + 1"); }`)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestJSNoDynamicCode(t *testing.T) {
 // directory, are refused.
 func TestJSRefusesWhatItCannotRun(t *testing.T) {
 	dir := writeJS(t, manifestFor("small"), `export function one() { return 1; }`)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestJSRefusesWhatItCannotRun(t *testing.T) {
 	}
 
 	escaping := writeJS(t, `{"id":"test.bad","name":"bad","apiVersion":1,"runtime":"js","entry":"../../etc/passwd"}`, `export function one() { return 1; }`)
-	if _, err := ext.OpenJS(escaping, ext.JSLimits{}); err == nil {
+	if _, err := ext.OpenJS(escaping, nil, ext.JSLimits{}); err == nil {
 		t.Error("an entry outside the extension was accepted")
 	}
 }
@@ -200,7 +200,7 @@ func TestJSRefusesWhatItCannotRun(t *testing.T) {
 // once share the pool's depth without deadlocking.
 func TestJSPoolWarmAndReuse(t *testing.T) {
 	dir := writeJS(t, manifestFor("pooled"), `export function one() { return 1; }`)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestJSPoolKeepsModuleState(t *testing.T) {
 let seen = 0;
 export function tick() { seen += 1; return seen; }
 `)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -278,7 +278,7 @@ export function go(ok) {
   return 1;
 }
 `)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -323,7 +323,7 @@ func TestJSWarmSurfacesLoadErrors(t *testing.T) {
 	// A module that throws while evaluating: compileJS accepts it (it parses),
 	// the load does not.
 	dir := writeJS(t, manifestFor("boom"), `throw new Error("boom");`)
-	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}

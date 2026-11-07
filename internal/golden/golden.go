@@ -134,7 +134,7 @@ func faces() []Face {
 				Ordinal: 1}},
 	}
 
-	runner, err := builtin.Cards(ext.JSLimits{})
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
 		panic("golden: the card plugin did not start: " + err.Error())
 	}

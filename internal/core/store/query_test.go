@@ -56,6 +56,64 @@ func TestSearchCards(t *testing.T) {
 	}
 }
 
+// Notes and cards search the same way: the index, a block's text, a user's
+// phrase taken literally. A note is what the note's blocks hold.
+func TestSearchNotes(t *testing.T) {
+	now := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
+	lib, err := store.Create(t.TempDir(), store.Options{Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	defer lib.Close()
+
+	biology, err := lib.SaveNote(core.Note{Title: "Biology", Blocks: []core.Block{
+		{Text: "spacing beats cramming :: yes"},
+		{Text: "half of 50% is 25% :: maths"},
+		{Text: "under_score matters :: yes"},
+	}})
+	if err != nil {
+		t.Fatalf("note: %v", err)
+	}
+	if _, err := lib.SaveNote(core.Note{Title: "Physics", Blocks: []core.Block{{Text: "entropy grows :: almost always"}}}); err != nil {
+		t.Fatalf("second note: %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		query string
+		want  string // the title of the one note a query matches, empty for none
+	}{
+		{"case insensitively", "SPACING", "Biology"},
+		{"a substring", "cramm", "Biology"},
+		{"nothing", "quantum", ""},
+		{"percent is literal", "50%", "Biology"},
+		{"underscore is literal", "under_score", "Biology"},
+		{"a bare percent matches nothing literal", "%", "Biology"},
+		{"empty", "   ", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := lib.SearchNotes(tt.query)
+			if err != nil {
+				t.Fatalf("SearchNotes(%q): %v", tt.query, err)
+			}
+			if tt.want == "" {
+				if len(got) != 0 {
+					t.Errorf("SearchNotes(%q) = %d notes, want none", tt.query, len(got))
+				}
+				return
+			}
+			if len(got) != 1 || got[0].Title != tt.want {
+				t.Fatalf("SearchNotes(%q) = %+v, want the %s note", tt.query, got, tt.want)
+			}
+			if got[0].ID != biology.ID || len(got[0].Blocks) != len(biology.Blocks) {
+				t.Errorf("SearchNotes(%q) = %q with %d blocks, want note %q with %d",
+					tt.query, got[0].ID, len(got[0].Blocks), biology.ID, len(biology.Blocks))
+			}
+		})
+	}
+}
+
 func TestCardsWithStatus(t *testing.T) {
 	now := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
 	lib, err := store.Create(t.TempDir(), store.Options{Now: func() time.Time { return now }})

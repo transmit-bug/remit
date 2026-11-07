@@ -105,7 +105,7 @@ func validateJS(m Manifest) error {
 	if filepath.IsAbs(m.Entry) || strings.Contains(m.Entry, "..") {
 		return fmt.Errorf("entry %q is outside the extension", m.Entry)
 	}
-	return validateImplements(m)
+	return errors.Join(validateImplements(m), validateCapabilities(m))
 }
 
 // validateImplements checks what the extension claims to carry against the
@@ -122,6 +122,19 @@ func validateImplements(m Manifest) error {
 			problems = append(problems, fmt.Errorf("implements %q: version %d, contracts start at 1", hook, m.Implements[hook]))
 		case m.Implements[hook] > contract:
 			problems = append(problems, fmt.Errorf("implements %q: version %d, this app speaks %d", hook, m.Implements[hook], contract))
+		}
+	}
+	return errors.Join(problems...)
+}
+
+// validateCapabilities checks what the extension asks the host for against the
+// host's vocabulary. Every unknown name is listed, as validateImplements lists
+// every wrong hook, so a plugin author sees the whole picture in one refusal.
+func validateCapabilities(m Manifest) error {
+	var problems []error
+	for _, capability := range m.Capabilities {
+		if !knownCapability(capability) {
+			problems = append(problems, fmt.Errorf("capability %q: no such capability", capability))
 		}
 	}
 	return errors.Join(problems...)

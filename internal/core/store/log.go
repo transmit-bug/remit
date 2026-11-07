@@ -195,6 +195,29 @@ func liveBetween(events []schedule.Event, from, to time.Time) []schedule.Event {
 	return out
 }
 
+// History returns one card's live reviews, oldest first: the reviews an undo
+// or a plugin's "what happened" view asks for. It is read-only, and a void
+// takes its review with it, so an undone answer is not in the history.
+func (l *Library) History(cardID core.ID) ([]schedule.Event, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, ErrClosed
+	}
+	events, _, err := l.readLogFrom(0)
+	if err != nil {
+		return nil, err
+	}
+	live := liveBetween(events, time.Time{}, time.Time{})
+	out := make([]schedule.Event, 0, 4)
+	for _, ev := range live {
+		if ev.Card == cardID {
+			out = append(out, ev)
+		}
+	}
+	return out, nil
+}
+
 // appendLog writes one event and makes sure it survives a crash: the log is the
 // only place scheduling history lives.
 func appendLog(path string, event schedule.Event) error {

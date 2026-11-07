@@ -104,11 +104,31 @@ func TestValidateJSManifestListsEveryWrongClaim(t *testing.T) {
 // vocabulary it is checked against is the one the host exports.
 func TestValidateJSManifestAcceptsTheCurrentContract(t *testing.T) {
 	m := jsManifest()
+	m.Capabilities = []string{
+		ext.CapNotesRead, ext.CapCardsWrite, ext.CapReviewRead,
+		ext.CapReviewWrite, ext.CapScheduleFSRS, ext.CapStoreOwn,
+	}
 	if err := ext.Validate(m); err != nil {
 		t.Fatalf("a well-formed js manifest was refused: %v", err)
 	}
 	if ext.Hooks["deriveBlock"] != 1 || ext.Hooks["on_event"] != 1 {
 		t.Errorf("the hook vocabulary drifted: %+v", ext.Hooks)
+	}
+}
+
+// A capability the host does not offer is refused, and every unknown name is
+// listed at once: a plugin author sees the whole picture in one refusal.
+func TestValidateJSManifestRefusesUnknownCapabilities(t *testing.T) {
+	m := jsManifest()
+	m.Capabilities = []string{ext.CapNotesRead, "cards:teleport", "net:fetch"}
+	err := ext.Validate(m)
+	if err == nil {
+		t.Fatal("unknown capabilities were accepted")
+	}
+	for _, want := range []string{`capability "cards:teleport": no such capability`, `capability "net:fetch": no such capability`} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("refusal %q misses %q", err, want)
+		}
 	}
 }
 

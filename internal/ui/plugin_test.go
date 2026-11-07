@@ -27,7 +27,7 @@ func withPlugin(t *testing.T, dir string, source string) (*App, testLibrary) {
 	if err := os.WriteFile(filepath.Join(extDir, "main.js"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runner, err := ext.OpenJS(extDir, ext.JSLimits{Timeout: time.Second})
+	runner, err := ext.OpenJS(extDir, nil, ext.JSLimits{Timeout: time.Second})
 	if err != nil {
 		t.Fatalf("open the test plugin: %v", err)
 	}
@@ -183,7 +183,7 @@ export function summary(session) {
 	if err := os.WriteFile(filepath.Join(extDir, "main.js"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runner, err := ext.OpenJS(extDir, ext.JSLimits{})
+	runner, err := ext.OpenJS(extDir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open the test scheduler: %v", err)
 	}

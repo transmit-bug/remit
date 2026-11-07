@@ -13,7 +13,7 @@ import (
 // gets, so the example cannot rot.
 func TestTheGuidesExamplePluginRuns(t *testing.T) {
 	dir := filepath.Join("..", "..", "examples", "plugins", "cards-mini")
-	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("load the example: %v", err)
 	}
