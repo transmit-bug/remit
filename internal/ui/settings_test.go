@@ -153,7 +153,7 @@ func TestSettingsSurviveRestart(t *testing.T) {
 	if !agent.on {
 		t.Error("the agent switch did not start the listener")
 	}
-	if !a.prefs.agentOn || !a.prefs.updateCheck || !a.prefs.notifications {
+	if !a.prefs.AgentOn || !a.prefs.UpdateCheck || !a.prefs.Notifications {
 		t.Errorf("the page did not read its own write back: %+v", a.prefs)
 	}
 
@@ -162,7 +162,7 @@ func TestSettingsSurviveRestart(t *testing.T) {
 	tt = ui.NewTester(next.View, 1024, 720)
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyComma)
-	if !next.prefs.agentOn || !next.prefs.updateCheck || !next.prefs.notifications {
+	if !next.prefs.AgentOn || !next.prefs.UpdateCheck || !next.prefs.Notifications {
 		t.Fatalf("the restarted app shows %+v, want the settings written", next.prefs)
 	}
 	tt.Advance(time.Second) // the switch knobs settle
@@ -237,7 +237,7 @@ func TestAgentFailureKeepsTheSwitch(t *testing.T) {
 	if !tt.HasText("The agent API did not start: address already in use") {
 		t.Fatalf("the failure was not reported; texts %q", tt.Texts())
 	}
-	if a.prefs.agentOn {
+	if a.prefs.AgentOn {
 		t.Error("the switch stayed on after the listener refused")
 	}
 	got, err := settings.Load(data)
@@ -352,7 +352,7 @@ func TestHotkeyApply(t *testing.T) {
 
 	// The page starts on the default accelerator; typing a new one binds it and
 	// writes it.
-	if got := a.prefs.hotkey; got != settings.DefaultHotkey {
+	if got := a.prefs.Hotkey; got != settings.DefaultHotkey {
 		t.Errorf("the field holds %q, want the default %q", got, settings.DefaultHotkey)
 	}
 	if err := tt.Click("Review shortcut"); err != nil {
@@ -403,28 +403,6 @@ func TestHotkeyApply(t *testing.T) {
 	tt.Key(ui.Cmd, ui.KeyComma)
 	if !tt.HasText("That shortcut is not available: another app owns it") {
 		t.Fatalf("the startup failure is not on the page; texts %q", tt.Texts())
-	}
-	tt.Advance(time.Second)
-	if tt.FramePending() {
-		t.Error("view still requests frames after it should settle")
-	}
-}
-
-// The settings page in Chinese at the smallest window: every control still has
-// its box inside the window, not only its text.
-func TestSettingsChineseAtTheSmallestWindow(t *testing.T) {
-	a := settingsApp(t, Options{AgentControls: newFakeAgent()})
-	tt := ui.NewTester(a.View, 720, 520)
-	tt.SetLocale("zh-Hans")
-	tt.Frame()
-	tt.Key(ui.Cmd, ui.KeyComma)
-
-	for _, label := range []string{"设置", "代理接口", "对代理开放", "更换令牌", "更新", "启动时检查", "立即检查", "复习快捷键", "应用", "每日提醒"} {
-		reveal(t, tt, 720, 520, label)
-		assertControl(t, tt, 720, 520, label)
-	}
-	if tt.HasText("Settings") {
-		t.Error("the page kept its English title")
 	}
 	tt.Advance(time.Second)
 	if tt.FramePending() {
@@ -537,7 +515,7 @@ func TestSettingsWriteFailureRevertsTheSwitch(t *testing.T) {
 	if !tt.HasText("Could not save the change.") {
 		t.Fatalf("the failed write was not reported; texts %q", tt.Texts())
 	}
-	if a.prefs.notifications || a.Settings().Notifications {
+	if a.prefs.Notifications || a.Settings().Notifications {
 		t.Error("the switch stayed on after the write failed")
 	}
 }

@@ -1,10 +1,20 @@
 package ui
 
 import (
+	"context"
+	"errors"
 	"log/slog"
+	"strings"
+
+	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/settings"
+	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 )
+
+// errCannotUpdate is the settings page's report of a build without update
+// keys, named here because the check the app runs is the page's default.
+var errCannotUpdate = screensettings.ErrCannotUpdate
 
 // loadSettings reads the app's settings from its data directory, so that a
 // choice made in an earlier run is shown in this one. Settings that cannot be
@@ -72,4 +82,175 @@ func (a *App) OnSettings(fn func(settings.Settings)) {
 // other preference, so the next start opens it without asking again.
 func (a *App) remember(dir string) error {
 	return a.UpdateSettings(func(s *settings.Settings) { s.LibraryDir = dir })
+}
+
+// openSettings shows the settings page, remembering the face to come back to.
+func (a *App) openSettings() {
+	if a.mode != modeSettings {
+		a.prefsBack = a.mode
+	}
+	a.mode = modeSettings
+	a.syncPrefs()
+}
+
+// closeSettings returns to the face the page was opened from.
+func (a *App) closeSettings() {
+	back := a.prefsBack
+	if back == modeSettings {
+		back = modeNotes
+	}
+	a.setMode(back)
+}
+
+// syncPrefs copies the settings, and the agent API's own report, into what the
+// page shows. Every write ends here, so a failed one leaves the page showing
+// what the file holds rather than what the user clicked.
+func (a *App) syncPrefs() {
+	a.prefs.Notifications = a.settings.Notifications
+	a.prefs.AgentOn = a.settings.AgentServer
+	a.prefs.UpdateCheck = a.settings.UpdateCheck
+	a.prefs.Hotkey = a.settings.HotkeyAccelerator()
+	a.prefs.Agent = screensettings.AgentStatus{}
+	if a.agentAPI != nil {
+		a.prefs.Agent = a.agentAPI.Status()
+	}
+}
+
+// settingsDeps is what the settings page asks of the app: one function per
+// thing the user can do there, each run on the UI thread.
+func (a *App) settingsDeps() screensettings.Deps {
+	return screensettings.Deps{
+		SetAgent:         a.setAgent,
+		RotateToken:      a.rotateToken,
+		CheckNow:         a.checkNow,
+		ApplyHotkey:      a.applyHotkey,
+		SetUpdateCheck:   a.setUpdateCheck,
+		SetNotifications: a.setNotifications,
+	}
+}
+
+// setUpdateCheck remembers whether the app checks for updates at launch.
+func (a *App) setUpdateCheck(c *ui.Context, on bool) {
+	a.writePrefs(c, func(s *settings.Settings) { s.UpdateCheck = on })
+}
+
+// setNotifications remembers whether the daily reminder is on. It is the same
+// setting the tray's pause item flips.
+func (a *App) setNotifications(c *ui.Context, on bool) {
+	a.writePrefs(c, func(s *settings.Settings) { s.Notifications = on })
+}
+
+// NoteHotkeyFailure records why the accelerator could not be registered, so
+// that the next visit to the settings page says it. A startup that cannot bind
+// the shortcut must never be a silent one.
+func (a *App) NoteHotkeyFailure(err error) {
+	if err == nil {
+		a.prefs.HotkeyErr = ""
+		return
+	}
+	a.prefs.HotkeyErr = err.Error()
+}
+
+// applyHotkey binds the accelerator the field holds. A combination that is
+// invalid or already taken leaves the old binding in place: the seam registers
+// before it unregisters, and nothing is written unless that worked.
+func (a *App) applyHotkey(c *ui.Context, draft string) {
+	acc := strings.TrimSpace(draft)
+	if acc == "" {
+		acc = settings.DefaultHotkey
+	}
+	if a.bindHotkey == nil {
+		a.prefs.HotkeyErr = m(c).SettingsUnavailable()
+		return
+	}
+	if err := a.bindHotkey(acc); err != nil {
+		a.prefs.HotkeyErr = err.Error()
+		slog.Warn("remit: global shortcut not applied", "accelerator", acc, "err", err)
+		return
+	}
+	a.prefs.HotkeyErr = ""
+	if err := a.UpdateSettings(func(s *settings.Settings) { s.Hotkey = acc }); err != nil {
+		a.report(c, "save settings", err)
+		return
+	}
+	c.Toast(m(c).ShortcutApplied(acc))
+}
+
+// checkNow asks whether a newer version exists and says what came back. It
+// asks only when the user turned the check on, and reports a build that cannot
+// update as such rather than as being up to date.
+func (a *App) checkNow(c *ui.Context) {
+	a.prefs.UpdateMsg = ""
+	if !a.settings.UpdateCheck {
+		a.prefs.UpdateMsg = m(c).UpdateOff()
+		return
+	}
+	if a.checkUpdate == nil {
+		a.prefs.UpdateMsg = m(c).SettingsUnavailable()
+		return
+	}
+	result, err := a.checkUpdate(context.Background(), a.settings)
+	switch {
+	case errors.Is(err, errCannotUpdate):
+		a.prefs.UpdateMsg = m(c).UpdateCannot()
+	case err != nil:
+		a.prefs.UpdateMsg = m(c).UpdateFailed(err.Error())
+		slog.Warn("remit: update check", "err", err)
+	case result.Version == "":
+		a.prefs.UpdateMsg = m(c).UpdateUpToDate()
+	default:
+		a.prefs.UpdateMsg = m(c).UpdateAvailable(result.Version)
+		slog.Info("remit: newer version available", "version", result.Version, "running", Version)
+	}
+}
+
+// rotateToken withdraws the agent API's token and reports the one now active,
+// which is a new one on a restarted listener.
+func (a *App) rotateToken(c *ui.Context) {
+	if a.agentAPI == nil {
+		c.Toast(m(c).SettingsUnavailable())
+		return
+	}
+	if err := a.agentAPI.RotateToken(); err != nil {
+		slog.Warn("remit: agent token", "err", err)
+		c.Toast(m(c).TokenRotateFailed(err.Error()))
+		return
+	}
+	a.syncPrefs()
+	c.Toast(m(c).TokenRotated())
+}
+
+// setAgent turns the agent API on or off now, and remembers the choice for the
+// next start only when the listener did as it was told.
+func (a *App) setAgent(c *ui.Context, on bool) {
+	if a.agentAPI == nil {
+		a.syncPrefs()
+		c.Toast(m(c).SettingsUnavailable())
+		return
+	}
+	if err := a.agentAPI.SetEnabled(on); err != nil {
+		slog.Warn("remit: agent api", "on", on, "err", err)
+		a.syncPrefs()
+		c.Toast(m(c).AgentFailed(err.Error()))
+		return
+	}
+	// A choice that could not be remembered is undone: the port follows the
+	// settings rather than serving what they deny.
+	if !a.writePrefs(c, func(s *settings.Settings) { s.AgentServer = on }) && on {
+		if err := a.agentAPI.SetEnabled(false); err != nil {
+			slog.Warn("remit: agent api", "err", err)
+		}
+	}
+	a.syncPrefs()
+}
+
+// writePrefs writes the page's change and reports a failure where the change
+// was made; the page ends up showing what the file holds either way.
+func (a *App) writePrefs(c *ui.Context, fn func(*settings.Settings)) bool {
+	if err := a.UpdateSettings(fn); err != nil {
+		a.report(c, "save settings", err)
+		a.syncPrefs() // the file did not take it: show what it holds
+		return false
+	}
+	return true
 }
