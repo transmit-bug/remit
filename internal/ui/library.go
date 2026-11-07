@@ -19,6 +19,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/start"
+	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -315,6 +316,23 @@ func (a *App) loadCurrent() {
 		a.preview, a.hasPreview = a.previewFor()
 		a.summary, a.hasSummary = a.summaryFor()
 	}
+}
+
+// loadStats derives the statistics page's datasets: the review heatmap, the
+// retention picture and the forecast. It is a load path: the view reads what it
+// left, so no frame replays the review log.
+func (a *App) loadStats() {
+	if a.lib == nil {
+		a.stats = screenstats.State{}
+		return
+	}
+	now := time.Now()
+	from, to := screenstats.HeatRange(now)
+	a.stats = screenstats.Build(now,
+		stats.ReviewsPerDay(a.lib, from, to),
+		stats.RetentionOf(a.lib, schedule.DefaultParams()),
+		stats.Forecast(a.lib, now, screenstats.ForecastDays),
+	)
 }
 
 // report logs a write that failed and says so where the action was, so a
