@@ -364,7 +364,7 @@ func readReviews(t *testing.T, dir string) []logRecord {
 // the app reads a card through.
 func resolver(t *testing.T, lib *store.Library) *cards.Resolver {
 	t.Helper()
-	runner, err := builtin.Cards(ext.JSLimits{})
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open the card plugin: %v", err)
 	}

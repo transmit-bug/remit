@@ -20,7 +20,9 @@ type cardPlugin struct {
 }
 
 // openCards starts the card plugin: the one a test hands in, none at all when it
-// asked for none, and otherwise the one the app ships.
+// asked for none, and otherwise the one the app ships. The app's own plugins are
+// opened before a library is and declare no capabilities, so they are given no
+// host; a downloaded extension is started by cmd, beside the open library.
 func openCards(chosen *ext.JSRunner, without bool) *cardPlugin {
 	if without {
 		return nil
@@ -29,7 +31,7 @@ func openCards(chosen *ext.JSRunner, without bool) *cardPlugin {
 		warm(chosen, "card")
 		return &cardPlugin{runner: chosen}
 	}
-	runner, err := builtin.Cards(ext.JSLimits{})
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
 		// A plugin that cannot start is not a reason to refuse the library: the
 		// cards that exist keep reading their paragraphs.
@@ -65,7 +67,7 @@ func openScheduler(chosen *ext.JSRunner, without bool) *schedulerPlugin {
 		warm(chosen, "scheduler")
 		return &schedulerPlugin{runner: chosen}
 	}
-	runner, err := builtin.Scheduler(ext.JSLimits{})
+	runner, err := builtin.Scheduler(nil, ext.JSLimits{})
 	if err != nil {
 		slog.Error("remit: the scheduler plugin did not start", "err", err)
 		return nil

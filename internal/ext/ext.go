@@ -29,9 +29,10 @@ const Timeout = time.Second
 // extension runs in this process under the default limits, anything else runs
 // as a process speaking the protocol. The decision lives here, where the
 // manifest is read, so the app above asks once and gets a runner either way.
-func Open(e Extension) (Hook, error) {
+// host is what the extension may reach; nil is a runner that reaches nothing.
+func Open(e Extension, host Host) (Hook, error) {
 	if Runtime(e.Manifest.Runtime) == RuntimeJS {
-		return OpenJS(e.Dir, JSLimits{})
+		return OpenJS(e.Dir, host, JSLimits{})
 	}
 	return Start(e)
 }

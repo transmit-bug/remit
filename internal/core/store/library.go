@@ -961,6 +961,40 @@ func (l *Library) SaveCard(card core.Card) error {
 	return nil
 }
 
+// DeleteCard removes a card's definition and its schedule from the index. The
+// review log is append-only, so the card's reviews stay where they were
+// written: deleting a card takes back no history, it only stops the card from
+// being scheduled. A card that is not there is an error, so a caller that meant
+// another id hears about it.
+func (l *Library) DeleteCard(id core.ID) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return ErrClosed
+	}
+	if _, ok := l.cards[id]; !ok {
+		return fmt.Errorf("store: no card %q", id)
+	}
+	if err := os.Remove(l.cardPath(id)); err != nil {
+		return err
+	}
+	marks, err := l.sourceMarks()
+	if err != nil {
+		return err
+	}
+	err = l.index.write(func(e execer) error {
+		if err := deleteCard(e, id); err != nil {
+			return err
+		}
+		return l.putMarks(e, marks)
+	})
+	if err != nil {
+		return err
+	}
+	l.removeCard(id)
+	return nil
+}
+
 // CreateCards makes the cards a derive pass answered for a block. Only what
 // identifies each card is persisted — type, ordinal, producer; the field
 // values the pass computed are resolved again from the block at render time,
@@ -1059,6 +1093,10 @@ func (l *Library) ScheduleParams() schedule.Params {
 	defer l.mu.Unlock()
 	return l.params
 }
+
+// Now is the library's clock: the moment a write that carries no time of its
+// own is stamped with, and the moment "due now" is measured from.
+func (l *Library) Now() time.Time { return l.now() }
 
 func (l *Library) Review(cardID core.ID, rating schedule.Rating, at time.Time) error {
 	l.mu.Lock()
@@ -1186,7 +1224,7 @@ func (l *Library) cardHistory(cardID core.ID) (schedule.State, int64, error) {
 // Events returns the review log in order, void events included, so a caller
 // can compute what the schedule cannot answer on its own (counts per day,
 // predictions against outcomes). Every call reads the log: a caller that only
-// wants a range asks LiveReviews, and one that wants one card asks CardHistory.
+// wants a range asks LiveReviews, and one that wants one card asks History.
 func (l *Library) Events() []schedule.Event {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -1216,30 +1254,6 @@ func (l *Library) LiveReviews(from, to time.Time) ([]schedule.Event, error) {
 	return liveBetween(events, from, to), nil
 }
 
-// CardHistory returns one card's live reviews, oldest first: the reviews an
-// undo or a "what happened" view asks for.
-func (l *Library) CardHistory(cardID core.ID) ([]schedule.Event, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.index == nil {
-		return nil, ErrClosed
-	}
-	events, _, err := l.readLogFrom(0)
-	if err != nil {
-		return nil, err
-	}
-	live := liveBetween(events, time.Time{}, time.Time{})
-	out := make([]schedule.Event, 0, 4)
-	for _, ev := range live {
-		if ev.Card == cardID {
-			out = append(out, ev)
-		}
-	}
-	return out, nil
-}
-
-// CardState returns a card's replayed schedule, and whether it has been
-// reviewed at all.
 // Preview is what each of the four answers would schedule for a card, as the
 // grade keys show it before the user picks one — the scheduling interface's own
 // answer, from the parameters this library reviews with. It changes nothing.
@@ -1254,6 +1268,8 @@ func (l *Library) Preview(cardID core.ID, now time.Time) ([]schedule.Outlook, bo
 	return params.Preview(meta.state, now), true
 }
 
+// CardState returns a card's replayed schedule, and whether it has been
+// reviewed at all.
 func (l *Library) CardState(cardID core.ID) (schedule.State, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

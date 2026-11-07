@@ -17,7 +17,7 @@ var files embed.FS
 
 // Cards is the default card plugin: what a paragraph of a note asks, in the
 // shapes the content model knows. It answers JSON; the host renders.
-func Cards(limits ext.JSLimits) (*ext.JSRunner, error) {
+func Cards(host ext.Host, limits ext.JSLimits) (*ext.JSRunner, error) {
 	manifest, err := CardsManifest()
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func Cards(limits ext.JSLimits) (*ext.JSRunner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ext: builtin cards: %w", err)
 	}
-	return ext.OpenBuiltin(manifest, source, limits)
+	return ext.OpenBuiltin(manifest, source, host, limits)
 }
 
 // CardsManifest is what the card plugin declares: no capabilities, because it
@@ -48,7 +48,7 @@ func IsBuiltin(name string) bool { return name == "cards" || name == "scheduler"
 
 // Scheduler is the default scheduling plugin: it decides policy — retention, and
 // what to call the scheduler — while the schedule's arithmetic stays the app's.
-func Scheduler(limits ext.JSLimits) (*ext.JSRunner, error) {
+func Scheduler(host ext.Host, limits ext.JSLimits) (*ext.JSRunner, error) {
 	manifest, err := SchedulerManifest()
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func Scheduler(limits ext.JSLimits) (*ext.JSRunner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ext: builtin scheduler: %w", err)
 	}
-	return ext.OpenBuiltin(manifest, source, limits)
+	return ext.OpenBuiltin(manifest, source, host, limits)
 }
 
 // SchedulerManifest is what the scheduler plugin declares.

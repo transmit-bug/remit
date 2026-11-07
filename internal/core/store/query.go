@@ -55,6 +55,38 @@ func (l *Library) SearchCards(text string) ([]core.Card, error) {
 	return cards, nil
 }
 
+// SearchNotes returns the notes whose text contains text, ignoring case. Like
+// SearchCards it runs on the derived index, one SQL shape for both: a block's
+// text matched with LIKE, the user's text escaped to a literal pattern.
+func (l *Library) SearchNotes(text string) ([]core.Note, error) {
+	query := strings.TrimSpace(text)
+	if query == "" {
+		return nil, nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, ErrClosed
+	}
+	ids, err := l.index.searchNotes(query)
+	if err != nil {
+		return nil, err
+	}
+	notes := make([]core.Note, 0, len(ids))
+	for _, id := range ids {
+		row, ok := l.index.note(id)
+		if !ok {
+			continue
+		}
+		blocks, err := l.index.blocksOfNote(id)
+		if err != nil {
+			return nil, err
+		}
+		notes = append(notes, core.Note{ID: id, Title: row.title, Blocks: blocks, Updated: row.updated})
+	}
+	return notes, nil
+}
+
 // escapeLike makes a user's text a literal pattern: a search for "50%" should
 // not match everything.
 func escapeLike(s string) string {
@@ -69,6 +101,20 @@ func (x *index) searchCards(text string) ([]core.ID, error) {
 		SELECT c.id FROM cards c
 		WHERE EXISTS (SELECT 1 FROM blocks b WHERE b.id = c.block_id AND b.text LIKE ? ESCAPE '\')
 		ORDER BY c.created, c.id`, "%"+escapeLike(text)+"%")
+	if err != nil {
+		return nil, fmt.Errorf("store: search query: %w", err)
+	}
+	defer rows.Close()
+	return scanIDs(rows)
+}
+
+// searchNotes matches the block text a note holds, newest save first, as the
+// notebook lists notes.
+func (x *index) searchNotes(text string) ([]core.ID, error) {
+	rows, err := x.db.Query(`
+		SELECT n.id FROM notes n
+		WHERE EXISTS (SELECT 1 FROM blocks b WHERE b.note_id = n.id AND b.text LIKE ? ESCAPE '\')
+		ORDER BY n.updated DESC, n.id`, "%"+escapeLike(text)+"%")
 	if err != nil {
 		return nil, fmt.Errorf("store: search query: %w", err)
 	}

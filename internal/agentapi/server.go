@@ -26,18 +26,24 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 )
 
-// Library is the part of a library the API reads and writes.
+// Library is the part of a library the API reads and writes. It is also the
+// layer the plugin host shares (ext.Host embeds it): one declaration of what a
+// library can be read and written by, for the loopback API and for plugins
+// alike. The two methods the HTTP surface has no route for — SearchNotes and
+// History — are here for the plugins that do.
 type Library interface {
 	Notes() []core.Note
 	Note(core.ID) (core.Note, bool)
 	SaveNote(core.Note) (core.Note, error)
 	CreateNote(string) (core.Note, error)
+	SearchNotes(string) ([]core.Note, error)
 	Cards() []core.Card
 	Card(core.ID) (core.Card, bool)
 	CreateCard(core.ID) (core.Card, error)
 	SaveCard(core.Card) error
 	Review(core.ID, schedule.Rating, time.Time) error
 	CardState(core.ID) (schedule.State, bool)
+	History(core.ID) ([]schedule.Event, error)
 	Due(time.Time, int) ([]core.Card, error)
 	Remaining(time.Time) (int, error)
 	Block(core.ID) (core.Block, bool)

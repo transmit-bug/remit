@@ -173,7 +173,7 @@ func TestOpenDispatchesByRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	jsRunner, err := Open(loaded)
+	jsRunner, err := Open(loaded, nil)
 	if err != nil {
 		t.Fatalf("Open(js): %v", err)
 	}
@@ -197,7 +197,7 @@ func TestOpenDispatchesByRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	execRunner, err := Open(loaded)
+	execRunner, err := Open(loaded, nil)
 	if err != nil {
 		t.Fatalf("Open(exec): %v", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -11,6 +12,9 @@ import (
 	"time"
 
 	"github.com/MoeForge/moejs"
+
+	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 )
 
 // Runtime names the substrate an extension runs on. A manifest that names none
@@ -84,6 +88,9 @@ type JSRunner struct {
 	module   *moejs.Module
 	limits   JSLimits
 	caps     map[string]bool
+	// host is what the extension may reach through its capabilities; nil when
+	// it was started without one.
+	host Host
 
 	// pool holds idle runtimes that have loaded the module. A channel is the
 	// whole concurrency story: take is a receive, return is a send, a full
@@ -100,8 +107,9 @@ type JSRunner struct {
 const runtimePoolSize = 2
 
 // OpenJS loads the JavaScript extension in dir: the same manifest, the same
-// capability rules and the same limits as any other, built in or not.
-func OpenJS(dir string, limits JSLimits) (*JSRunner, error) {
+// capability rules and the same limits as any other, built in or not. host is
+// what the extension may reach; nil is a runner that reaches nothing.
+func OpenJS(dir string, host Host, limits JSLimits) (*JSRunner, error) {
 	ext, err := Load(dir)
 	if err != nil {
 		return nil, err
@@ -114,26 +122,26 @@ func OpenJS(dir string, limits JSLimits) (*JSRunner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ext: %s: %w", entry, err)
 	}
-	return compileJS(ext.Manifest, source, limits)
+	return compileJS(ext.Manifest, source, host, limits)
 }
 
 // OpenBuiltin compiles an extension the app ships. It is the same loader as
 // OpenJS — the same manifest rules, the same capability set, the same limits —
 // with the bytes read from the binary rather than from a directory, so that a
 // built-in extension has no door a downloaded one does not.
-func OpenBuiltin(manifest Manifest, source []byte, limits JSLimits) (*JSRunner, error) {
+func OpenBuiltin(manifest Manifest, source []byte, host Host, limits JSLimits) (*JSRunner, error) {
 	if err := Validate(manifest); err != nil {
 		return nil, fmt.Errorf("ext: builtin %s: %w", manifest.Name, err)
 	}
 	if Runtime(manifest.Runtime) != RuntimeJS {
 		return nil, fmt.Errorf("ext: builtin %s: runtime %q, not js", manifest.Name, manifest.Runtime)
 	}
-	return compileJS(manifest, source, limits)
+	return compileJS(manifest, source, host, limits)
 }
 
 // compileJS is the one place a JavaScript extension is compiled and its
 // capabilities read.
-func compileJS(manifest Manifest, source []byte, limits JSLimits) (*JSRunner, error) {
+func compileJS(manifest Manifest, source []byte, host Host, limits JSLimits) (*JSRunner, error) {
 	module, err := moejs.Compile(manifest.Entry, string(source))
 	if err != nil {
 		return nil, fmt.Errorf("ext: %s: compile: %w", manifest.Name, err)
@@ -147,6 +155,7 @@ func compileJS(manifest Manifest, source []byte, limits JSLimits) (*JSRunner, er
 		module:   module,
 		limits:   limits.withDefaults(),
 		caps:     caps,
+		host:     host,
 		pool:     make(chan *moejs.Runtime, runtimePoolSize),
 	}, nil
 }
@@ -394,10 +403,155 @@ const (
 	CapNow = "remit.now"
 )
 
-// globals is the host object an extension reaches: one function per declared
-// capability, and nothing else.
+// The shapes a plugin reads and writes through its capabilities. They are
+// narrower than the store's own types on purpose: a plugin sees what the
+// contract promises, not the library's internals, and JSON is the one shape
+// every runtime agrees on.
+type noteJSON struct {
+	ID     string      `json:"id"`
+	Title  string      `json:"title"`
+	Blocks []blockJSON `json:"blocks"`
+}
+
+type blockJSON struct {
+	ID   string `json:"id,omitempty"`
+	Text string `json:"text"`
+}
+
+type cardJSON struct {
+	ID      string            `json:"id"`
+	Block   string            `json:"block"`
+	Type    string            `json:"type"`
+	Ordinal int               `json:"ordinal"`
+	Fields  map[string]string `json:"fields,omitempty"`
+	Edited  bool              `json:"edited,omitempty"`
+	Status  string            `json:"status"`
+	Due     string            `json:"due,omitempty"`
+	Reviews int               `json:"reviews"`
+}
+
+// eventJSON is one line of the review log, without the void events: a plugin
+// reads what happened, not what was taken back.
+type eventJSON struct {
+	Seq       int64  `json:"seq"`
+	Card      string `json:"card"`
+	Rating    string `json:"rating"`
+	At        string `json:"at"`
+	Scheduler string `json:"scheduler,omitempty"`
+}
+
+// stateJSON is a card's FSRS state as it crosses into a plugin. It is the
+// host's shape, opaque to the plugin: the plugin carries it back unchanged and
+// does not read it (ADR 0007 — the maths stays the host's).
+type stateJSON struct {
+	Stability  float64 `json:"stability"`
+	Difficulty float64 `json:"difficulty"`
+	Due        string  `json:"due,omitempty"`
+	LastReview string  `json:"lastReview,omitempty"`
+	Reviews    int     `json:"reviews"`
+	LastRating string  `json:"lastRating,omitempty"`
+}
+
+func newNoteJSON(note core.Note) noteJSON {
+	out := noteJSON{ID: string(note.ID), Title: note.Title, Blocks: make([]blockJSON, 0, len(note.Blocks))}
+	for _, block := range note.Blocks {
+		out.Blocks = append(out.Blocks, blockJSON{ID: string(block.ID), Text: block.Text})
+	}
+	return out
+}
+
+func notesJSON(notes []core.Note) []noteJSON {
+	out := make([]noteJSON, 0, len(notes))
+	for _, note := range notes {
+		out = append(out, newNoteJSON(note))
+	}
+	return out
+}
+
+func newCardJSON(card core.Card, state schedule.State, reviewed bool) cardJSON {
+	out := cardJSON{
+		ID:      string(card.ID),
+		Block:   string(card.Ref.Block),
+		Type:    string(card.Type),
+		Ordinal: card.Ordinal,
+		Fields:  card.Fields,
+		Edited:  card.Edited,
+		Status:  card.Status.String(),
+	}
+	if reviewed {
+		out.Due = formatTime(state.Due)
+		out.Reviews = state.Reviews
+	}
+	return out
+}
+
+func newEventJSON(event schedule.Event) eventJSON {
+	return eventJSON{
+		Seq:       event.Seq,
+		Card:      string(event.Card),
+		Rating:    event.Rating.String(),
+		At:        formatTime(event.At),
+		Scheduler: event.Scheduler,
+	}
+}
+
+func eventsJSON(events []schedule.Event) []eventJSON {
+	out := make([]eventJSON, 0, len(events))
+	for _, event := range events {
+		out = append(out, newEventJSON(event))
+	}
+	return out
+}
+
+func newStateJSON(state schedule.State) stateJSON {
+	out := stateJSON{
+		Stability:  state.Memory.Stability,
+		Difficulty: state.Memory.Difficulty,
+		Reviews:    state.Reviews,
+	}
+	if state.Reviews > 0 {
+		out.Due = formatTime(state.Due)
+		out.LastReview = formatTime(state.LastReview)
+	}
+	if state.LastRating.Valid() {
+		out.LastRating = state.LastRating.String()
+	}
+	return out
+}
+
+// state reads a plugin's object as a schedule state. Only what the maths needs
+// crosses back: the due time and the last rating are the host's to derive.
+func (s stateJSON) state() (schedule.State, error) {
+	out := schedule.State{
+		Memory:  schedule.Memory{Stability: s.Stability, Difficulty: s.Difficulty},
+		Reviews: s.Reviews,
+	}
+	if s.LastReview != "" {
+		at, err := time.Parse(time.RFC3339Nano, s.LastReview)
+		if err != nil {
+			return schedule.State{}, fmt.Errorf("ext: lastReview: %w", err)
+		}
+		out.LastReview = at
+	}
+	return out, nil
+}
+
+// formatTime is how a time crosses into a plugin: RFC 3339, nanoseconds and all.
+func formatTime(at time.Time) string { return at.UTC().Format(time.RFC3339Nano) }
+
+// globals is the host object an extension reaches: one namespace per
+// capability, plus the two host functions a plugin may ask for to test itself.
+// The six capability namespaces are always present, and every entry refuses a
+// call its manifest did not declare with a CapabilityError, so a plugin is told
+// which capability it is missing rather than that the function does not exist.
 func (r *JSRunner) globals(rt *moejs.Runtime) map[string]any {
-	host := map[string]any{}
+	host := map[string]any{
+		"notes":  r.notesHost(rt),
+		"cards":  r.cardsHost(rt),
+		"review": r.reviewHost(rt),
+		"fsrs":   r.fsrsHost(rt),
+		"store":  r.storeHost(rt),
+	}
 	if r.caps[CapEcho] {
 		host["echo"] = moejs.NativeFunc(func(_ *moejs.Realm, _ moejs.Value, args []moejs.Value) (moejs.Value, error) {
 			if len(args) == 0 {
@@ -413,4 +567,264 @@ func (r *JSRunner) globals(rt *moejs.Runtime) map[string]any {
 		})
 	}
 	return map[string]any{"remit": host}
+}
+
+// notesHost is remit.notes: what notes:read grants.
+func (r *JSRunner) notesHost(rt *moejs.Runtime) map[string]any {
+	return map[string]any{
+		"list": r.hostFunc(rt, CapNotesRead, func(host Host, _ []moejs.Value) (any, error) {
+			return notesJSON(host.Notes()), nil
+		}),
+		"get": r.hostFunc(rt, CapNotesRead, func(host Host, args []moejs.Value) (any, error) {
+			var id string
+			if err := arg(rt, args, 0, &id); err != nil {
+				return nil, err
+			}
+			note, ok := host.Note(core.ID(id))
+			if !ok {
+				return nil, nil
+			}
+			return newNoteJSON(note), nil
+		}),
+		"search": r.hostFunc(rt, CapNotesRead, func(host Host, args []moejs.Value) (any, error) {
+			var text string
+			if err := arg(rt, args, 0, &text); err != nil {
+				return nil, err
+			}
+			notes, err := host.SearchNotes(text)
+			if err != nil {
+				return nil, err
+			}
+			return notesJSON(notes), nil
+		}),
+	}
+}
+
+// cardsHost is remit.cards: what cards:write grants. A make asks the host to
+// derive from the block, as the loopback API does; a change and a delete act on
+// the card the caller names.
+func (r *JSRunner) cardsHost(rt *moejs.Runtime) map[string]any {
+	return map[string]any{
+		"create": r.hostFunc(rt, CapCardsWrite, func(host Host, args []moejs.Value) (any, error) {
+			var block string
+			if err := arg(rt, args, 0, &block); err != nil {
+				return nil, err
+			}
+			card, err := host.CreateCard(core.ID(block))
+			if err != nil {
+				return nil, err
+			}
+			state, reviewed := host.CardState(card.ID)
+			return newCardJSON(card, state, reviewed), nil
+		}),
+		"update": r.hostFunc(rt, CapCardsWrite, func(host Host, args []moejs.Value) (any, error) {
+			var id string
+			if err := arg(rt, args, 0, &id); err != nil {
+				return nil, err
+			}
+			var patch struct {
+				Fields *map[string]string `json:"fields"`
+				Status *string            `json:"status"`
+			}
+			if err := arg(rt, args, 1, &patch); err != nil {
+				return nil, err
+			}
+			card, ok := host.Card(core.ID(id))
+			if !ok {
+				return nil, fmt.Errorf("ext: no card %q", id)
+			}
+			if patch.Fields != nil {
+				card.Fields = *patch.Fields
+				card.Edited = len(*patch.Fields) > 0
+			}
+			if patch.Status != nil {
+				status, ok := core.ParseStatus(*patch.Status)
+				if !ok {
+					return nil, fmt.Errorf("ext: unknown status %q", *patch.Status)
+				}
+				card.Status = status
+			}
+			if err := host.SaveCard(card); err != nil {
+				return nil, err
+			}
+			state, reviewed := host.CardState(card.ID)
+			return newCardJSON(card, state, reviewed), nil
+		}),
+		"delete": r.hostFunc(rt, CapCardsWrite, func(host Host, args []moejs.Value) (any, error) {
+			var id string
+			if err := arg(rt, args, 0, &id); err != nil {
+				return nil, err
+			}
+			return nil, host.DeleteCard(core.ID(id))
+		}),
+	}
+}
+
+// reviewHost is remit.review: review:read for what happened and what is due,
+// review:write for the one thing a plugin may add.
+func (r *JSRunner) reviewHost(rt *moejs.Runtime) map[string]any {
+	return map[string]any{
+		"history": r.hostFunc(rt, CapReviewRead, func(host Host, args []moejs.Value) (any, error) {
+			var id string
+			if err := arg(rt, args, 0, &id); err != nil {
+				return nil, err
+			}
+			events, err := host.History(core.ID(id))
+			if err != nil {
+				return nil, err
+			}
+			return eventsJSON(events), nil
+		}),
+		"dueCount": r.hostFunc(rt, CapReviewRead, func(host Host, _ []moejs.Value) (any, error) {
+			return host.Remaining(host.Now())
+		}),
+		"record": r.hostFunc(rt, CapReviewWrite, func(host Host, args []moejs.Value) (any, error) {
+			var id, grade, atText string
+			if err := arg(rt, args, 0, &id); err != nil {
+				return nil, err
+			}
+			if err := arg(rt, args, 1, &grade); err != nil {
+				return nil, err
+			}
+			rating, ok := schedule.ParseRating(grade)
+			if !ok {
+				return nil, fmt.Errorf("ext: unknown rating %q", grade)
+			}
+			if err := arg(rt, args, 2, &atText); err != nil {
+				return nil, err
+			}
+			at := time.Time{}
+			if atText != "" {
+				parsed, err := time.Parse(time.RFC3339Nano, atText)
+				if err != nil {
+					return nil, fmt.Errorf("ext: at: %w", err)
+				}
+				at = parsed
+			}
+			if err := host.Review(core.ID(id), rating, at); err != nil {
+				return nil, err
+			}
+			card, _ := host.Card(core.ID(id))
+			state, reviewed := host.CardState(core.ID(id))
+			return newCardJSON(card, state, reviewed), nil
+		}),
+	}
+}
+
+// fsrsHost is remit.fsrs: schedule:fsrs advances a state by one answer, with
+// the parameters this library reviews with. The moment defaults to the
+// library's clock, as every other write does.
+func (r *JSRunner) fsrsHost(rt *moejs.Runtime) map[string]any {
+	return map[string]any{
+		"review": r.hostFunc(rt, CapScheduleFSRS, func(host Host, args []moejs.Value) (any, error) {
+			var current stateJSON
+			if err := arg(rt, args, 0, &current); err != nil {
+				return nil, err
+			}
+			var grade, atText string
+			if err := arg(rt, args, 1, &grade); err != nil {
+				return nil, err
+			}
+			rating, ok := schedule.ParseRating(grade)
+			if !ok {
+				return nil, fmt.Errorf("ext: unknown rating %q", grade)
+			}
+			at := host.Now()
+			if err := arg(rt, args, 2, &atText); err != nil {
+				return nil, err
+			}
+			if atText != "" {
+				parsed, err := time.Parse(time.RFC3339Nano, atText)
+				if err != nil {
+					return nil, fmt.Errorf("ext: at: %w", err)
+				}
+				at = parsed
+			}
+			state, err := current.state()
+			if err != nil {
+				return nil, err
+			}
+			next := host.ScheduleParams().Step(state, schedule.Event{Rating: rating, At: at})
+			return newStateJSON(next), nil
+		}),
+	}
+}
+
+// storeHost is remit.store: store:own, in the namespace of the runner's own id
+// and no other.
+func (r *JSRunner) storeHost(rt *moejs.Runtime) map[string]any {
+	return map[string]any{
+		"get": r.hostFunc(rt, CapStoreOwn, func(host Host, _ []moejs.Value) (any, error) {
+			value, ok := host.PluginData(r.manifest.ID)
+			if !ok {
+				return nil, nil
+			}
+			return value, nil
+		}),
+		"set": r.hostFunc(rt, CapStoreOwn, func(host Host, args []moejs.Value) (any, error) {
+			var value string
+			if err := arg(rt, args, 0, &value); err != nil {
+				return nil, err
+			}
+			return nil, host.SetPluginData(r.manifest.ID, value)
+		}),
+	}
+}
+
+// hostFunc is one entry of the host object: the capability check, then the
+// call, then the answer as JSON. Every entry goes through it, so no function is
+// reachable without the manifest's declaration.
+func (r *JSRunner) hostFunc(rt *moejs.Runtime, capability string, call func(Host, []moejs.Value) (any, error)) moejs.NativeFunc {
+	return func(_ *moejs.Realm, _ moejs.Value, args []moejs.Value) (moejs.Value, error) {
+		host, err := r.reachable(capability)
+		if err != nil {
+			return moejs.Undefined(), err
+		}
+		out, err := call(host, args)
+		if err != nil {
+			return moejs.Undefined(), err
+		}
+		return r.fromGo(rt, out)
+	}
+}
+
+// reachable answers with the host a capability call may use, or the reason it
+// may not. A capability the manifest did not declare is a CapabilityError, and
+// the plugin log — this app's one log — says which plugin asked for what.
+func (r *JSRunner) reachable(capability string) (Host, error) {
+	if !r.caps[capability] {
+		slog.Warn("remit: a plugin called a capability it did not declare",
+			"extension", r.manifest.Name, "capability", capability)
+		return nil, &CapabilityError{Extension: r.manifest.ID, Capability: capability}
+	}
+	if r.host == nil {
+		return nil, fmt.Errorf("ext: %s: no host to answer %s", r.manifest.Name, capability)
+	}
+	return r.host, nil
+}
+
+// fromGo converts a result for the runtime, naming the plugin when it cannot.
+func (r *JSRunner) fromGo(rt *moejs.Runtime, v any) (moejs.Value, error) {
+	value, err := rt.FromGo(v)
+	if err != nil {
+		return moejs.Undefined(), fmt.Errorf("ext: %s: result: %w", r.manifest.Name, err)
+	}
+	return value, nil
+}
+
+// arg reads one call argument as JSON. A missing or null argument leaves v at
+// its zero value, which is what an optional argument means.
+func arg(rt *moejs.Runtime, args []moejs.Value, i int, v any) error {
+	value := moejs.Arg(args, i)
+	if value.IsNullish() {
+		return nil
+	}
+	encoded, err := rt.AppendJSON(nil, value)
+	if err != nil {
+		return fmt.Errorf("ext: argument %d: %w", i+1, err)
+	}
+	if err := json.Unmarshal(encoded, v); err != nil {
+		return fmt.Errorf("ext: argument %d: %w", i+1, err)
+	}
+	return nil
 }

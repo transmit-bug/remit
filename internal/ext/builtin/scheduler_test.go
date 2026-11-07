@@ -13,7 +13,7 @@ import (
 // The scheduler plugin answers policy and identity: a family, a version and the
 // retention to aim for, and nothing about arithmetic.
 func TestSchedulerPolicy(t *testing.T) {
-	runner, err := builtin.Scheduler(ext.JSLimits{})
+	runner, err := builtin.Scheduler(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestSchedulerPolicy(t *testing.T) {
 // The built-in summary is quiet and says nothing of its own: the host words the
 // numbers.
 func TestSchedulerSummaryIsQuiet(t *testing.T) {
-	runner, err := builtin.Scheduler(ext.JSLimits{})
+	runner, err := builtin.Scheduler(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestSchedulerSummaryIsQuiet(t *testing.T) {
 // from a fresh card schedule exactly as the default parameters do. If the policy
 // ever moves, this fails and the golden file has to be re-frozen on purpose.
 func TestSchedulerPolicySchedulesAsTheGoldens(t *testing.T) {
-	runner, err := builtin.Scheduler(ext.JSLimits{})
+	runner, err := builtin.Scheduler(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}

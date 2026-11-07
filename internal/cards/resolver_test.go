@@ -13,7 +13,7 @@ import (
 // does, with the types it answers against.
 func newResolver(t *testing.T) *cards.Resolver {
 	t.Helper()
-	runner, err := builtin.Cards(ext.JSLimits{})
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open the built-in card plugin: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestFace(t *testing.T) {
 // A type whose templates are broken — a user's edit — renders the field list
 // rather than a blank or a crash.
 func TestFaceFallsBackOnABrokenTemplate(t *testing.T) {
-	runner, err := builtin.Cards(ext.JSLimits{})
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open the built-in card plugin: %v", err)
 	}
