@@ -68,7 +68,9 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 			a.addReading(c, a.openNoteID())
 		}},
 	)
-	return actions
+	// The plugins' commands last, and only the ones their when shows now: the
+	// palette lists what the window can do, not what every plugin can do.
+	return append(actions, a.pluginPaletteActions(c)...)
 }
 
 // paletteView draws the palette over the window. DialogBase keeps the keyboard

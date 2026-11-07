@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
@@ -14,6 +15,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/browse"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
@@ -45,6 +47,10 @@ const (
 	modeBrowse
 	modeStats
 	modeSettings
+	// modePlugin is a page a plugin contributed: not one of the host's five
+	// screens, which is why a when expression reads mode empty there and
+	// page.id names it instead.
+	modePlugin
 )
 
 // takingOver reports whether the screen takes the window whole: review and
@@ -75,6 +81,7 @@ type App struct {
 	due     []core.ID      // today's queue, as the last reload derived it
 
 	mode             mode
+	page             contrib.PageRef // the contributed page on screen, when mode is modePlugin
 	review           review.State
 	reading          reading.State // the reading session: the queue's order and where the reader is
 	readingPositions map[core.ID]core.ID
@@ -97,6 +104,22 @@ type App struct {
 	withoutScheduler bool                                    // schedule with the app's own defaults
 	discover         func() ([]screensettings.Plugin, error) // what the plugin directory holds
 	openPlugin       func(string) (*ext.JSRunner, error)     // the runner a role names
+	// manifests and contribution are the plugin service as the window reads it:
+	// what each plugin declares without being started, and the runner that
+	// answers a contributed command. cmd owns both; nil is a build whose plugins
+	// contribute no UI and whose callbacks are unavailable.
+	manifests    func() ([]ext.Extension, error)
+	contribution func(name string) (CommandRunner, error)
+
+	// ui is the plugins' declared UI, parsed once when the library opens, and
+	// pending is what their callbacks answered since the last frame: what a
+	// frame reads instead of ever calling a plugin.
+	ui      pluginUI
+	pending pendingWork
+	// runBackground runs one job off the UI thread. nil is the app's own: a
+	// goroutine whose answer the next frame applies. A headless test runs it
+	// inline, where there is one thread.
+	runBackground func(*ui.Context, func() func(*ui.Context))
 	// pluginList, roleList and typeList are the settings page's snapshots,
 	// retaken when the page opens and after every write: no frame reads the
 	// plugins directory or the store for them.
@@ -191,6 +214,7 @@ func NewApp(opts ...Options) *App {
 		chosenCards, withoutCards = o.Cards, o.WithoutCards
 		chosenScheduler, withoutScheduler = o.Scheduler, o.WithoutScheduler
 		a.discover, a.openPlugin = o.Discover, o.Plugin
+		a.manifests, a.contribution = o.Manifests, o.Contribution
 	}
 	a.cardsChoice, a.schedulerChoice = chosenCards, chosenScheduler
 	a.withoutCards, a.withoutScheduler = withoutCards, withoutScheduler

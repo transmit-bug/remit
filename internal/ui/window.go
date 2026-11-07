@@ -9,6 +9,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/reading"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // toolbar is the window's one row of controls, the same in every mode so that
@@ -28,6 +29,7 @@ func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 			Label(msgs.ModeLabel()).Changed() {
 			a.setMode(mode(chosen))
 		}
+		a.pluginPagesMenu(c, msgs)
 
 		ui.Spacer(c)
 		if a.mode == modeNotes {
@@ -52,11 +54,40 @@ func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 				if menu.Item(msgs.OpenSettings()).Chosen() {
 					a.openSettings()
 				}
+				// The plugins' menu items follow the host's: this window's one
+				// overflow menu is the receiver for the contract's toolbar and
+				// note slots (docs/specs/plugins/ui.md §4).
+				items := a.contributionMenuItems("toolbar.overflow", "note.overflow")
+				if len(items) > 0 {
+					menu.Separator()
+				}
+				for _, ref := range items {
+					if menu.Item(a.pluginText(c, ref.Plugin, string(ref.Command.Title))).Chosen() {
+						a.runContribution(c, ref)
+					}
+				}
 			})
 	}).Label(msgs.Toolbar(Name)).
 		Padding(tk.SpaceS, tk.SpaceL).
 		Background(tk.Surface)
 	return toolbar
+}
+
+// pluginPagesMenu offers the pages plugins contributed, when the library has
+// one to offer: the host's plugin-pages group, which the contract guarantees
+// exists. How pages are grouped and sorted beyond it is #129's (ui.md §2).
+func (a *App) pluginPagesMenu(c *ui.Context, msgs locales.Messages) {
+	pages := a.visiblePages()
+	if len(pages) == 0 {
+		return
+	}
+	ui.MenuButton(c, msgs.PluginPages(), func(menu *ui.Menu) {
+		for _, page := range pages {
+			if menu.Item(a.pluginText(c, page.Plugin, string(page.Page.Title))).Chosen() {
+				a.openPage(c, page)
+			}
+		}
+	}).Label(msgs.PluginPages())
 }
 
 // shortcuts declares the app's keys. They are window shortcuts, so they wait
@@ -125,7 +156,7 @@ func (a *App) shortcuts(c *ui.Context) {
 		c.OnShortcut(0, ui.KeyX, func() { a.dropCurrentReading(c) })
 		c.OnShortcut(0, ui.KeyM, a.editCurrentReading)
 		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
-	case modeBrowse, modeStats:
+	case modeBrowse, modeStats, modePlugin:
 		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
 	}
 }

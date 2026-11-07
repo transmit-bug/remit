@@ -38,6 +38,14 @@ func Icon(name string) *ui.SVG {
 	panic(fmt.Sprintf("design: no icon named %q; vendored: %s", name, strings.Join(IconNames(), ", ")))
 }
 
+// HasIcon reports whether the set carries name. It is the check a plugin's
+// contributed icon goes through before a frame draws it: a name this build does
+// not have is the contribution's problem, not a panic in a frame.
+func HasIcon(name string) bool {
+	_, ok := iconSet()[name]
+	return ok
+}
+
 var (
 	iconsOnce   sync.Once
 	iconsByName map[string]*ui.SVG

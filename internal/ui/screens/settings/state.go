@@ -27,6 +27,10 @@ type State struct {
 	// PluginErr is why the last plugin or role write was refused, "" when it
 	// was taken.
 	PluginErr string
+	// PluginSettings is the settings the enabled plugins declared, with the
+	// values this library holds. The form may change a value in place; a write
+	// is still the app's, and it retakes this list.
+	PluginSettings []Setting
 
 	// TypeList is the type table's own state: the row the user chose. TypeRow
 	// repeats the choice, so the editor can tell the row it shows from one the

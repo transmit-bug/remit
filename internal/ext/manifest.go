@@ -1,6 +1,7 @@
 package ext
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -63,6 +64,12 @@ type Manifest struct {
 	// Capabilities are what the host offers the extension, by name; an
 	// extension gets nothing it does not declare.
 	Capabilities []string `json:"capabilities"`
+	// Contributes is what the extension adds to the window: commands, menu
+	// items, pages, settings and its own strings (docs/specs/plugins/ui.md). It
+	// rides with the manifest, so the host reads and validates it without
+	// starting the extension, and one bad entry costs only itself — it is kept
+	// raw here and parsed by internal/ext/contrib.
+	Contributes json.RawMessage `json:"contributes"`
 }
 
 // Validate checks a manifest against what this build can run. The two runtimes

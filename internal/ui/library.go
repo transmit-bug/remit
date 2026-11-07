@@ -17,6 +17,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/start"
@@ -125,8 +126,9 @@ func (a *App) schedulerRole(name string) *schedulerPlugin {
 func (a *App) apply(lib *store.Library, dir string) {
 	a.lib, a.dir = lib, dir
 	a.openErr, a.start = nil, false
-	a.mode = modeReview
+	a.mode, a.page = modeReview, contrib.PageRef{}
 	a.review.Reset()
+	a.loadContributions()
 	a.reload()
 	if a.opened != nil {
 		a.opened(lib)
@@ -239,6 +241,7 @@ func (a *App) close() {
 		slog.Warn("remit: close library", "err", err)
 	}
 	a.lib = nil
+	a.loadContributions()
 }
 
 // DefaultLibraryDir is where a library goes when the caller names none:
@@ -326,6 +329,10 @@ func (a *App) reload() {
 	a.due = a.dueToday()
 	a.review.Sync(a.due)
 	a.loadReading(now)
+	// The plugin pages are rebuilt from the library that just changed, and the
+	// queues' numbers are reported to whoever watches them: one reload, one
+	// answer for every reader.
+	a.invalidatePages()
 	if a.counts != nil {
 		a.counts(a.queueCounts())
 	}

@@ -3960,3 +3960,205 @@ func TrayTooltipQueues(cards int, reading int) string {
 func (msgs Messages) TrayTooltipQueues(cards int, reading int) string {
 	return Catalog.Format(msgs.locale, "trayTooltipQueues", map[string]any{"cards": cards, "reading": reading})
 }
+
+// PluginPages says "Plugin pages"
+// in the language the app shows.
+//
+// The button that lists the pages plugins contributed.
+func PluginPages() string { return In(i18n.Locale()).PluginPages() }
+
+// PluginPages says "Plugin pages"
+// in the language of msgs.
+//
+// The button that lists the pages plugins contributed.
+func (msgs Messages) PluginPages() string {
+	return Catalog.Format(msgs.locale, "pluginPages", nil)
+}
+
+// PluginPageLoading says "Loading…"
+// in the language the app shows.
+//
+// A plugin page whose data is still on its way.
+func PluginPageLoading() string { return In(i18n.Locale()).PluginPageLoading() }
+
+// PluginPageLoading says "Loading…"
+// in the language of msgs.
+//
+// A plugin page whose data is still on its way.
+func (msgs Messages) PluginPageLoading() string {
+	return Catalog.Format(msgs.locale, "pluginPageLoading", nil)
+}
+
+// PluginPageFailed says "This page could not be loaded: {reason}"
+// in the language the app shows.
+//
+// A plugin page whose data command failed, with the reason.
+func PluginPageFailed(reason string) string { return In(i18n.Locale()).PluginPageFailed(reason) }
+
+// PluginPageFailed says "This page could not be loaded: {reason}"
+// in the language of msgs.
+//
+// A plugin page whose data command failed, with the reason.
+func (msgs Messages) PluginPageFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "pluginPageFailed", map[string]any{"reason": reason})
+}
+
+// PluginPageRetry says "Retry"
+// in the language the app shows.
+//
+// The button that asks a failed plugin page for its data again.
+func PluginPageRetry() string { return In(i18n.Locale()).PluginPageRetry() }
+
+// PluginPageRetry says "Retry"
+// in the language of msgs.
+//
+// The button that asks a failed plugin page for its data again.
+func (msgs Messages) PluginPageRetry() string {
+	return Catalog.Format(msgs.locale, "pluginPageRetry", nil)
+}
+
+// PluginPageUnknownNode says "{kind} is not something this version of Remit draws."
+// in the language the app shows.
+//
+// A page node of a kind this host does not know, named in place.
+func PluginPageUnknownNode(kind string) string { return In(i18n.Locale()).PluginPageUnknownNode(kind) }
+
+// PluginPageUnknownNode says "{kind} is not something this version of Remit draws."
+// in the language of msgs.
+//
+// A page node of a kind this host does not know, named in place.
+func (msgs Messages) PluginPageUnknownNode(kind string) string {
+	return Catalog.Format(msgs.locale, "pluginPageUnknownNode", map[string]any{"kind": kind})
+}
+
+// PluginCommandFailed says "{command} failed: {reason}"
+// in the language the app shows.
+//
+// A plugin command that threw or ran past its budget.
+func PluginCommandFailed(command string, reason string) string {
+	return In(i18n.Locale()).PluginCommandFailed(command, reason)
+}
+
+// PluginCommandFailed says "{command} failed: {reason}"
+// in the language of msgs.
+//
+// A plugin command that threw or ran past its budget.
+func (msgs Messages) PluginCommandFailed(command string, reason string) string {
+	return Catalog.Format(msgs.locale, "pluginCommandFailed", map[string]any{"command": command, "reason": reason})
+}
+
+// SettingsPluginOptions says "Plugin settings"
+// in the language the app shows.
+//
+// Settings section: the settings plugins contributed.
+func SettingsPluginOptions() string { return In(i18n.Locale()).SettingsPluginOptions() }
+
+// SettingsPluginOptions says "Plugin settings"
+// in the language of msgs.
+//
+// Settings section: the settings plugins contributed.
+func (msgs Messages) SettingsPluginOptions() string {
+	return Catalog.Format(msgs.locale, "settingsPluginOptions", nil)
+}
+
+// SettingsPluginOptionsBody says "Settings a plugin declared. They are kept in the plugin's own data, and Remit never runs it to write one."
+// in the language the app shows.
+//
+// Description of the plugin settings section.
+func SettingsPluginOptionsBody() string { return In(i18n.Locale()).SettingsPluginOptionsBody() }
+
+// SettingsPluginOptionsBody says "Settings a plugin declared. They are kept in the plugin's own data, and Remit never runs it to write one."
+// in the language of msgs.
+//
+// Description of the plugin settings section.
+func (msgs Messages) SettingsPluginOptionsBody() string {
+	return Catalog.Format(msgs.locale, "settingsPluginOptionsBody", nil)
+}
+
+// PluginProblems says "Remit could not use these contributions:"
+// in the language the app shows.
+//
+// The problems a plugin's manifest declared, listed under it.
+func PluginProblems() string { return In(i18n.Locale()).PluginProblems() }
+
+// PluginProblems says "Remit could not use these contributions:"
+// in the language of msgs.
+//
+// The problems a plugin's manifest declared, listed under it.
+func (msgs Messages) PluginProblems() string {
+	return Catalog.Format(msgs.locale, "pluginProblems", nil)
+}
+
+// PluginFailures says "{count} contributed entries failed"
+// in the language the app shows.
+//
+// How many of a plugin's commands or pages failed three times and were
+// hidden.
+func PluginFailures(count int) string { return In(i18n.Locale()).PluginFailures(count) }
+
+// PluginFailures says "{count} contributed entries failed"
+// in the language of msgs.
+//
+// How many of a plugin's commands or pages failed three times and were
+// hidden.
+func (msgs Messages) PluginFailures(count int) string {
+	return Catalog.Format(msgs.locale, "pluginFailures", map[string]any{"count": count})
+}
+
+// PluginReenable says "Re-enable"
+// in the language the app shows.
+//
+// The button that clears a plugin's failure counts and shows its entries
+// again.
+func PluginReenable() string { return In(i18n.Locale()).PluginReenable() }
+
+// PluginReenable says "Re-enable"
+// in the language of msgs.
+//
+// The button that clears a plugin's failure counts and shows its entries
+// again.
+func (msgs Messages) PluginReenable() string {
+	return Catalog.Format(msgs.locale, "pluginReenable", nil)
+}
+
+// PluginReenabled says "Its failed entries were given another try."
+// in the language the app shows.
+//
+// A plugin's failures were cleared.
+func PluginReenabled() string { return In(i18n.Locale()).PluginReenabled() }
+
+// PluginReenabled says "Its failed entries were given another try."
+// in the language of msgs.
+//
+// A plugin's failures were cleared.
+func (msgs Messages) PluginReenabled() string {
+	return Catalog.Format(msgs.locale, "pluginReenabled", nil)
+}
+
+// PluginSettingFailed says "The setting was not saved: {reason}"
+// in the language the app shows.
+//
+// Writing a contributed setting into the plugin's own store failed.
+func PluginSettingFailed(reason string) string { return In(i18n.Locale()).PluginSettingFailed(reason) }
+
+// PluginSettingFailed says "The setting was not saved: {reason}"
+// in the language of msgs.
+//
+// Writing a contributed setting into the plugin's own store failed.
+func (msgs Messages) PluginSettingFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "pluginSettingFailed", map[string]any{"reason": reason})
+}
+
+// PluginPageRefresh says "Refresh"
+// in the language the app shows.
+//
+// The button that asks a plugin page's data command for its tree again.
+func PluginPageRefresh() string { return In(i18n.Locale()).PluginPageRefresh() }
+
+// PluginPageRefresh says "Refresh"
+// in the language of msgs.
+//
+// The button that asks a plugin page's data command for its tree again.
+func (msgs Messages) PluginPageRefresh() string {
+	return Catalog.Format(msgs.locale, "pluginPageRefresh", nil)
+}

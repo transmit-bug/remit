@@ -11,6 +11,11 @@ import (
 // View draws the window. It reads state and returns; anything that changes
 // state belongs in a handler.
 func (a *App) View(c *ui.Context) {
+	// What a plugin's callback answered since the last frame is applied first,
+	// so the frame that draws it draws the result. The work itself already ran
+	// off this pass: no frame ever waits on a plugin.
+	a.applyBackground(c)
+
 	tk := design.NewTokens(c.Theme())
 	c.SetTheme(tk.Theme)
 
@@ -46,6 +51,8 @@ func (a *App) View(c *ui.Context) {
 				a.browseView(c)
 			case a.mode == modeStats:
 				screenstats.View(c, a.stats, screenstats.Deps{})
+			case a.mode == modePlugin:
+				a.pluginPageView(c)
 			default:
 				a.notesView(c)
 			}
