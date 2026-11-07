@@ -17,6 +17,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/start"
@@ -125,8 +126,9 @@ func (a *App) schedulerRole(name string) *schedulerPlugin {
 func (a *App) apply(lib *store.Library, dir string) {
 	a.lib, a.dir = lib, dir
 	a.openErr, a.start = nil, false
-	a.mode = modeReview
+	a.mode, a.page = modeReview, contrib.PageRef{}
 	a.review.Reset()
+	a.loadContributions()
 	a.reload()
 	if a.opened != nil {
 		a.opened(lib)
@@ -239,6 +241,7 @@ func (a *App) close() {
 		slog.Warn("remit: close library", "err", err)
 	}
 	a.lib = nil
+	a.loadContributions()
 }
 
 // DefaultLibraryDir is where a library goes when the caller names none:
@@ -324,6 +327,7 @@ func (a *App) reload() {
 	a.notesRows = a.noteRows()
 	a.due = a.dueToday()
 	a.review.Sync(a.due)
+	a.invalidatePages()
 	if a.remaining != nil {
 		a.remaining(a.review.Remaining())
 	}

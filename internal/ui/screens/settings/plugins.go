@@ -22,6 +22,13 @@ type Plugin struct {
 	Roles        []string // the role names the manifest implements
 	Builtin      bool
 	Enabled      bool
+	// Problems is what the plugin's contributes declared that this host cannot
+	// use, one line each: the plugin still runs, and only those entries are
+	// hidden (docs/specs/plugins/ui.md §8).
+	Problems []string
+	// Failures is how many of its contributed commands and pages have failed in
+	// a row and been hidden.
+	Failures int
 }
 
 // enableRequest is the approval one frame asked for, applied after the
@@ -58,7 +65,7 @@ func pluginsFieldset(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk 
 		}
 		roles := d.roles()
 		for _, p := range plugins {
-			pluginField(c, tk, msgs, p, &enable)
+			pluginField(c, d, tk, msgs, p, &enable)
 		}
 		roleField(c, msgs, tk, plugins, roles, core.RoleCardsDerive, msgs.PluginRoleCards(), msgs.PluginRoleCardsBody(), &role)
 		roleField(c, msgs, tk, plugins, roles, core.RoleReviewSchedule, msgs.PluginRoleSchedule(), msgs.PluginRoleScheduleBody(), &role)
@@ -78,7 +85,7 @@ func pluginsFieldset(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk 
 // pluginField is one plugin: its name, the capabilities approving it grants,
 // and the switch that grants them. A built-in carries a badge instead of a
 // switch, because withdrawing the app's own card plugin is not a choice.
-func pluginField(c *ui.Context, tk design.Tokens, msgs locales.Messages, p Plugin, enable *enableRequest) {
+func pluginField(c *ui.Context, d Deps, tk design.Tokens, msgs locales.Messages, p Plugin, enable *enableRequest) {
 	on := p.Enabled
 	ui.Column(c).Gap(tk.SpaceXS).Children(func() {
 		ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
@@ -94,13 +101,14 @@ func pluginField(c *ui.Context, tk design.Tokens, msgs locales.Messages, p Plugi
 		})
 		if len(p.Capabilities) == 0 {
 			ui.Text(c, msgs.PluginNoCapabilities()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
-			return
+		} else {
+			ui.Row(c).Gap(tk.SpaceXS).Children(func() {
+				for _, capability := range p.Capabilities {
+					ui.Badge(c, capability)
+				}
+			})
 		}
-		ui.Row(c).Gap(tk.SpaceXS).Children(func() {
-			for _, capability := range p.Capabilities {
-				ui.Badge(c, capability)
-			}
-		})
+		pluginProblems(c, d, msgs, tk, p)
 	})
 }
 

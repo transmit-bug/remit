@@ -1,0 +1,121 @@
+{
+  "id": "example.leeches",
+  "name": "leeches",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "runtime": "js",
+  "entry": "main.js",
+  "capabilities": ["notes:read", "store:own"],
+  "implements": {
+    "on_event": 1
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "example.leeches.show",
+        "title": "%command.show%",
+        "category": "%category.review%",
+        "icon": "chart-column",
+        "keybinding": "mod+shift+l",
+        "when": "library.open && (mode == review || mode == browse)",
+        "action": "command:showLeeches"
+      },
+      {
+        "id": "example.leeches.pause",
+        "title": "%command.pause%",
+        "category": "%category.review%",
+        "icon": "flame",
+        "action": "command:pauseAndTag"
+      }
+    ],
+    "menus": {
+      "review.card": [
+        {
+          "command": "example.leeches.pause",
+          "group": "plugin",
+          "order": 100,
+          "when": "card.present"
+        }
+      ],
+      "toolbar.overflow": [
+        {
+          "command": "example.leeches.show",
+          "group": "plugin",
+          "order": 10
+        }
+      ],
+      "note.overflow": [
+        {
+          "command": "example.leeches.pause",
+          "group": "plugin",
+          "order": 20,
+          "when": "note.open"
+        }
+      ]
+    },
+    "pages": [
+      {
+        "id": "leeches",
+        "title": "%page.title%",
+        "icon": "chart-column",
+        "nav": "plugins",
+        "when": "library.open",
+        "data": "command:leechesData"
+      }
+    ],
+    "settings": [
+      {
+        "key": "threshold",
+        "type": "number",
+        "title": "%setting.threshold%",
+        "default": 8
+      },
+      {
+        "key": "includeSuspended",
+        "type": "bool",
+        "title": "%setting.suspended%",
+        "default": false
+      }
+    ],
+    "locales": {
+      "en": {
+        "command.show": "Leech report",
+        "command.pause": "Pause and tag",
+        "category.review": "Review",
+        "page.title": "Leeches",
+        "setting.threshold": "Lapses that make a leech",
+        "setting.suspended": "Count suspended cards",
+        "section.overview": "Overview",
+        "section.cards": "Cards",
+        "stat.notes": "notes",
+        "stat.cards": "cards",
+        "col.note": "Note",
+        "col.cards": "Cards",
+        "empty": "No note is close to the threshold.",
+        "callout.title": "A leech is a card you keep forgetting",
+        "callout.body": "It keeps coming back because its answer is too big. Make it smaller.",
+        "toast.paused": "Card paused and tagged",
+        "refresh": "Refresh"
+      },
+      "zh-Hans": {
+        "command.show": "水蛭报告",
+        "command.pause": "暂停并打标签",
+        "category.review": "复习",
+        "page.title": "水蛭",
+        "setting.threshold": "算作水蛭的遗忘次数",
+        "setting.suspended": "把已暂停的卡片也算进来",
+        "section.overview": "概览",
+        "section.cards": "卡片",
+        "stat.notes": "篇笔记",
+        "stat.cards": "张卡片",
+        "col.note": "笔记",
+        "col.cards": "卡片",
+        "empty": "还没有笔记接近这个阈值。",
+        "callout.title": "水蛭是总也记不住的卡片",
+        "callout.body": "它一再回来，是因为答案太长。把它改小。",
+        "toast.paused": "卡片已暂停并打上标签",
+        "refresh": "刷新"
+      }
+    }
+  }
+}

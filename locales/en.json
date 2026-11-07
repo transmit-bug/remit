@@ -1390,4 +1390,118 @@
       }
     }
   }
+,
+  "pluginPages": "Plugin pages"
+,
+  "@pluginPages": {
+    "description": "The button that lists the pages plugins contributed."
+  }
+,
+  "pluginPageLoading": "Loading…"
+,
+  "@pluginPageLoading": {
+    "description": "A plugin page whose data is still on its way."
+  }
+,
+  "pluginPageFailed": "This page could not be loaded: {reason}"
+,
+  "@pluginPageFailed": {
+    "description": "A plugin page whose data command failed, with the reason.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "the page's data command timed out"
+      }
+    }
+  }
+,
+  "pluginPageRetry": "Retry"
+,
+  "@pluginPageRetry": {
+    "description": "The button that asks a failed plugin page for its data again."
+  }
+,
+  "pluginPageUnknownNode": "{kind} is not something this version of Remit draws."
+,
+  "@pluginPageUnknownNode": {
+    "description": "A page node of a kind this host does not know, named in place.",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "example": "sparkline"
+      }
+    }
+  }
+,
+  "pluginCommandFailed": "{command} failed: {reason}"
+,
+  "@pluginCommandFailed": {
+    "description": "A plugin command that threw or ran past its budget.",
+    "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "Leech report"
+      },
+      "reason": {
+        "type": "String",
+        "example": "the command used its time"
+      }
+    }
+  }
+,
+  "settingsPluginOptions": "Plugin settings"
+,
+  "@settingsPluginOptions": {
+    "description": "Settings section: the settings plugins contributed."
+  }
+,
+  "settingsPluginOptionsBody": "Settings a plugin declared. They are kept in the plugin's own data, and Remit never runs it to write one."
+,
+  "@settingsPluginOptionsBody": {
+    "description": "Description of the plugin settings section."
+  }
+,
+  "pluginProblems": "Remit could not use these contributions:"
+,
+  "@pluginProblems": {
+    "description": "The problems a plugin's manifest declared, listed under it."
+  }
+,
+  "pluginFailures": "{count} contributed entries failed"
+,
+  "@pluginFailures": {
+    "description": "How many of a plugin's commands or pages failed three times and were hidden.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  }
+,
+  "pluginReenable": "Re-enable"
+,
+  "@pluginReenable": {
+    "description": "The button that clears a plugin's failure counts and shows its entries again."
+  }
+,
+  "pluginReenabled": "Its failed entries were given another try."
+,
+  "@pluginReenabled": {
+    "description": "A plugin's failures were cleared."
+  },
+  "pluginSettingFailed": "The setting was not saved: {reason}",
+  "@pluginSettingFailed": {
+    "description": "Writing a contributed setting into the plugin's own store failed.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "the plugin's data is not a JSON object"
+      }
+    }
+  },
+  "pluginPageRefresh": "Refresh",
+  "@pluginPageRefresh": {
+    "description": "The button that asks a plugin page's data command for its tree again."
+  }
 }

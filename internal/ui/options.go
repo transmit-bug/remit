@@ -65,6 +65,16 @@ type Options struct {
 	// leaves Options.Cards and Options.Scheduler, or the built-ins, playing
 	// every role.
 	Plugin func(name string) (*ext.JSRunner, error)
+	// Manifests lists every plugin this build can run, by manifest, without
+	// starting one: what the app reads to index the pages, commands, menus and
+	// settings the library's plugins declare. nil is a build where plugins
+	// contribute no UI.
+	Manifests func() ([]ext.Extension, error)
+	// Contribution opens the runner that answers a contributed command or a
+	// page's data, by manifest name. cmd passes the plugin service's own; nil
+	// leaves a contribution that calls back with an error the page shows and a
+	// command toasts.
+	Contribution func(name string) (CommandRunner, error)
 	// BindHotkey binds the global shortcut, replacing the one bound now, and
 	// reports a combination that is invalid or already taken. cmd registers it
 	// on MyGo's GlobalShortcut; a test replaces it.
