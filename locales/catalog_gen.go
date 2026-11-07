@@ -329,6 +329,132 @@ func (msgs Messages) RevealHint() string {
 	return Catalog.Format(msgs.locale, "revealHint", nil)
 }
 
+// Hint says "Hint"
+// in the language the app shows.
+//
+// Header of the folded hint a card's template captured.
+func Hint() string { return In(i18n.Locale()).Hint() }
+
+// Hint says "Hint"
+// in the language of msgs.
+//
+// Header of the folded hint a card's template captured.
+func (msgs Messages) Hint() string {
+	return Catalog.Format(msgs.locale, "hint", nil)
+}
+
+// TypedAnswer says "Your answer"
+// in the language the app shows.
+//
+// Labels the input a {{type:}} card takes, and the line that compares it.
+func TypedAnswer() string { return In(i18n.Locale()).TypedAnswer() }
+
+// TypedAnswer says "Your answer"
+// in the language of msgs.
+//
+// Labels the input a {{type:}} card takes, and the line that compares it.
+func (msgs Messages) TypedAnswer() string {
+	return Catalog.Format(msgs.locale, "typedAnswer", nil)
+}
+
+// TypeAnswerPlaceholder says "Type the answer"
+// in the language the app shows.
+//
+// Placeholder of the input a {{type:}} card takes.
+func TypeAnswerPlaceholder() string { return In(i18n.Locale()).TypeAnswerPlaceholder() }
+
+// TypeAnswerPlaceholder says "Type the answer"
+// in the language of msgs.
+//
+// Placeholder of the input a {{type:}} card takes.
+func (msgs Messages) TypeAnswerPlaceholder() string {
+	return Catalog.Format(msgs.locale, "typeAnswerPlaceholder", nil)
+}
+
+// CheckAnswer says "Check"
+// in the language the app shows.
+//
+// Checks the typed answer against the card's.
+func CheckAnswer() string { return In(i18n.Locale()).CheckAnswer() }
+
+// CheckAnswer says "Check"
+// in the language of msgs.
+//
+// Checks the typed answer against the card's.
+func (msgs Messages) CheckAnswer() string {
+	return Catalog.Format(msgs.locale, "checkAnswer", nil)
+}
+
+// CheckHint says "Press Enter to check."
+// in the language the app shows.
+//
+// Hint shown beside the button that checks a typed answer.
+func CheckHint() string { return In(i18n.Locale()).CheckHint() }
+
+// CheckHint says "Press Enter to check."
+// in the language of msgs.
+//
+// Hint shown beside the button that checks a typed answer.
+func (msgs Messages) CheckHint() string {
+	return Catalog.Format(msgs.locale, "checkHint", nil)
+}
+
+// AnswerCorrect says "Correct"
+// in the language the app shows.
+//
+// Verdict on a typed answer whose every letter is the card's.
+func AnswerCorrect() string { return In(i18n.Locale()).AnswerCorrect() }
+
+// AnswerCorrect says "Correct"
+// in the language of msgs.
+//
+// Verdict on a typed answer whose every letter is the card's.
+func (msgs Messages) AnswerCorrect() string {
+	return Catalog.Format(msgs.locale, "answerCorrect", nil)
+}
+
+// AnswerPartly says "Almost"
+// in the language the app shows.
+//
+// Verdict on a typed answer that matched in part.
+func AnswerPartly() string { return In(i18n.Locale()).AnswerPartly() }
+
+// AnswerPartly says "Almost"
+// in the language of msgs.
+//
+// Verdict on a typed answer that matched in part.
+func (msgs Messages) AnswerPartly() string {
+	return Catalog.Format(msgs.locale, "answerPartly", nil)
+}
+
+// AnswerWrong says "Not quite"
+// in the language the app shows.
+//
+// Verdict on a typed answer that matched nowhere.
+func AnswerWrong() string { return In(i18n.Locale()).AnswerWrong() }
+
+// AnswerWrong says "Not quite"
+// in the language of msgs.
+//
+// Verdict on a typed answer that matched nowhere.
+func (msgs Messages) AnswerWrong() string {
+	return Catalog.Format(msgs.locale, "answerWrong", nil)
+}
+
+// CompareLegend says "Struck-through letters were extra; underlined ones are missing."
+// in the language the app shows.
+//
+// Explains the two differences a typed answer's comparison shows.
+func CompareLegend() string { return In(i18n.Locale()).CompareLegend() }
+
+// CompareLegend says "Struck-through letters were extra; underlined ones are missing."
+// in the language of msgs.
+//
+// Explains the two differences a typed answer's comparison shows.
+func (msgs Messages) CompareLegend() string {
+	return Catalog.Format(msgs.locale, "compareLegend", nil)
+}
+
 // ShowAnswer says "Show answer"
 // in the language the app shows.
 //

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,122 @@ import (
 
 	"github.com/transmit-bug/remit/locales"
 )
+
+// writeBasicType replaces the built-in basic type with one whose front is
+// front. Types are plain-text library data, so a test writes the file a user
+// would edit, before the library opens.
+func writeBasicType(t *testing.T, dir, front string) {
+	t.Helper()
+	data, err := json.MarshalIndent(map[string]any{
+		"id":      "remit.basic",
+		"name":    "Basic",
+		"fields":  []string{"Front", "Back"},
+		"front":   front,
+		"back":    "{{Back}}",
+		"version": 1,
+	}, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "types"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "types", "remit.basic.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A template's {{hint:}} reaches the screen: the answer stays hidden, the
+// hint's words arrive folded, and asking for them shows them.
+func TestHintReachesTheScreen(t *testing.T) {
+	dir := t.TempDir()
+	writeBasicType(t, dir, "{{Front}}{{hint:Back}}")
+	seedLibrary(t, dir)
+	a := NewApp(Options{LibraryDir: dir})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	tt.Key(ui.Cmd, ui.Key1)
+
+	const hint = "reviewing just before you forget strengthens recall."
+	if !tt.HasText("Spacing beats cramming") {
+		t.Fatalf("review did not open on the first card; texts %q", tt.Texts())
+	}
+	if tt.HasText(hint) {
+		t.Fatal("the hint is open before it is asked for")
+	}
+	if err := tt.Click("Hint"); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText(hint) {
+		t.Fatalf("the hint did not reach the screen; texts %q", tt.Texts())
+	}
+}
+
+// A card whose type asks for a typed answer owns the keyboard until it is
+// checked: a digit typed into the input is the answer's, not a grade, Space does
+// not reveal the answer, Enter checks it, and the grades come back afterwards.
+func TestTypedAnswerTakesTheKeys(t *testing.T) {
+	dir := t.TempDir()
+	writeBasicType(t, dir, "{{Front}}{{type:Back}}")
+	seedLibrary(t, dir)
+	a := NewApp(Options{LibraryDir: dir})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	tt.Key(ui.Cmd, ui.Key1)
+
+	msgs := locales.In("en")
+	if !tt.HasText(msgs.CheckAnswer()) {
+		t.Fatalf("the typed card is not on screen; texts %q", tt.Texts())
+	}
+
+	// The input takes the digit and the space; neither grades nor reveals.
+	tt.TypeKey(0, ui.Key4, "4")
+	tt.TypeKey(0, ui.KeySpace, " ")
+	const answer = "reviewing just before you forget strengthens recall."
+	if !tt.HasText("4 cards left") {
+		t.Fatalf("a key graded the card while its answer was being typed; texts %q", tt.Texts())
+	}
+	if tt.HasText(answer) {
+		t.Fatal("Space revealed the answer while it was being typed")
+	}
+	field, ok := tt.Access(msgs.TypedAnswer())
+	if !ok || field.Value != "4 " {
+		t.Fatalf("the input holds %q (found %v), want %q", field.Value, ok, "4 ")
+	}
+
+	// With the focus off the input, Space must still leave the answer hidden:
+	// a typed card is checked, not revealed.
+	if err := tt.Click("Spacing beats cramming"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Key(0, ui.KeySpace)
+	if tt.HasText(answer) {
+		t.Fatal("Space revealed the answer of a card that is waiting to be checked")
+	}
+	if field, _ := tt.Access(msgs.TypedAnswer()); field.Value != "4 " {
+		t.Errorf("the input holds %q after Space left the focus, want %q", field.Value, "4 ")
+	}
+
+	// The space is one of the answer's characters, so an otherwise wrong answer
+	// that holds one is Partial, not Wrong: the comparison is literal.
+	if err := tt.Click(msgs.CheckAnswer()); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{msgs.AnswerPartly(), answer, msgs.Easy()} {
+		if !tt.HasText(want) {
+			t.Fatalf("after checking, %q is missing; texts %q", want, tt.Texts())
+		}
+	}
+
+	tt.Key(0, ui.Key3)
+	tt.Advance(320 * time.Millisecond) // the graded card's exit
+	if !tt.HasText("3 cards left") {
+		t.Errorf("Good did not grade the checked card; texts %q", tt.Texts())
+	}
+	if tt.FramePending() {
+		t.Error("view still requests frames after it should settle")
+	}
+}
 
 // Review takes the window whole: no navigation and no notes list, only the card
 // and its status bar — and Esc gives the notebook back.

@@ -216,6 +216,170 @@ func TestFrozenCard(t *testing.T) {
 	}
 }
 
+// A card's {{hint:}} is folded away until asked for: opening it shows the
+// nudge, closing it puts it away, and neither reveals the answer.
+func TestHintStaysFolded(t *testing.T) {
+	msgs := locales.In("en")
+	f := &fake{cards: map[core.ID]review.Card{
+		"c1": {ID: "c1", Prompt: "Prompt c1", Answer: "Answer c1", Hint: "Starts with A"},
+	}, state: &review.State{}}
+	f.state.Sync([]core.ID{"c1"})
+	state, deps := f.state, f.deps()
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, size.w, size.h)
+			if tt.HasText("Starts with A") {
+				t.Fatalf("the hint is open before it is asked for; texts %q", tt.Texts())
+			}
+			if err := tt.Click(msgs.Hint()); err != nil {
+				t.Fatal(err)
+			}
+			if !tt.HasText("Starts with A") {
+				t.Fatalf("the hint did not open; texts %q", tt.Texts())
+			}
+			if tt.HasText("Answer c1") {
+				t.Error("opening the hint showed the answer")
+			}
+			if err := tt.Click(msgs.Hint()); err != nil {
+				t.Fatal(err)
+			}
+			if tt.HasText("Starts with A") {
+				t.Errorf("the hint did not close; texts %q", tt.Texts())
+			}
+		})
+	}
+}
+
+// typed is a card that asks for its answer to be typed, as a type's {{type:}}
+// tag makes one.
+func typed(prompt, answer string) review.Card {
+	return review.Card{ID: "c1", Prompt: prompt, Answer: answer, TypeAnswer: answer}
+}
+
+// A card with a {{type:}} tag takes its answer as typed input: the screen asks
+// for it instead of revealing it, Enter checks it, and the verdict says how the
+// two spellings differ — at both sizes the window opens at.
+func TestTypedAnswerOnScreen(t *testing.T) {
+	msgs := locales.In("en")
+	for _, tc := range []struct {
+		name  string
+		typed string
+		of    string
+		diff  bool
+	}{
+		{"correct", "colour", msgs.AnswerCorrect(), false},
+		{"partial", "colur", msgs.AnswerPartly(), true},
+		{"wrong", "banana", msgs.AnswerWrong(), true},
+	} {
+		for _, size := range sizes {
+			t.Run(tc.name+"/"+size.name, func(t *testing.T) {
+				f := &fake{cards: map[core.ID]review.Card{"c1": typed("Spell the colour", "colour")}, state: &review.State{}}
+				f.state.Sync([]core.ID{"c1"})
+				state, deps := f.state, f.deps()
+				tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, size.w, size.h)
+
+				if tt.HasText(msgs.ShowAnswer()) {
+					t.Fatalf("a typed card offers to reveal its answer; texts %q", tt.Texts())
+				}
+				for _, want := range []string{msgs.CheckAnswer(), msgs.CheckHint(), msgs.TypedAnswer()} {
+					if !tt.HasText(want) {
+						t.Fatalf("the typed card is missing %q; texts %q", want, tt.Texts())
+					}
+				}
+				if !tt.Focused(msgs.TypedAnswer()) {
+					t.Errorf("the input does not take the focus; texts %q", tt.Texts())
+				}
+
+				tt.Type(tc.typed)
+				tt.Key(0, ui.KeyEnter)
+				if !state.Answered() {
+					t.Fatal("Enter did not check the answer")
+				}
+				for _, want := range []string{tc.of, msgs.TypedAnswer(), "colour", msgs.Easy()} {
+					if !tt.HasText(want) {
+						t.Errorf("after checking, %q is missing; texts %q", want, tt.Texts())
+					}
+				}
+				if got := tt.HasText(msgs.CompareLegend()); got != tc.diff {
+					t.Errorf("the difference is explained = %v, want %v; texts %q", got, tc.diff, tt.Texts())
+				}
+
+				if err := tt.Click(msgs.Good()); err != nil {
+					t.Fatal(err)
+				}
+				if len(f.graded) != 1 || f.graded[0].r != review.Good {
+					t.Errorf("the grade reached the app as %v, want one Good", f.graded)
+				}
+			})
+		}
+	}
+}
+
+// The typed answer reads in Chinese at the smallest window: the input, the way
+// to check it and the verdict all come from the catalog, with a box inside it.
+func TestTypedAnswerInChinese(t *testing.T) {
+	msgs := locales.In("zh-Hans")
+	f := &fake{cards: map[core.ID]review.Card{"c1": typed("拼写这个单词", "colour")}, state: &review.State{}}
+	f.state.Sync([]core.ID{"c1"})
+	state, deps := f.state, f.deps()
+	tt := ui.NewTester(func(c *ui.Context) { review.View(c, state, deps) }, 720, 520)
+	tt.SetLocale("zh-Hans")
+	tt.Frame()
+	tt.Advance(300 * time.Millisecond)
+
+	for _, label := range []string{msgs.TypedAnswer(), msgs.CheckAnswer(), msgs.CheckHint()} {
+		box, ok := tt.Find(label)
+		if !ok {
+			t.Fatalf("missing %q; texts %q", label, tt.Texts())
+		}
+		if box.X < 0 || box.Y < 0 || box.X+box.W > 720 || box.Y+box.H > 520 {
+			t.Errorf("%q box %+v is outside the 720x520 window", label, box)
+		}
+	}
+
+	tt.Type("colur")
+	tt.Key(0, ui.KeyEnter)
+	for _, want := range []string{msgs.AnswerPartly(), msgs.CompareLegend()} {
+		if !tt.HasText(want) {
+			t.Errorf("the Chinese verdict is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+	if tt.HasText(msgs.AnswerPartly()+"!") || tt.HasText("Almost") {
+		t.Error("the screen fell back to English")
+	}
+}
+
+// A typed answer belongs to the card it was written for: the next card starts
+// with an empty input and none of the previous verdict.
+func TestTypedAnswerBelongsToItsCard(t *testing.T) {
+	msgs := locales.In("en")
+	f := &fake{cards: map[core.ID]review.Card{
+		"c1": typed("Prompt c1", "colour"),
+		"c2": typed("Prompt c2", "colour"),
+	}, state: &review.State{}}
+	f.state.Sync([]core.ID{"c1", "c2"})
+	state, deps := f.state, f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
+
+	tt.Type("colour")
+	tt.Key(0, ui.KeyEnter)
+	if !tt.HasText(msgs.AnswerCorrect()) {
+		t.Fatalf("the first card was not checked; texts %q", tt.Texts())
+	}
+
+	state.Advance(true) // as grading the card does
+	tt.Frame()
+	if !tt.HasText("Prompt c2") {
+		t.Fatalf("the queue did not move on; texts %q", tt.Texts())
+	}
+	if tt.HasText(msgs.AnswerCorrect()) {
+		t.Error("the previous card's verdict is still on screen")
+	}
+	if input, ok := tt.Access(msgs.TypedAnswer()); ok && input.Value != "" {
+		t.Errorf("the next card starts with %q typed", input.Value)
+	}
+}
+
 // The queue's end: one sentence and one way back, and it works.
 func TestEmptyQueue(t *testing.T) {
 	msgs := locales.In("en")

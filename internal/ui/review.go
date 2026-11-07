@@ -77,12 +77,30 @@ func (a *App) reviewCard(id core.ID) (review.Card, bool) {
 	if !ok {
 		return review.Card{}, false
 	}
-	prompt, answer, state := a.faces(card)
-	out := review.Card{ID: card.ID, Prompt: prompt, Answer: answer, State: state}
+	face := a.face(card)
+	out := review.Card{
+		ID:         card.ID,
+		Prompt:     face.Front,
+		Answer:     face.Back,
+		Hint:       face.Hint,
+		TypeAnswer: face.TypeAnswer,
+		State:      face.State,
+	}
 	if card.Ref.Frozen != nil {
 		out.Frozen = card.Ref.Frozen.At
 	}
 	return out, true
+}
+
+// typing reports whether the card on screen is taking a typed answer, so the
+// window's review keys leave the keyboard to its input.
+func (a *App) typing() bool {
+	id, ok := a.review.Current()
+	if !ok {
+		return false
+	}
+	card, ok := a.reviewCard(id)
+	return ok && a.review.Typing(card)
 }
 
 // grade rates the card shown, records the review in the store and moves on. A
