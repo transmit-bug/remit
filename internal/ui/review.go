@@ -77,8 +77,14 @@ func (a *App) reviewCard(id core.ID) (review.Card, bool) {
 	if !ok {
 		return review.Card{}, false
 	}
-	prompt, answer, state := a.faces(card)
-	out := review.Card{ID: card.ID, Prompt: prompt, Answer: answer, State: state}
+	face := a.face(card)
+	out := review.Card{
+		ID:     card.ID,
+		Prompt: face.Front,
+		Answer: face.Back,
+		Hint:   face.Hint,
+		State:  face.State,
+	}
 	if card.Ref.Frozen != nil {
 		out.Frozen = card.Ref.Frozen.At
 	}

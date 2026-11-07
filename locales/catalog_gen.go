@@ -329,6 +329,20 @@ func (msgs Messages) RevealHint() string {
 	return Catalog.Format(msgs.locale, "revealHint", nil)
 }
 
+// Hint says "Hint"
+// in the language the app shows.
+//
+// Header of the folded hint a card's template captured.
+func Hint() string { return In(i18n.Locale()).Hint() }
+
+// Hint says "Hint"
+// in the language of msgs.
+//
+// Header of the folded hint a card's template captured.
+func (msgs Messages) Hint() string {
+	return Catalog.Format(msgs.locale, "hint", nil)
+}
+
 // ShowAnswer says "Show answer"
 // in the language the app shows.
 //

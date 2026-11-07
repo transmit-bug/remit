@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,56 @@ import (
 
 	"github.com/transmit-bug/remit/locales"
 )
+
+// writeBasicType replaces the built-in basic type with one whose front is
+// front. Types are plain-text library data, so a test writes the file a user
+// would edit, before the library opens.
+func writeBasicType(t *testing.T, dir, front string) {
+	t.Helper()
+	data, err := json.MarshalIndent(map[string]any{
+		"id":      "remit.basic",
+		"name":    "Basic",
+		"fields":  []string{"Front", "Back"},
+		"front":   front,
+		"back":    "{{Back}}",
+		"version": 1,
+	}, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "types"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "types", "remit.basic.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A template's {{hint:}} reaches the screen: the answer stays hidden, the
+// hint's words arrive folded, and asking for them shows them.
+func TestHintReachesTheScreen(t *testing.T) {
+	dir := t.TempDir()
+	writeBasicType(t, dir, "{{Front}}{{hint:Back}}")
+	seedLibrary(t, dir)
+	a := NewApp(Options{LibraryDir: dir})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	tt.Key(ui.Cmd, ui.Key1)
+
+	const hint = "reviewing just before you forget strengthens recall."
+	if !tt.HasText("Spacing beats cramming") {
+		t.Fatalf("review did not open on the first card; texts %q", tt.Texts())
+	}
+	if tt.HasText(hint) {
+		t.Fatal("the hint is open before it is asked for")
+	}
+	if err := tt.Click("Hint"); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText(hint) {
+		t.Fatalf("the hint did not reach the screen; texts %q", tt.Texts())
+	}
+}
 
 // Review takes the window whole: no navigation and no notes list, only the card
 // and its status bar — and Esc gives the notebook back.

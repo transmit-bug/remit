@@ -102,6 +102,10 @@
   "@revealHint": {
     "description": "Hint shown before a card's answer is revealed."
   },
+  "hint": "Hint",
+  "@hint": {
+    "description": "Header of the folded hint a card's template captured."
+  },
   "showAnswer": "Show answer",
   "@showAnswer": {
     "description": "Reveals the current card's answer."

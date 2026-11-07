@@ -21,6 +21,7 @@
   "frozen": "已凝固",
   "snapshotTaken": "快照于 {date} 保存",
   "revealHint": "按空格显示答案。",
+  "hint": "提示",
   "showAnswer": "显示答案",
   "emptyAnswer": "这个块在第一个 :: 之后没有内容。",
   "undo": "撤销 (U)",

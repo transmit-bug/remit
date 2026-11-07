@@ -74,12 +74,15 @@ func (r Rating) colour(t *ui.Theme) ui.Color {
 }
 
 // Card is what the screen shows of a card: its sides as the library resolves
-// them now, and how its source stands.
+// them now, what the type's template folds away, and how its source stands.
 type Card struct {
 	ID     core.ID
 	Prompt string
 	Answer string
-	State  core.LinkState
+	// Hint is the {{hint:}} the card's template folded into the front, shown
+	// only when asked for.
+	Hint string
+	State core.LinkState
 	// Frozen is when a frozen card's snapshot was taken.
 	Frozen time.Time
 }
@@ -141,16 +144,21 @@ type State struct {
 	shown    core.ID   // the card revealed reports on
 	revealed bool
 	graded   []core.ID // cards graded this session, newest last
+	hintOpen bool      // the {{hint:}} fold is open
 }
 
 // Reset forgets the queue and the session's progress.
-func (s *State) Reset() { s.queue, s.shown, s.revealed, s.graded = nil, "", false, nil }
+func (s *State) Reset() {
+	s.queue, s.shown, s.revealed, s.graded = nil, "", false, nil
+	s.hintOpen = false
+}
 
 // Sync takes the library's answer to what is due now: a card still due keeps its
 // place, one no longer due leaves, and one that became due — a card made just
 // now, a card returned by undo — joins the end. Membership is the store's; the
 // order the user is working through stays.
 func (s *State) Sync(due []core.ID) {
+	head, _ := s.Current()
 	live := make(map[core.ID]bool, len(due))
 	for _, id := range due {
 		live[id] = true
@@ -169,7 +177,14 @@ func (s *State) Sync(due []core.ID) {
 		}
 	}
 	s.queue = kept
+	if now, ok := s.Current(); !ok || now != head {
+		s.forgetCard()
+	}
 }
+
+// forgetCard drops what belonged to the card on screen: what is open, and later
+// what was typed, is the card's, not the session's.
+func (s *State) forgetCard() { s.hintOpen = false }
 
 // Progress is how many cards this session has graded, and how many it started
 // with: what the status bar draws.
@@ -192,6 +207,7 @@ func (s *State) Current() (core.ID, bool) {
 // Only makes id the whole queue, as opening one card from browse does.
 func (s *State) Only(id core.ID) {
 	s.queue = []core.ID{id}
+	s.forgetCard()
 }
 
 // Reveal shows the card's answer.
@@ -200,6 +216,9 @@ func (s *State) Reveal() {
 		s.shown, s.revealed = s.queue[0], true
 	}
 }
+
+// ToggleHint opens or closes the card's {{hint:}} fold.
+func (s *State) ToggleHint() { s.hintOpen = !s.hintOpen }
 
 // Answered reports whether the answer on screen is the card's.
 func (s *State) Answered() bool {
@@ -217,6 +236,7 @@ func (s *State) Advance(graded bool) {
 	}
 	s.queue = s.queue[1:]
 	s.shown, s.revealed = "", false
+	s.forgetCard()
 }
 
 // Last is the card the newest grade belongs to.
@@ -232,6 +252,7 @@ func (s *State) Last() (core.ID, bool) {
 func (s *State) Restore(id core.ID) {
 	s.queue = append([]core.ID{id}, s.queue...)
 	s.shown, s.revealed = id, true
+	s.forgetCard()
 }
 
 // Show puts a card at the head of the queue with its answer still hidden, as a
@@ -240,6 +261,7 @@ func (s *State) Restore(id core.ID) {
 func (s *State) Show(id core.ID) {
 	s.queue = append([]core.ID{id}, s.queue...)
 	s.shown, s.revealed = "", false
+	s.forgetCard()
 }
 
 // Forget drops the grade undo has just cancelled.
@@ -348,6 +370,9 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 			front, back := card.Prompt, card.Answer
 			ui.Text(c, maths.Render(front)).FontSize(design.TypeHeading).Bold()
 			ui.Divider(c)
+			if card.Hint != "" && !s.Answered() {
+				hintFold(c, s, card)
+			}
 			if !s.Answered() {
 				ui.Text(c, msgs.RevealHint()).
 					FontSize(design.TypeSmall).TextColor(c.Theme().TextMuted)

@@ -216,6 +216,40 @@ func TestFrozenCard(t *testing.T) {
 	}
 }
 
+// A card's {{hint:}} is folded away until asked for: opening it shows the
+// nudge, closing it puts it away, and neither reveals the answer.
+func TestHintStaysFolded(t *testing.T) {
+	msgs := locales.In("en")
+	f := &fake{cards: map[core.ID]review.Card{
+		"c1": {ID: "c1", Prompt: "Prompt c1", Answer: "Answer c1", Hint: "Starts with A"},
+	}, state: &review.State{}}
+	f.state.Sync([]core.ID{"c1"})
+	state, deps := f.state, f.deps()
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, size.w, size.h)
+			if tt.HasText("Starts with A") {
+				t.Fatalf("the hint is open before it is asked for; texts %q", tt.Texts())
+			}
+			if err := tt.Click(msgs.Hint()); err != nil {
+				t.Fatal(err)
+			}
+			if !tt.HasText("Starts with A") {
+				t.Fatalf("the hint did not open; texts %q", tt.Texts())
+			}
+			if tt.HasText("Answer c1") {
+				t.Error("opening the hint showed the answer")
+			}
+			if err := tt.Click(msgs.Hint()); err != nil {
+				t.Fatal(err)
+			}
+			if tt.HasText("Starts with A") {
+				t.Errorf("the hint did not close; texts %q", tt.Texts())
+			}
+		})
+	}
+}
+
 // The queue's end: one sentence and one way back, and it works.
 func TestEmptyQueue(t *testing.T) {
 	msgs := locales.In("en")

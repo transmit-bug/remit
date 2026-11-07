@@ -3,6 +3,7 @@ package ui
 import (
 	"log/slog"
 
+	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/builtin"
@@ -137,15 +138,22 @@ func (a *App) deriveCards(text string) ([]core.Derived, bool) {
 	return a.resolver.Derive(text)
 }
 
-// faces is what a card asks: the resolver's answer — the fields the paragraph
+// face is what a card asks: the resolver's answer — the fields the paragraph
 // gives (the block for a live reference, the snapshot for a frozen one), the
-// card's own edited fields on top, rendered by the type's templates. A plugin
-// that is absent or failed leaves the paragraph's own words, unsplit.
-func (a *App) faces(card core.Card) (prompt, answer string, state core.LinkState) {
+// card's own edited fields on top, rendered by the type's templates, with what
+// the review screen reads beyond the two sides. A plugin that is absent or
+// failed leaves the paragraph's own words, unsplit.
+func (a *App) face(card core.Card) cards.Answer {
 	if a.resolver == nil {
 		text, state := card.Ref.Text(a.data.blocks)
-		return text, "", state
+		return cards.Answer{Front: text, State: state}
 	}
-	got := a.resolver.Face(card, a.data.blocks)
+	return a.resolver.Face(card, a.data.blocks)
+}
+
+// faces is what browse and re-link read of a card's answer: its two sides and
+// how its source stands.
+func (a *App) faces(card core.Card) (prompt, answer string, state core.LinkState) {
+	got := a.face(card)
 	return got.Front, got.Back, got.State
 }
