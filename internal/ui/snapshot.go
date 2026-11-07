@@ -12,10 +12,13 @@ type libraryData struct {
 	notes  []core.Note
 	cards  []core.Card
 	byID   map[core.ID]core.Card
+	byNote map[core.ID]core.Note
 	blocks core.BlockSet
 
-	// titles name a note, so a card can say which note it came from.
-	titles map[core.ID]string
+	// titles name a note, so a card can say which note it came from, and
+	// byTitle finds a note by the title a link names it with.
+	titles  map[core.ID]string
+	byTitle map[string]core.ID
 	// perBlock and perNote are the card counts the editor's badge and the
 	// note's summary show.
 	perBlock map[core.ID]int
@@ -38,12 +41,20 @@ func newLibraryData(notes []core.Note, cards []core.Card) libraryData {
 		byID:     make(map[core.ID]core.Card, len(cards)),
 		blocks:   make(core.BlockSet),
 		titles:   make(map[core.ID]string, len(notes)),
+		byNote:   make(map[core.ID]core.Note, len(notes)),
+		byTitle:  make(map[string]core.ID, len(notes)),
 		perBlock: make(map[core.ID]int, len(cards)),
 		perNote:  make(map[core.ID]int, len(notes)),
 		noteOf:   make(map[core.ID]core.ID, len(notes)),
 	}
 	for _, note := range notes {
 		d.titles[note.ID] = note.Title
+		d.byNote[note.ID] = note
+		// A title names one note: the first in the listing wins, so a link to a
+		// duplicated title resolves the same on every frame.
+		if _, taken := d.byTitle[core.NormalizeTitle(note.Title)]; !taken {
+			d.byTitle[core.NormalizeTitle(note.Title)] = note.ID
+		}
 		seen := map[string]bool{}
 		for _, block := range note.Blocks {
 			if block.ID == "" {
@@ -75,6 +86,12 @@ func newLibraryData(notes []core.Note, cards []core.Card) libraryData {
 func (d libraryData) card(id core.ID) (core.Card, bool) {
 	card, ok := d.byID[id]
 	return card, ok
+}
+
+// note is a note as the library has it now.
+func (d libraryData) note(id core.ID) (core.Note, bool) {
+	note, ok := d.byNote[id]
+	return note, ok
 }
 
 // cardsForBlock counts the cards that reference a block.

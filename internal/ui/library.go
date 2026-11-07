@@ -322,10 +322,12 @@ func (a *App) reload() {
 	a.resolver = cards.New(runner, a.lib.Types())
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
 	a.notesRows = a.noteRows()
+	now := time.Now()
 	a.due = a.dueToday()
 	a.review.Sync(a.due)
-	if a.remaining != nil {
-		a.remaining(a.review.Remaining())
+	a.loadReading(now)
+	if a.counts != nil {
+		a.counts(a.queueCounts())
 	}
 	a.loadCurrent()
 }
@@ -361,6 +363,9 @@ func (a *App) loadCurrent() {
 		a.loadBrowse()
 	case modeStats:
 		a.loadStats()
+	case modeReading:
+		// The reading screen reads the queue reload derived; it has nothing else
+		// to load, and a frame never asks the store.
 	case modeNotes:
 		a.backlinks = nil
 		if a.lib != nil && a.notes.Draft.ID != "" {
@@ -393,7 +398,7 @@ func (a *App) loadStats() {
 	a.stats = screenstats.Build(now,
 		stats.ReviewsPerDay(a.lib, from, to),
 		stats.RetentionOf(a.lib, schedule.DefaultParams()),
-		stats.Forecast(a.lib, now, screenstats.ForecastDays),
+		stats.ForecastAll(a.lib, now, screenstats.ForecastDays),
 	)
 }
 

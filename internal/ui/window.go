@@ -7,6 +7,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/about"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
+	"github.com/transmit-bug/remit/internal/ui/screens/reading"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 )
 
@@ -107,6 +108,22 @@ func (a *App) shortcuts(c *ui.Context) {
 		c.OnShortcut(0, ui.KeyU, func() { a.undo(c) })
 		c.OnShortcut(0, ui.KeyS, func() { a.suspendCurrent(c) })
 		c.OnShortcut(0, ui.KeyE, a.editCurrent)
+		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
+	case modeReading:
+		// The reading screen is read with the keyboard: J and K move the reading
+		// position, the digits record how the note digested, and E excerpts the
+		// block the position is on.
+		c.OnShortcut(0, ui.KeyJ, func() { a.moveReading(1) })
+		c.OnShortcut(0, ui.KeyK, func() { a.moveReading(-1) })
+		c.OnShortcut(0, ui.KeyDown, func() { a.moveReading(1) })
+		c.OnShortcut(0, ui.KeyUp, func() { a.moveReading(-1) })
+		c.OnShortcut(0, ui.Key1, func() { a.readCurrent(c, reading.TooHard) })
+		c.OnShortcut(0, ui.Key2, func() { a.readCurrent(c, reading.JustRight) })
+		c.OnShortcut(0, ui.Key3, func() { a.readCurrent(c, reading.TooShallow) })
+		c.OnShortcut(0, ui.KeyE, func() { a.excerptCurrent(c) })
+		c.OnShortcut(0, ui.KeyS, func() { a.skipCurrentReading() })
+		c.OnShortcut(0, ui.KeyX, func() { a.dropCurrentReading(c) })
+		c.OnShortcut(0, ui.KeyM, a.editCurrentReading)
 		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
 	case modeBrowse, modeStats:
 		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })

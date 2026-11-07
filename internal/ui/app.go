@@ -17,6 +17,7 @@ import (
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/browse"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
+	"github.com/transmit-bug/remit/internal/ui/screens/reading"
 	"github.com/transmit-bug/remit/internal/ui/screens/relink"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
@@ -33,22 +34,25 @@ const (
 )
 
 // mode is which of Remit's faces the window shows: editing notes, reviewing
-// the queue pulled from them, browsing every card, the statistics page, or the
-// settings page.
+// the queue pulled from them, reading the notes they came from, browsing every
+// card, the statistics page, or the settings page.
 type mode uint8
 
 const (
 	modeNotes mode = iota
 	modeReview
+	modeReading
 	modeBrowse
 	modeStats
 	modeSettings
 )
 
-// takingOver reports whether the screen takes the window whole: review hides
-// the navigation, so that the card and its status bar are all the user sees.
+// takingOver reports whether the screen takes the window whole: review and
+// reading hide the navigation, so that the card or the note and its status bar
+// are all the user sees.
 func (a *App) takingOver() bool {
-	return a.lib != nil && !a.start && a.openErr == nil && a.mode == modeReview
+	return a.lib != nil && !a.start && a.openErr == nil &&
+		(a.mode == modeReview || a.mode == modeReading)
 }
 
 // animState counts the moments the window's own motion replays by: a screen
@@ -72,6 +76,9 @@ type App struct {
 
 	mode             mode
 	review           review.State
+	reading          reading.State // the reading session: the queue's order and where the reader is
+	readingPositions map[core.ID]core.ID
+	readingCount     int
 	notes            notes.State  // the notebook: the note open, its draft and its panes
 	notesRows        []notes.Note // the notebook's list, as the snapshot derived it
 	browse           browse.State
@@ -130,9 +137,9 @@ type App struct {
 	pickAnki    func() (string, error)
 	importAnki  func(path string) (importanki.Report, error)
 
-	// remaining is told the queue's length whenever it is rebuilt, so the
-	// tray can show it without asking the window.
-	remaining func(int)
+	// counts is told the queues' lengths whenever they are rebuilt, so the tray
+	// can show them without asking the window.
+	counts func(Counts)
 
 	// opened is told about the library once it opens, so a service that
 	// serves it (the agent API) can start without a second open.

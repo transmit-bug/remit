@@ -7,6 +7,7 @@ import (
 
 	"github.com/egoist/mygo"
 
+	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/settings"
 	appui "github.com/transmit-bug/remit/internal/ui"
 	"github.com/transmit-bug/remit/locales"
@@ -25,25 +26,26 @@ type reminder struct {
 	enabled func() bool
 	last    func() string
 	mark    func(day string) error
-	due     func() (int, error)
+	due     func() (appui.Counts, error)
 	notify  func(title, body string) error
 }
 
-// remind shows today's reminder when reminders are on, cards are due and none
-// was shown today, and reports whether it showed one.
+// remind shows today's reminder when reminders are on, something is due — a
+// card to review or a note to read — and none was shown today, and reports
+// whether it showed one.
 func (r *reminder) remind() (bool, error) {
 	day := r.now().Format(time.DateOnly)
 	if !r.enabled() || r.last() == day {
 		return false, nil
 	}
-	due, err := r.due()
+	counts, err := r.due()
 	if err != nil {
 		return false, err
 	}
-	if due <= 0 {
+	if counts.Cards+counts.Reading <= 0 {
 		return false, nil
 	}
-	if err := r.notify(appui.Name, locales.ReminderBody(due)); err != nil {
+	if err := r.notify(appui.Name, locales.ReminderBody(counts.Cards, counts.Reading)); err != nil {
 		return false, err
 	}
 	// The day is recorded after the notification was shown, so a refused
@@ -64,12 +66,21 @@ func remindAtStartup(a *appui.App, notify func(title, body string) error) {
 		mark: func(day string) error {
 			return a.UpdateSettings(func(s *settings.Settings) { s.RemindedOn = day })
 		},
-		due: func() (int, error) {
+		due: func() (appui.Counts, error) {
 			lib := a.Library()
 			if lib == nil {
-				return 0, nil
+				return appui.Counts{}, nil
 			}
-			return lib.Remaining(time.Now())
+			now := time.Now()
+			cards, err := lib.Remaining(now)
+			if err != nil {
+				return appui.Counts{}, err
+			}
+			reading, err := queue.ReadingCount(lib, now)
+			if err != nil {
+				return appui.Counts{}, err
+			}
+			return appui.Counts{Cards: cards, Reading: reading}, nil
 		},
 		notify: notify,
 	}

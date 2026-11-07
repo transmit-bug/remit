@@ -428,21 +428,24 @@ func reveal(t *testing.T, tt *ui.Tester, w, h int, s string) {
 	t.Fatalf("%q did not scroll into the window: box %+v (found %v); texts %q", s, r, ok, tt.Texts())
 }
 
-// The queue's number reaches a service without the service asking the window:
-// the tray shows it. Grading a card moves it.
-func TestRemainingReachesAService(t *testing.T) {
+// The queues' numbers reach a service without the service asking the window:
+// the tray shows both. Grading a card moves the cards' count.
+func TestCountsReachAService(t *testing.T) {
 	a, _ := newTestApp(t)
-	var got []int
-	a.OnRemaining(func(n int) { got = append(got, n) })
+	var got []Counts
+	a.OnCounts(func(c Counts) { got = append(got, c) })
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	if len(got) == 0 || got[len(got)-1] != 4 {
+	if len(got) == 0 || got[len(got)-1].Cards != 4 {
 		t.Fatalf("a service was told %v, want the queue's 4 cards", got)
+	}
+	if got[len(got)-1].Reading != 0 {
+		t.Fatalf("a service was told %d notes to read, want none", got[len(got)-1].Reading)
 	}
 
 	tt.Key(0, ui.KeySpace)
 	tt.Key(0, ui.Key3)
-	if last := got[len(got)-1]; last != 3 {
+	if last := got[len(got)-1].Cards; last != 3 {
 		t.Fatalf("after one grade the service was told %d, want 3", last)
 	}
 }
