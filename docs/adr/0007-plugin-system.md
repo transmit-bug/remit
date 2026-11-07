@@ -1,6 +1,6 @@
 # ADR 0007 — Plugin system: host API, capabilities and the "built-in is a plugin" boundary
 
-- **Status:** accepted
+- **Status:** accepted — amended by ADR 0008 (the `cards.render` hook is withdrawn; the host renders) and #146 (UI is declared in `contributes`, drawn by the host)
 - **Date:** 2026-11-07
 - **Amends:** #9 (extension form), #11 (v1 scope), ADR 0002 (who derives a card)
 - **Related:** #68, #69, #71, #72–#75, #77, ADR 0006
@@ -49,6 +49,12 @@ reference still follows its block (ADR 0002).
 runtime the host installs only the granted `remit.*` functions and the standard
 library is frozen. There is no `fs`, `net` or UI, and no `node_modules`.
 
+*Amended by [#146](https://github.com/transmit-bug/remit/issues/146):* a plugin
+may **declare** commands, menus, pages and settings in its manifest's
+`contributes`, and the host draws them with its own components and tokens
+([`docs/specs/plugins/ui.md`](../specs/plugins/ui.md)). What stays forbidden is
+plugin-owned DOM, CSS, canvas or drawing.
+
 ### The completion moment is content, the host owns the motion
 
 When a session empties, the host asks the scheduler plugin's `reviewSummary`
@@ -60,6 +66,9 @@ rules as everything else.
 This replaces #21's blanket *"no celebration"* with *"the default plugin does not
 celebrate, and a plugin may ask for it"*. What does not change: the host renders
 it, so a plugin still cannot inject UI, and the motion stays inside the table.
+
+The same boundary holds for declarative UI contributions (#146): the host owns
+every widget, layout, token and motion; a plugin names *what* it wants to say.
 
 ### Roles, not ordering
 
