@@ -106,6 +106,38 @@
   "@hint": {
     "description": "Header of the folded hint a card's template captured."
   },
+  "typedAnswer": "Your answer",
+  "@typedAnswer": {
+    "description": "Labels the input a {{type:}} card takes, and the line that compares it."
+  },
+  "typeAnswerPlaceholder": "Type the answer",
+  "@typeAnswerPlaceholder": {
+    "description": "Placeholder of the input a {{type:}} card takes."
+  },
+  "checkAnswer": "Check",
+  "@checkAnswer": {
+    "description": "Checks the typed answer against the card's."
+  },
+  "checkHint": "Press Enter to check.",
+  "@checkHint": {
+    "description": "Hint shown beside the button that checks a typed answer."
+  },
+  "answerCorrect": "Correct",
+  "@answerCorrect": {
+    "description": "Verdict on a typed answer whose every letter is the card's."
+  },
+  "answerPartly": "Almost",
+  "@answerPartly": {
+    "description": "Verdict on a typed answer that matched in part."
+  },
+  "answerWrong": "Not quite",
+  "@answerWrong": {
+    "description": "Verdict on a typed answer that matched nowhere."
+  },
+  "compareLegend": "Struck-through letters were extra; underlined ones are missing.",
+  "@compareLegend": {
+    "description": "Explains the two differences a typed answer's comparison shows."
+  },
   "showAnswer": "Show answer",
   "@showAnswer": {
     "description": "Reveals the current card's answer."

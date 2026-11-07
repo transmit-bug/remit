@@ -87,11 +87,20 @@ func (a *App) shortcuts(c *ui.Context) {
 
 	switch a.mode {
 	case modeReview:
-		c.OnShortcut(0, ui.KeySpace, func() { a.review.Reveal() })
-		c.OnShortcut(0, ui.Key1, func() { a.gradeCurrent(c, review.Again) })
-		c.OnShortcut(0, ui.Key2, func() { a.gradeCurrent(c, review.Hard) })
-		c.OnShortcut(0, ui.Key3, func() { a.gradeCurrent(c, review.Good) })
-		c.OnShortcut(0, ui.Key4, func() { a.gradeCurrent(c, review.Easy) })
+		// A card that takes a typed answer owns the keyboard until it is
+		// checked: Space is a space there, and the grades only come back once
+		// the answer is on screen, so a digit typed into the input is not a grade.
+		c.OnShortcut(0, ui.KeySpace, func() {
+			if !a.typing() {
+				a.review.Reveal()
+			}
+		})
+		if a.review.Answered() {
+			c.OnShortcut(0, ui.Key1, func() { a.gradeCurrent(c, review.Again) })
+			c.OnShortcut(0, ui.Key2, func() { a.gradeCurrent(c, review.Hard) })
+			c.OnShortcut(0, ui.Key3, func() { a.gradeCurrent(c, review.Good) })
+			c.OnShortcut(0, ui.Key4, func() { a.gradeCurrent(c, review.Easy) })
+		}
 		c.OnShortcut(0, ui.KeyU, func() { a.undo(c) })
 		c.OnShortcut(0, ui.KeyS, func() { a.suspendCurrent(c) })
 		c.OnShortcut(0, ui.KeyE, a.editCurrent)

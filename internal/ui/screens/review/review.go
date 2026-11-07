@@ -82,7 +82,10 @@ type Card struct {
 	// Hint is the {{hint:}} the card's template folded into the front, shown
 	// only when asked for.
 	Hint string
-	State core.LinkState
+	// TypeAnswer is the answer a {{type:}} tag asks the user to type. It is
+	// empty on a card that is only flipped.
+	TypeAnswer string
+	State      core.LinkState
 	// Frozen is when a frozen card's snapshot was taken.
 	Frozen time.Time
 }
@@ -126,7 +129,7 @@ type Deps struct {
 	Preview func() ([4]Interval, bool)
 	// Summary is what a finished queue reports, when the app has a summary to
 	// give; false falls back to the one quiet line.
-	Summary func() (Summary, bool)
+	Summary  func() (Summary, bool)
 	Grade    func(core.ID, Rating) // record the answer and move on
 	Undo     func()                // take the newest answer back
 	Suspend  func(core.ID)         // out of the queue, history untouched
@@ -140,17 +143,20 @@ type Deps struct {
 // survives leaving review for notes, and undo can put the card just graded back
 // at the head where the user left it.
 type State struct {
-	queue    []core.ID // the card shown, then those after it
-	shown    core.ID   // the card revealed reports on
-	revealed bool
-	graded   []core.ID // cards graded this session, newest last
-	hintOpen bool      // the {{hint:}} fold is open
+	queue     []core.ID // the card shown, then those after it
+	shown     core.ID   // the card revealed reports on
+	revealed  bool
+	graded    []core.ID // cards graded this session, newest last
+	hintOpen  bool      // the {{hint:}} fold is open
+	typed     string    // what the user typed for the card on screen
+	submitted bool      // that typed answer has been checked
+	verdict   []Span    // how it compared with the card's answer
 }
 
 // Reset forgets the queue and the session's progress.
 func (s *State) Reset() {
 	s.queue, s.shown, s.revealed, s.graded = nil, "", false, nil
-	s.hintOpen = false
+	s.forgetCard()
 }
 
 // Sync takes the library's answer to what is due now: a card still due keeps its
@@ -182,9 +188,11 @@ func (s *State) Sync(due []core.ID) {
 	}
 }
 
-// forgetCard drops what belonged to the card on screen: what is open, and later
-// what was typed, is the card's, not the session's.
-func (s *State) forgetCard() { s.hintOpen = false }
+// forgetCard drops what belonged to the card on screen: what is open, what was
+// typed, and how it compared, is the card's, not the session's.
+func (s *State) forgetCard() {
+	s.hintOpen, s.typed, s.submitted, s.verdict = false, "", false, nil
+}
 
 // Progress is how many cards this session has graded, and how many it started
 // with: what the status bar draws.
@@ -219,6 +227,23 @@ func (s *State) Reveal() {
 
 // ToggleHint opens or closes the card's {{hint:}} fold.
 func (s *State) ToggleHint() { s.hintOpen = !s.hintOpen }
+
+// Typing reports whether the card on screen takes a typed answer that has not
+// been checked yet: the screen collects one instead of revealing the answer.
+func (s *State) Typing(card Card) bool {
+	return card.TypeAnswer != "" && len(s.queue) > 0 && !s.Answered()
+}
+
+// Submit checks the typed answer against the card's and shows the answer. The
+// comparison is kept, so the screen can draw how the two spellings differ.
+func (s *State) Submit(want string) {
+	if len(s.queue) == 0 || s.submitted || s.Answered() {
+		return
+	}
+	s.verdict = Compare(want, s.typed)
+	s.submitted = true
+	s.shown, s.revealed = s.queue[0], true
+}
 
 // Answered reports whether the answer on screen is the card's.
 func (s *State) Answered() bool {
@@ -273,8 +298,13 @@ func (s *State) Forget() {
 
 // View draws the screen: one card, centred.
 func View(c *ui.Context, s *State, d Deps) {
+	id, hasCard := s.Current()
+	var card Card
+	if hasCard {
+		card, hasCard = d.Card(id)
+	}
 	ui.Column(c).Fill().Children(func() {
-		statusBar(c, s)
+		statusBar(c, s, card)
 		// The card sits in the middle of what the status bar leaves, on the
 		// smallest window with a tighter margin so the card keeps its room.
 		pad := float32(design.SpaceXXL)
@@ -283,12 +313,7 @@ func View(c *ui.Context, s *State, d Deps) {
 		}
 		ui.Column(c).Grow(1).Center().Padding(pad).Children(func() {
 			ui.Column(c).FillWidth().MaxWidth(width).Gap(design.SpaceL).Children(func() {
-				id, ok := s.Current()
-				var card Card
-				if ok {
-					card, ok = d.Card(id)
-				}
-				if !ok {
+				if !hasCard {
 					empty(c, d)
 					return
 				}
@@ -305,7 +330,7 @@ func View(c *ui.Context, s *State, d Deps) {
 // statusBar is the one line the taking-over screen keeps: how much is left, how
 // far along the session is, and the keys that move it. It is never taller than
 // statusHeight.
-func statusBar(c *ui.Context, s *State) {
+func statusBar(c *ui.Context, s *State, card Card) {
 	msgs := locales.In(c.Locale())
 	t := c.Theme()
 	done, total := s.Progress()
@@ -318,8 +343,14 @@ func statusBar(c *ui.Context, s *State) {
 		}
 		ui.Spacer(c)
 		ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Children(func() {
+			// A card that takes a typed answer is checked from its input, so the
+			// key the status bar names is Enter, not the reveal only flips.
+			revealKey, revealLabel := "Space", msgs.ShowAnswer()
+			if s.Typing(card) {
+				revealKey, revealLabel = "Enter", msgs.CheckAnswer()
+			}
 			keys := []struct{ key, label string }{
-				{"Space", msgs.ShowAnswer()},
+				{revealKey, revealLabel},
 				{"U", msgs.Undo()},
 				{"S", msgs.Suspend()},
 				{"E", msgs.EditNote()},
@@ -373,6 +404,10 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 			if card.Hint != "" && !s.Answered() {
 				hintFold(c, s, card)
 			}
+			if s.Typing(card) {
+				typing(c, s, card)
+				return
+			}
 			if !s.Answered() {
 				ui.Text(c, msgs.RevealHint()).
 					FontSize(design.TypeSmall).TextColor(c.Theme().TextMuted)
@@ -380,6 +415,9 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 					PaddingX(design.SpaceL).MinHeight(design.ControlHeight).
 					OnClick(s.Reveal)
 				return
+			}
+			if s.submitted {
+				comparison(c, s)
 			}
 			if card.Answer == "" {
 				ui.Text(c, msgs.EmptyAnswer()).
