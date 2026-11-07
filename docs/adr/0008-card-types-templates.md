@@ -3,8 +3,9 @@
 - **Status:** accepted
 - **Date:** 2026-11-07
 - **Amends:** ADR 0002 (who derives a card and what a card stores), ADR 0003
-  (storage layout: `types/`, card file v2), ADR 0007 (the `cards.render`
-  hook is withdrawn; the host is the renderer)
+  (storage layout: `types/`, card file v2), ADR 0005 (the typed derive contract
+  replaces `{ordinal, kind, front, back}`), ADR 0007 (the `cards.render` hook is
+  withdrawn; the host is the renderer)
 - **Related:** #138, #139, #140, #142, #143, #67, #69
 
 ## Context
