@@ -37,7 +37,7 @@ func (a *App) View(c *ui.Context) {
 			case a.mode == modeSettings:
 				a.settingsView(c, tk)
 			case a.start:
-				a.startView(c, tk)
+				a.startView(c)
 			case a.mode == modeReview:
 				a.reviewView(c, tk)
 			case a.mode == modeBrowse:
