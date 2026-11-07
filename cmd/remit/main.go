@@ -117,7 +117,10 @@ func main() {
 		if err := agent.startIfEnabled(a.Settings().AgentServer); err != nil {
 			slog.Warn("remit: agent api", "err", err)
 		}
-		startExtensions(lib)
+		// The plugins act on the library that just opened, and a contributed
+		// page reads it: bind before the runners ask for capabilities.
+		plugins.SetLibrary(lib)
+		startExtensions(lib, a)
 	})
 	mygo.App.SetName(appui.Name)
 	mygo.App.SetVersion(appui.Version)

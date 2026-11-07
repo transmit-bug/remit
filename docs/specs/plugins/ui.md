@@ -11,9 +11,9 @@
 > `internal/ext/contrib` 解析 / 校验 / 索引 / 求值 `when`；命令进命令面板与宿主菜单槽位，
 > 页面由 `internal/ui/screens/pluginpage` 用宿主组件绘制，设置项落在设置页的宿主表单里。
 > `remit ext check <dir>` 跑同一份解析；`remit ext test <dir>` 用插件自带的 `fixtures/`
-> 逐字比对钩子答案；`remit.d.ts` 由宿主的表生成并随 `apiVersion` 版本化。仍未做的：
-> `review.card` 等宿主今天没有接收方的槽位（§4）、`activation` 与页面数据的 onEvent
-> 触发（§9）。
+> 逐字比对钩子答案；`remit.d.ts` 由宿主的表生成并随 `apiVersion` 版本化。库的每次写入
+> 都会让开着的页面重取一次数据（§9）。仍未做的：`review.card` 等宿主今天没有接收方
+> 的槽位（§4）、`activation`（manifest 的触发时机仍是加载即用）。
 
 ## 1. 原则
 

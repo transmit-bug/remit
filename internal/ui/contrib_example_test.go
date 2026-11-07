@@ -31,6 +31,14 @@ func (h pluginHost) Faces(core.Card) (string, string, string) { return "", "", c
 // test library through a host. It is the contract's fixture, so it cannot rot.
 func exampleContributionApp(t *testing.T, locale string) *ui.Tester {
 	t.Helper()
+	_, tt := exampleContribution(t, locale)
+	return tt
+}
+
+// exampleContribution is the app behind exampleContributionApp, for a test that
+// writes to the library and expects the window to hear about it.
+func exampleContribution(t *testing.T, locale string) (*App, *ui.Tester) {
+	t.Helper()
 	dir := t.TempDir()
 	seedLibrary(t, dir)
 	enablePlugin(t, dir, "leeches")
@@ -56,7 +64,7 @@ func exampleContributionApp(t *testing.T, locale string) *ui.Tester {
 		tt.SetLocale(locale)
 	}
 	settle(tt)
-	return tt
+	return a, tt
 }
 
 // The example plugin's page is the library it read through its capability,
@@ -126,5 +134,31 @@ func TestTheExamplePluginsCommandsRun(t *testing.T) {
 	tt.Key(0, ui.KeyEnter)
 	if !tt.HasText("Overview") {
 		t.Fatalf("the command did not open its page; texts %q", tt.Texts())
+	}
+}
+
+// A write lands as an event: the page on screen asks its plugin again instead
+// of showing the library it was loaded against (ui.md §9).
+func TestAnEventReloadsTheOpenPage(t *testing.T) {
+	a, tt := exampleContribution(t, "")
+	openPage(t, tt, "Plugin pages", "Leeches")
+	if !tt.HasText("Overview") {
+		t.Fatalf("the page did not load; texts %q", tt.Texts())
+	}
+	if tt.HasText("A fourth note") {
+		t.Fatalf("the page shows a note that is not in the library yet; texts %q", tt.Texts())
+	}
+
+	if _, err := a.Library().SaveNote(core.Note{
+		Title:  "A fourth note",
+		Blocks: []core.Block{{Text: "Question :: answer"}},
+	}); err != nil {
+		t.Fatalf("write a note: %v", err)
+	}
+	a.LibraryEvent()
+	settle(tt)
+
+	if !tt.HasText("A fourth note") {
+		t.Fatalf("an event did not reload the open page; texts %q", tt.Texts())
 	}
 }

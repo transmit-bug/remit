@@ -1,11 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ext"
 	appui "github.com/transmit-bug/remit/internal/ui"
 )
 
@@ -71,5 +76,41 @@ func TestPluginServiceOpensTheBuiltins(t *testing.T) {
 		if runner.Name() != name {
 			t.Errorf("Open(%s) answered %q", name, runner.Name())
 		}
+	}
+}
+
+// A contributed page reads the library through the capability it declared: the
+// runner the window is handed is opened with the open library's host, not
+// without one. Without it every remit.notes.* call fails and the page shows an
+// empty library, which is the bug a screen test with its own host cannot see.
+func TestPluginServiceGivesAContributedPageTheLibrary(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Now().UTC().Truncate(time.Second)
+	lib, err := store.Create(dir, store.Options{Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatalf("create library: %v", err)
+	}
+	t.Cleanup(func() { lib.Close() })
+	if _, err := lib.SaveNote(core.Note{
+		Title:  "Leech farm",
+		Blocks: []core.Block{{Text: "too big :: an answer"}},
+	}); err != nil {
+		t.Fatalf("save note: %v", err)
+	}
+
+	s := newPluginService(filepath.Join("..", "..", "examples", "plugins"))
+	s.SetLibrary(lib)
+	runner, err := s.Open("leeches")
+	if err != nil {
+		t.Fatalf("Open(leeches): %v", err)
+	}
+	t.Cleanup(func() { _ = runner.Close() })
+
+	var page json.RawMessage
+	if err := runner.Call(ext.CommandHook, map[string]any{"name": "leechesData", "context": map[string]any{}}, &page); err != nil {
+		t.Fatalf("the page's data command: %v", err)
+	}
+	if !strings.Contains(string(page), "Leech farm") {
+		t.Fatalf("the page did not read the library: %s", page)
 	}
 }

@@ -4,6 +4,7 @@ package ui
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -116,6 +117,10 @@ type App struct {
 	// frame reads instead of ever calling a plugin.
 	ui      pluginUI
 	pending pendingWork
+	// stale is set by the library's event handler, from whichever goroutine
+	// wrote: the next frame drops what each page's cache key was, so a page
+	// reads the library it is now.
+	stale atomic.Bool
 	// runBackground runs one job off the UI thread. nil is the app's own: a
 	// goroutine whose answer the next frame applies. A headless test runs it
 	// inline, where there is one thread.
