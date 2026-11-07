@@ -191,7 +191,7 @@ func findMatches(text, query string) (int, [][2]int) {
 // secondPane is the right-hand side of a split: the note as it reads, in its own
 // scroll, so that two places can be compared while the left side is edited.
 //
-// It is a reading view because v0.7.4's richtext editor keeps one view per
+// It is a reading view because v0.8.1's richtext editor keeps one view per
 // document: two editors over the same Document do not both report their edits
 // (checked: richtext.Editor, EditorBase, Document.SetText, Document.Selection —
 // the view state that notices a change is per editor, and the second one never

@@ -26,7 +26,7 @@ const (
 	// weeks, the calendar shape decision #11 asks for.
 	heatWeeks = 26
 	// heatCell is one day's box and heatGap what separates two of them. ui/chart
-	// has no heatmap at v0.7.4, so the calendar is a grid of tinted ui.Boxes;
+	// has no heatmap at v0.8.1, so the calendar is a grid of tinted ui.Boxes;
 	// the two sizes are the cell grid's, named here rather than in the view.
 	// The cell is as tall as the small type's line, so a weekday name beside
 	// it sits on its own row.
@@ -157,7 +157,7 @@ func (a *App) statsView(c *ui.Context, tk tokens) {
 
 // heatmapSection is the review heatmap: one small box per day, weeks as
 // columns and weekdays as rows, tinted by how many reviews the day holds. It
-// is composed from stock widgets because ui/chart has no heatmap at v0.7.4;
+// is composed from stock widgets because ui/chart has no heatmap at v0.8.1;
 // see RECONCILE.md.
 func (a *App) heatmapSection(c *ui.Context, tk tokens) {
 	ui.Column(c).Gap(tk.spaceS).Children(func() {

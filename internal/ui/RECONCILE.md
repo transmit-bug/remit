@@ -1,9 +1,15 @@
-# Reconciliation against MyGo v0.7.4
+# Reconciliation against MyGo
 
-Every UI need in the prototype, put against MyGo's inventory at the version
-`go.mod` compiles (`go list -m -f '{{.Version}}' github.com/egoist/mygo` →
-`v0.7.4`). The right column is what the code uses; a gap that survived is one
-of the two wrappers documented below, or the heatmap's recorded composition.
+Audited at **v0.7.4**; upgraded to **v0.8.1** on 2026-11-07 (the version
+`go.mod` compiles — `go list -m -f '{{.Version}}' github.com/egoist/mygo`).
+The rows below record that audit. The entries re-checked against v0.8.1 say so;
+that release adds `AccordionBase`, `CheckboxState`/`CheckboxStateBase`,
+`ContextMenuBase`, `MenuBase`, `TreeBase`, `SelectBaseOpen`, `NewTesterWith`,
+`ParseSnippet`, `ParsePath`/`MustParsePath`, `NewTextShadow`, `Revealed`,
+`Translation3D`/`TranslationZ` — no row here changes because of them.
+Every UI need in the prototype has its right column below; a gap that survived
+is one of the two wrappers documented below, or the heatmap's recorded
+composition.
 
 | Need | Widget at v0.7.4 |
 |---|---|
@@ -96,7 +102,7 @@ large documents, Markdown round-trip).
 shows, in the editor's gutter, how many cards it feeds and their link state, and
 clicking it opens the card's face for an override.
 
-**Checked at v0.7.4.** `richtext.Editor` exposes paragraph geometry but nothing
+**Checked at v0.8.1.** `richtext.Editor` exposes paragraph geometry but nothing
 that draws outside the text column; `ui.Badge` is an in-flow badge, not a gutter
 mark; `ui.Tooltip` is a hover surface, not a persistent mark; `ui.List` builds
 rows, not paragraphs of one continuous text; `ui.Overlay` draws relative to an
@@ -114,7 +120,7 @@ selection, IME) stays the editor's.
 columns, weekdays are rows, and a day's colour is how many reviews it holds,
 with a legend and an empty state.
 
-**Checked at v0.7.4.** `ui/chart` has no heatmap: its marks are `Rect`,
+**Checked at v0.8.1.** `ui/chart` has no heatmap: its marks are `Rect`,
 `Point`, `RuleX` and `RuleY` over its scales, which a grid of squares could be
 built from but which would carry no day, no label and no legend.
 `ui.Calendar` is a month picker — one month of selectable days, not a year's
@@ -173,7 +179,7 @@ normally.
 **The need.** Spec #78 asks the five modes to read as an icon and a word, so
 that the switch is recognised rather than read.
 
-**Checked at v0.7.4.** `ui.Segmented` (draws its `labels ...string` and nothing
+**Checked at v0.8.1.** `ui.Segmented` (draws its `labels ...string` and nothing
 else), `ui.SegmentedBase` (lookless by design: the segments are built by the
 caller, and its own doc names this as the icon path), `ui.ToggleGroup` /
 `ui.Toggle` (a multi-select of pressed states, not one choice of five),
@@ -199,7 +205,9 @@ through the widget's own parameter.
 ## Audit notes
 
 
-- The inventory grep ran against `/Users/pony/go/pkg/mod/github.com/egoist/mygo@v0.7.4`.
+- The inventory grep ran against `/Users/pony/go/pkg/mod/github.com/egoist/mygo@v0.7.4`
+  for the audit and again against `.../mygo@v0.8.1` after the upgrade; the
+  v0.8.1 run is the constructor diff quoted above.
 - ADR 0005 corrects this file: the packages that decide the note editor are
   `ui/richtext`, `ui/markdown` and `ui/editor`, and they were missing from the
   first pass. An entry whose evidence skipped a package is a bug, not a scope
@@ -228,8 +236,8 @@ through the widget's own parameter.
   column); all are named and commented.
 - Colours and spacing used by the views come from `tokens.go`; widgets keep
   their own theme-derived look.
-- `ui.Mix` documented on the site is not exported at v0.7.4; the tokens blend
-  with `Color.Mix`, which is.
+- `ui.Mix` documented on the site is not exported at v0.8.1 either; the tokens
+  blend with `Color.Mix`, which is.
 - Icons are Lucide's, vendored from `lucide-static@0.460.0` under ISC in
   `internal/ui/design/icons/` and embedded: `git grep -n '<svg' -- '*.go'` finds
   no inline drawing, and the app requests nothing for an icon. Sizes come from
