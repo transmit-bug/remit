@@ -36,14 +36,25 @@ the issue tracker; this file says how code is written, gated and merged.
 
 ## CI gates
 
-A PR is mergeable only when every job is green:
+`.github/workflows/ci.yml` runs on a pull request that touches code and on
+every push to `master`. A docs-only change (`docs/`, `**.md`, `.agents/`) runs
+nothing, and a superseded run on the same branch is cancelled rather than paid
+for.
 
-1. `go vet ./...` and `go test ./...` on Linux.
-2. `CGO_ENABLED=0 go test ./...`.
-3. Cross-compiled binaries for `darwin/arm64`, `linux/amd64`, `windows/amd64`,
-   uploaded as artifacts — platform breakage must surface before merge, not at
-   release.
-4. `go tool mygo vet .` where the tool directive resolves.
+A PR is mergeable only when every job it triggers is green:
+
+1. `go vet ./...` and `CGO_ENABLED=0 go test ./...` on Linux — the shipped build
+   is cgo-free, so this is the suite that matters.
+2. Catalog check: `go tool mygo i18n check .`, `go tool mygo generate` leaving
+   `locales/` unchanged, and `go tool mygo vet .`.
+3. Cross-compiled binaries for `darwin/arm64`, `linux/amd64`, `windows/amd64` —
+   platform breakage must surface before merge, not at release. Artifacts are
+   uploaded from `master` only.
+4. `privacy`: no outbound URL outside the allowlist.
+
+`master` additionally runs the default (cgo) suite, the 100k-card performance
+budget, and uploads the cross-built binaries. Tags belong to `release.yml`, so
+no gate waits for a tag.
 
 ## Branch and PR flow
 
