@@ -120,7 +120,7 @@ func TestLibraryWithoutACardPlugin(t *testing.T) {
 	tt.Type("what is spacing :: the gaps between reviews")
 	tt.Advance(320 * time.Millisecond)
 	for _, card := range a.Library().Cards() {
-		if card.Ref.Block == a.editor.draft.Blocks[0].ID {
+		if card.Ref.Block == a.notes.Draft.Blocks[0].ID {
 			t.Fatalf("a card was made without a plugin: %+v", card)
 		}
 	}
@@ -148,7 +148,7 @@ func TestTheShippedPluginDerivesCards(t *testing.T) {
 	tt.Type("what is spacing :: the gaps between reviews")
 	tt.Advance(320 * time.Millisecond)
 
-	block := a.editor.draft.Blocks[0].ID
+	block := a.notes.Draft.Blocks[0].ID
 	var made []core.Card
 	for _, card := range a.Library().Cards() {
 		if card.Ref.Block == block {

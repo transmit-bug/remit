@@ -1,4 +1,4 @@
-package ui
+package notes
 
 import (
 	"strings"
@@ -10,128 +10,52 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
+	"github.com/transmit-bug/remit/locales"
 )
-
-// editorState is the notebook: which note is open, its draft, and the one
-// document editor the note is written in. A note is a document whose paragraphs
-// are addressable (ADR 0005); the per-block form is gone.
-type editorState struct {
-	selected    string
-	draft       core.Note
-	loaded      string // the note the draft holds
-	title       ui.Handle
-	body        ui.Handle
-	findOpen    bool   // the in-document find bar is up
-	linkOpen    bool   // the popover a link's address is typed in is up
-	linkURL     string // what that popover holds
-	findQuery   string // what it looks for
-	findCurrent int    // which match is shown
-	findJumped  string // the query the selection was last put on
-	jumpTo      int    // a paragraph of the note to put the caret in, 1-based; 0 for none
-
-	focus   bool               // the title takes the caret in the next pass
-	doc     *richtext.Document // the note as one document, markers and all
-	docNote core.ID            // the note the document holds
-	docText string             // the text the document was last built from
-}
-
-// follow points the draft at the note the list chose, before that note is
-// built, so a choice made in this frame shows in it.
-func (e *editorState) follow(d libraryData) {
-	if e.loaded == e.selected && e.draft.ID != "" {
-		return
-	}
-	e.draft = core.Note{}
-	for _, note := range d.notes {
-		if string(note.ID) == e.selected {
-			e.hold(note)
-			return
-		}
-	}
-	// Nothing chosen, or the choice is gone: the first note stands in.
-	if len(d.notes) == 0 {
-		e.loaded, e.selected = "", ""
-		e.draft = core.Note{}
-		return
-	}
-	e.hold(d.notes[0])
-}
-
-// hold takes a copy of a note as the draft, blocks and all, so that editing
-// never reaches into the snapshot the next reload replaces.
-func (e *editorState) hold(note core.Note) {
-	note.Blocks = append([]core.Block(nil), note.Blocks...)
-	e.draft = note
-	e.loaded = string(note.ID)
-	e.selected = string(note.ID)
-	e.doc, e.docNote, e.docText = nil, "", ""
-}
-
-// ensureIDs mints an ID for a block the library has never seen. A block read
-// from a hand-written note arrives without one; minting it here keeps the
-// draft's blocks and the saved ones in the same order, and gives a card a
-// source to point at.
-func (e *editorState) ensureIDs() {
-	for i := range e.draft.Blocks {
-		if e.draft.Blocks[i].ID == "" {
-			e.draft.Blocks[i].ID = core.NewID(core.BlockKind)
-		}
-	}
-}
-
-// ensureDocument gives the note its editor document: built when the note
-// changes, kept otherwise, so typing never loses its caret to a rebuild.
-func (e *editorState) ensureDocument() {
-	if e.doc != nil && e.docNote == e.draft.ID {
-		return
-	}
-	text := documentText(e.draft)
-	e.doc = richtext.NewDocument(richtext.ParseMarkdown(text))
-	e.docNote, e.docText = e.draft.ID, text
-}
 
 // editorView draws the selected note: its title, how many cards it feeds, and
 // its text as one document — headings, lists, code, images and links included.
-func (a *App) editorView(c *ui.Context, tk design.Tokens) {
-	a.editor.follow(a.data)
-	note := &a.editor.draft
+func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
+	library := d.Notes()
+	s.Follow(library)
+	msgs := locales.In(c.Locale())
+	note := &s.Draft
 	if note.ID == "" {
-		kit.Empty(c, "file-text", m(c).NoNotes(), func() {
-			ui.Button(c, m(c).NewNote()).MinHeight(tk.Control).OnClick(func() { a.newNote(c) })
+		kit.Empty(c, "file-text", msgs.NoNotes(), func() {
+			ui.Button(c, msgs.NewNote()).MinHeight(tk.Control).OnClick(func() { d.NewNote(c) })
 		})
 		return
 	}
-	a.editor.ensureDocument()
-	if a.editor.findOpen {
-		a.findBar(c)
+	s.ensureDocument()
+	if s.FindOpen {
+		s.findBar(c)
 	}
-	if a.editor.jumpTo > 0 {
+	if s.jumpTo > 0 {
 		// A backlink names a paragraph of this note: the caret goes there, which
 		// scrolls it into view.
-		if at := paragraphOffset(documentText(a.editor.draft), a.editor.jumpTo); at >= 0 {
-			a.editor.doc.SetSelection(at, at)
-			a.editor.body.Focus(c)
+		if at := ParagraphOffset(DocumentText(s.Draft), s.jumpTo); at >= 0 {
+			s.Doc.SetSelection(at, at)
+			s.body.Focus(c)
 		}
-		a.editor.jumpTo = 0
+		s.jumpTo = 0
 	}
 
 	edited, retitled := false, false
-	msgs := m(c)
 	// The band under the frame: the format bar, then the paper itself, then the
 	// status line. The paper is one centred measure; nothing else is boxed.
 	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
-		a.formatBar(c, tk)
+		s.formatBar(c, tk)
 		ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Stretch).Justify(ui.Center).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(tk.PaperWidth).
 				Padding(tk.SpaceXXL, tk.Gutter).Children(func() {
 				title := ui.TextInput(c, &note.Title).FontSize(tk.TypeDisplay).Bold().
-					Placeholder(msgs.NoteTitle()).Bind(&a.editor.title).
+					Placeholder(msgs.NoteTitle()).Bind(&s.title).
 					Label(msgs.NoteTitle()).
 					Background(ui.RGBA(0, 0, 0, 0)).Border(0, tk.Border).
 					Padding(tk.SpaceS, 0)
-				if a.editor.focus {
-					a.editor.title.Focus(c)
-					a.editor.focus = false
+				if s.focus {
+					s.title.Focus(c)
+					s.focus = false
 				}
 				if title.Changed() {
 					retitled = true
@@ -148,33 +72,45 @@ func (a *App) editorView(c *ui.Context, tk design.Tokens) {
 
 				// EditorBase, not Editor: the paper is the surface, so the editor
 				// brings no box of its own.
-				if richtext.EditorBase(c, a.editor.doc, richtext.EditorOptions{
+				if richtext.EditorBase(c, s.Doc, richtext.EditorOptions{
 					Label: msgs.NoteBody(),
 					Font:  noteFont(tk),
 					Theme: noteTheme(tk),
-				}).Grow(1).MinHeight(tk.Control * 12).Bind(&a.editor.body).Changed() {
+				}).Grow(1).MinHeight(tk.Control * 12).Bind(&s.body).Changed() {
 					edited = true
 				}
 			})
 		})
-		a.statusLine(c, tk)
+		s.statusLine(c, tk, cardCount(s.Draft, library))
 	})
 	switch {
 	case edited:
-		a.saveDocument(c)
+		s.saveDocument(c, d)
 	case retitled:
-		a.saveNote(c)
+		if saved, ok := d.SaveNote(c, s.Draft); ok {
+			s.Keep(saved)
+		}
 	}
+}
+
+// cardCount is how many cards a note feeds, as the app counted them for the
+// list.
+func cardCount(note core.Note, library []Note) int {
+	for _, row := range library {
+		if row.ID == note.ID {
+			return row.Cards
+		}
+	}
+	return 0
 }
 
 // statusLine is the paper's quiet foot: what the note holds. 11px, pencil, on
 // the same line as the writing, never a toolbar.
-func (a *App) statusLine(c *ui.Context, tk design.Tokens) {
-	msgs := m(c)
-	text := a.editor.doc.Text().String()
+func (s *State) statusLine(c *ui.Context, tk design.Tokens, cards int) {
+	msgs := locales.In(c.Locale())
+	text := s.Doc.Text().String()
 	words := len(strings.Fields(text))
-	paragraphs := a.editor.doc.Text().ParagraphCount()
-	cards := a.data.cardsInNote(a.editor.draft)
+	paragraphs := s.Doc.Text().ParagraphCount()
 	ui.Row(c).Justify(ui.Center).Children(func() {
 		ui.Row(c).Grow(1).MaxWidth(tk.PaperWidth).AlignItems(ui.Center).Gap(tk.SpaceS).
 			Padding(tk.SpaceS, tk.Gutter).Children(func() {
@@ -198,19 +134,19 @@ func (a *App) statusLine(c *ui.Context, tk design.Tokens) {
 // findBar shows the in-document find bar: it counts the query in the note open
 // now, and choosing a match puts the selection on it, which scrolls it into view.
 // It never looks at another note.
-func (a *App) findBar(c *ui.Context) {
-	matches, spans := findMatches(a.editor.doc.Text().String(), a.editor.findQuery)
-	if a.editor.findCurrent >= matches {
-		a.editor.findCurrent = 0
+func (s *State) findBar(c *ui.Context) {
+	matches, spans := findMatches(s.Doc.Text().String(), s.findQuery)
+	if s.findCurrent >= matches {
+		s.findCurrent = 0
 	}
-	before := a.editor.findCurrent
-	ui.FindBar(c, &a.editor.findOpen, &a.editor.findQuery, matches, &a.editor.findCurrent)
-	if (a.editor.findCurrent != before || a.editor.findQuery != a.editor.findJumped) && matches > 0 {
+	before := s.findCurrent
+	ui.FindBar(c, &s.FindOpen, &s.findQuery, matches, &s.findCurrent)
+	if (s.findCurrent != before || s.findQuery != s.findJumped) && matches > 0 {
 		// The bar keeps the focus: Escape and Enter are its keys while it is
 		// open, and the selection is enough to scroll the match into view.
-		span := spans[a.editor.findCurrent]
-		a.editor.doc.SetSelection(span[0], span[1])
-		a.editor.findJumped = a.editor.findQuery
+		span := spans[s.findCurrent]
+		s.Doc.SetSelection(span[0], span[1])
+		s.findJumped = s.findQuery
 	}
 }
 
@@ -243,30 +179,31 @@ func findMatches(text, query string) (int, [][2]int) {
 // the view state that notices a change is per editor, and the second one never
 // sees the first's). Editing the right side needs a second document and a merge,
 // which is a design of its own.
-func (a *App) secondPane(c *ui.Context, tk design.Tokens) {
-	a.editor.follow(a.data)
-	if a.editor.draft.ID == "" {
+func (s *State) secondPane(c *ui.Context, tk design.Tokens, d Deps) {
+	s.Follow(d.Notes())
+	if s.Draft.ID == "" {
 		return
 	}
 	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL).Children(func() {
-		markdown.View(c, documentText(a.editor.draft), nil)
+		markdown.View(c, DocumentText(s.Draft), nil)
 	})
 }
 
 // readView is the note as it reads, whole: its title, then the document with its
 // headings, lists and links, and no control over it.
-func (a *App) readView(c *ui.Context, tk design.Tokens) {
-	a.editor.follow(a.data)
-	if a.editor.draft.ID == "" {
-		kit.Empty(c, "file-text", m(c).NoNotes(), func() {
-			ui.Button(c, m(c).NewNote()).MinHeight(tk.Control).OnClick(func() { a.newNote(c) })
+func (s *State) readView(c *ui.Context, tk design.Tokens, d Deps) {
+	msgs := locales.In(c.Locale())
+	s.Follow(d.Notes())
+	if s.Draft.ID == "" {
+		kit.Empty(c, "file-text", msgs.NoNotes(), func() {
+			ui.Button(c, msgs.NewNote()).MinHeight(tk.Control).OnClick(func() { d.NewNote(c) })
 		})
 		return
 	}
 	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL).Children(func() {
 		ui.Column(c).MaxWidth(readWidth).Gap(tk.SpaceM).Children(func() {
-			ui.Text(c, a.editor.draft.Title).FontSize(tk.TypeTitle).Bold()
-			markdown.View(c, documentText(a.editor.draft), nil)
+			ui.Text(c, s.Draft.Title).FontSize(tk.TypeTitle).Bold()
+			markdown.View(c, DocumentText(s.Draft), nil)
 		})
 	})
 }
@@ -279,12 +216,12 @@ const readWidth float32 = 760
 // selection holds, and the one click that changes it. The document is the
 // richtext editor's; the controls are MyGo's, so the keys, the focus and the
 // names assistive technology reads come with them.
-func (a *App) formatBar(c *ui.Context, tk design.Tokens) {
-	doc := a.editor.doc
+func (s *State) formatBar(c *ui.Context, tk design.Tokens) {
+	doc := s.Doc
 	if doc == nil {
 		return
 	}
-	msgs := m(c)
+	msgs := locales.In(c.Locale())
 	f := doc.Formatting()
 	style := msgs.StyleBody()
 	switch f.Paragraph.Heading {
@@ -335,15 +272,15 @@ func (a *App) formatBar(c *ui.Context, tk design.Tokens) {
 			link.Background(tk.Surface.Mix(tk.Accent, 0.16)).TextColor(tk.Accent)
 		}
 		if link.Clicked() {
-			a.editor.linkURL, a.editor.linkOpen = f.Link, true
+			s.linkURL, s.linkOpen = f.Link, true
 		}
-		ui.Popover(c, link, &a.editor.linkOpen, func() {
+		ui.Popover(c, link, &s.linkOpen, func() {
 			ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Padding(tk.SpaceS).Children(func() {
-				field := ui.TextInput(c, &a.editor.linkURL).
+				field := ui.TextInput(c, &s.linkURL).
 					Placeholder(msgs.LinkURL()).Width(220).AutoFocus().Label(msgs.LinkURL())
 				set := func() {
-					doc.SetLink(strings.TrimSpace(a.editor.linkURL))
-					a.editor.linkOpen = false
+					doc.SetLink(strings.TrimSpace(s.linkURL))
+					s.linkOpen = false
 				}
 				if field.Submitted() {
 					set()
@@ -353,7 +290,7 @@ func (a *App) formatBar(c *ui.Context, tk design.Tokens) {
 				}
 				if f.Link != "" && ui.Button(c, msgs.LinkRemove()).Clicked() {
 					doc.SetLink("")
-					a.editor.linkOpen = false
+					s.linkOpen = false
 				}
 			})
 		})
@@ -389,102 +326,16 @@ func formatToggle(c *ui.Context, tk design.Tokens, icon, label string, on bool, 
 }
 
 // saveDocument writes what the editor holds: its paragraphs back into blocks,
-// the markers keeping every identity the document still carries.
-func (a *App) saveDocument(c *ui.Context) {
-	live := a.editor.doc.Text().Markdown()
-	if live == a.editor.docText {
+// the markers keeping every identity the document still carries. The app stores
+// the note and reconciles the cards the new shape asks for.
+func (s *State) saveDocument(c *ui.Context, d Deps) {
+	live := s.Doc.Text().Markdown()
+	if live == s.docText {
 		return
 	}
-	a.editor.draft.Blocks = blocksOfDocument(live, a.editor.draft.Blocks)
-	a.editor.docText = live
-	a.saveNote(c)
-	// Typing :: is what makes a paragraph a card, and deleting it is what takes
-	// the card out of the queue.
-	a.reconcileCards(c)
-}
-
-// saveNote writes the draft and reloads what the window reads.
-func (a *App) saveNote(c *ui.Context) bool {
-	if !a.writeNote(c) {
-		return false
-	}
-	a.reload()
-	return true
-}
-
-// writeNote saves the draft without reloading, for an action that writes more
-// than the note and reloads once at the end.
-func (a *App) writeNote(c *ui.Context) bool {
-	a.editor.ensureIDs()
-	saved, err := a.lib.SaveNote(a.editor.draft)
-	if err != nil {
-		a.report(c, "save note", err)
-		return false
-	}
-	a.editor.draft = saved
-	return true
-}
-
-// makeCard makes a card from one of the note's paragraphs.
-func (a *App) makeCard(c *ui.Context, i int) {
-	if i >= len(a.editor.draft.Blocks) {
-		return
-	}
-	block := a.editor.draft.Blocks[i]
-	derived, ok := a.deriveCards(block.Text)
-	asks := false
-	if ok {
-		for _, card := range derived {
-			for _, value := range card.Fields {
-				if value != "" {
-					asks = true
-				}
-			}
-		}
-	}
-	if !asks {
-		c.Toast(m(c).BlockEmpty())
-		return
-	}
-	if block.ID == "" {
-		// A block read from a hand-written note has no ID until the note is
-		// saved; saving now mints one that the card can point at.
-		if !a.saveNote(c) {
-			return
-		}
-		block = a.editor.draft.Blocks[i]
-	}
-	if _, err := a.lib.CreateCards(block.ID, derived); err != nil {
-		a.report(c, "make card", err)
-		return
-	}
-	// A card made now is due now, so reloading puts it at the end of the queue
-	// and the card the user is on does not move.
-	a.reload()
-	c.Toast(m(c).CardMade(i + 1))
-}
-
-// makeCardAtCaret makes a card from the paragraph the caret is in, which is what
-// the palette's "Make card" does while card creation is a command rather than a
-// gesture.
-func (a *App) makeCardAtCaret(c *ui.Context) {
-	a.editor.follow(a.data)
-	if a.editor.doc == nil || a.editor.draft.ID == "" {
-		return
-	}
-	text := a.editor.doc.Text().String()
-	_, caret := a.editor.doc.Selection()
-	start, _ := paragraphAt(text, caret)
-	// The paragraphs are the blocks, in order: the caret's place among the
-	// blank lines is the block it is in.
-	at := strings.Count(text[:start], "\n\n")
-	if at >= 0 && at < len(a.editor.draft.Blocks) {
-		a.makeCard(c, at)
+	s.Draft.Blocks = blocksOfDocument(live, s.Draft.Blocks)
+	s.docText = live
+	if saved, ok := d.SaveDocument(c, s.Draft); ok {
+		s.Keep(saved)
 	}
 }
-
-// blockCount names how many blocks a note has.
-func blockCount(c *ui.Context, n int) string { return m(c).BlockCount(n) }
-
-// cardCount names how many cards point at a block or a note.
-func cardCount(c *ui.Context, n int) string { return m(c).CardCount(n) }

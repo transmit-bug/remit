@@ -6,7 +6,6 @@ import (
 	"context"
 
 	"github.com/egoist/mygo"
-	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
@@ -17,6 +16,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/browse"
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/relink"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
@@ -72,7 +72,8 @@ type App struct {
 
 	mode             mode
 	review           review.State
-	editor           editorState
+	notes            notes.State  // the notebook: the note open, its draft and its panes
+	notesRows        []notes.Note // the notebook's list, as the snapshot derived it
 	browse           browse.State
 	browseRows       []browse.Row // the cards browse lists, as loadBrowse derived them
 	stats            screenstats.State
@@ -95,25 +96,11 @@ type App struct {
 	pluginList     []screensettings.Plugin
 	roleList       map[string]string
 	typeList       []screensettings.Type
-	summaryWord    summaryAnswer        // what the scheduling plugin says about a session
-	summaryWordFor string               // the numbers that answer was given
-	resolver       *cards.Resolver      // what a paragraph asks and how a card reads, asked once per text
-	panel          panelMode            // what the user said about the note's panel
-	panelTab       panelTab             // outline or backlinks
-	notesWidth     float32              // the notes column, as the divider left it
-	editorShare    float32              // the document's percentage of the note's room
-	view           viewMode             // written in, beside its source, or read whole
-	readShare      float32              // the document's percentage when written beside its source
-	outline        ui.OutlineState[int] // the note's headings, as the panel lists them
-	outlineChosen  int                  // the row the user chose in the outline, -1 for none
-	outlineCurrent int                  // the heading the caret is under, -1 for none
-	outlineFor     core.ID              // the note the outline was opened for
-	outlineShape   int                  // how many headings that note had
-	pendingJump    int                  // where a panel row asks the caret to go, -1 for none
-	tagFilter      string               // the tag the notes are filtered by, empty for none
-	notesQuery     string               // what the sidebar's search looks for
-	backlinks      []store.Backlink     // what points at the note open now
-	aboutWin       *mygo.Window         // the open About window, or nil
+	summaryWord    summaryAnswer    // what the scheduling plugin says about a session
+	summaryWordFor string           // the numbers that answer was given
+	resolver       *cards.Resolver  // what a paragraph asks and how a card reads, asked once per text
+	backlinks      []notes.Backlink // what points at the note open now
+	aboutWin       *mygo.Window     // the open About window, or nil
 
 	// preview is what the four answers would schedule for the card on screen,
 	// loaded with the rest of what a mode reads so that no frame reads the
@@ -164,18 +151,11 @@ type App struct {
 // it never panics over a damaged library.
 func NewApp(opts ...Options) *App {
 	a := &App{
-		browse:         browse.State{Selected: -1},
-		notesWidth:     defaultNotesWidth,
-		editorShare:    defaultEditorShare,
-		readShare:      defaultReadShare,
-		outlineChosen:  -1,
-		outlineCurrent: -1,
-		pendingJump:    -1,
-		outlineFor:     "",
-		editor:         editorState{},
-		pickLibrary:    pickLibraryDir,
-		pickAnki:       pickAnkiPackage,
-		checkUpdate:    screensettings.CheckForUpdate,
+		browse:      browse.State{Selected: -1},
+		notes:       notes.New(),
+		pickLibrary: pickLibraryDir,
+		pickAnki:    pickAnkiPackage,
+		checkUpdate: screensettings.CheckForUpdate,
 	}
 	// The importer reads the library open now, which a dropped archive can
 	// replace, so it takes it at call time rather than at construction.

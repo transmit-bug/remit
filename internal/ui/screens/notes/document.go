@@ -1,4 +1,4 @@
-package ui
+package notes
 
 import (
 	"strings"
@@ -6,15 +6,15 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 )
 
-// documentText is the note as the editor holds it: its paragraphs, separated by a
-// blank line, without the markers that carry their identity.
+// DocumentText is the note as the editor holds it: its paragraphs, separated by
+// a blank line, without the markers that carry their identity.
 //
 // The markers live in the file, not in the editor (ADR 0005's "the editor hides
 // it"). They are kept out of the text the user types in because the editor's
 // caret can come to rest inside one — at the end of a paragraph, or a few
 // characters before the end — and then keystrokes split the id and the paragraph
 // loses the card that pointed at it. Identity is re-attached on save, by place.
-func documentText(note core.Note) string {
+func DocumentText(note core.Note) string {
 	var out strings.Builder
 	for i, block := range note.Blocks {
 		if i > 0 {
@@ -72,9 +72,9 @@ func paragraphAt(text string, offset int) (start, end int) {
 	return start, offset + end
 }
 
-// paragraphOffset is where a paragraph starts in the document's text, counted
+// ParagraphOffset is where a paragraph starts in the document's text, counted
 // from one as the panel counts; -1 when the note has fewer paragraphs.
-func paragraphOffset(text string, paragraph int) int {
+func ParagraphOffset(text string, paragraph int) int {
 	if paragraph < 1 {
 		return -1
 	}

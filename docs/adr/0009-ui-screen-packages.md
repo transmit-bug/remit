@@ -2,6 +2,8 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-07
+- **Amended:** 2026-11-08 — the notebook's frame is one screen; `sidebar.go`,
+  `panel.go` and `outline.go` moved into `screens/notes` (#162), see below
 - **Amends:** ADR 0004 (the path of a screen's package; the shape stands)
 - **Related:** #128, ADR 0001, ADR 0005, ADR 0007
 
@@ -63,15 +65,34 @@ possible):
 | `app.go` | `App`'s state, `NewApp`, the app's identity |
 | `view.go` | which screen the window shows, and the switch between them |
 | `window.go` | the toolbar, the key map, the window's find |
-| `sidebar.go` | the notes list, its search and the tag filter |
-| `panel.go` | the panel: outline and backlinks |
-| `outline.go` | headings: read, list, jump to |
+| `notes.go` | the notebook's assembly, and the note writes it owns |
+| `cards.go` | the card gestures — making a card, reconciling it — and the field editor |
 | `palette.go` | the command palette |
 | `library.go` | open, close, reload, the derived queue |
 | `snapshot.go` | `libraryData`, the store as the views read it |
 | `prefs.go` | `settings.json`: read, write, remember the library |
 | `options.go` | `Options`, the constructor's contract |
 | `route.go` | deep links |
+
+### The notebook's frame is one screen
+
+`#162` moved the notes editor into `screens/notes`, and with it the three files
+the table above first kept here: the notes list, its search and the tag filter
+(`sidebar.go`), the panel (`panel.go`) and the outline (`outline.go`). The
+extraction showed they are the notebook's, not the window's:
+
+- `notesView` is the split that holds all three. A screen that owned the editor
+  and not the split would leave the notebook's own layout behind.
+- The panel reads the editor's session — the outline marks the heading the
+  caret is under, a backlink row names the paragraph the caret jumps to — so
+  keeping them apart would put one session on two sides of a package boundary.
+- The list's rows are the notes the notebook opens. The app still derives them
+  from the snapshot (`libraryData`) and the screen reads them through `Deps`.
+
+What `internal/ui` keeps around the notebook is the window: the toolbar and the
+keys (`window.go`), the command palette, and the card field editor — an overlay
+drawn over whatever screen is up, so its state stays on `App`. `notesView` is
+now the assembly alone: `notes.View` and the `Deps` the app builds.
 
 ### Extraction order
 
@@ -82,8 +103,8 @@ moving with it and the app-level tests staying to prove the assembly:
 2. `settings`, `stats` — they read the snapshot and already have seams
    (`AgentControls`, `settings.Settings`).
 3. `browse`, `relink` — rows derived by the app, written back through `Deps`.
-4. `notes` — the editor, the document and the card panel; most of `a.editor`
-   moves into the screen's `State`.
+4. `notes` — the editor, the document, the notes list and the card panel; most
+   of `a.editor` moves into the screen's `State`.
 
 `internal/ui` is done when no screen state is left on `App` and every screen's
 test runs without a library on disk.

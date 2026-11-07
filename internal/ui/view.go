@@ -47,7 +47,7 @@ func (a *App) View(c *ui.Context) {
 			case a.mode == modeStats:
 				screenstats.View(c, a.stats, screenstats.Deps{})
 			default:
-				a.notesView(c, tk)
+				a.notesView(c)
 			}
 		})
 
@@ -55,14 +55,6 @@ func (a *App) View(c *ui.Context) {
 		a.relinkView(c)
 		a.cardEditView(c, tk)
 	})
-
-	// A row chosen in the note's panel moves the caret after the pass: the
-	// editor above keeps its own view state, and a jump made inside the build
-	// is written back over by it in the next frame.
-	if a.pendingJump >= 0 {
-		a.jumpInDocument(c, a.pendingJump)
-		a.pendingJump = -1
-	}
 }
 
 // setMode switches the window's face and loads what the new one reads. What a

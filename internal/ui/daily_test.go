@@ -28,9 +28,9 @@ func TestDailyNoteOpensToday(t *testing.T) {
 	if !tt.HasText(today) {
 		t.Fatalf("today's note is not on screen; texts %q", tt.Texts())
 	}
-	note, ok := a.Library().Note(core.ID(a.editor.loaded))
+	note, ok := a.Library().Note(core.ID(a.notes.Loaded))
 	if !ok || note.Title != today {
-		t.Fatalf("the editor holds %q, want today's note", a.editor.loaded)
+		t.Fatalf("the editor holds %q, want today's note", a.notes.Loaded)
 	}
 	notes := 0
 	for _, n := range a.Library().Notes() {
@@ -91,7 +91,7 @@ func TestFormulaStaysSourceInTheEditor(t *testing.T) {
 	settle(tt)
 	notesMode(t, a, tt)
 	openNote(t, tt, "Formula")
-	if a.editor.doc == nil || !strings.Contains(a.editor.doc.Text().String(), `$\pi r^2$`) {
+	if a.notes.Doc == nil || !strings.Contains(a.notes.Doc.Text().String(), `$\pi r^2$`) {
 		t.Fatalf("the editor lost the source; texts %q", tt.Texts())
 	}
 }

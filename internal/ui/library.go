@@ -18,6 +18,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/start"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/locales"
@@ -320,6 +321,7 @@ func (a *App) reload() {
 	}
 	a.resolver = cards.New(runner, a.lib.Types())
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
+	a.notesRows = a.noteRows()
 	a.due = a.dueToday()
 	a.review.Sync(a.due)
 	if a.remaining != nil {
@@ -361,8 +363,16 @@ func (a *App) loadCurrent() {
 		a.loadStats()
 	case modeNotes:
 		a.backlinks = nil
-		if a.lib != nil && a.editor.draft.ID != "" {
-			a.backlinks = a.lib.Backlinks(a.editor.draft.ID)
+		if a.lib != nil && a.notes.Draft.ID != "" {
+			for _, link := range a.lib.Backlinks(a.notes.Draft.ID) {
+				a.backlinks = append(a.backlinks, notes.Backlink{
+					Note:      link.Note,
+					NoteTitle: link.NoteTitle,
+					Block:     link.Block,
+					Paragraph: link.Paragraph,
+					Text:      link.Text,
+				})
+			}
 		}
 	case modeReview:
 		a.preview, a.hasPreview = a.previewFor()

@@ -33,8 +33,8 @@ func TestThreeColumnsAtTheDefaultSize(t *testing.T) {
 	if !ok {
 		t.Fatalf("the notes column is missing; texts %q", tt.Texts())
 	}
-	if notes.X < 0 || notes.X+notes.W > a.notesWidth+1 {
-		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notesWidth)
+	if notes.X < 0 || notes.X+notes.W > a.notes.Width+1 {
+		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notes.Width)
 	}
 	doc, ok := tt.Find(msgs.NoteBody())
 	if !ok {
@@ -62,30 +62,30 @@ func TestThreeColumnsAtTheDefaultSize(t *testing.T) {
 func TestSplitResizesTheNotesColumn(t *testing.T) {
 	a, tt, _ := notesOnTheNotebook(t, 1024, 720)
 
-	drag := a.notesWidth
+	drag := a.notes.Width
 	tt.Press(drag, 300)
 	tt.Move(drag+30, 300)
 	tt.Move(drag+80, 300)
 	tt.Release(drag+80, 300)
 	tt.Frame()
 
-	if a.notesWidth < drag+40 {
-		t.Fatalf("the notes column is %v wide after dragging to %v, want it resized", a.notesWidth, drag+80)
+	if a.notes.Width < drag+40 {
+		t.Fatalf("the notes column is %v wide after dragging to %v, want it resized", a.notes.Width, drag+80)
 	}
 	notes, ok := tt.Find("Notebook")
 	if !ok {
 		t.Fatalf("the notes column is missing; texts %q", tt.Texts())
 	}
-	if notes.X+notes.W > a.notesWidth+1 {
-		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notesWidth)
+	if notes.X+notes.W > a.notes.Width+1 {
+		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notes.Width)
 	}
 
 	// The size is the user's: a window change keeps it.
-	chosen := a.notesWidth
+	chosen := a.notes.Width
 	tt.SetSize(1400, 900)
 	tt.Frame()
-	if a.notesWidth != chosen {
-		t.Errorf("the width moved from %v to %v when the window grew", chosen, a.notesWidth)
+	if a.notes.Width != chosen {
+		t.Errorf("the width moved from %v to %v when the window grew", chosen, a.notes.Width)
 	}
 }
 
@@ -101,8 +101,8 @@ func TestNarrowWindowDropsThePanel(t *testing.T) {
 	if !ok {
 		t.Fatalf("the notes column is missing; texts %q", tt.Texts())
 	}
-	if notes.X+notes.W > a.notesWidth+1 {
-		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notesWidth)
+	if notes.X+notes.W > a.notes.Width+1 {
+		t.Errorf("the notes column reaches %v, want it within %v", notes.X+notes.W, a.notes.Width)
 	}
 	doc, ok := tt.Find(msgs.NoteBody())
 	if !ok {
@@ -166,8 +166,8 @@ func TestTodayAndNewestFirst(t *testing.T) {
 			t.Errorf("the edited note sits below %q, want it newest first", other)
 		}
 	}
-	if a.editor.loaded != string(seed.habit.ID) {
-		t.Errorf("the editor holds %q, want the edited note", a.editor.loaded)
+	if a.notes.Loaded != string(seed.habit.ID) {
+		t.Errorf("the editor holds %q, want the edited note", a.notes.Loaded)
 	}
 }
 

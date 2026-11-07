@@ -6,68 +6,97 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
-	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
 )
 
-const (
-	// defaultNotesWidth is the notes column's width until the divider moves:
-	// the user's width is kept across frames and window resizes, and the split
-	// gives it back when the window has room again. On the smallest window the
-	// column keeps its room and the note shrinks, which is the divider's job.
-	defaultNotesWidth float32 = 260
-	// defaultEditorShare is the document's percentage of the note's room: the
-	// panel takes the rest, in proportion, so both follow the window.
-	defaultEditorShare float32 = 72
-	// defaultReadShare is the document's percentage when read beside its own
-	// source: half of the note, so two places can be compared.
-	defaultReadShare float32 = 50
-	// narrowWindow is the width below which the notebook drops its panel.
-	narrowWindow float32 = 900
-)
+// notesView draws the notebook; the screen itself lives in its own package, and
+// this hands it the snapshot the app derived and the actions it owns (ADR 0004).
+func (a *App) notesView(c *ui.Context) {
+	notes.View(c, &a.notes, a.notesDeps())
+}
 
-// viewMode is how the notebook shows the note: written in, written beside the
-// same note as it reads, or read whole.
-type viewMode uint8
+// notesDeps is what the notebook asks of the app: the notes and cards it reads,
+// and one function per thing the user can do, each run here on the UI thread.
+func (a *App) notesDeps() notes.Deps {
+	return notes.Deps{
+		Notes:        func() []notes.Note { return a.notesRows },
+		Tags:         func() map[string]int { return a.data.tags },
+		Backlinks:    func() []notes.Backlink { return a.backlinks },
+		Cards:        a.cardGroups,
+		Due:          func() int { return a.review.Remaining() },
+		Reload:       a.reload,
+		OpenReview:   func() { a.setMode(modeReview) },
+		NewNote:      a.newNote,
+		SaveNote:     a.saveNote,
+		SaveDocument: a.saveDocument,
+		OpenCardEdit: a.openCardEdit,
+	}
+}
 
-const (
-	viewEdit viewMode = iota
-	viewSplit
-	viewRead
-)
+// showPanel opens the note's panel on one of its views from the keyboard,
+// switching to the notebook when another screen was up.
+func (a *App) showPanel(tab notes.PanelTab) {
+	if a.mode != modeNotes {
+		a.setMode(modeNotes)
+	}
+	a.notes.ShowPanel(tab)
+}
 
-// notesView is editing mode: the notes on the left, and on the right the note
-// written in, read beside its own source, or read whole. Each edge is a pane the
-// user drags — a split remembers the width it was given — and a narrow window
-// drops the note's panel so that the document keeps room to be typed.
-func (a *App) notesView(c *ui.Context, tk design.Tokens) {
-	w, _ := c.Size()
-	ui.Split(c, &a.notesWidth, func() {
-		a.notesList(c, tk)
-	}, func() {
-		ui.Column(c).Grow(1).MinWidth(0).Children(func() {
-			switch a.view {
-			case viewRead:
-				a.readView(c, tk)
-			case viewSplit:
-				ui.SplitPercent(c, &a.readShare, func() {
-					a.editorView(c, tk)
-				}, func() {
-					a.secondPane(c, tk)
-				}).SplitReset(defaultReadShare).Fill()
-			default:
-				if !a.panelShown(w) {
-					a.editorView(c, tk)
-					return
-				}
-				ui.SplitPercent(c, &a.editorShare, func() {
-					a.editorView(c, tk)
-				}, func() {
-					a.notePanel(c, tk)
-				}).SplitReset(defaultEditorShare).Fill()
-			}
+// noteRows is the snapshot as the notebook's list reads it: each note with how
+// many cards it feeds and the tags it carries. It is derived after every write,
+// so no frame walks the cards.
+func (a *App) noteRows() []notes.Note {
+	rows := make([]notes.Note, 0, len(a.data.notes))
+	for _, note := range a.data.notes {
+		rows = append(rows, notes.Note{
+			Note:  note,
+			Cards: a.data.cardsInNote(note),
+			Tags:  a.data.noteTags[note.ID],
 		})
-	}).SplitReset(defaultNotesWidth).Fill()
+	}
+	return rows
+}
+
+// saveNote stores a note and reloads what the window reads: a title or a
+// document saved, with nothing else to write.
+func (a *App) saveNote(c *ui.Context, note core.Note) (core.Note, bool) {
+	saved, ok := a.writeNote(c, note)
+	if !ok {
+		return core.Note{}, false
+	}
+	a.reload()
+	return saved, true
+}
+
+// saveDocument stores the note an edited document produced and reconciles the
+// cards its paragraphs ask for: typing :: is what makes a paragraph a card, and
+// deleting it is what takes the card out of the queue.
+func (a *App) saveDocument(c *ui.Context, note core.Note) (core.Note, bool) {
+	saved, ok := a.writeNote(c, note)
+	if !ok {
+		return core.Note{}, false
+	}
+	a.reload()
+	a.reconcileCards(c, saved)
+	return saved, true
+}
+
+// writeNote saves a note without reloading, for an action that writes more than
+// the note and reloads once at the end. A block read from a hand-written note
+// arrives without an ID; minting it here gives a card a source to point at.
+func (a *App) writeNote(c *ui.Context, note core.Note) (core.Note, bool) {
+	for i := range note.Blocks {
+		if note.Blocks[i].ID == "" {
+			note.Blocks[i].ID = core.NewID(core.BlockKind)
+		}
+	}
+	saved, err := a.lib.SaveNote(note)
+	if err != nil {
+		a.report(c, "save note", err)
+		return core.Note{}, false
+	}
+	return saved, true
 }
 
 // newNote adds an empty note, selects it and puts the caret in its first
@@ -87,8 +116,8 @@ func (a *App) newNote(c *ui.Context) {
 		return
 	}
 	a.reload()
-	a.editor.selected = string(note.ID)
-	a.editor.focus = true
+	a.notes.Selected = string(note.ID)
+	a.notes.FocusTitle()
 	a.setMode(modeNotes)
 }
 
@@ -106,7 +135,7 @@ func (a *App) openDailyNote(c *ui.Context) {
 	title := dailyTitle(time.Now())
 	for _, note := range a.data.notes {
 		if note.Title == title {
-			a.editor.selected = string(note.ID)
+			a.notes.Selected = string(note.ID)
 			a.setMode(modeNotes)
 			return
 		}
@@ -121,8 +150,8 @@ func (a *App) openDailyNote(c *ui.Context) {
 		return
 	}
 	a.reload()
-	a.editor.selected = string(note.ID)
-	a.editor.focus = true
+	a.notes.Selected = string(note.ID)
+	a.notes.FocusTitle()
 	a.setMode(modeNotes)
 }
 
@@ -133,6 +162,6 @@ func (a *App) editNote(card core.Card) {
 	if !ok {
 		return
 	}
-	a.editor.selected = string(note)
+	a.notes.Selected = string(note)
 	a.setMode(modeNotes)
 }

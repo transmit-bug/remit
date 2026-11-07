@@ -385,7 +385,7 @@ func TestReviewKeys(t *testing.T) {
 
 	// E opens the note the card came from.
 	tt.Key(0, ui.KeyE)
-	if !tt.HasText("Notebook") || a.editor.loaded != string(seed.writing.ID) {
+	if !tt.HasText("Notebook") || a.notes.Loaded != string(seed.writing.ID) {
 		t.Fatalf("E did not open the card's note; texts %q", tt.Texts())
 	}
 

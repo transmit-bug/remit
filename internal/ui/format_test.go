@@ -8,6 +8,7 @@ import (
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/richtext"
 
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -23,7 +24,7 @@ func TestFormatBarBoldsTheSelection(t *testing.T) {
 	}
 	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Frame()
-	if f := a.editor.doc.Formatting(); f.Bold == richtext.FormatOn {
+	if f := a.notes.Doc.Formatting(); f.Bold == richtext.FormatOn {
 		t.Fatal("the note starts bold, so the test proves nothing")
 	}
 	if err := tt.Click(msgs.FmtBold()); err != nil {
@@ -31,11 +32,11 @@ func TestFormatBarBoldsTheSelection(t *testing.T) {
 	}
 	tt.Frame()
 
-	if got := a.editor.doc.Formatting().Bold; got != richtext.FormatOn {
+	if got := a.notes.Doc.Formatting().Bold; got != richtext.FormatOn {
 		t.Errorf("the selection is %v after clicking Bold, want on", got)
 	}
 	tt.Advance(320 * time.Millisecond) // the document saves what it holds
-	if md := a.editor.doc.Text().Markdown(); !strings.Contains(md, "**") {
+	if md := a.notes.Doc.Text().Markdown(); !strings.Contains(md, "**") {
 		t.Errorf("the bold did not reach the document:\n%s", md)
 	}
 }
@@ -81,7 +82,7 @@ func TestViewModesSwitchPanes(t *testing.T) {
 	if _, ok := tt.Find(msgs.Close()); !ok {
 		t.Errorf("the note's panel did not come back; texts %q", tt.Texts())
 	}
-	if a.view != viewEdit {
-		t.Errorf("the notebook is in view %v, want writing", a.view)
+	if a.notes.View != notes.Edit {
+		t.Errorf("the notebook is in view %v, want writing", a.notes.View)
 	}
 }
