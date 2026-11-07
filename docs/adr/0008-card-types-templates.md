@@ -14,7 +14,7 @@ ADR 0007 froze the derive contract as two strings — front and back. That
 contract cannot express a card with more than two faces, and it made every
 change of presentation a plugin's job: a user who wanted their cloze cards to
 read differently had nothing to edit. The spec revision (`docs/specs/
-plugin-system.md` §2–§3) reopened the contract for an Anki-grade model:
+plugins/system.md` §2–§3) reopened the contract for an Anki-grade model:
 fields the plugin fills, templates the user edits, types as library data.
 
 ## Decision

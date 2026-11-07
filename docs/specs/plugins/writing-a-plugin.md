@@ -11,7 +11,7 @@ example in [`examples/plugins/cards-mini`](../../examples/plugins/cards-mini)
 is a whole plugin; [`internal/ext/example_test.go`](../../internal/ext/example_test.go)
 loads and runs it through the same loader, so this page cannot drift from the
 code. The design behind the contract is in
-[`plugin-system.md`](plugin-system.md).
+[`system.md`](system.md).
 
 ## 1. Where a plugin lives
 
@@ -96,7 +96,7 @@ capability it declared — and nothing else.
 | `remit.now` | `remit.now()` answers the current time as RFC 3339, which is the app's to give. |
 
 These are the two functions the host installs today. The named grants in
-[`plugin-system.md`](plugin-system.md) §6 — `notes:read`, `cards:write`,
+[`system.md`](system.md) §6 — `notes:read`, `cards:write`,
 `review:read`, `review:write`, `schedule:fsrs`, `store:own` — are the planned
 set; declaring one is accepted but installs no function.
 
@@ -152,7 +152,7 @@ so a template can ask what it can instead of going blank.
 
 There is no `faces` and no `render` hook. The host renders a card's two sides
 from its type's templates (`{{Field}}`, `{{#Field}}`, `{{cloze:Text}}`,
-`{{hint:}}`, `{{type:}}` — see [`plugin-system.md`](plugin-system.md) §3); a
+`{{hint:}}`, `{{type:}}` — see [`system.md`](system.md) §3); a
 plugin never draws.
 
 ### `policy()` — what to schedule with, and what to call the scheduler
@@ -286,7 +286,7 @@ page documents — that is what `ext.OpenJS` runs today, and what the example te
 exercises.
 
 Also not built: the six named capability grants of
-[`plugin-system.md`](plugin-system.md) §6 (only `remit.echo` and `remit.now`
+[`system.md`](system.md) §6 (only `remit.echo` and `remit.now`
 exist), capability approval at enable time, a settings surface a plugin
 contributes to, and `activation` actually gating a load. A derive plugin cannot
 bring a card type definition of its own: `produces` is a declaration, and the

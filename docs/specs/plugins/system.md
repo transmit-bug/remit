@@ -8,7 +8,7 @@
 > **落地口径（2026-11-07 之后）**：本稿按 `0d87ffd`（类型/模板与宿主 API v1 落地）与
 > `70e7b8f`（无迁移）校正。钩子与能力以 `internal/ext/manifest.go`、`internal/ext/js.go`
 > 为准，卡片面以 `internal/cards` + `internal/core/template` 为准。标 **计划** 的是尚未建
-> 的部分，其余按今天的行为写。
+> 的部分，其余按今天的行为写；v1 的收尾按票列在 §14。
 
 ## 1. 原则
 
@@ -30,8 +30,8 @@
 
 - **类型（type）**：一份命名的卡片 schema = 有序**字段**表（字段名 + 值为标量/字符串）+
   一组**模板**（front/back 两段模板文本）+ 版本。类型随库走：`types/<id>.json` 明文，
-  ID 一次性铸造；内置三件随库种入，缺文件时补齐。今天改类型是手改这些文件（类型编辑
-  界面：**计划**）。卡片引用类型。
+  ID 一次性铸造；内置三件随库种入，缺文件时补齐。今天改类型仍是手改这些文件（类型编辑
+  界面归 #144）。卡片引用类型。
 - **卡片**：`type + ordinal + producer`，外加**只在用户手工编辑过时**才有的字段覆盖
   （`fields` + `edited`）。字段值本身不落库：渲染时按卡片的来源现算（live = 块文本，
   frozen = 快照），卡片自己的覆盖逐字段压在上面（ADR 0008）。同一 Block 派生多张卡
@@ -58,13 +58,13 @@
   `::: type <id>` 带内容，与单独成行的 `:::`（双向卡标记）可区分。字段块由内置
   derive 插件解析：`字段名: 值` 每行一条。类型没有的字段由插件列进 `unknown`，宿主记日志
   并丢弃，卡片仍按能对上的那部分生成；今天没有面向用户的报告。
-- **schema 的来源**：内置三类型（随库种入）+ 手改 `types/<id>.json`（类型编辑界面：**计划**）。
+- **schema 的来源**：内置三类型（随库种入）+ 手改 `types/<id>.json`（类型编辑界面归 #144，未建）。
   derive 插件的 `produces` 只是声明：宿主只接受库内已有的类型，插件不能凭空带来类型定义。
   表单式"单独建卡"不做——产品是笔记优先，字段块即录入。
 
 ### 2.3 类型编辑的安全边界
 
-v1 没有类型管理界面；下表先约束手改文件，也是将来编辑器的验收条件。因为字段只在
+v1 的类型管理界面归 #144（未建）；下表先约束手改文件，也是将来编辑器的验收条件。因为字段只在
 **编辑过的卡片**上持久化，"全库重写"的范围是那些 `fields` 映射，不是每一张卡。
 
 | 操作 | 行为 |
@@ -77,8 +77,8 @@ v1 没有类型管理界面；下表先约束手改文件，也是将来编辑�
 ### 2.4 没有存量迁移
 
 **不读旧格式**：remit/2 是第一个发布格式，打开时声明其它 format 的库直接拒绝
-（错误指向声明的值与期望值）。pre-1.0 没有已发布的库要保。搜索仍覆盖块文本；把
-字段文本纳入索引搜索属后续票。
+（错误指向声明的值与期望值）。pre-1.0 没有已发布的库要保。搜索仍只覆盖块文本；把
+字段文本纳入索引搜索（#138 故事 19）尚未开工，也未挂票。
 
 ## 3. 模板方言（宿主引擎）
 
@@ -127,7 +127,8 @@ v1 没有类型管理界面；下表先约束手改文件，也是将来编辑�
   已有的类型。
 - `activation` 只决定何时加载，不决定谁被选中；角色决定选中。宿主今天记录它，不据此
   加载（启用列表决定加载）。
-- 没有 `contributes`：插件不做 UI。由插件声明、宿主渲染的设置项是**计划**。
+- 没有 `contributes` 字段：今天插件不做 UI。UI 贡献（命令 / 菜单 / 页面 / 设置）的契约
+  已在 [`ui.md`](ui.md) 冻结（#146：宿主绘制，插件只给声明），尚未实现。
 - `runtime: "exec"` 仍被接受（ADR 0006）：需要原生库或长计算的扩展走进程协议；js
   manifest 不带 `protocol`，exec manifest 必须带 `protocol: 1`。类型体系相关钩子今天
   只有 JS 插件在用，宿主未禁止 exec 声明它们，但没有 exec 插件能跑通这些钩子。
@@ -191,6 +192,9 @@ export function on_event(event: { kind: string; id: string }): void
 | `schedule:fsrs` | `remit.fsrs.review(state, grade, now)` |
 | `store:own` | `remit.store.get/set`，命名空间绑定插件 id |
 
+落地票 [#142](https://github.com/transmit-bug/remit/issues/142)。宿主面与 loopback agent API
+复用同一读写层（`internal/agentapi.Library` 是现成缝），插件调用不走 HTTP 回环。
+
 `store:own` 的**存储**已落地：库内明文 `plugins-data/<id>.json`，随 `.remitlib` 归档走
 （启用按库，数据按库——Obsidian 的 per-vault 模型；VS Code 式机器级层等真实需求出现再
 加）。但 `remit.store` 还没有装进 JS 全局，插件今天读不到自己的数据。
@@ -239,9 +243,10 @@ discovered → enabled(remit.json 里有名字) → loaded(Open；角色插件�
 ```
 
 - 启用是按库的显式动作，今天就是在 `remit.json` 的 `extensions` 里写名字；能力审批
-  （**计划**）发生在启用时，但除 echo/now 外还没有可授予的函数，所以启用不询问。
+  （#144 的启用流程）发生在启用时，但除 echo/now 外还没有可授予的函数，所以启用不询问。
 - 角色两个（卡片、调度）今天固定为内置插件；`Options.Cards` / `Options.Scheduler` 是
-  宿主给测试的注入点，没有按库选择角色的设置页。第三方 js 插件被启用后只收到 `on_event`。
+  宿主给测试的注入点，没有按库选择角色的设置页（#144）。第三方 js 插件被启用后只收到
+  `on_event`。
 - 完成文案归调度插件：已落地为 `summary` 钩子（§5）。
 
 ## 11. 内置默认插件
@@ -256,11 +261,24 @@ discovered → enabled(remit.json 里有名字) → loaded(Open；角色插件�
 内置插件用金标准 fixtures：`internal/ext/builtin` 的测试逐项比对
 `internal/golden/testdata/golden.json`（兼作删除 Go 实现的凭据），`internal/cards` 测字段
 解析与回退，`internal/core/template` 测方言。第三方插件的 harness 与 `ext test <dir>` CLI
-都还没有；今天最近的路径是照 `internal/ext/example_test.go` 用 `ext.OpenJS` 加载自己的
-目录，宿主不代为运行插件自带 fixtures（**计划**）。
+都还没有（#145）；今天最近的路径是照 `internal/ext/example_test.go` 用 `ext.OpenJS` 加载
+自己的目录，宿主不代为运行插件自带 fixtures（**计划**）。
 
 ## 13. v1 不做
 
-插件市场 / 签名 / 自动更新 · `net:fetch` · 插件间依赖 · 移动端 · 插件注册模板函数 ·
-排序字段（sort field） · 表单式建卡 · 机器级插件存储层 · 类型管理界面 · 按角色选择插件 ·
-能力审批 · `activation` 生效 · 插件自带的 fixtures harness。
+插件市场 / 签名 / 自动更新 · `net:fetch`（v2 议题，届时加 allowlist）· 插件间依赖 ·
+移动端 · 插件注册模板函数或过滤器 · 排序字段（sort field） · 表单式建卡 ·
+机器级（跨库）插件存储层 · exec substrate 的新能力（仅保留现状）。
+
+类型管理界面、按角色选择插件、能力审批、`activation` 生效与插件自带 fixtures 的 harness
+**不在这一列**：它们是 v1 的收尾，按 §14 的票推进。
+
+## 14. 还没建的部分（按票）
+
+| 票 | 内容 | 今天的状态 |
+|---|---|---|
+| [#141](https://github.com/transmit-bug/remit/issues/141) | 键入作答与提示的复习面 | 模板把 `{{type:}}` / `{{hint:}}` 捕获进 `template.Output`，经 `cards.Answer` 交给 UI；复习屏只渲染卡面，没有输入框、逐字比对或折叠提示 |
+| [#142](https://github.com/transmit-bug/remit/issues/142) | 六个 capability 的宿主函数 | JS 全局只有 `remit.echo` / `remit.now`；`store:own` 的存储层已落地，`remit.store` 未装；未声明的调用仍是 `TypeError`，没有 `CapabilityError` |
+| [#144](https://github.com/transmit-bug/remit/issues/144) | 设置 UI：启用批准、角色单选、类型管理 | 无；插件按库写在 `remit.json` 的 `extensions`，类型只能手改 `types/<id>.json` |
+| [#145](https://github.com/transmit-bug/remit/issues/145) | `ext test` / `ext check`、`remit.d.ts`、文档清扫 | `writing-a-plugin.md` 已按现行契约重写，示例被 `internal/ext/example_test.go` 加载；CLI、`.d.ts`、GLOSSARY 词条与 ADR 清扫未做 |
+| [#146](https://github.com/transmit-bug/remit/issues/146) | 插件 UI 贡献（命令 / 菜单 / 页面 / 设置） | 契约见 [`ui.md`](ui.md)；无实现（manifest 没有 `contributes`） |

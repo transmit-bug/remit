@@ -1,5 +1,5 @@
 // Package template implements the host template dialect described in
-// docs/specs/plugin-system.md §3. Templates are user-editable library data,
+// docs/specs/plugins/system.md §3. Templates are user-editable library data,
 // interpreted by the host on the review critical path: pure data replacement,
 // no scripting, no HTML/CSS, no third-party functions. Output is markdown.
 package template
