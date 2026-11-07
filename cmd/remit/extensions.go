@@ -3,7 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -13,7 +15,9 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/builtin"
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 	appui "github.com/transmit-bug/remit/internal/ui"
+	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
 // startExtensions runs the extensions this library enabled. A broken or
@@ -111,6 +115,27 @@ func (s *pluginService) Discover() ([]appui.Plugin, error) {
 	return out, errors.Join(problems...)
 }
 
+// Manifests lists what the plugin directory holds, with what each manifest
+// declares, without starting any of it: the window parses the enabled plugins'
+// pages, commands, menus and settings from these, so a plugin it does not run
+// still costs nothing.
+func (s *pluginService) Manifests() ([]ext.Extension, error) {
+	out := make([]ext.Extension, 0, 4)
+	var problems []error
+	for _, manifest := range []func() (ext.Manifest, error){builtin.CardsManifest, builtin.SchedulerManifest} {
+		m, err := manifest()
+		if err != nil {
+			problems = append(problems, err)
+			continue
+		}
+		out = append(out, ext.Extension{Manifest: m})
+	}
+	found, err := ext.Discover(s.root)
+	out = append(out, found...)
+	problems = append(problems, err)
+	return out, errors.Join(problems...)
+}
+
 // Open starts the plugin a manifest name names, for the role that chose it.
 func (s *pluginService) Open(name string) (*ext.JSRunner, error) {
 	s.mu.Lock()
@@ -154,6 +179,26 @@ func (s *pluginService) start(name string) (*ext.JSRunner, error) {
 		return ext.OpenJS(candidate.Dir, nil, ext.JSLimits{})
 	}
 	return nil, fmt.Errorf("remit: no plugin named %q", name)
+}
+
+// runCheckExtension prints what one plugin directory declares that this build
+// cannot use, and exits non-zero when it found any: the same parse the window
+// runs when it reads a library's plugins, without a window. It answers whether
+// it ran at all, as the library commands do.
+func runCheckExtension(dir string, out io.Writer) bool {
+	if dir == "" {
+		return false
+	}
+	problems := contrib.Check(dir, contrib.Options{Icon: design.HasIcon})
+	if len(problems) == 0 {
+		fmt.Fprintf(out, "%s: ok\n", dir)
+		return true
+	}
+	for _, problem := range problems {
+		fmt.Fprintf(out, "%s: %v\n", dir, problem)
+	}
+	os.Exit(1)
+	return true
 }
 
 // pluginOf is one manifest as the settings page lists it.

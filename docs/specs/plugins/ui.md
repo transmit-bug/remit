@@ -7,9 +7,12 @@
 字段（ADR 0008/#140）。本稿不碰卡片模型——复习卡信息仍只读 `card.type` / `fields` /
 `ordinal` / `producer`，没有 `cards.describe`，也没有 `cards.render`。
 
-> **现状（2026-11-07）**：未实现。manifest 没有 `contributes`，没有 `internal/ext/contrib`，
-> 命令面板、菜单与导航都是宿主固定项。页面 `data` 命令所需的读能力（`notes:read` 等）在
-> #142；设置页的启用流程在 #144；`ext check` 与 `remit.d.ts` 在 #145。
+> **现状（2026-11-08，#146 落地）**：已实现。`contributes` 随 manifest 读入，
+> `internal/ext/contrib` 解析 / 校验 / 索引 / 求值 `when`；命令进命令面板与宿主菜单槽位，
+> 页面由 `internal/ui/screens/pluginpage` 用宿主组件绘制，设置项落在设置页的宿主表单里，
+> `remit -check-ext <dir>` 跑同一份解析。仍未做的：`remit.d.ts` 与 `go tool remit ext`
+> （#145）、`review.card` 等宿主今天没有接收方的槽位（§4）、
+> `activation` 与页面数据的 onEvent 触发（§9）。
 
 ## 1. 原则
 
@@ -109,6 +112,11 @@
 
 每项是 `{command, group, order, when}`。`group` 取宿主组（`primary` / `secondary`）或
 `plugin`；同组按 `order` 升序。位置、分隔线与溢出行为由 #129 定，契约只保证槽位存在。
+
+今天有接收方的槽位：`toolbar.overflow` 与 `note.overflow`，都落在窗口的 `⋯` 菜单里（两条
+槽位在这一个菜单位置上合并，同一命令只出现一次）。其余槽位校验通过、但不显示：`review.card`、
+`note.block`、`editor.slash`、`browse.row`、`sidebar.note`、`page.header` 的宿主位置属于 #129，
+本票不替它决定。
 
 ## 5. 页面：语义块 + 布局节点
 

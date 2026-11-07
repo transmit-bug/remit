@@ -58,6 +58,16 @@ type Deps struct {
 	// DeleteType removes a type no card references, and says why in the
 	// page's State when one does.
 	DeleteType func(*ui.Context, core.ID)
+
+	// SetPluginSetting writes one value into the plugin's own store, under its
+	// id: the host owns the write, and the plugin reads the value itself.
+	SetPluginSetting func(*ui.Context, string, string, string)
+	// PluginMessage resolves one of a plugin's own messages in the frame's
+	// language, so the page follows the window's locale rather than a snapshot.
+	PluginMessage func(*ui.Context, string, string) string
+	// Reenable gives a plugin's failed contributions another try: the counts go
+	// back to zero and the hidden entries show again.
+	Reenable func(*ui.Context, string)
 }
 
 // View draws the settings page: the agent API, updates, the global shortcut,
@@ -77,6 +87,7 @@ func View(c *ui.Context, s *State, d Deps) {
 					hotkeyFieldset(c, s, d, msgs, tk)
 					reminderFieldset(c, s, d, msgs, tk)
 					pluginsFieldset(c, s, d, msgs, tk)
+					pluginSettingsFieldset(c, s, d, msgs, tk)
 					typesFieldset(c, s, d, msgs, tk)
 				})
 			})

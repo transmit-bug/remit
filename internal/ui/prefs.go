@@ -137,9 +137,14 @@ func (a *App) refreshSettingsData() {
 	for _, name := range a.lib.EnabledExtensions() {
 		enabled[name] = true
 	}
+	problems := a.pluginProblems()
 	for i := range a.pluginList {
-		a.pluginList[i].Enabled = a.pluginList[i].Builtin || enabled[a.pluginList[i].Name]
+		name := a.pluginList[i].Name
+		a.pluginList[i].Enabled = a.pluginList[i].Builtin || enabled[name]
+		a.pluginList[i].Problems = problems[name]
+		a.pluginList[i].Failures = a.pluginFailures(name)
 	}
+	a.prefs.PluginSettings = a.pluginSettings()
 	used := make(map[core.ID]int, 8)
 	for _, card := range a.data.cards {
 		used[card.Type]++
@@ -188,6 +193,10 @@ func (a *App) settingsDeps() screensettings.Deps {
 		Types:      func() []screensettings.Type { return a.typeList },
 		SaveType:   a.saveType,
 		DeleteType: a.deleteType,
+
+		SetPluginSetting: a.setPluginSetting,
+		PluginMessage:    a.pluginText,
+		Reenable:         a.reenablePlugin,
 	}
 }
 
@@ -224,6 +233,10 @@ func (a *App) setPluginEnabled(c *ui.Context, name string, on bool) {
 		slog.Warn("remit: enable plugin", "name", name, "on", on, "err", err)
 		a.prefs.PluginErr = m(c).PluginEnableFailed(err.Error())
 	}
+	// Approving or withdrawing a plugin takes its pages, commands and settings
+	// out of every receiver now: they are declarations, so nothing running has
+	// to stop for them to go (ui.md §8).
+	a.loadContributions()
 	a.refreshSettingsData()
 }
 
