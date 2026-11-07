@@ -329,3 +329,84 @@ func (s pluginSource) Blocks() core.BlockSet {
 }
 
 var errNoSuchBlock = errors.New("agentapi: the block asks nothing")
+
+// The reading queue is readable without a token and carries what a reader needs:
+// which notes wait, where each was left, and the events that put it there.
+func TestReadingIsReadableAndJoiningNeedsAToken(t *testing.T) {
+	lib := newLibrary(t)
+	note, err := lib.SaveNote(core.Note{Title: "Biology", Blocks: []core.Block{
+		{Text: "the cell :: the unit of life"},
+		{Text: "the membrane :: what holds it together"},
+	}})
+	if err != nil {
+		t.Fatalf("save note: %v", err)
+	}
+	srv := newServer(t, lib)
+
+	// Joining the queue is a write, so it needs the token.
+	if code, _ := do(t, http.MethodPost, srv.URL+"/v1/reading", "", map[string]any{"note": note.ID}); code != http.StatusUnauthorized {
+		t.Fatalf("POST reading without token = %d, want 401", code)
+	}
+	code, raw := do(t, http.MethodPost, srv.URL+"/v1/reading", token, map[string]any{"note": note.ID})
+	if code != http.StatusOK {
+		t.Fatalf("POST reading = %d (%s), want 200", code, raw)
+	}
+	if status := object(t, raw)["status"]; status != "queued" {
+		t.Errorf("status = %v, want queued", status)
+	}
+
+	code, raw = do(t, http.MethodGet, srv.URL+"/v1/reading", "", nil)
+	if code != http.StatusOK {
+		t.Fatalf("GET reading = %d", code)
+	}
+	entries := objects(t, raw)
+	if len(entries) != 1 || entries[0]["note"] != string(note.ID) || entries[0]["title"] != "Biology" {
+		t.Fatalf("reading queue = %v, want the note that joined", entries)
+	}
+
+	// A session the window recorded shows in the entry: the difficulty and the
+	// block the reading stopped at.
+	if err := lib.ReadNote(note.ID, schedule.Good, note.Blocks[1].ID, now.Add(time.Hour)); err != nil {
+		t.Fatalf("ReadNote: %v", err)
+	}
+	code, raw = do(t, http.MethodGet, srv.URL+"/v1/reading/"+string(note.ID), "", nil)
+	if code != http.StatusOK {
+		t.Fatalf("GET reading entry = %d (%s)", code, raw)
+	}
+	entry := object(t, raw)
+	if entry["position"] != string(note.Blocks[1].ID) {
+		t.Errorf("position = %v, want the second paragraph", entry["position"])
+	}
+	if entry["reviews"] != float64(1) || entry["last_rating"] != "good" {
+		t.Errorf("entry = %v, want one good session", entry)
+	}
+	events, _ := entry["events"].([]any)
+	if len(events) != 2 {
+		t.Fatalf("events = %v, want the join and the session", events)
+	}
+	first, _ := events[0].(map[string]any)
+	if first["kind"] != "queued" {
+		t.Errorf("first event = %v, want the join", first)
+	}
+	last, _ := events[1].(map[string]any)
+	if last["kind"] != "reviewed" || last["rating"] != "good" || last["position"] != string(note.Blocks[1].ID) {
+		t.Errorf("last event = %v, want the session", last)
+	}
+
+	// The API takes notes into the queue and nothing out of it.
+	if code, _ := do(t, http.MethodDelete, srv.URL+"/v1/reading", token, nil); code != http.StatusMethodNotAllowed {
+		t.Errorf("DELETE reading = %d, want 405: removing is the window's", code)
+	}
+	if code, _ := do(t, http.MethodGet, srv.URL+"/v1/reading/"+string(core.NewID("note")), "", nil); code != http.StatusNotFound {
+		t.Errorf("GET an unknown reading entry = %d, want 404", code)
+	}
+
+	// The library's own counts report both queues.
+	code, raw = do(t, http.MethodGet, srv.URL+"/v1/library", "", nil)
+	if code != http.StatusOK {
+		t.Fatalf("GET library = %d", code)
+	}
+	if reading := object(t, raw)["reading"]; reading != float64(0) {
+		t.Errorf("reading count = %v, want none due after the session", reading)
+	}
+}

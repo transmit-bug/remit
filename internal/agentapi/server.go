@@ -47,6 +47,13 @@ type Library interface {
 	Due(time.Time, int) ([]core.Card, error)
 	Remaining(time.Time) (int, error)
 	Block(core.ID) (core.Block, bool)
+	// The reading queue: what is due to be read, where each note was left, and
+	// the way into it. Adding is a write; removing and recording a position
+	// are the window's alone.
+	ReadingQueue() ([]store.Reading, error)
+	ReadingFor(core.ID) (store.Reading, bool)
+	ReadingEvents(core.ID) ([]schedule.Event, error)
+	AddToReading(core.ID, time.Time) error
 	// Faces is what a card asks, as the type's templates render it — this
 	// package has no splitting rules of its own.
 	Faces(core.Card) (front, back string, link string)
@@ -89,14 +96,18 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/cards", s.getCards)
 	mux.HandleFunc("GET /v1/cards/{id}", s.getCard)
 	mux.HandleFunc("GET /v1/queue", s.getQueue)
+	mux.HandleFunc("GET /v1/reading", s.getReading)
+	mux.HandleFunc("GET /v1/reading/{id}", s.getReadingEntry)
 	mux.HandleFunc("POST /v1/notes", s.requireToken(s.postNote))
 	mux.HandleFunc("POST /v1/cards", s.requireToken(s.postCard))
+	mux.HandleFunc("POST /v1/reading", s.requireToken(s.postReading))
 	mux.HandleFunc("POST /v1/cards/{id}/reviews", s.requireToken(s.postReview))
 	mux.HandleFunc("PATCH /v1/cards/{id}", s.requireToken(s.patchCard))
 	// A known path with another method is a 405, not a 404: the endpoint exists
 	// and the API deliberately has no such operation (no deletes).
 	mux.HandleFunc("/v1/notes", methodNotAllowed)
 	mux.HandleFunc("/v1/cards", methodNotAllowed)
+	mux.HandleFunc("/v1/reading", methodNotAllowed)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such endpoint")
 	})
@@ -122,15 +133,23 @@ func (s *Server) requireToken(next http.HandlerFunc) http.HandlerFunc {
 
 func (s *Server) getLibrary(w http.ResponseWriter, r *http.Request) {
 	notes := s.lib.Notes()
-	var due int
+	var due, reading int
 	if n, err := s.lib.Remaining(s.opts.Now()); err == nil {
 		due = n
 	}
+	if queue, err := s.lib.ReadingQueue(); err == nil {
+		for _, entry := range queue {
+			if entry.State.Reviews == 0 || !entry.State.Due.After(s.opts.Now()) {
+				reading++
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"format": "remit/2",
-		"notes":  len(notes),
-		"cards":  len(s.lib.Cards()),
-		"due":    due,
+		"format":  "remit/2",
+		"notes":   len(notes),
+		"cards":   len(s.lib.Cards()),
+		"due":     due,
+		"reading": reading,
 	})
 }
 
@@ -190,6 +209,132 @@ func (s *Server) getQueue(w http.ResponseWriter, r *http.Request) {
 		out = append(out, s.newCardJSON(c))
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// getReading lists the reading queue: the notes due to be read, soonest first,
+// with where each one was left. Reading needs no token, like every read.
+func (s *Server) getReading(w http.ResponseWriter, r *http.Request) {
+	entries, err := s.lib.ReadingQueue()
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	out := make([]readingJSON, 0, len(entries))
+	for _, entry := range entries {
+		out = append(out, s.newReadingJSON(entry, nil))
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// getReadingEntry shows one note's place in the reading queue with the events
+// that put it there: the sessions and the changes of membership, in order.
+func (s *Server) getReadingEntry(w http.ResponseWriter, r *http.Request) {
+	id := core.ID(r.PathValue("id"))
+	entry, ok := s.lib.ReadingFor(id)
+	if !ok {
+		writeError(w, http.StatusNotFound, "not_found", "the reading queue does not hold that note")
+		return
+	}
+	events, err := s.lib.ReadingEvents(id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	out := make([]readingEventJSON, 0, len(events))
+	for _, ev := range events {
+		out = append(out, newReadingEventJSON(ev))
+	}
+	writeJSON(w, http.StatusOK, s.newReadingJSON(entry, out))
+}
+
+// postReading puts a note in the reading queue. It is the one write the reading
+// queue takes: removing a note and recording where a session stopped are the
+// window's, so an agent cannot take a note away from its reader.
+func (s *Server) postReading(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Note string `json:"note"`
+		At   string `json:"at"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	id := core.ID(body.Note)
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "no_note", "note must name a note in this library")
+		return
+	}
+	at := s.opts.Now()
+	if body.At != "" {
+		parsed, err := time.Parse(time.RFC3339, body.At)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_time", "at must be RFC 3339")
+			return
+		}
+		at = parsed
+	}
+	if err := s.lib.AddToReading(id, at); err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	entry, _ := s.lib.ReadingFor(id)
+	writeJSON(w, http.StatusOK, s.newReadingJSON(entry, nil))
+}
+
+// readingJSON is one note's place in the reading queue as the API shows it.
+type readingJSON struct {
+	Note     string             `json:"note"`
+	Title    string             `json:"title"`
+	Position string             `json:"position,omitempty"`
+	Status   string             `json:"status"`
+	Due      *time.Time         `json:"due,omitempty"`
+	LastSeen *time.Time         `json:"last_review,omitempty"`
+	Rating   string             `json:"last_rating,omitempty"`
+	Reviews  int                `json:"reviews"`
+	Events   []readingEventJSON `json:"events,omitempty"`
+}
+
+func (s *Server) newReadingJSON(entry store.Reading, events []readingEventJSON) readingJSON {
+	out := readingJSON{
+		Note:     string(entry.Note),
+		Position: string(entry.Position),
+		Status:   "reading",
+		Reviews:  entry.State.Reviews,
+		Events:   events,
+	}
+	if entry.Queued {
+		out.Status = "queued"
+	}
+	if note, ok := s.lib.Note(entry.Note); ok {
+		out.Title = note.Title
+	}
+	if !entry.State.Due.IsZero() {
+		due := entry.State.Due
+		out.Due = &due
+	}
+	if entry.State.Reviews > 0 {
+		last := entry.State.LastReview
+		out.LastSeen = &last
+		out.Rating = entry.State.LastRating.String()
+	}
+	return out
+}
+
+// readingEventJSON is one line of a note's reading history.
+type readingEventJSON struct {
+	Seq      int64  `json:"seq"`
+	Kind     string `json:"kind"`
+	Rating   string `json:"rating,omitempty"`
+	Position string `json:"position,omitempty"`
+	At       string `json:"at"`
+}
+
+func newReadingEventJSON(ev schedule.Event) readingEventJSON {
+	out := readingEventJSON{Seq: ev.Seq, Kind: ev.Kind.String(), At: ev.At.UTC().Format(time.RFC3339)}
+	if ev.Kind == schedule.Reviewed {
+		out.Rating = ev.Rating.String()
+	}
+	out.Position = string(ev.Position)
+	return out
 }
 
 func (s *Server) postNote(w http.ResponseWriter, r *http.Request) {
