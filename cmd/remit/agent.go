@@ -11,6 +11,7 @@ import (
 
 	"fmt"
 	"github.com/transmit-bug/remit/internal/agentapi"
+	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
@@ -132,25 +133,26 @@ func (s *agentService) Status() appui.AgentStatus {
 }
 
 // cardSource is the library as the agent API sees it. A card is made by asking
-// the card plugin what the block asks, exactly as the notebook does: the API has
-// no derivation of its own, and neither does the store.
+// the shared resolver what the block asks, exactly as the notebook does: the
+// API has no derivation of its own, and neither does the store.
 type cardSource struct {
 	*store.Library
-	plugin *ext.JSRunner
+	faces *cards.Resolver
 }
 
-// newCardSource opens the card plugin for the API's own use.
+// newCardSource opens the card plugin and the library's types for the API's
+// own use.
 func newCardSource(lib *store.Library) (cardSource, error) {
 	runner, err := builtin.Cards(ext.JSLimits{})
 	if err != nil {
 		return cardSource{}, err
 	}
-	return cardSource{Library: lib, plugin: runner}, nil
+	return cardSource{Library: lib, faces: cards.New(runner, lib.Types())}, nil
 }
 
-// Faces is what a card asks, as the card plugin shapes it.
-func (s cardSource) Faces(card core.Card) (prompt, answer, link string) {
-	return facesOf(s.plugin, s.Library, card)
+// Faces is what a card asks, as its type's templates render it.
+func (s cardSource) Faces(card core.Card) (front, back, link string) {
+	return facesOf(s.faces, s.Library, card)
 }
 
 // CreateCard makes the cards the block's text asks for, and answers with the
@@ -160,20 +162,9 @@ func (s cardSource) CreateCard(blockID core.ID) (core.Card, error) {
 	if !ok {
 		return core.Card{}, fmt.Errorf("agent api: no block %q", blockID)
 	}
-	var answered []struct {
-		Kind    string `json:"kind"`
-		Ordinal int    `json:"ordinal"`
-	}
-	if err := s.plugin.Call("derive", map[string]any{"text": block.Text}, &answered); err != nil {
-		return core.Card{}, fmt.Errorf("agent api: the card plugin: %w", err)
-	}
-	derived := make([]core.Derived, 0, len(answered))
-	for _, card := range answered {
-		kind, ok := core.ParseKind(card.Kind)
-		if !ok {
-			continue
-		}
-		derived = append(derived, core.Derived{Kind: kind, Ordinal: card.Ordinal})
+	derived, ok := s.faces.Derive(block.Text)
+	if !ok {
+		return core.Card{}, fmt.Errorf("agent api: the card plugin could not derive")
 	}
 	cards, err := s.Library.CreateCards(blockID, derived)
 	if err != nil {
@@ -208,29 +199,12 @@ func serveAgent(lib *store.Library, token string) (net.Listener, error) {
 	return ln, nil
 }
 
-// facesOf asks the card plugin what a card asks, and applies the card's own
-// overrides. It is the same question the notebook asks, answered by the same
-// plugin.
-func facesOf(plugin *ext.JSRunner, lib *store.Library, card core.Card) (prompt, answer, link string) {
-	text, state := card.Ref.Text(blocksOf(lib))
-	prompt, answer = text, ""
-	var answered struct {
-		Front string `json:"front"`
-		Back  string `json:"back"`
-	}
-	params := map[string]any{"text": text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
-	if err := plugin.Call("faces", params, &answered); err != nil {
-		slog.Error("remit: the card plugin could not shape a card", "err", err)
-	} else {
-		prompt, answer = answered.Front, answered.Back
-	}
-	if card.Prompt != "" {
-		prompt = card.Prompt
-	}
-	if card.Answer != "" {
-		answer = card.Answer
-	}
-	return prompt, answer, state.String()
+// facesOf asks the shared resolver what a card asks. It is the same door the
+// notebook goes through — the plugin derives, the type's templates render —
+// so the API and the app read a card alike.
+func facesOf(faces *cards.Resolver, lib *store.Library, card core.Card) (front, back, link string) {
+	answer := faces.Face(card, blocksOf(lib))
+	return answer.Front, answer.Back, answer.State.String()
 }
 
 // blocksOf is the library's blocks as the model reads them.

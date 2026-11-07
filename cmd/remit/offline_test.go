@@ -23,7 +23,7 @@ func TestExportAndImport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("note: %v", err)
 	}
-	cards, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Kind: core.KindBasic}})
+	cards, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Type: core.TypeBasic}})
 	if err != nil {
 		t.Fatalf("card: %v", err)
 	}

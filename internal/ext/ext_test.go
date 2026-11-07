@@ -159,3 +159,59 @@ func TestCloseIsIdempotent(t *testing.T) {
 		t.Fatalf("second Close: %v", err)
 	}
 }
+
+// Open routes by the manifest's runtime: a js extension runs in this process,
+// an exec extension as a process — and the caller holds either as a Hook.
+func TestOpenDispatchesByRuntime(t *testing.T) {
+
+	// js: dispatched through Open, the extension receives on_event.
+	jsDir := writeExtension(t, t.TempDir(), "noting", `{"id":"test.noting","name":"noting","version":"1.0.0","apiVersion":1,"runtime":"js","entry":"main.js","implements":{"on_event":1}}`)
+	if err := os.WriteFile(filepath.Join(jsDir, "main.js"), []byte("export function on_event(event) { return { got: event.kind + \":\" + event.id }; }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(jsDir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	jsRunner, err := Open(loaded)
+	if err != nil {
+		t.Fatalf("Open(js): %v", err)
+	}
+	defer jsRunner.Close()
+	if _, isJS := jsRunner.(*JSRunner); !isJS {
+		t.Fatalf("a js manifest came back as %T", jsRunner)
+	}
+	var noted struct {
+		Got string `json:"got"`
+	}
+	if err := jsRunner.Call("on_event", map[string]any{"kind": "card_graded", "id": "card_7"}, &noted); err != nil {
+		t.Fatalf("on_event: %v", err)
+	}
+	if noted.Got != "card_graded:card_7" {
+		t.Errorf("on_event answered %+v", noted)
+	}
+
+	// exec: the process path is unchanged — the fake still answers.
+	execDir := writeExtension(t, t.TempDir(), "fake", `{"name":"fake","version":"1","protocol":1,"entrypoint":["`+fakePath+`"]}`)
+	loaded, err = Load(execDir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	execRunner, err := Open(loaded)
+	if err != nil {
+		t.Fatalf("Open(exec): %v", err)
+	}
+	defer execRunner.Close()
+	if _, isExec := execRunner.(*Runner); !isExec {
+		t.Fatalf("an exec manifest came back as %T", execRunner)
+	}
+	var echoed struct {
+		Echo string `json:"echo"`
+	}
+	if err := execRunner.Call("on_event", nil, &echoed); err != nil {
+		t.Fatalf("on_event over the pipe: %v", err)
+	}
+	if echoed.Echo != "on_event" {
+		t.Errorf("the pipe answered %q", echoed.Echo)
+	}
+}

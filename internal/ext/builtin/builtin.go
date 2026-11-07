@@ -44,7 +44,7 @@ func CardsManifest() (ext.Manifest, error) {
 }
 
 // IsBuiltin reports whether a name belongs to an extension this app ships.
-func IsBuiltin(name string) bool { return name == "cards" }
+func IsBuiltin(name string) bool { return name == "cards" || name == "scheduler" }
 
 // Scheduler is the default scheduling plugin: it decides policy — retention, and
 // what to call the scheduler — while the schedule's arithmetic stays the app's.

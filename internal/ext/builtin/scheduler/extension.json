@@ -1,8 +1,14 @@
 {
+  "id": "remit.scheduler.default",
   "name": "scheduler",
   "version": "1.0.0",
-  "protocol": 1,
+  "apiVersion": 1,
   "runtime": "js",
   "entry": "main.js",
-  "capabilities": []
+  "capabilities": [],
+  "implements": {
+    "policy": 1,
+    "identity": 1,
+    "summary": 1
+  }
 }

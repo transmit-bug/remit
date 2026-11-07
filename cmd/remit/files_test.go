@@ -25,7 +25,7 @@ func TestOpenArchiveImportsOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("note: %v", err)
 	}
-	if _, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Kind: core.KindBasic}}); err != nil {
+	if _, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Type: core.TypeBasic}}); err != nil {
 		t.Fatalf("card: %v", err)
 	}
 	if err := lib.Close(); err != nil {

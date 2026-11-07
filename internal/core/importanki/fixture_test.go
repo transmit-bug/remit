@@ -14,6 +14,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
@@ -359,35 +360,38 @@ func readReviews(t *testing.T, dir string) []logRecord {
 	return records
 }
 
-// cardsByPrompt groups a library's cards by the prompt the card plugin shapes for
-// them: the shapes belong to the plugin, so a test asks it rather than splitting
-// text itself.
-func cardsByPrompt(t *testing.T, lib *store.Library) map[string]core.Card {
+// resolver opens the shared resolver over the built-in plugin, the same door
+// the app reads a card through.
+func resolver(t *testing.T, lib *store.Library) *cards.Resolver {
 	t.Helper()
 	runner, err := builtin.Cards(ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open the card plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
+	return cards.New(runner, lib.Types())
+}
 
+// blocksOf is the library's blocks as the model reads them.
+func blocksOf(lib *store.Library) core.BlockSet {
+	blocks := core.BlockSet{}
+	for _, note := range lib.Notes() {
+		for _, block := range note.Blocks {
+			blocks[block.ID] = block
+		}
+	}
+	return blocks
+}
+
+// cardsByPrompt groups a library's cards by the face the resolver renders for
+// them: the shapes belong to the plugin and the type's templates, so a test
+// asks rather than splitting text itself.
+func cardsByPrompt(t *testing.T, lib *store.Library) map[string]core.Card {
+	t.Helper()
+	faces := resolver(t, lib)
 	cards := make(map[string]core.Card)
 	for _, card := range lib.Cards() {
-		block, ok := lib.Block(card.Ref.Block)
-		if !ok {
-			continue
-		}
-		var answered struct {
-			Front string `json:"front"`
-		}
-		params := map[string]any{"text": block.Text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
-		if err := runner.Call("faces", params, &answered); err != nil {
-			t.Fatalf("shape a card: %v", err)
-		}
-		front := answered.Front
-		if card.Prompt != "" {
-			front = card.Prompt
-		}
-		cards[front] = card
+		cards[faces.Face(card, blocksOf(lib)).Front] = card
 	}
 	return cards
 }
@@ -411,34 +415,11 @@ func hasWarning(report importanki.Report, want string) bool {
 	return false
 }
 
-// cardFaces is what the card plugin shapes for one card: the shapes are its
-// decision, so a test asks rather than splitting text itself.
+// cardFaces is what a card asks, as the resolver renders it: the shapes are
+// the plugin's and the type's, so a test asks rather than splitting text
+// itself.
 func cardFaces(t *testing.T, lib *store.Library, card core.Card) (prompt, answer string, state core.LinkState) {
 	t.Helper()
-	runner, err := builtin.Cards(ext.JSLimits{})
-	if err != nil {
-		t.Fatalf("open the card plugin: %v", err)
-	}
-	t.Cleanup(func() { _ = runner.Close() })
-
-	block, ok := lib.Block(card.Ref.Block)
-	if !ok {
-		return "", "", core.LinkLost
-	}
-	var answered struct {
-		Front string `json:"front"`
-		Back  string `json:"back"`
-	}
-	params := map[string]any{"text": block.Text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
-	if err := runner.Call("faces", params, &answered); err != nil {
-		t.Fatalf("shape a card: %v", err)
-	}
-	prompt, answer = answered.Front, answered.Back
-	if card.Prompt != "" {
-		prompt = card.Prompt
-	}
-	if card.Answer != "" {
-		answer = card.Answer
-	}
-	return prompt, answer, core.LinkLive
+	got := resolver(t, lib).Face(card, blocksOf(lib))
+	return got.Front, got.Back, got.State
 }

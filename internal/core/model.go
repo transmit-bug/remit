@@ -181,64 +181,43 @@ func (s Status) Scheduled() bool {
 	return false
 }
 
-// Kind is how a paragraph produced a card: a card's own record of its place,
-// not a rule this package applies.
-type Kind uint8
-
-const (
-	// KindBasic is one paragraph, prompt then answer.
-	KindBasic Kind = iota
-	// KindCloze is one blank of a paragraph's many.
-	KindCloze
-	// KindBidirectional is one of the two directions of a paragraph asked both
-	// ways: ordinal 0 is as written, 1 is reversed.
-	KindBidirectional
-)
-
-// String names the kind, as a card file and a form show it.
-func (k Kind) String() string {
-	switch k {
-	case KindCloze:
-		return "cloze"
-	case KindBidirectional:
-		return "bidirectional"
-	}
-	return "basic"
+// Producer names what derived a card: the plugin that made it and the version
+// that made it, so a card stays readable and explainable after its plugin is
+// unloaded or updated.
+type Producer struct {
+	ID      string
+	Version string
 }
 
-// ParseKind reads a kind back from the name Kind.String writes.
-func ParseKind(s string) (Kind, bool) {
-	switch s {
-	case "basic":
-		return KindBasic, true
-	case "cloze":
-		return KindCloze, true
-	case "bidirectional":
-		return KindBidirectional, true
-	}
-	return KindBasic, false
-}
-
-// Derived is one card a card plugin answered, before it has an identity or a
-// schedule: what to ask, what to accept, and which of the paragraph's cards it
-// is. The shapes are the plugin's; this is only how they travel.
+// Derived is one card a derive pass answered, before it has an identity or a
+// schedule: which type it is, the field values it was given, and which of the
+// paragraph's cards it is. The shapes are the plugin's; this is only how they
+// travel.
 type Derived struct {
-	Kind    Kind
-	Ordinal int
-	Prompt  string
-	Answer  string
+	Type     ID
+	Ordinal  int
+	Fields   map[string]string
+	Producer Producer
 }
 
-// Card is an independent review entity: it references exactly one block,
-// owns its scheduling history, and may replace the wording the block gives it.
+// Card is an independent review entity: it references exactly one block and
+// owns its scheduling history.
+//
+// A card persists only type, ordinal and producer. Its field values are
+// resolved at render time — live from the block, frozen from the snapshot —
+// so the store never derives fields, and a hand edit of the block reaches
+// every card that follows it. Fields is written only for values the user
+// hand-edited (Edited says there are any), which is the same semantics the
+// prompt/answer overrides used to carry.
 type Card struct {
 	ID     ID
 	Ref    Reference
-	Prompt string // replaces the block's prompt when set
-	Answer string // replaces the block's answer when set
+	Type   ID
+	Fields map[string]string
+	Edited bool
 	Status Status
-	// Kind and Ordinal say which of its paragraph's cards this is: one
-	// paragraph can ask several things (each blank, both directions).
-	Kind    Kind
-	Ordinal int
+	// Ordinal says which of its paragraph's cards this is: one paragraph can
+	// ask several things (each blank, both directions), counted from 0.
+	Ordinal  int
+	Producer Producer
 }

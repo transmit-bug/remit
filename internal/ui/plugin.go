@@ -8,9 +8,9 @@ import (
 	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
 
-// cardPlugin is the extension that answers what a paragraph asks and how a card
-// reads. It is an ordinary extension — the one the app ships, loaded through the
-// same loader and capability rules as any other (ADR 0006/0007).
+// cardPlugin is the extension that answers what a paragraph asks. It is an
+// ordinary extension — the one the app ships, loaded through the same loader
+// and capability rules as any other (ADR 0006/0007).
 //
 // A library without one still works: no paragraph makes a new card, and a card
 // reads its paragraph's own words.
@@ -25,6 +25,7 @@ func openCards(chosen *ext.JSRunner, without bool) *cardPlugin {
 		return nil
 	}
 	if chosen != nil {
+		warm(chosen, "card")
 		return &cardPlugin{runner: chosen}
 	}
 	runner, err := builtin.Cards(ext.JSLimits{})
@@ -34,7 +35,17 @@ func openCards(chosen *ext.JSRunner, without bool) *cardPlugin {
 		slog.Error("remit: the card plugin did not start", "err", err)
 		return nil
 	}
+	warm(runner, "card")
 	return &cardPlugin{runner: runner}
+}
+
+// warm fills a plugin's runtime pool at activation, so the first review pays
+// no load cost and a syntax error surfaces now rather than mid-review
+// (ADR 0006). A plugin that cannot warm still works: its calls load lazily.
+func warm(runner *ext.JSRunner, what string) {
+	if err := runner.Warm(); err != nil {
+		slog.Error("remit: the "+what+" plugin did not warm", "err", err)
+	}
 }
 
 // schedulerPlugin is the extension that decides scheduling policy and says what
@@ -50,6 +61,7 @@ func openScheduler(chosen *ext.JSRunner, without bool) *schedulerPlugin {
 		return nil
 	}
 	if chosen != nil {
+		warm(chosen, "scheduler")
 		return &schedulerPlugin{runner: chosen}
 	}
 	runner, err := builtin.Scheduler(ext.JSLimits{})
@@ -57,6 +69,7 @@ func openScheduler(chosen *ext.JSRunner, without bool) *schedulerPlugin {
 		slog.Error("remit: the scheduler plugin did not start", "err", err)
 		return nil
 	}
+	warm(runner, "scheduler")
 	return &schedulerPlugin{runner: runner}
 }
 
@@ -113,125 +126,26 @@ func (p *schedulerPlugin) SummaryOf(reviewed, dueTomorrow int, accuracy float64)
 	return answered, true
 }
 
-// derived is one card a plugin answered, as the extension speaks it.
-type derived struct {
-	Kind    string `json:"kind"`
-	Ordinal int    `json:"ordinal"`
-	Front   string `json:"front"`
-	Back    string `json:"back"`
-}
-
-// deriveCards asks the plugin what a paragraph makes. ok is false when there is
-// no plugin or it failed — a paragraph then makes no new card, and nothing the
-// user sees turns red over it.
+// deriveCards asks the resolver what a paragraph makes. ok is false when there
+// is no plugin or it failed — a paragraph then makes no new card, and nothing
+// the user sees turns red over it. The resolver asks the plugin once per text
+// and stamps each card with the plugin's identity.
 func (a *App) deriveCards(text string) ([]core.Derived, bool) {
-	if a.cards == nil {
+	if a.resolver == nil {
 		return nil, false
 	}
-	var answered []derived
-	params := map[string]any{"text": text}
-	if err := a.cards.runner.Call("derive", params, &answered); err != nil {
-		slog.Error("remit: the card plugin could not derive", "err", err)
-		return nil, false
-	}
-	out := make([]core.Derived, 0, len(answered))
-	for _, card := range answered {
-		kind, ok := core.ParseKind(card.Kind)
-		if !ok {
-			continue
-		}
-		out = append(out, core.Derived{Kind: kind, Ordinal: card.Ordinal,
-			Prompt: card.Front, Answer: card.Back})
-	}
-	return out, true
+	return a.resolver.Derive(text)
 }
 
-// rendered is one card's answer from the plugin: what it was asked, what it
-// answered, and whether it answered at all.
-type rendered struct {
-	askedFront, askedBack string
-	front, back           string
-	ok                    bool
-}
-
-// renderCard asks the plugin how a card reads: markdown the host renders. ok is
-// false when there is no plugin or it failed, and the card then reads its
-// paragraph's own words rather than nothing.
-//
-// The answer is kept per card and per sides: the question is asked once, not once
-// a frame — a plugin with a whole second to spend would otherwise hold the window
-// every pass.
-func (a *App) renderCard(card core.ID, prompt, answer string) (string, string, bool) {
-	if a.cards == nil {
-		return prompt, answer, false
-	}
-	if got, ok := a.rendered[card]; ok && got.askedFront == prompt && got.askedBack == answer {
-		return got.front, got.back, got.ok
-	}
-	var answered struct {
-		Front string `json:"front"`
-		Back  string `json:"back"`
-	}
-	params := map[string]any{"front": prompt, "back": answer}
-	// The answer is remembered, and so is a failure: a card's sides are asked
-	// about once, not once a frame — a plugin with a whole second to spend would
-	// otherwise hold the window every pass, and one that threw would be retried
-	// for ever.
-	got := rendered{askedFront: prompt, askedBack: answer, front: prompt, back: answer}
-	if err := a.cards.runner.Call("render", params, &answered); err != nil {
-		slog.Error("remit: the card plugin could not render", "err", err)
-		a.rendered[card] = got
-		return prompt, answer, false
-	}
-	got.front, got.back, got.ok = answered.Front, answered.Back, true
-	a.rendered[card] = got
-	return got.front, got.back, true
-}
-
-// facesAnswer is one card's shaping from the plugin, with what it was asked.
-type facesAnswer struct {
-	askedText      string
-	askedKind      core.Kind
-	askedOrdinal   int
-	prompt, answer string
-}
-
-// faces is what a card asks: the plugin's shaping of its paragraph, with the
-// card's own overrides on top. A plugin that is absent or failed leaves the
-// paragraph's own words — unsplit, because splitting is the plugin's rule and
-// not the app's.
-//
-// The answer is kept per card and per question: a card is shaped once, not once a
-// frame.
+// faces is what a card asks: the resolver's answer — the fields the paragraph
+// gives (the block for a live reference, the snapshot for a frozen one), the
+// card's own edited fields on top, rendered by the type's templates. A plugin
+// that is absent or failed leaves the paragraph's own words, unsplit.
 func (a *App) faces(card core.Card) (prompt, answer string, state core.LinkState) {
-	text, state := card.Ref.Text(a.data.blocks)
-	prompt, answer = text, ""
-	if a.cards != nil {
-		if got, ok := a.facesCache[card.ID]; ok && got.askedText == text &&
-			got.askedKind == card.Kind && got.askedOrdinal == card.Ordinal {
-			prompt, answer = got.prompt, got.answer
-		} else {
-			var answered struct {
-				Front string `json:"front"`
-				Back  string `json:"back"`
-			}
-			params := map[string]any{"text": text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
-			got := facesAnswer{askedText: text, askedKind: card.Kind, askedOrdinal: card.Ordinal,
-				prompt: text, answer: ""}
-			if err := a.cards.runner.Call("faces", params, &answered); err != nil {
-				slog.Error("remit: the card plugin could not shape a card", "err", err)
-			} else {
-				got.prompt, got.answer = answered.Front, answered.Back
-			}
-			a.facesCache[card.ID] = got
-			prompt, answer = got.prompt, got.answer
-		}
+	if a.resolver == nil {
+		text, state := card.Ref.Text(a.data.blocks)
+		return text, "", state
 	}
-	if card.Prompt != "" {
-		prompt = card.Prompt
-	}
-	if card.Answer != "" {
-		answer = card.Answer
-	}
-	return prompt, answer, state
+	got := a.resolver.Face(card, a.data.blocks)
+	return got.Front, got.Back, got.State
 }

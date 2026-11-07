@@ -108,8 +108,8 @@ func TestConfigIsWritten(t *testing.T) {
 	if err := json.Unmarshal(read(t, filepath.Join(dir, "remit.json")), &config); err != nil {
 		t.Fatalf("remit.json: %v", err)
 	}
-	if config.Format != "remit/1" {
-		t.Errorf("format = %q, want remit/1", config.Format)
+	if config.Format != "remit/2" {
+		t.Errorf("format = %q, want remit/2", config.Format)
 	}
 	if len(config.FSRS.Weights) != 21 {
 		t.Errorf("weights = %d, want 21", len(config.FSRS.Weights))
@@ -117,7 +117,7 @@ func TestConfigIsWritten(t *testing.T) {
 	if config.FSRS.DesiredRetention != schedule.DefaultRetention {
 		t.Errorf("desired retention = %v, want %v", config.FSRS.DesiredRetention, schedule.DefaultRetention)
 	}
-	for _, name := range []string{"notes", "cards", ".remit"} {
+	for _, name := range []string{"notes", "cards", "types", ".remit"} {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			t.Errorf("library has no %s directory: %v", name, err)
 		}
@@ -280,8 +280,8 @@ func TestCreateCard(t *testing.T) {
 		t.Errorf("card references %q, want %q", card.Ref.Block, block.ID)
 	}
 
-	if card.Kind != core.KindBasic || card.Ordinal != 0 {
-		t.Errorf("the card is %v/%d, want the paragraph's first", card.Kind, card.Ordinal)
+	if card.Type != core.TypeBasic || card.Ordinal != 0 {
+		t.Errorf("the card is %v/%d, want the paragraph's first", card.Type, card.Ordinal)
 	}
 
 	// The marker is in the note source, and the card file exists.
@@ -293,12 +293,12 @@ func TestCreateCard(t *testing.T) {
 	if err := json.Unmarshal(cardData, &file); err != nil {
 		t.Fatalf("card file: %v", err)
 	}
-	for _, key := range []string{"block", "prompt", "answer", "status", "created"} {
+	for _, key := range []string{"block", "type", "status", "created"} {
 		if _, ok := file[key]; !ok {
 			t.Errorf("card file has no %q", key)
 		}
 	}
-	if file["block"] != string(block.ID) || file["status"] != "new" {
+	if file["block"] != string(block.ID) || file["type"] != string(core.TypeBasic) || file["status"] != "new" {
 		t.Errorf("card file = %s", cardData)
 	}
 
@@ -625,19 +625,20 @@ func TestSaveCard(t *testing.T) {
 		t.Fatalf("CreateCard: %v", err)
 	}
 
-	card.Prompt = "sharpened question"
+	card.Fields = map[string]string{"Front": "sharpened question"}
+	card.Edited = true
 	card.Status = core.StatusSuspended
 	if err := lib.SaveCard(card); err != nil {
 		t.Fatalf("SaveCard: %v", err)
 	}
 	stored, ok := lib.Card(card.ID)
-	if !ok || stored.Prompt != "sharpened question" || stored.Status != core.StatusSuspended {
+	if !ok || stored.Fields["Front"] != "sharpened question" || stored.Status != core.StatusSuspended {
 		t.Fatalf("Card = (%+v, %v)", stored, ok)
 	}
-	// The sides a card asks are the card plugin's shaping; the store keeps the
-	// override it was given.
-	if stored.Prompt != "sharpened question" {
-		t.Errorf("the stored override is %q", stored.Prompt)
+	// The field values a card asks are resolved at render time; the store
+	// keeps only the edit it was given.
+	if !stored.Edited || stored.Fields["Back"] != "" {
+		t.Errorf("the stored edit is %+v", stored.Fields)
 	}
 	if due, _ := lib.Due(clk.Now(), 0); len(due) != 0 {
 		t.Errorf("a suspended card is in the queue: %v", ids(due))

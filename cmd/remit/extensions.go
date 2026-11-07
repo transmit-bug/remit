@@ -32,14 +32,14 @@ func startExtensions(lib *store.Library) {
 		byName[e.Manifest.Name] = e
 	}
 
-	var runners []*ext.Runner
+	var runners []ext.Hook
 	for _, name := range enabled {
 		e, ok := byName[name]
 		if !ok {
 			slog.Warn("remit: extension enabled but not installed", "name", name)
 			continue
 		}
-		r, err := ext.Start(e)
+		r, err := ext.Open(e)
 		if err != nil {
 			slog.Warn("remit: extension did not start", "name", name, "err", err)
 			continue

@@ -44,8 +44,10 @@ const (
 	indexDir   = ".remit"
 	indexName  = "index.sqlite"
 
-	// formatVersion is what this build writes, and the only layout it reads.
-	formatVersion = "remit/1"
+	// formatVersion is what this build writes; legacyFormat is the remit/1
+	// layout (prompt/answer/kind card files), which Open migrates once.
+	formatVersion = "remit/2"
+	legacyFormat  = "remit/1"
 
 	noteKind  = "note"
 	cardKind  = "card"
@@ -110,6 +112,8 @@ type Library struct {
 	dueOK     bool
 	byCreated []core.ID
 	createdOK bool
+
+	types []core.Type
 
 	extensions []string
 	onEvent    func(Event)
@@ -180,12 +184,23 @@ func Open(dir string, opts Options) (*Library, error) {
 	if err != nil {
 		return nil, err
 	}
-	params, extensions, err := decodeConfig(data)
+	config, err := decodeConfig(data)
 	if err != nil {
 		return nil, err
 	}
+	params := config.FSRS.Normalized()
 	if params.IsZero() {
 		params = opts.Params.Normalized()
+	}
+
+	// A remit/1 library migrates once on open: every card file is rewritten
+	// in the type+fields shape, and remit.json declares the new format. The
+	// review log is not touched; rewriting the card files moves their marks,
+	// so the index rebuilds itself on the same open.
+	if config.Format == legacyFormat {
+		if err := migrateLibrary(dir, params, config.Extensions); err != nil {
+			return nil, err
+		}
 	}
 
 	library := newLibrary(dir, opts)
@@ -193,12 +208,53 @@ func Open(dir string, opts Options) (*Library, error) {
 	// What schedules this library is what the app says it schedules with, or
 	// what the library was last written with.
 	library.scheduler = firstNonEmpty(opts.Scheduler, params.Scheduler)
-	library.extensions = extensions
+	library.extensions = config.Extensions
 	if err := library.load(); err != nil {
 		library.Close()
 		return nil, err
 	}
 	return library, nil
+}
+
+// migrateLibrary rewrites a remit/1 library in place, once: every card file
+// trades its prompt/answer overrides and kind for type, fields and edited,
+// and remit.json declares the format this build writes. reviews.jsonl is left
+// alone — scheduling history never changes shape.
+func migrateLibrary(dir string, params schedule.Params, extensions []string) error {
+	entries, err := os.ReadDir(filepath.Join(dir, cardsDir))
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	for _, entry := range entries {
+		id, ok := splitCardName(entry.Name())
+		if entry.IsDir() || !ok {
+			continue
+		}
+		path := filepath.Join(dir, cardsDir, entry.Name())
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		card, created, migrated, err := decodeCard(id, data)
+		if err != nil {
+			return err
+		}
+		if !migrated {
+			continue
+		}
+		encoded, err := encodeCard(card, created)
+		if err != nil {
+			return err
+		}
+		if err := writeFileAtomic(path, encoded); err != nil {
+			return err
+		}
+	}
+	config, err := encodeConfig(params, extensions)
+	if err != nil {
+		return err
+	}
+	return writeFileAtomic(filepath.Join(dir, configName), config)
 }
 
 func newLibrary(dir string, opts Options) *Library {
@@ -248,12 +304,17 @@ func (l *Library) Rebuild() error {
 // load opens the index and reads it. A first attempt that fails is retried once
 // from an empty index: the index is a cache, never a reason to refuse a library.
 func (l *Library) load() error {
-	for _, dir := range []string{notesDir, cardsDir, indexDir} {
+	for _, dir := range []string{notesDir, cardsDir, typesDir, indexDir} {
 		if err := os.MkdirAll(filepath.Join(l.dir, dir), dirPerms); err != nil {
 			return err
 		}
 	}
-	err := l.loadIndex()
+	types, err := loadTypes(l.dir)
+	if err != nil {
+		return err
+	}
+	l.types = types
+	err = l.loadIndex()
 	if err == nil {
 		return nil
 	}
@@ -589,9 +650,20 @@ func (l *Library) readCards() (map[core.ID]cardEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-		card, created, err := decodeCard(id, data)
+		card, created, migrated, err := decodeCard(id, data)
 		if err != nil {
 			return nil, err
+		}
+		if migrated {
+			// A remit/1 card file that arrived after the one-time
+			// migration: rewrite it where it stands.
+			encoded, err := encodeCard(card, created)
+			if err != nil {
+				return nil, err
+			}
+			if err := writeFileAtomic(filepath.Join(l.dir, cardsDir, entry.Name()), encoded); err != nil {
+				return nil, err
+			}
 		}
 		cards[id] = cardEntry{card: card, created: created}
 	}
@@ -858,7 +930,7 @@ func (l *Library) Card(id core.ID) (core.Card, bool) {
 		return core.Card{}, false
 	}
 	l.sources.cards++
-	card, _, err := decodeCard(id, data)
+	card, _, _, err := decodeCard(id, data)
 	if err != nil {
 		return core.Card{}, false
 	}
@@ -953,9 +1025,11 @@ func (l *Library) SaveCard(card core.Card) error {
 	return nil
 }
 
-// CreateCards makes the cards a block's text asks for: one for a separator, one
-// per blank of a cloze, both directions of a paragraph written both ways. A
-// block whose text asks nothing makes no card.
+// CreateCards makes the cards a derive pass answered for a block. Only what
+// identifies each card is persisted — type, ordinal, producer; the field
+// values the pass computed are resolved again from the block at render time,
+// so they are deliberately not stored (spec §2.1: neither card faces nor
+// derived fields touch disk).
 func (l *Library) CreateCards(blockID core.ID, derived []core.Derived) ([]core.Card, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -985,11 +1059,12 @@ func (l *Library) CreateCards(blockID core.ID, derived []core.Derived) ([]core.C
 	for _, d := range derived {
 		created := l.now().UTC()
 		card := core.Card{
-			ID:      core.NewID(cardKind),
-			Ref:     core.Reference{Block: blockID},
-			Status:  core.StatusNew,
-			Kind:    d.Kind,
-			Ordinal: d.Ordinal,
+			ID:       core.NewID(cardKind),
+			Ref:      core.Reference{Block: blockID},
+			Status:   core.StatusNew,
+			Type:     d.Type,
+			Ordinal:  d.Ordinal,
+			Producer: d.Producer,
 		}
 		encoded, err := encodeCard(card, created)
 		if err != nil {
@@ -1458,15 +1533,15 @@ func encodeConfig(params schedule.Params, extensions []string) ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-func decodeConfig(data []byte) (schedule.Params, []string, error) {
+func decodeConfig(data []byte) (configFile, error) {
 	var config configFile
 	if err := json.Unmarshal(data, &config); err != nil {
-		return schedule.Params{}, nil, fmt.Errorf("store: %s: %w", configName, err)
+		return configFile{}, fmt.Errorf("store: %s: %w", configName, err)
 	}
-	if config.Format != formatVersion {
-		return schedule.Params{}, nil, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, formatVersion)
+	if config.Format != formatVersion && config.Format != legacyFormat {
+		return configFile{}, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, formatVersion)
 	}
-	return config.FSRS.Normalized(), config.Extensions, nil
+	return config, nil
 }
 
 // paramsDigest fingerprints the scheduling parameters: a library that changed

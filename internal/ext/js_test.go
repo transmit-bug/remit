@@ -24,12 +24,14 @@ func writeJS(t *testing.T, manifest string, source string) string {
 	return dir
 }
 
-// manifestFor is a js manifest that declares the capabilities given.
+// manifestFor is a js manifest that declares the capabilities given, carrying
+// every field the js contract requires.
 func manifestFor(name string, caps ...string) string {
 	body, err := json.Marshal(map[string]any{
+		"id":           "test." + name,
 		"name":         name,
 		"version":      "1.0.0",
-		"protocol":     1,
+		"apiVersion":   1,
 		"runtime":      "js",
 		"entry":        "main.js",
 		"capabilities": caps,
@@ -188,8 +190,145 @@ func TestJSRefusesWhatItCannotRun(t *testing.T) {
 		t.Errorf("a missing hook answered %v", err)
 	}
 
-	escaping := writeJS(t, `{"name":"bad","protocol":1,"runtime":"js","entry":"../../etc/passwd"}`, `export function one() { return 1; }`)
+	escaping := writeJS(t, `{"id":"test.bad","name":"bad","apiVersion":1,"runtime":"js","entry":"../../etc/passwd"}`, `export function one() { return 1; }`)
 	if _, err := ext.OpenJS(escaping, ext.JSLimits{}); err == nil {
 		t.Error("an entry outside the extension was accepted")
+	}
+}
+
+// A warmed pool serves calls without making another runtime, and two calls at
+// once share the pool's depth without deadlocking.
+func TestJSPoolWarmAndReuse(t *testing.T) {
+	dir := writeJS(t, manifestFor("pooled"), `export function one() { return 1; }`)
+	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer runner.Close()
+	if err := runner.Warm(); err != nil {
+		t.Fatalf("warm: %v", err)
+	}
+	if got := runner.Runtimes(); got != 2 {
+		t.Fatalf("warm made %d runtimes, want 2", got)
+	}
+	if err := runner.Warm(); err != nil {
+		t.Fatalf("second warm: %v", err)
+	}
+
+	var one int
+	if err := runner.Call("one", nil, &one); err != nil {
+		t.Fatalf("call: %v", err)
+	}
+	if one != 1 {
+		t.Errorf("one answered %d", one)
+	}
+	if got := runner.Runtimes(); got != 2 {
+		t.Errorf("a warmed pool made another runtime: %d", got)
+	}
+
+	// Two calls at once: both borrow, both return, neither blocks the other.
+	done := make(chan error, 2)
+	for range 2 {
+		go func() {
+			var n int
+			done <- runner.Call("one", nil, &n)
+		}()
+	}
+	for range 2 {
+		if err := <-done; err != nil {
+			t.Errorf("concurrent call: %v", err)
+		}
+	}
+	if got := runner.Runtimes(); got != 2 {
+		t.Errorf("two calls over a warm pool made %d runtimes, want 2", got)
+	}
+}
+
+// A pooled runtime is kept, not thrown away: module-level state survives from
+// one call to the next. This is the trade ADR 0006 accepted for not paying a
+// load per call, written down as a test so a change to the pool is a decision.
+func TestJSPoolKeepsModuleState(t *testing.T) {
+	dir := writeJS(t, manifestFor("counting"), `
+let seen = 0;
+export function tick() { seen += 1; return seen; }
+`)
+	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer runner.Close()
+	var seen int
+	for i := 1; i <= 3; i++ {
+		if err := runner.Call("tick", nil, &seen); err != nil {
+			t.Fatalf("tick %d: %v", i, err)
+		}
+		if seen != i {
+			t.Fatalf("tick %d answered %d: the runtime was replaced", i, seen)
+		}
+	}
+}
+
+// Three failed calls in a row stop the extension; the fourth answers
+// ErrDisabled without touching a runtime. A success in between clears the
+// streak.
+func TestJSThreeStrikesDisable(t *testing.T) {
+	dir := writeJS(t, manifestFor("flaky"), `
+export function go(ok) {
+  if (!ok) throw new Error("no");
+  return 1;
+}
+`)
+	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer runner.Close()
+
+	fail := false
+	pass := true
+	for i := range 2 {
+		if err := runner.Call("go", fail, nil); err == nil {
+			t.Fatalf("call %d succeeded", i)
+		}
+	}
+	if got := runner.Failures(); got != 2 {
+		t.Fatalf("failures = %d, want 2", got)
+	}
+	if err := runner.Call("go", pass, nil); err != nil {
+		t.Fatalf("success after failures: %v", err)
+	}
+	if got := runner.Failures(); got != 0 {
+		t.Fatalf("a success left the streak at %d", got)
+	}
+
+	for i := range 3 {
+		if err := runner.Call("go", fail, nil); err == nil {
+			t.Fatalf("strike %d succeeded", i)
+		}
+	}
+	if !runner.Disabled() {
+		t.Fatal("three strikes left the runner enabled")
+	}
+	before := runner.Runtimes()
+	if err := runner.Call("go", pass, nil); !errors.Is(err, ext.ErrDisabled) {
+		t.Fatalf("a disabled runner answered %v, want ErrDisabled", err)
+	}
+	if got := runner.Runtimes(); got != before {
+		t.Errorf("the disabled call made a runtime: %d, want %d", got, before)
+	}
+}
+
+// Warming is when a broken module is heard from, not the first review.
+func TestJSWarmSurfacesLoadErrors(t *testing.T) {
+	// A module that throws while evaluating: compileJS accepts it (it parses),
+	// the load does not.
+	dir := writeJS(t, manifestFor("boom"), `throw new Error("boom");`)
+	runner, err := ext.OpenJS(dir, ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer runner.Close()
+	if err := runner.Warm(); err == nil {
+		t.Error("warming a module that throws at load succeeded")
 	}
 }

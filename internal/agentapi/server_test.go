@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"errors"
+
+	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
@@ -142,8 +144,8 @@ func TestCreateCardAndReview(t *testing.T) {
 	if code != http.StatusCreated {
 		t.Fatalf("POST card = %d (%v), want 201", code, created)
 	}
-	if created["prompt"] != "what is a cell" || created["answer"] != "the unit of life" {
-		t.Errorf("card sides = (%v, %v)", created["prompt"], created["answer"])
+	if created["front"] != "what is a cell" || created["back"] != "the unit of life" {
+		t.Errorf("card faces = (%v, %v)", created["front"], created["back"])
 	}
 	if created["link"] != "live" {
 		t.Errorf("link = %v, want live", created["link"])
@@ -175,7 +177,7 @@ func TestPatchIsLimitedToWordingAndStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("save note: %v", err)
 	}
-	cards, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Kind: core.KindBasic}})
+	cards, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Type: core.TypeBasic}})
 	if err != nil {
 		t.Fatalf("create card: %v", err)
 	}
@@ -183,12 +185,13 @@ func TestPatchIsLimitedToWordingAndStatus(t *testing.T) {
 	srv := newServer(t, lib)
 
 	code, raw := do(t, http.MethodPatch, srv.URL+"/v1/cards/"+string(card.ID), token,
-		map[string]any{"prompt": "sharper question", "status": "suspended"})
+		map[string]any{"fields": map[string]string{"Front": "sharper question"}, "status": "suspended"})
 	patched := object(t, raw)
 	if code != http.StatusOK {
 		t.Fatalf("PATCH = %d (%v)", code, patched)
 	}
-	if patched["prompt"] != "sharper question" || patched["status"] != "suspended" {
+	fields, _ := patched["fields"].(map[string]any)
+	if fields["Front"] != "sharper question" || patched["status"] != "suspended" {
 		t.Errorf("patched card = %v", patched)
 	}
 
@@ -268,12 +271,12 @@ func TestRotateTokenReplaces(t *testing.T) {
 	}
 }
 
-// pluginSource is the library as the API sees it in these tests: a card is made
-// and shaped by the card plugin, as it is in the app. The API itself knows
-// neither.
+// pluginSource is the library as the API sees it in these tests: a card is
+// made and shaped through the shared resolver, as it is in the app. The API
+// itself knows neither.
 type pluginSource struct {
 	*store.Library
-	plugin *ext.JSRunner
+	faces *cards.Resolver
 }
 
 func newPluginSource(t *testing.T, lib *store.Library) pluginSource {
@@ -283,7 +286,7 @@ func newPluginSource(t *testing.T, lib *store.Library) pluginSource {
 		t.Fatalf("open the card plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
-	return pluginSource{Library: lib, plugin: runner}
+	return pluginSource{Library: lib, faces: cards.New(runner, lib.Types())}
 }
 
 func (s pluginSource) CreateCard(blockID core.ID) (core.Card, error) {
@@ -291,20 +294,9 @@ func (s pluginSource) CreateCard(blockID core.ID) (core.Card, error) {
 	if !ok {
 		return core.Card{}, errNoSuchBlock
 	}
-	var answered []struct {
-		Kind    string `json:"kind"`
-		Ordinal int    `json:"ordinal"`
-	}
-	if err := s.plugin.Call("derive", map[string]any{"text": block.Text}, &answered); err != nil {
-		return core.Card{}, err
-	}
-	derived := make([]core.Derived, 0, len(answered))
-	for _, card := range answered {
-		kind, ok := core.ParseKind(card.Kind)
-		if !ok {
-			continue
-		}
-		derived = append(derived, core.Derived{Kind: kind, Ordinal: card.Ordinal})
+	derived, ok := s.faces.Derive(block.Text)
+	if !ok {
+		return core.Card{}, errNoSuchBlock
 	}
 	cards, err := s.Library.CreateCards(blockID, derived)
 	if err != nil {
@@ -316,24 +308,9 @@ func (s pluginSource) CreateCard(blockID core.ID) (core.Card, error) {
 	return cards[0], nil
 }
 
-func (s pluginSource) Faces(card core.Card) (prompt, answer, link string) {
-	text, state := card.Ref.Text(s.Blocks())
-	prompt, answer = text, ""
-	var answered struct {
-		Front string `json:"front"`
-		Back  string `json:"back"`
-	}
-	params := map[string]any{"text": text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
-	if err := s.plugin.Call("faces", params, &answered); err == nil {
-		prompt, answer = answered.Front, answered.Back
-	}
-	if card.Prompt != "" {
-		prompt = card.Prompt
-	}
-	if card.Answer != "" {
-		answer = card.Answer
-	}
-	return prompt, answer, state.String()
+func (s pluginSource) Faces(card core.Card) (front, back string, link string) {
+	answer := s.faces.Face(card, s.Blocks())
+	return answer.Front, answer.Back, answer.State.String()
 }
 
 // Blocks is the library's blocks as the model reads them.

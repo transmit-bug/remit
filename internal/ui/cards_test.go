@@ -123,7 +123,7 @@ func TestCardBadgeEditsOverrides(t *testing.T) {
 	if !tt.HasText(msgs.EditCard()) {
 		t.Fatalf("the dialog did not open; texts %q", tt.Texts())
 	}
-	if err := tt.Click(msgs.CardPrompt()); err != nil {
+	if err := tt.Click("Front"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Type("What is spaced practice?")
@@ -135,8 +135,8 @@ func TestCardBadgeEditsOverrides(t *testing.T) {
 	if !ok {
 		t.Fatal("the card is gone")
 	}
-	if after.Prompt != "What is spaced practice?" {
-		t.Errorf("the override is %q, want what the dialog took", after.Prompt)
+	if after.Fields["Front"] != "What is spaced practice?" || !after.Edited {
+		t.Errorf("the override is %v, want what the dialog took", after.Fields)
 	}
 	if prompt, _, _ := a.faces(after); prompt != "What is spaced practice?" {
 		t.Errorf("the card reads %q, want the override", prompt)
@@ -166,8 +166,12 @@ func TestCardBadgesFitTheSmallestWindow(t *testing.T) {
 	if badge.X < 0 || badge.Y < 0 || badge.X+badge.W > 720 || badge.Y+badge.H > 520 {
 		t.Errorf("the badge box %+v is outside the 720x520 window", badge)
 	}
-	if badge.X < 720-panelWidth-1 {
-		t.Errorf("the badge %+v is not in the panel column", badge)
+	doc, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the document is not drawn; texts %q", tt.Texts())
+	}
+	if badge.X < doc.X+doc.W {
+		t.Errorf("the badge %+v is not in the panel column, right of the document ending at %v", badge, doc.X+doc.W)
 	}
 }
 
@@ -199,7 +203,7 @@ func TestClozeMakesOneCardPerBlank(t *testing.T) {
 	}
 	var cloze []core.Card
 	for _, card := range a.Library().Cards() {
-		if card.Kind == core.KindCloze {
+		if card.Type == core.TypeCloze {
 			cloze = append(cloze, card)
 		}
 	}
@@ -209,11 +213,11 @@ func TestClozeMakesOneCardPerBlank(t *testing.T) {
 	// Each asks its own blank; the faces follow the paragraph, so nothing about
 	// the pair is stored twice.
 	prompt, answer, _ := a.faces(cloze[0])
-	if prompt != "The […] blank asks second." || answer != "first" {
+	if prompt != "The […] blank asks second." || answer != "The first blank asks second." {
 		t.Errorf("the first card asks %q / %q", prompt, answer)
 	}
 	prompt, answer, _ = a.faces(cloze[1])
-	if prompt != "The first blank asks […]." || answer != "second" {
+	if prompt != "The first blank asks […]." || answer != "The first blank asks second." {
 		t.Errorf("the second card asks %q / %q", prompt, answer)
 	}
 
@@ -224,7 +228,7 @@ func TestClozeMakesOneCardPerBlank(t *testing.T) {
 	}
 	seen := 0
 	for _, card := range due {
-		if card.Kind == core.KindCloze {
+		if card.Type == core.TypeCloze {
 			seen++
 		}
 	}

@@ -99,7 +99,7 @@ func TestCardsWithStatus(t *testing.T) {
 // shapes a paragraph makes are the card plugin's decision, and the store only
 // stores what it is told to.
 func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
-	cards, err := lib.CreateCards(blockID, []core.Derived{{Kind: core.KindBasic}})
+	cards, err := lib.CreateCards(blockID, []core.Derived{{Type: core.TypeBasic}})
 	if err != nil {
 		return core.Card{}, err
 	}

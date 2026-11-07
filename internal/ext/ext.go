@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 )
@@ -26,46 +25,15 @@ const Protocol = 1
 // review flow.
 const Timeout = time.Second
 
-// Manifest is extension.json: what the extension is, what it runs on, and what
-// the host may offer it.
-type Manifest struct {
-	Name     string `json:"name"`
-	Version  string `json:"version"`
-	Protocol int    `json:"protocol"`
-	// Runtime is "exec" (the default, a process speaking the protocol) or "js"
-	// (JavaScript in this process).
-	Runtime string `json:"runtime"`
-	// Entrypoint starts an exec extension; Entry is a js extension's file, in
-	// its own directory.
-	Entrypoint []string `json:"entrypoint"`
-	Entry      string   `json:"entry"`
-	// Capabilities are what the host offers the extension, by name; an
-	// extension gets nothing it does not declare.
-	Capabilities []string `json:"capabilities"`
-}
-
-// Validate checks a manifest against what this build can run.
-func Validate(m Manifest) error {
-	if m.Name == "" {
-		return errors.New("manifest needs a name")
+// Open starts the extension on the substrate its manifest names: a js
+// extension runs in this process under the default limits, anything else runs
+// as a process speaking the protocol. The decision lives here, where the
+// manifest is read, so the app above asks once and gets a runner either way.
+func Open(e Extension) (Hook, error) {
+	if Runtime(e.Manifest.Runtime) == RuntimeJS {
+		return OpenJS(e.Dir, JSLimits{})
 	}
-	switch Runtime(m.Runtime) {
-	case RuntimeJS:
-		if m.Entry == "" {
-			return errors.New("a js extension needs an entry")
-		}
-		if filepath.IsAbs(m.Entry) || strings.Contains(m.Entry, "..") {
-			return fmt.Errorf("entry %q is outside the extension", m.Entry)
-		}
-	default:
-		if len(m.Entrypoint) == 0 {
-			return errors.New("manifest needs an entrypoint")
-		}
-	}
-	if m.Protocol != Protocol {
-		return fmt.Errorf("protocol %d, this app speaks %d", m.Protocol, Protocol)
-	}
-	return nil
+	return Start(e)
 }
 
 // Extension is a discovered extension: its directory and its manifest.

@@ -1,8 +1,14 @@
 {
+  "id": "remit.cards.standard",
   "name": "cards",
   "version": "1.0.0",
-  "protocol": 1,
+  "apiVersion": 1,
   "runtime": "js",
   "entry": "main.js",
-  "capabilities": []
+  "capabilities": [],
+  "implements": {
+    "describe": 1,
+    "deriveBlock": 1
+  },
+  "produces": ["remit.basic", "remit.bidirectional", "remit.cloze"]
 }

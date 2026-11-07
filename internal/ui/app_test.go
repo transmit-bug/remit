@@ -520,12 +520,17 @@ func TestMinimumSizeControls(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.KeyK)
 	assertControl(t, tt, 720, 520, "Search actions")
-	assertControl(t, tt, 720, 520, "Review cards")
-	if err := tt.Click("Review cards"); err != nil {
+	assertControl(t, tt, 720, 520, "Edit notes")
+	tt.Advance(320 * time.Millisecond) // the palette's arrival
+	if err := tt.Click("Edit notes"); err != nil {
 		t.Fatal(err)
 	}
+	tt.Advance(320 * time.Millisecond) // the screen's change
 	if tt.HasText("Search actions") {
-		t.Error("the palette row was not clickable at the minimum")
+		t.Error("the palette stayed open after its row was clicked")
+	}
+	if !tt.HasText("Notebook") {
+		t.Error("the palette's action did not run")
 	}
 	tt.Advance(320 * time.Millisecond) // the card's transition
 
@@ -771,7 +776,7 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 // shapes a paragraph makes are the card plugin's decision, and the store only
 // stores what it is told to.
 func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
-	cards, err := lib.CreateCards(blockID, []core.Derived{{Kind: core.KindBasic}})
+	cards, err := lib.CreateCards(blockID, []core.Derived{{Type: core.TypeBasic}})
 	if err != nil {
 		return core.Card{}, err
 	}

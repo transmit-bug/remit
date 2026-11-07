@@ -9,6 +9,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
@@ -79,11 +80,21 @@ type App struct {
 	scheduler      *schedulerPlugin        // what schedules a review, and what a session is worth
 	summaryWord    summaryAnswer           // what the scheduling plugin says about a session
 	summaryWordFor string                  // the numbers that answer was given
-	rendered       map[core.ID]rendered    // what the plugin last answered for a card
-	facesCache     map[core.ID]facesAnswer // what the plugin last shaped for a card
+	resolver       *cards.Resolver        // what a paragraph asks and how a card reads, asked once per text
 	panel          panelMode               // what the user said about the note's panel
 	panelTab       panelTab                // outline or backlinks
+	notesWidth     float32                 // the notes column, as the divider left it
+	editorShare    float32                 // the document's percentage of the note's room
+	view           viewMode                // written in, beside its source, or read whole
+	readShare      float32                 // the document's percentage when written beside its source
+	outline        ui.OutlineState[int]    // the note's headings, as the panel lists them
+	outlineChosen  int                     // the row the user chose in the outline, -1 for none
+	outlineCurrent int                     // the heading the caret is under, -1 for none
+	outlineFor     core.ID                 // the note the outline was opened for
+	outlineShape   int                     // how many headings that note had
+	pendingJump    int                     // where a panel row asks the caret to go, -1 for none
 	tagFilter      string                  // the tag the notes are filtered by, empty for none
+	notesQuery     string                  // what the sidebar's search looks for
 	backlinks      []store.Backlink        // what points at the note open now
 	aboutWin       *mygo.Window            // the open About window, or nil
 
@@ -136,14 +147,19 @@ type App struct {
 // it never panics over a damaged library.
 func NewApp(opts ...Options) *App {
 	a := &App{
-		browse:      browseState{selected: -1},
-		rendered:    map[core.ID]rendered{},
-		facesCache:  map[core.ID]facesAnswer{},
-		editor:      editorState{},
-		relink:      relinkState{selected: -1},
-		pickLibrary: pickLibraryDir,
-		pickAnki:    pickAnkiPackage,
-		checkUpdate: checkForUpdate,
+		browse:         browseState{selected: -1},
+		notesWidth:     defaultNotesWidth,
+		editorShare:    defaultEditorShare,
+		readShare:      defaultReadShare,
+		outlineChosen:  -1,
+		outlineCurrent: -1,
+		pendingJump:    -1,
+		outlineFor:     "",
+		editor:         editorState{},
+		relink:         relinkState{selected: -1},
+		pickLibrary:    pickLibraryDir,
+		pickAnki:       pickAnkiPackage,
+		checkUpdate:    checkForUpdate,
 	}
 	// The importer reads the library open now, which a dropped archive can
 	// replace, so it takes it at call time rather than at construction.
@@ -230,4 +246,12 @@ func (a *App) View(c *ui.Context) {
 		a.relinkView(c, tk)
 		a.cardEditView(c, tk)
 	})
+
+	// A row chosen in the note's panel moves the caret after the pass: the
+	// editor above keeps its own view state, and a jump made inside the build
+	// is written back over by it in the next frame.
+	if a.pendingJump >= 0 {
+		a.jumpInDocument(c, a.pendingJump)
+		a.pendingJump = -1
+	}
 }

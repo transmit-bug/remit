@@ -7,6 +7,8 @@
 package review
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -122,10 +124,6 @@ type Deps struct {
 	// Summary is what a finished queue reports, when the app has a summary to
 	// give; false falls back to the one quiet line.
 	Summary func() (Summary, bool)
-	// Render asks for how a card reads, as markdown the host renders. false —
-	// no plugin, or one that failed — leaves the card reading its paragraph's
-	// own words rather than nothing.
-	Render   func(card core.ID, prompt, answer string) (string, string, bool)
 	Grade    func(core.ID, Rating) // record the answer and move on
 	Undo     func()                // take the newest answer back
 	Suspend  func(core.ID)         // out of the queue, history untouched
@@ -345,12 +343,9 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 				})
 			}
 
+			// A card's faces arrive already rendered: the type's templates
+			// turned its fields into markdown, the host turns markdown into text.
 			front, back := card.Prompt, card.Answer
-			if d.Render != nil {
-				if renderedFront, renderedBack, ok := d.Render(card.ID, front, back); ok {
-					front, back = renderedFront, renderedBack
-				}
-			}
 			ui.Text(c, maths.Render(front)).FontSize(design.TypeHeading).Bold()
 			ui.Divider(c)
 			if !s.Answered() {
@@ -466,26 +461,31 @@ func empty(c *ui.Context, d Deps) {
 		face.Opacity(rise).Translate(0, design.Rise*(1-rise))
 	}
 	face.Children(func() {
-		kit.Card(c, func() {
-			if !hasSummary {
+		t := c.Theme()
+		if !hasSummary {
+			kit.Card(c, func() {
 				kit.Empty(c, "coffee", msgs.NoCards(), func() {
 					ui.Button(c, msgs.BackToNotes()).MinHeight(design.ControlHeight).
 						OnClick(d.Home)
 				})
-				return
-			}
-			t := c.Theme()
-			ui.Column(c).Gap(design.SpaceS).Children(func() {
+			})
+			return
+		}
+		// A session's worth is read as three numbers first, then in words: the
+		// same card the queue used, wider, with the one action under it.
+		card := kit.Card(c, func() {
+			ui.Column(c).Gap(design.SpaceXL).Children(func() {
 				ui.Row(c).AlignItems(ui.Center).Gap(design.SpaceS).Children(func() {
 					ui.Icon(c, design.Icon("coffee")).
 						Width(design.IconMedium).Height(design.IconMedium).
-						TextColor(t.TextMuted)
-					ui.Text(c, msgs.SummaryTitle()).FontSize(design.TypeHeading).Bold()
+						TextColor(t.Accent)
+					ui.Text(c, msgs.SummaryTitle()).FontSize(design.TypeTitle).Bold()
 				})
-				ui.Text(c, msgs.SummaryReviewed(summary.Reviewed)).
-					FontSize(design.TypeBody).TextColor(t.Text)
-				ui.Text(c, msgs.SummaryDueTomorrow(summary.DueTomorrow)).
-					FontSize(design.TypeBody).TextColor(t.Text)
+				ui.Row(c).Gap(design.SpaceXXL).Children(func() {
+					kit.Stat(c, strconv.Itoa(summary.Reviewed), msgs.StatReviewed())
+					kit.Stat(c, strconv.Itoa(summary.DueTomorrow), msgs.StatDueTomorrow())
+					kit.Stat(c, fmt.Sprintf("%d%%", int(summary.Accuracy*100)), msgs.StatRemembered())
+				})
 				for _, line := range summary.Lines {
 					if strings.TrimSpace(line) == "" {
 						continue
@@ -493,14 +493,14 @@ func empty(c *ui.Context, d Deps) {
 					// A plugin's line is markdown; the screen renders it as one
 					// line of text with its formulas set.
 					ui.Text(c, maths.Render(line)).
-						FontSize(design.TypeBody).TextColor(t.Text)
+						FontSize(design.TypeBody).TextColor(t.TextMuted)
 				}
-				ui.Text(c, msgs.SummaryAccuracy(int(summary.Accuracy*100))).
-					FontSize(design.TypeBody).TextColor(t.TextMuted)
-				// Leaving is never blocked, whatever the tone.
-				ui.Button(c, msgs.BackToNotes()).AlignSelf(ui.Start).
+				// Leaving is never blocked, whatever the tone, and it is the one
+				// filled button on the screen.
+				ui.PrimaryButton(c, msgs.BackToNotes()).AlignSelf(ui.Start).
 					MinHeight(design.ControlHeight).OnClick(d.Home)
 			})
 		})
+		card.Width(520).MaxWidth(520).Padding(design.SpaceXXL)
 	})
 }

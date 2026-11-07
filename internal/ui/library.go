@@ -11,6 +11,7 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/queue"
@@ -390,6 +391,11 @@ func (a *App) reload() {
 	if a.lib == nil {
 		return
 	}
+	var runner *ext.JSRunner
+	if a.cards != nil {
+		runner = a.cards.runner
+	}
+	a.resolver = cards.New(runner, a.lib.Types())
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
 	a.due = a.dueToday()
 	a.review.Sync(a.due)

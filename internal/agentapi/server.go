@@ -41,9 +41,9 @@ type Library interface {
 	Due(time.Time, int) ([]core.Card, error)
 	Remaining(time.Time) (int, error)
 	Block(core.ID) (core.Block, bool)
-	// Faces is what a card asks, as the card plugin shapes it — this package
-	// has no splitting rules of its own.
-	Faces(core.Card) (prompt, answer string, link string)
+	// Faces is what a card asks, as the type's templates render it — this
+	// package has no splitting rules of its own.
+	Faces(core.Card) (front, back string, link string)
 }
 
 // Options configures a Server.
@@ -208,9 +208,8 @@ func (s *Server) postNote(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) postCard(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Block  string `json:"block"`
-		Prompt string `json:"prompt"`
-		Answer string `json:"answer"`
+		Block  string            `json:"block"`
+		Fields map[string]string `json:"fields"`
 	}
 	if !decode(w, r, &body) {
 		return
@@ -225,8 +224,9 @@ func (s *Server) postCard(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
-	if body.Prompt != "" || body.Answer != "" {
-		card.Prompt, card.Answer = body.Prompt, body.Answer
+	if len(body.Fields) > 0 {
+		card.Fields = body.Fields
+		card.Edited = true
 		if err := s.lib.SaveCard(card); err != nil {
 			writeStoreError(w, err)
 			return
@@ -268,9 +268,8 @@ func (s *Server) postReview(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) patchCard(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Prompt *string `json:"prompt"`
-		Answer *string `json:"answer"`
-		Status *string `json:"status"`
+		Fields *map[string]string `json:"fields"`
+		Status *string            `json:"status"`
 	}
 	if !decode(w, r, &body) {
 		return
@@ -280,11 +279,9 @@ func (s *Server) patchCard(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such card")
 		return
 	}
-	if body.Prompt != nil {
-		card.Prompt = *body.Prompt
-	}
-	if body.Answer != nil {
-		card.Answer = *body.Answer
+	if body.Fields != nil {
+		card.Fields = *body.Fields
+		card.Edited = len(*body.Fields) > 0
 	}
 	if body.Status != nil {
 		status, ok := core.ParseStatus(*body.Status)
@@ -322,28 +319,37 @@ func newNoteJSON(n core.Note) noteJSON {
 }
 
 // cardJSON is a card as the API shows it, with the schedule state a caller
-// needs to reason about it.
+// needs to reason about it: its type and fields as the library holds them, and
+// the rendered faces as a reader sees them.
 type cardJSON struct {
-	ID       string     `json:"id"`
-	Block    string     `json:"block"`
-	Prompt   string     `json:"prompt"`
-	Answer   string     `json:"answer"`
-	Status   string     `json:"status"`
-	Link     string     `json:"link"`
-	Due      *time.Time `json:"due,omitempty"`
-	LastSeen *time.Time `json:"last_review,omitempty"`
-	Reviews  int        `json:"reviews"`
+	ID       string            `json:"id"`
+	Block    string            `json:"block"`
+	Type     string            `json:"type"`
+	Ordinal  int               `json:"ordinal"`
+	Fields   map[string]string `json:"fields,omitempty"`
+	Edited   bool              `json:"edited,omitempty"`
+	Front    string            `json:"front"`
+	Back     string            `json:"back"`
+	Status   string            `json:"status"`
+	Link     string            `json:"link"`
+	Due      *time.Time        `json:"due,omitempty"`
+	LastSeen *time.Time        `json:"last_review,omitempty"`
+	Reviews  int               `json:"reviews"`
 }
 
 func (s *Server) newCardJSON(c core.Card) cardJSON {
-	prompt, answer, link := s.lib.Faces(c)
+	front, back, link := s.lib.Faces(c)
 	out := cardJSON{
-		ID:     string(c.ID),
-		Block:  string(c.Ref.Block),
-		Prompt: prompt,
-		Answer: answer,
-		Status: c.Status.String(),
-		Link:   link,
+		ID:      string(c.ID),
+		Block:   string(c.Ref.Block),
+		Type:    string(c.Type),
+		Ordinal: c.Ordinal,
+		Fields:  c.Fields,
+		Edited:  c.Edited,
+		Front:   front,
+		Back:    back,
+		Status:  c.Status.String(),
+		Link:    link,
 	}
 	if state, ok := s.lib.CardState(c.ID); ok {
 		due, last := state.Due, state.LastReview

@@ -1,29 +1,28 @@
 // A minimal card plugin: every paragraph asks one question, and the answer is
 // whatever comes after the first "::".
 //
-// Its manifest declares no capability, because it needs nothing but the text it
-// is handed. Copy this directory into <user data>/extensions/ to install it.
+// Its manifest declares no capability, because it needs nothing but the block
+// it is handed. Copy this directory into <user data>/extensions/ to install it.
+//
+// deriveBlock is the typed contract (spec §5): the plugin picks a card type
+// from the library's types and fills its fields. The host checks the answer,
+// stamps it with this plugin's identity and writes it; the card's faces are
+// rendered later by the host's template engine, not by the plugin.
 
 export function describe() {
-  return { name: "cards-mini", version: "0.1.0", protocol: 1 };
+  return { name: "cards-mini", version: "0.1.0" };
 }
 
-export function derive(block) {
+export function deriveBlock(block, types) {
   const text = (block && block.text) || "";
   const at = text.indexOf("::");
   if (at < 0) return [];
   return [{
-    kind: "basic",
+    typeId: "remit.basic",
     ordinal: 0,
-    front: text.slice(0, at).trim(),
-    back: text.slice(at + 2).trim(),
+    fields: {
+      Front: text.slice(0, at).trim(),
+      Back: text.slice(at + 2).trim(),
+    },
   }];
-}
-
-export function faces(card) {
-  return derive({ text: (card && card.text) || "" })[0] || { front: "", back: "" };
-}
-
-export function render(card) {
-  return { front: (card && card.front) || "", back: (card && card.back) || "" };
 }

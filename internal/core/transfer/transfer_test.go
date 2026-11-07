@@ -113,6 +113,45 @@ func TestArchiveDoesNotCarryTheIndex(t *testing.T) {
 	}
 }
 
+// The archive is the whole library: the card types travel with it, so an
+// unpacked copy renders from its own types.
+func TestArchiveCarriesTypes(t *testing.T) {
+	source := makeLibrary(t)
+	path := filepath.Join(t.TempDir(), "library.remitlib")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := Write(source, f); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	f.Close()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read archive: %v", err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		t.Fatalf("zip: %v", err)
+	}
+	want := map[string]bool{
+		"types/remit.basic.json":         false,
+		"types/remit.bidirectional.json": false,
+		"types/remit.cloze.json":         false,
+	}
+	for _, entry := range zr.File {
+		if seen, ok := want[entry.Name]; ok {
+			want[entry.Name] = seen || true
+		}
+	}
+	for name, seen := range want {
+		if !seen {
+			t.Errorf("archive has no %s", name)
+		}
+	}
+}
+
 func TestReadRefusesTraversal(t *testing.T) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
@@ -159,7 +198,7 @@ func size(t *testing.T, path string) int64 {
 // shapes a paragraph makes are the card plugin's decision, and the store only
 // stores what it is told to.
 func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
-	cards, err := lib.CreateCards(blockID, []core.Derived{{Kind: core.KindBasic}})
+	cards, err := lib.CreateCards(blockID, []core.Derived{{Type: core.TypeBasic}})
 	if err != nil {
 		return core.Card{}, err
 	}

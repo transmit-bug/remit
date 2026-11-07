@@ -393,11 +393,17 @@ func (im *importer) write() error {
 			return fmt.Errorf("importanki: cards row %d: block %d is not in note %q", cp.ankiID, cp.blockAt, note.Title)
 		}
 		card := core.Card{
-			ID:     cp.id,
-			Ref:    core.Reference{Block: note.Blocks[cp.blockAt].ID},
-			Prompt: cp.prompt,
-			Answer: cp.answer,
+			ID:  cp.id,
+			Ref: core.Reference{Block: note.Blocks[cp.blockAt].ID},
+			// Anki's own wording is the closest thing to a hand edit: the
+			// imported card carries its Front/Back as edited field values
+			// rather than following the block's "::" reading of them.
+			Type:   core.TypeBasic,
 			Status: cp.status,
+		}
+		if cp.prompt != "" || cp.answer != "" {
+			card.Fields = map[string]string{"Front": cp.prompt, "Back": cp.answer}
+			card.Edited = true
 		}
 		if err := im.lib.SaveCard(card); err != nil {
 			return fmt.Errorf("importanki: cards row %d: %w", cp.ankiID, err)

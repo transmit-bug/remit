@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +18,7 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "6"
+const schemaVersion = "7"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -54,13 +55,15 @@ CREATE TABLE cards (
 	status      TEXT NOT NULL,
 	stored      TEXT NOT NULL,
 	created     INTEGER NOT NULL,
-	prompt      TEXT NOT NULL,
-	answer      TEXT NOT NULL,
 	frozen      INTEGER NOT NULL,
 	frozen_text TEXT NOT NULL,
 	frozen_at   INTEGER NOT NULL,
 	live        INTEGER NOT NULL,
-	kind        TEXT NOT NULL DEFAULT '',
+	type        TEXT NOT NULL DEFAULT '',
+	producer_id TEXT NOT NULL DEFAULT '',
+	producer_version TEXT NOT NULL DEFAULT '',
+	edited      INTEGER NOT NULL DEFAULT 0,
+	fields      TEXT NOT NULL DEFAULT '{}',
 	ordinal     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX cards_block ON cards (block_id);
@@ -347,8 +350,9 @@ type cardRow struct {
 
 // cardColumns is the projection a card row is read through, in scan order.
 const cardColumns = `
-	c.id, c.block_id, c.status, c.stored, c.created, c.prompt, c.answer,
-	c.frozen, c.frozen_text, c.frozen_at, c.live, c.kind, c.ordinal,
+	c.id, c.block_id, c.status, c.stored, c.created,
+	c.frozen, c.frozen_text, c.frozen_at, c.live,
+	c.type, c.producer_id, c.producer_version, c.edited, c.fields, c.ordinal,
 	COALESCE(s.stability, 0), COALESCE(s.difficulty, 0), COALESCE(s.due, 0),
 	COALESCE(s.last_review, 0), COALESCE(s.reviews, 0), COALESCE(s.last_rating, ''),
 	COALESCE(s.last_seq, 0)`
@@ -367,13 +371,23 @@ func putCard(e execer, row cardRow) error {
 	if row.live {
 		live = 1
 	}
-	_, err := e.Exec(
+	edited := 0
+	if row.card.Edited {
+		edited = 1
+	}
+	fields, err := json.Marshal(row.card.Fields)
+	if err != nil {
+		return fmt.Errorf("store: encode card fields: %w", err)
+	}
+	_, err = e.Exec(
 		`INSERT OR REPLACE INTO cards
-		 (id, block_id, status, stored, created, prompt, answer, frozen, frozen_text, frozen_at, live, kind, ordinal)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 (id, block_id, status, stored, created, frozen, frozen_text, frozen_at, live,
+		  type, producer_id, producer_version, edited, fields, ordinal)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		string(row.card.ID), string(row.card.Ref.Block), row.card.Status.String(), row.stored.String(),
-		row.created.UnixNano(), row.card.Prompt, row.card.Answer, frozen, frozenText, frozenAt, live,
-		row.card.Kind.String(), row.card.Ordinal)
+		row.created.UnixNano(), frozen, frozenText, frozenAt, live,
+		string(row.card.Type), row.card.Producer.ID, row.card.Producer.Version, edited, string(fields),
+		row.card.Ordinal)
 	return err
 }
 
@@ -492,29 +506,34 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 	var out []cardRow
 	for rows.Next() {
 		var (
-			row                                       cardRow
-			id, block, status, stored, prompt, answer string
-			frozenText, lastRating, kind              string
-			created, frozenAt, due, lastReview        int64
-			frozen, live, ordinal                     int
-			stability, difficulty                     float64
-			reviews                                   int
+			row                                cardRow
+			id, block, status, stored, typ     string
+			producerID, producerVersion        string
+			frozenText, fields, lastRating     string
+			created, frozenAt, due, lastReview int64
+			frozen, live, ordinal, edited      int
+			stability, difficulty              float64
+			reviews                            int
 		)
-		err := rows.Scan(&id, &block, &status, &stored, &created, &prompt, &answer,
-			&frozen, &frozenText, &frozenAt, &live, &kind, &ordinal,
+		err := rows.Scan(&id, &block, &status, &stored, &created,
+			&frozen, &frozenText, &frozenAt, &live,
+			&typ, &producerID, &producerVersion, &edited, &fields, &ordinal,
 			&stability, &difficulty, &due, &lastReview, &reviews, &lastRating, &row.lastSeq)
 		if err != nil {
 			return nil, err
 		}
 		row.card.ID = core.ID(id)
 		row.card.Ref.Block = core.ID(block)
-		row.card.Prompt = prompt
-		row.card.Answer = answer
-		row.card.Status, _ = core.ParseStatus(status)
-		if kind != "" {
-			row.card.Kind, _ = core.ParseKind(kind)
+		row.card.Type = core.ID(typ)
+		row.card.Producer = core.Producer{ID: producerID, Version: producerVersion}
+		row.card.Edited = edited == 1
+		if fields != "" && fields != "null" && fields != "{}" {
+			if err := json.Unmarshal([]byte(fields), &row.card.Fields); err != nil {
+				return nil, fmt.Errorf("store: card %q: fields: %w", id, err)
+			}
 		}
 		row.card.Ordinal = ordinal
+		row.card.Status, _ = core.ParseStatus(status)
 		row.stored, _ = core.ParseStatus(stored)
 		if frozen == 1 {
 			row.card.Ref.Frozen = &core.Snapshot{Text: frozenText, At: time.Unix(0, frozenAt).UTC()}

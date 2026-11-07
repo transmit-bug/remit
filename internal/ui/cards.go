@@ -2,6 +2,8 @@ package ui
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
@@ -55,32 +57,32 @@ func (a *App) reconcileCards(c *ui.Context) {
 			// already has keep reading it.
 			continue
 		}
-		type place struct {
-			kind    core.Kind
-			ordinal int
+	type place struct {
+		typ     core.ID
+		ordinal int
+	}
+	wanted := make(map[place]bool, len(asked))
+	for _, d := range asked {
+		wanted[place{d.Type, d.Ordinal}] = true
+	}
+	held := map[place]bool{}
+	for _, card := range a.data.cards {
+		if card.Ref.Block != block.ID || card.Status == core.StatusSuspended {
+			continue
 		}
-		wanted := make(map[place]bool, len(asked))
-		for _, d := range asked {
-			wanted[place{d.Kind, d.Ordinal}] = true
-		}
-		held := map[place]bool{}
-		for _, card := range a.data.cards {
-			if card.Ref.Block != block.ID || card.Status == core.StatusSuspended {
-				continue
+		place := place{card.Type, card.Ordinal}
+		if !wanted[place] {
+			// The paragraph stopped asking this: it leaves the queue.
+			card.Status = core.StatusSuspended
+			if err := a.lib.SaveCard(card); err != nil {
+				a.report(c, "suspend card", err)
+				return
 			}
-			place := place{card.Kind, card.Ordinal}
-			if !wanted[place] {
-				// The paragraph stopped asking this: it leaves the queue.
-				card.Status = core.StatusSuspended
-				if err := a.lib.SaveCard(card); err != nil {
-					a.report(c, "suspend card", err)
-					return
-				}
-				wrote = true
-				continue
-			}
-			held[place] = true
+			wrote = true
+			continue
 		}
+		held[place] = true
+	}
 		missing := 0
 		for range wanted {
 			missing++
@@ -159,33 +161,42 @@ func cardColour(tk tokens, card core.Card) ui.Color {
 	}
 }
 
-// cardEditState is the card whose prompt and answer overrides are being edited.
+// cardEditState is the card whose fields are being edited: one value per
+// field of its type, in the type's order.
 type cardEditState struct {
-	open    bool
-	card    core.ID
-	prompt  string
-	answer  string
-	field   ui.Handle
-	answerF ui.Handle
+	open   bool
+	card   core.ID
+	typ    core.ID
+	fields []string
+	focus  []ui.Handle
 }
 
-// openCardEdit opens the override editor on a card, filled with what the card
-// says now: its own override, empty for a side it takes from its paragraph.
+// openCardEdit opens the field editor on a card, filled with what the card
+// says now: its own edited value for a field, empty for one it takes from its
+// paragraph.
 func (a *App) openCardEdit(c *ui.Context, id core.ID) {
 	card, ok := a.data.card(id)
 	if !ok {
 		return
 	}
-	a.cardEdit.open = true
-	a.cardEdit.card = id
-	a.cardEdit.prompt = card.Prompt
-	a.cardEdit.answer = card.Answer
-	a.cardEdit.field.Focus(c)
+	typ, ok := a.lib.Type(card.Type)
+	if !ok {
+		return
+	}
+	edit := cardEditState{open: true, card: id, typ: typ.ID,
+		fields: make([]string, len(typ.Fields)), focus: make([]ui.Handle, len(typ.Fields))}
+	for i, name := range typ.Fields {
+		edit.fields[i] = card.Fields[name]
+	}
+	a.cardEdit = edit
+	if len(edit.focus) > 0 {
+		edit.focus[0].Focus(c)
+	}
 }
 
-// cardEditView draws the override editor over the window: a prompt and an answer
-// that replace the paragraph's, and nothing else. An empty side takes the
-// paragraph's, which is what a card is until someone overrides it.
+// cardEditView draws the field editor over the window: one input per field of
+// the card's type. An empty field takes the paragraph's value, which is what
+// a card is until someone edits it.
 func (a *App) cardEditView(c *ui.Context, tk tokens) {
 	if !a.cardEdit.open {
 		return
@@ -196,7 +207,6 @@ func (a *App) cardEditView(c *ui.Context, tk tokens) {
 	ui.DialogBase(c, &a.cardEdit.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.scrim)
 		panel = kit.StylePanel(c, panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM))
-		panel.Label(msgs.EditCard())
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
@@ -206,14 +216,15 @@ func (a *App) cardEditView(c *ui.Context, tk tokens) {
 					OnClick(func() { a.cardEdit.open = false })
 			})
 
-			prompt := ui.TextInput(c, &a.cardEdit.prompt).
-				Placeholder(msgs.CardPrompt()).Bind(&a.cardEdit.field).
-				Label(msgs.CardPrompt()).MinHeight(tk.control)
-			answer := ui.TextInput(c, &a.cardEdit.answer).
-				Placeholder(msgs.CardAnswer()).Bind(&a.cardEdit.answerF).
-				Label(msgs.CardAnswer()).MinHeight(tk.control)
-			if prompt.Submitted() || answer.Submitted() {
-				submit = true
+			for i, value := range a.cardEdit.fields {
+				name := a.fieldName(i)
+				input := ui.TextInput(c, &a.cardEdit.fields[i]).
+					Placeholder(name).Bind(&a.cardEdit.focus[i]).
+					Label(name).MinHeight(tk.control)
+				if input.Submitted() {
+					submit = true
+				}
+				_ = value
 			}
 
 			ui.Row(c).Gap(tk.spaceS).Children(func() {
@@ -232,15 +243,37 @@ func (a *App) cardEditView(c *ui.Context, tk tokens) {
 	}
 }
 
-// writeCardEdit stores the card's overrides and closes the dialog.
+// fieldName names the i-th field of the card being edited.
+func (a *App) fieldName(i int) string {
+	typ, ok := a.lib.Type(a.cardEdit.typ)
+	if !ok || i >= len(typ.Fields) {
+		return ""
+	}
+	return typ.Fields[i]
+}
+
+// writeCardEdit stores the card's edited fields — only the non-empty ones, so
+// an emptied field goes back to following its paragraph — and closes the
+// dialog.
 func (a *App) writeCardEdit(c *ui.Context) {
 	card, ok := a.data.card(a.cardEdit.card)
 	if !ok {
 		a.cardEdit.open = false
 		return
 	}
-	card.Prompt = a.cardEdit.prompt
-	card.Answer = a.cardEdit.answer
+	typ, ok := a.lib.Type(card.Type)
+	if !ok {
+		a.cardEdit.open = false
+		return
+	}
+	fields := map[string]string{}
+	for i, name := range typ.Fields {
+		if i < len(a.cardEdit.fields) && strings.TrimSpace(a.cardEdit.fields[i]) != "" {
+			fields[name] = a.cardEdit.fields[i]
+		}
+	}
+	card.Fields = fields
+	card.Edited = len(fields) > 0
 	if err := a.lib.SaveCard(card); err != nil {
 		a.report(c, "edit card", err)
 		return

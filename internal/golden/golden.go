@@ -13,6 +13,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/ext"
@@ -101,33 +102,36 @@ func faces() []Face {
 		card   core.Card
 	}{
 		{"a paragraph with no separator asks everything and answers nothing",
-			core.Card{ID: "card_1", Ref: core.Reference{Block: "block_00000000000000000000000000000005"}}},
+			core.Card{ID: "card_1", Type: core.TypeBasic, Ref: core.Reference{Block: "block_00000000000000000000000000000005"}}},
 		{"the first separator divides, and later ones stay in the answer",
-			core.Card{ID: "card_2", Ref: core.Reference{Block: "block_00000000000000000000000000000004"}}},
+			core.Card{ID: "card_2", Type: core.TypeBasic, Ref: core.Reference{Block: "block_00000000000000000000000000000004"}}},
 		{"a card's own prompt replaces the paragraph's",
-			core.Card{ID: "card_3", Ref: core.Reference{Block: blockID}, Prompt: "asked another way"}},
+			core.Card{ID: "card_3", Type: core.TypeBasic, Ref: core.Reference{Block: blockID},
+				Fields: map[string]string{"Front": "asked another way"}, Edited: true}},
 		{"a card's own answer replaces the paragraph's",
-			core.Card{ID: "card_4", Ref: core.Reference{Block: blockID}, Answer: "answered another way"}},
+			core.Card{ID: "card_4", Type: core.TypeBasic, Ref: core.Reference{Block: blockID},
+				Fields: map[string]string{"Back": "answered another way"}, Edited: true}},
 		{"a lost card keeps only what it overrides",
-			core.Card{ID: "card_5", Ref: core.Reference{Block: "block_ffffffffffffffffffffffffffffffff"}, Prompt: "still asked"}},
+			core.Card{ID: "card_5", Type: core.TypeBasic, Ref: core.Reference{Block: "block_ffffffffffffffffffffffffffffffff"},
+				Fields: map[string]string{"Front": "still asked"}, Edited: true}},
 		{"a frozen card asks the text it kept, not the paragraph's",
-			core.Card{ID: "card_6", Ref: core.Reference{Block: blockID,
+			core.Card{ID: "card_6", Type: core.TypeBasic, Ref: core.Reference{Block: blockID,
 				Frozen: &core.Snapshot{Text: "old prompt :: old answer"}}}},
 		{"the first blank of a cloze is the gap, the rest show",
-			core.Card{ID: "card_7", Ref: core.Reference{Block: "block_00000000000000000000000000000002"},
-				Kind: core.KindCloze, Ordinal: 0}},
+			core.Card{ID: "card_7", Type: core.TypeCloze, Ref: core.Reference{Block: "block_00000000000000000000000000000002"},
+				Ordinal: 0}},
 		{"the second blank of a cloze is the gap, the first shows",
-			core.Card{ID: "card_8", Ref: core.Reference{Block: "block_00000000000000000000000000000002"},
-				Kind: core.KindCloze, Ordinal: 1}},
+			core.Card{ID: "card_8", Type: core.TypeCloze, Ref: core.Reference{Block: "block_00000000000000000000000000000002"},
+				Ordinal: 1}},
 		{"a cloze whose blank is gone asks what it can",
-			core.Card{ID: "card_9", Ref: core.Reference{Block: "block_00000000000000000000000000000002"},
-				Kind: core.KindCloze, Ordinal: 5}},
+			core.Card{ID: "card_9", Type: core.TypeCloze, Ref: core.Reference{Block: "block_00000000000000000000000000000002"},
+				Ordinal: 5}},
 		{"both ways asks the paragraph as written",
-			core.Card{ID: "card_10", Ref: core.Reference{Block: "block_00000000000000000000000000000003"},
-				Kind: core.KindBidirectional, Ordinal: 0}},
+			core.Card{ID: "card_10", Type: core.TypeBidirectional, Ref: core.Reference{Block: "block_00000000000000000000000000000003"},
+				Ordinal: 0}},
 		{"both ways asks it reversed",
-			core.Card{ID: "card_11", Ref: core.Reference{Block: "block_00000000000000000000000000000003"},
-				Kind: core.KindBidirectional, Ordinal: 1}},
+			core.Card{ID: "card_11", Type: core.TypeBidirectional, Ref: core.Reference{Block: "block_00000000000000000000000000000003"},
+				Ordinal: 1}},
 	}
 
 	runner, err := builtin.Cards(ext.JSLimits{})
@@ -135,20 +139,21 @@ func faces() []Face {
 		panic("golden: the card plugin did not start: " + err.Error())
 	}
 	defer runner.Close()
+	resolver := cards.New(runner, core.BuiltinTypes())
 
 	out := make([]Face, 0, len(cases))
 	for _, c := range cases {
-		prompt, answer, state := facesOf(runner, blocks, c.card)
+		got := resolver.Face(c.card, blocks)
 		face := Face{
 			Proves:         c.proves,
-			Kind:           c.card.Kind.String(),
+			Kind:           kindOf(c.card.Type),
 			Ordinal:        c.card.Ordinal,
-			OverridePrompt: c.card.Prompt,
-			OverrideAnswer: c.card.Answer,
-			Lost:           state == core.LinkLost,
-			Prompt:         prompt,
-			Answer:         answer,
-			State:          stateName(state),
+			OverridePrompt: c.card.Fields["Front"],
+			OverrideAnswer: c.card.Fields["Back"],
+			Lost:           got.State == core.LinkLost,
+			Prompt:         got.Front,
+			Answer:         got.Back,
+			State:          stateName(got.State),
 		}
 		if block, ok := blocks[c.card.Ref.Block]; ok {
 			face.Text = block.Text
@@ -159,6 +164,17 @@ func faces() []Face {
 		out = append(out, face)
 	}
 	return out
+}
+
+// kindOf names a card's type the way the frozen file writes it.
+func kindOf(typ core.ID) string {
+	switch typ {
+	case core.TypeCloze:
+		return "cloze"
+	case core.TypeBidirectional:
+		return "bidirectional"
+	}
+	return "basic"
 }
 
 // round trims floating-point noise to nine decimals. The same weights give the
@@ -222,27 +238,4 @@ func schedule_() []Step {
 		}
 	}
 	return out
-}
-
-// facesOf asks the card plugin what a card asks, and applies the card's own
-// overrides: the shapes are the plugin's, the overrides are the card's.
-func facesOf(runner *ext.JSRunner, blocks core.BlockSet, card core.Card) (prompt, answer string, state core.LinkState) {
-	text, state := card.Ref.Text(blocks)
-	prompt, answer = text, ""
-	var answered struct {
-		Front string `json:"front"`
-		Back  string `json:"back"`
-	}
-	params := map[string]any{"text": text, "kind": card.Kind.String(), "ordinal": card.Ordinal}
-	if err := runner.Call("faces", params, &answered); err != nil {
-		panic("golden: the card plugin could not shape a card: " + err.Error())
-	}
-	prompt, answer = answered.Front, answered.Back
-	if card.Prompt != "" {
-		prompt = card.Prompt
-	}
-	if card.Answer != "" {
-		answer = card.Answer
-	}
-	return prompt, answer, state
 }

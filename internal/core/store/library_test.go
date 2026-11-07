@@ -27,8 +27,11 @@ func TestCreateCardsDerivesPlaces(t *testing.T) {
 	}
 
 	cards, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{
-		{Kind: core.KindCloze, Ordinal: 0, Prompt: "The […] blank and the second one.", Answer: "first"},
-		{Kind: core.KindCloze, Ordinal: 1, Prompt: "The first blank and the […].", Answer: "second"},
+		{Type: core.TypeCloze, Ordinal: 0,
+			Fields:   map[string]string{"Text": "The {{first}} blank and the {{second}} one."},
+			Producer: core.Producer{ID: "remit.cards.standard", Version: "1.0.0"}},
+		{Type: core.TypeCloze, Ordinal: 1,
+			Fields: map[string]string{"Text": "The {{first}} blank and the {{second}} one."}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -37,22 +40,29 @@ func TestCreateCardsDerivesPlaces(t *testing.T) {
 		t.Fatalf("the cloze made %d cards, want 2", len(cards))
 	}
 	for i, card := range cards {
-		if card.Kind != core.KindCloze || card.Ordinal != i {
-			t.Errorf("card %d is %v/%d, want cloze/%d", i, card.Kind, card.Ordinal, i)
+		if card.Type != core.TypeCloze || card.Ordinal != i {
+			t.Errorf("card %d is %v/%d, want cloze/%d", i, card.Type, card.Ordinal, i)
 		}
 	}
-	// The faces a card asks are the card plugin's shaping; the store keeps the
-	// place it was told to keep.
+	// A card persists only what identifies it — type, ordinal, producer. The
+	// field values the pass computed are resolved from the block at render
+	// time, so they are not on disk.
+	if cards[0].Fields != nil || cards[0].Edited {
+		t.Errorf("the derived fields were stored: %+v", cards[0])
+	}
+	if cards[0].Producer.ID != "remit.cards.standard" || cards[0].Producer.Version != "1.0.0" {
+		t.Errorf("the producer was not kept: %+v", cards[0].Producer)
+	}
 
 	both, err := lib.CreateCards(note.Blocks[1].ID, []core.Derived{
-		{Kind: core.KindBidirectional, Ordinal: 0, Prompt: "the gaps between reviews", Answer: "spacing"},
-		{Kind: core.KindBidirectional, Ordinal: 1, Prompt: "spacing", Answer: "the gaps between reviews"},
+		{Type: core.TypeBidirectional, Ordinal: 0},
+		{Type: core.TypeBidirectional, Ordinal: 1},
 	})
 	if err != nil || len(both) != 2 {
 		t.Fatalf("the both-ways paragraph made %v (%v)", both, err)
 	}
-	if both[1].Kind != core.KindBidirectional || both[1].Ordinal != 1 {
-		t.Errorf("the reversed card is %v/%d", both[1].Kind, both[1].Ordinal)
+	if both[1].Type != core.TypeBidirectional || both[1].Ordinal != 1 {
+		t.Errorf("the reversed card is %v/%d", both[1].Type, both[1].Ordinal)
 	}
 
 	if _, err := lib.CreateCards(note.Blocks[3].ID, nil); !errors.Is(err, store.ErrNothingToAsk) {
@@ -72,11 +82,11 @@ func TestCreateCardsDerivesPlaces(t *testing.T) {
 	if len(all) != 4 {
 		t.Fatalf("the library holds %d cards after reopening, want 4", len(all))
 	}
-	seen := map[core.Kind]int{}
+	seen := map[core.ID]int{}
 	for _, card := range all {
-		seen[card.Kind]++
+		seen[card.Type]++
 	}
-	if seen[core.KindCloze] != 2 || seen[core.KindBidirectional] != 2 || seen[core.KindBasic] != 0 {
-		t.Errorf("kinds after reopening: %+v", seen)
+	if seen[core.TypeCloze] != 2 || seen[core.TypeBidirectional] != 2 {
+		t.Errorf("types after reopening: %+v", seen)
 	}
 }

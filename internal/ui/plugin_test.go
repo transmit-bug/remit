@@ -20,7 +20,7 @@ func withPlugin(t *testing.T, dir string, source string) (*App, testLibrary) {
 	lib := t.TempDir()
 	seed := seedLibrary(t, lib)
 	extDir := t.TempDir()
-	manifest := `{"name":"cards","version":"1","protocol":1,"runtime":"js","entry":"main.js"}`
+	manifest := `{"id":"test.cards","name":"cards","version":"1","apiVersion":1,"runtime":"js","entry":"main.js","implements":{"deriveBlock":1}}`
 	if err := os.WriteFile(filepath.Join(extDir, "extension.json"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -35,18 +35,17 @@ func withPlugin(t *testing.T, dir string, source string) (*App, testLibrary) {
 	return NewApp(Options{LibraryDir: lib, Cards: runner}), seed
 }
 
-// A plugin's render is what the card reads: the host draws what the plugin
-// answered, not what it would have said itself.
+// A plugin's derived fields are what the card reads, through its type's
+// templates: the host draws the template's answer over the plugin's fields,
+// not anything the host would have said itself.
 func TestRenderedCardComesFromThePlugin(t *testing.T) {
 	a, _ := withPlugin(t, "", `
-export function derive(block) {
+export function deriveBlock(block) {
   const text = (block && block.text) || "";
   const at = text.indexOf("::");
   if (at < 0) return [];
-  return [{ kind: "basic", ordinal: 0, front: text.slice(0, at).trim(), back: text.slice(at + 2).trim() }];
-}
-export function render(card) {
-  return { front: "PLUGIN " + card.front, back: "PLUGIN " + card.back };
+  return [{ typeId: "remit.basic", ordinal: 0,
+    fields: { Front: "PLUGIN " + text.slice(0, at).trim(), Back: text.slice(at + 2).trim() } }];
 }
 `)
 	tt := ui.NewTester(a.View, 1024, 720)
@@ -55,7 +54,7 @@ export function render(card) {
 	tt.Advance(320 * time.Millisecond) // the answer unfolding
 
 	if !tt.HasText("PLUGIN Spacing beats cramming") {
-		t.Fatalf("the card does not read what the plugin answered; texts %q", tt.Texts())
+		t.Fatalf("the card does not read the plugin's fields; texts %q", tt.Texts())
 	}
 }
 
@@ -66,12 +65,9 @@ func TestBrokenPluginFallsBackToTheParagraph(t *testing.T) {
 		name   string
 		source string
 	}{
-		{"throws", `export function derive() { throw new Error("no"); }
-export function render() { throw new Error("no"); }`},
-		{"loops", `export function derive() { for (;;) {} }
-export function render() { for (;;) {} }`},
-		{"answers with nonsense", `export function derive() { return "nonsense"; }
-export function render() { return 42; }`},
+		{"throws", `export function deriveBlock() { throw new Error("no"); }`},
+		{"loops", `export function deriveBlock() { for (;;) {} }`},
+		{"answers with nonsense", `export function deriveBlock() { return 42; }`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			a, _ := withPlugin(t, "", tc.source)
@@ -159,7 +155,7 @@ func TestTheShippedPluginDerivesCards(t *testing.T) {
 			made = append(made, card)
 		}
 	}
-	if len(made) != 1 || made[0].Kind != core.KindBasic {
+	if len(made) != 1 || made[0].Type != core.TypeBasic {
 		t.Fatalf("the plugin made %+v, want one basic card", made)
 	}
 	prompt, answer, _ := a.faces(made[0])
@@ -174,7 +170,7 @@ func TestSchedulerPluginWordTheSummary(t *testing.T) {
 	dir := t.TempDir()
 	_ = seedLibrary(t, dir)
 	extDir := t.TempDir()
-	manifest := `{"name":"scheduler","version":"1","protocol":1,"runtime":"js","entry":"main.js"}`
+	manifest := `{"id":"test.scheduler","name":"scheduler","version":"1","apiVersion":1,"runtime":"js","entry":"main.js","implements":{"policy":1,"summary":1}}`
 	if err := os.WriteFile(filepath.Join(extDir, "extension.json"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
 	}

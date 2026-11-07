@@ -66,7 +66,7 @@
       "kind": "cloze",
       "ordinal": 0,
       "prompt": "The […] blank and the second one.",
-      "answer": "first",
+      "answer": "The first blank and the second one.",
       "state": "live"
     },
     {
@@ -75,7 +75,7 @@
       "kind": "cloze",
       "ordinal": 1,
       "prompt": "The first blank and the […] one.",
-      "answer": "second",
+      "answer": "The first blank and the second one.",
       "state": "live"
     },
     {
@@ -84,7 +84,7 @@
       "kind": "cloze",
       "ordinal": 5,
       "prompt": "The first blank and the second one.",
-      "answer": "",
+      "answer": "The first blank and the second one.",
       "state": "live"
     },
     {

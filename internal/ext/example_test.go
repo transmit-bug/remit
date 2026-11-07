@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ext"
 )
 
@@ -21,35 +22,27 @@ func TestTheGuidesExamplePluginRuns(t *testing.T) {
 		t.Errorf("the example names itself %q", runner.Name())
 	}
 
+	types := []any{map[string]any{"id": string(core.TypeBasic), "fields": []string{"Front", "Back"}, "version": 1}}
 	var cards []struct {
-		Kind    string `json:"kind"`
-		Ordinal int    `json:"ordinal"`
-		Front   string `json:"front"`
-		Back    string `json:"back"`
+		TypeID  string            `json:"typeId"`
+		Ordinal int               `json:"ordinal"`
+		Fields  map[string]string `json:"fields"`
 	}
-	if err := runner.Call("derive", map[string]any{"id": "block_1", "text": "spacing :: the gaps"}, &cards); err != nil {
-		t.Fatalf("derive: %v", err)
+	block := map[string]any{"id": "block_1", "text": "spacing :: the gaps"}
+	if err := runner.Call("deriveBlock", []any{block, types}, &cards); err != nil {
+		t.Fatalf("deriveBlock: %v", err)
 	}
-	if len(cards) != 1 || cards[0].Kind != "basic" || cards[0].Front != "spacing" || cards[0].Back != "the gaps" {
+	if len(cards) != 1 || cards[0].TypeID != string(core.TypeBasic) ||
+		cards[0].Fields["Front"] != "spacing" || cards[0].Fields["Back"] != "the gaps" {
 		t.Fatalf("the example answered %+v", cards)
-	}
-
-	var faces struct {
-		Front string `json:"front"`
-		Back  string `json:"back"`
-	}
-	if err := runner.Call("faces", map[string]any{"text": "spacing :: the gaps", "kind": "basic", "ordinal": 0}, &faces); err != nil {
-		t.Fatalf("faces: %v", err)
-	}
-	if faces.Front != "spacing" || faces.Back != "the gaps" {
-		t.Errorf("the example shaped %+v", faces)
 	}
 
 	// A paragraph without a separator asks nothing, and says so by answering
 	// with no cards rather than by failing.
+	plain := map[string]any{"id": "block_1", "text": "just prose"}
 	cards = nil
-	if err := runner.Call("derive", map[string]any{"id": "block_1", "text": "just prose"}, &cards); err != nil {
-		t.Fatalf("derive on prose: %v", err)
+	if err := runner.Call("deriveBlock", []any{plain, types}, &cards); err != nil {
+		t.Fatalf("deriveBlock on prose: %v", err)
 	}
 	if len(cards) != 0 {
 		t.Errorf("prose made %+v", cards)

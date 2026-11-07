@@ -21,6 +21,8 @@ type editorState struct {
 	title       ui.Handle
 	body        ui.Handle
 	findOpen    bool   // the in-document find bar is up
+	linkOpen    bool   // the popover a link's address is typed in is up
+	linkURL     string // what that popover holds
 	findQuery   string // what it looks for
 	findCurrent int    // which match is shown
 	findJumped  string // the query the selection was last put on
@@ -113,31 +115,48 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	}
 
 	edited, retitled := false, false
-	ui.Column(c).Grow(1).MinWidth(0).Padding(tk.spaceXL).Gap(tk.spaceM).Children(func() {
-		title := ui.TextInput(c, &note.Title).FontSize(tk.typeTitle).Bold().
-			Placeholder(m(c).NoteTitle()).Bind(&a.editor.title).
-			Label(m(c).NoteTitle())
-		if a.editor.focus {
-			a.editor.title.Focus(c)
-			a.editor.focus = false
-		}
-		if title.Changed() {
-			retitled = true
-		}
+	msgs := m(c)
+	// The band under the frame: the format bar, then the paper itself, then the
+	// status line. The paper is one centred measure; nothing else is boxed.
+	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
+		a.formatBar(c, tk)
+		ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Stretch).Justify(ui.Center).Children(func() {
+			ui.Column(c).Grow(1).MaxWidth(tk.paperWidth).
+				Padding(tk.spaceXXL, tk.gutter).Children(func() {
+				title := ui.TextInput(c, &note.Title).FontSize(tk.typeDisplay).Bold().
+					Placeholder(msgs.NoteTitle()).Bind(&a.editor.title).
+					Label(msgs.NoteTitle()).
+					Background(ui.RGBA(0, 0, 0, 0)).Border(0, tk.Border).
+					Padding(tk.spaceS, 0)
+				if a.editor.focus {
+					a.editor.title.Focus(c)
+					a.editor.focus = false
+				}
+				if title.Changed() {
+					retitled = true
+				}
 
-		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
-			ui.Text(c, m(c).EditorHint()).
-				FontSize(tk.typeSmall).TextColor(tk.TextMuted).Grow(1)
-			ui.Button(c, "").Label(m(c).PanelTitle()).Tooltip(m(c).PanelTitle()).
-				Children(func() { tk.icon(c, "sparkles", iconSmall) }).
-				OnClick(a.togglePanel)
+				ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Padding(0, 0, tk.spaceM, 0).Children(func() {
+					ui.Text(c, msgs.EditorHint()).
+						FontSize(tk.typeCaption).TextColor(tk.textFaint).Grow(1).SingleLine()
+					if n := len(outlineEntries(note.Blocks)); n > 0 {
+						ui.Text(c, msgs.HeadingCount(n)).
+							FontSize(tk.typeCaption).TextColor(tk.textFaint)
+					}
+				})
+
+				// EditorBase, not Editor: the paper is the surface, so the editor
+				// brings no box of its own.
+				if richtext.EditorBase(c, a.editor.doc, richtext.EditorOptions{
+					Label: msgs.NoteBody(),
+					Font:  noteFont(tk),
+					Theme: noteTheme(tk),
+				}).Grow(1).MinHeight(tk.control * 12).Bind(&a.editor.body).Changed() {
+					edited = true
+				}
+			})
 		})
-
-		if richtext.Editor(c, a.editor.doc).
-			Grow(1).MinHeight(tk.control * 8).
-			Label(m(c).NoteBody()).Bind(&a.editor.body).Changed() {
-			edited = true
-		}
+		a.statusLine(c, tk)
 	})
 	switch {
 	case edited:
@@ -145,6 +164,34 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	case retitled:
 		a.saveNote(c)
 	}
+}
+
+// statusLine is the paper's quiet foot: what the note holds. 11px, pencil, on
+// the same line as the writing, never a toolbar.
+func (a *App) statusLine(c *ui.Context, tk tokens) {
+	msgs := m(c)
+	text := a.editor.doc.Text().String()
+	words := len(strings.Fields(text))
+	paragraphs := a.editor.doc.Text().ParagraphCount()
+	cards := a.data.cardsInNote(a.editor.draft)
+	ui.Row(c).Justify(ui.Center).Children(func() {
+		ui.Row(c).Grow(1).MaxWidth(tk.paperWidth).AlignItems(ui.Center).Gap(tk.spaceS).
+			Padding(tk.spaceS, tk.gutter).Children(func() {
+			ui.Text(c, msgs.WordCount(words)).
+				FontSize(tk.typeCaption).TextColor(tk.TextMuted)
+			ui.Text(c, "·").FontSize(tk.typeCaption).TextColor(tk.textFaint)
+			ui.Text(c, msgs.ParagraphCount(paragraphs)).
+				FontSize(tk.typeCaption).TextColor(tk.TextMuted)
+			if cards > 0 {
+				ui.Text(c, "·").FontSize(tk.typeCaption).TextColor(tk.textFaint)
+				ui.Text(c, msgs.CardCount(cards)).
+					FontSize(tk.typeCaption).TextColor(tk.TextMuted)
+			}
+			ui.Spacer(c)
+			ui.Text(c, msgs.Saved()).
+				FontSize(tk.typeCaption).TextColor(tk.textFaint)
+		})
+	})
 }
 
 // findBar shows the in-document find bar: it counts the query in the note open
@@ -200,9 +247,144 @@ func (a *App) secondPane(c *ui.Context, tk tokens) {
 	if a.editor.draft.ID == "" {
 		return
 	}
-	ui.Scroll(c).Grow(1).Padding(tk.spaceXL).Children(func() {
+	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.spaceXL).Children(func() {
 		markdown.View(c, documentText(a.editor.draft), nil)
 	})
+}
+
+// readView is the note as it reads, whole: its title, then the document with its
+// headings, lists and links, and no control over it.
+func (a *App) readView(c *ui.Context, tk tokens) {
+	a.editor.follow(a.data)
+	if a.editor.draft.ID == "" {
+		kit.Empty(c, "file-text", m(c).NoNotes(), func() {
+			ui.Button(c, m(c).NewNote()).MinHeight(tk.control).OnClick(func() { a.newNote(c) })
+		})
+		return
+	}
+	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.spaceXL).Children(func() {
+		ui.Column(c).MaxWidth(readWidth).Gap(tk.spaceM).Children(func() {
+			ui.Text(c, a.editor.draft.Title).FontSize(tk.typeTitle).Bold()
+			markdown.View(c, documentText(a.editor.draft), nil)
+		})
+	})
+}
+
+// readWidth caps the measure of a note read whole, as the stats page caps its
+// own: a paragraph wider than this is hard to follow.
+const readWidth float32 = 760
+
+// formatBar is the row of formatting controls above the document: what the
+// selection holds, and the one click that changes it. The document is the
+// richtext editor's; the controls are MyGo's, so the keys, the focus and the
+// names assistive technology reads come with them.
+func (a *App) formatBar(c *ui.Context, tk tokens) {
+	doc := a.editor.doc
+	if doc == nil {
+		return
+	}
+	msgs := m(c)
+	f := doc.Formatting()
+	style := msgs.StyleBody()
+	switch f.Paragraph.Heading {
+	case 1:
+		style = msgs.StyleTitle()
+	case 2:
+		style = msgs.StyleHeading()
+	case 3:
+		style = msgs.StyleSubheading()
+	}
+	if f.ParagraphsMixed {
+		style = ""
+	}
+
+	ui.Toolbar(c, func() {
+		ui.MenuButton(c, style, func(menu *ui.Menu) {
+			for _, choice := range []struct {
+				name  string
+				level int
+			}{
+				{msgs.StyleBody(), 0},
+				{msgs.StyleTitle(), 1},
+				{msgs.StyleHeading(), 2},
+				{msgs.StyleSubheading(), 3},
+			} {
+				if menu.Item(choice.name).Checked(f.Paragraph.Heading == choice.level).Chosen() {
+					doc.SetHeading(choice.level)
+				}
+			}
+		}).Label(msgs.ParagraphStyle())
+		formatRule(c, tk)
+		formatToggle(c, tk, "bold", msgs.FmtBold(), f.Bold == richtext.FormatOn, doc.ToggleBold)
+		formatToggle(c, tk, "italic", msgs.FmtItalic(), f.Italic == richtext.FormatOn, doc.ToggleItalic)
+		formatToggle(c, tk, "underline", msgs.FmtUnderline(), f.Underline == richtext.FormatOn, doc.ToggleUnderline)
+		formatToggle(c, tk, "strikethrough", msgs.FmtStrikethrough(), f.Strikethrough == richtext.FormatOn, doc.ToggleStrikethrough)
+		formatToggle(c, tk, "code", msgs.FmtCode(), f.Code == richtext.FormatOn, doc.ToggleCode)
+		formatRule(c, tk)
+		formatToggle(c, tk, "list", msgs.FmtBullets(), f.Paragraph.List == richtext.Bullets, func() { doc.ToggleList(richtext.Bullets) })
+		formatToggle(c, tk, "list-ordered", msgs.FmtNumbers(), f.Paragraph.List == richtext.Numbers, func() { doc.ToggleList(richtext.Numbers) })
+		formatToggle(c, tk, "square-check", msgs.FmtTasks(), f.Paragraph.List == richtext.Tasks, func() { doc.ToggleList(richtext.Tasks) })
+		formatToggle(c, tk, "quote", msgs.FmtQuote(), f.Paragraph.Quote, doc.ToggleQuote)
+		formatToggle(c, tk, "braces", msgs.FmtCodeBlock(), f.Paragraph.CodeBlock, doc.ToggleCodeBlock)
+		formatRule(c, tk)
+		link := ui.Button(c, "").Label(msgs.Link()).Tooltip(msgs.Link()).KeepFocus().
+			MinWidth(tk.control + 2).MinHeight(tk.control + 2).Justify(ui.Center).
+			Children(func() { tk.icon(c, "link-2", iconSmall) })
+		if f.Link != "" {
+			link.Background(tk.Surface.Mix(tk.Accent, 0.16)).TextColor(tk.Accent)
+		}
+		if link.Clicked() {
+			a.editor.linkURL, a.editor.linkOpen = f.Link, true
+		}
+		ui.Popover(c, link, &a.editor.linkOpen, func() {
+			ui.Row(c).Gap(tk.spaceS).AlignItems(ui.Center).Padding(tk.spaceS).Children(func() {
+				field := ui.TextInput(c, &a.editor.linkURL).
+					Placeholder(msgs.LinkURL()).Width(220).AutoFocus().Label(msgs.LinkURL())
+				set := func() {
+					doc.SetLink(strings.TrimSpace(a.editor.linkURL))
+					a.editor.linkOpen = false
+				}
+				if field.Submitted() {
+					set()
+				}
+				if ui.PrimaryButton(c, msgs.Link()).Clicked() {
+					set()
+				}
+				if f.Link != "" && ui.Button(c, msgs.LinkRemove()).Clicked() {
+					doc.SetLink("")
+					a.editor.linkOpen = false
+				}
+			})
+		})
+	}).Label(msgs.FormatBar()).
+		MinHeight(tk.barHeight).
+		Padding(tk.spaceXS, tk.spaceL).
+		Background(tk.Surface).
+		BorderWidth(0, 0, tk.hairline, 0).BorderColor(tk.Border)
+}
+
+// formatRule is the hairline between two groups of the format bar: a line, not
+// a gap, so the groups read as groups.
+func formatRule(c *ui.Context, tk tokens) {
+	ui.Divider(c).Height(tk.typeBody).AlignSelf(ui.Center)
+}
+
+// formatToggle is one control of the format bar: the glyph that names the
+// format, a label for assistive technology and a tooltip, and the face it wears
+// while the selection holds the format. The focus stays on the bar, so a second
+// click applies a second format.
+func formatToggle(c *ui.Context, tk tokens, icon, label string, on bool, run func()) ui.Element {
+	button := ui.Button(c, "").Label(label).Tooltip(label).KeepFocus().
+		Children(func() { tk.icon(c, icon, iconSmall) }).
+		MinWidth(tk.control + 2).MinHeight(tk.control + 2).Justify(ui.Center).
+		Radius(tk.radiusControl).TextColor(tk.TextMuted)
+	if on {
+		button.Background(tk.Surface.Mix(tk.Accent, 0.14)).TextColor(tk.Accent)
+	}
+	if button.Clicked() {
+		run()
+	}
+	return button
 }
 
 // saveDocument writes what the editor holds: its paragraphs back into blocks,
@@ -249,7 +431,17 @@ func (a *App) makeCard(c *ui.Context, i int) {
 	}
 	block := a.editor.draft.Blocks[i]
 	derived, ok := a.deriveCards(block.Text)
-	if !ok || len(derived) == 0 || derived[0].Prompt == "" {
+	asks := false
+	if ok {
+		for _, card := range derived {
+			for _, value := range card.Fields {
+				if value != "" {
+					asks = true
+				}
+			}
+		}
+	}
+	if !asks {
 		c.Toast(m(c).BlockEmpty())
 		return
 	}
