@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"errors"
 	"io/fs"
 	"log/slog"
@@ -13,147 +12,12 @@ import (
 
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
-	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
-	"github.com/transmit-bug/remit/internal/settings"
-	"github.com/transmit-bug/remit/internal/update"
 )
-
-// Options configures an App.
-type Options struct {
-	// LibraryDir is the directory the library lives in. Empty means the one a
-	// previous run remembered, and with none remembered the window opens on
-	// the start view instead of creating a library behind the user's back.
-	// Tests pass t.TempDir() so they never touch the user's Documents.
-	LibraryDir string
-	// DataDir is the app's user data directory, where settings.json lives
-	// (main passes mygo.App.Path(mygo.PathUserData)). Empty means settings are
-	// neither read nor written, as in a test that drives the window alone.
-	DataDir string
-	// ChooseLibrary picks the folder a library lives in. It is mygo.Dialog's
-	// folder picker unless a test replaces it: a native dialog cannot be
-	// answered headlessly.
-	ChooseLibrary func() (string, error)
-	// ChooseAnki picks the Anki package the palette's import action reads,
-	// mygo.Dialog's file picker unless a test replaces it.
-	ChooseAnki func() (string, error)
-	// ImportAnki imports the package at path into the open library. It is
-	// importanki.Import unless a test replaces it.
-	ImportAnki func(path string) (importanki.Report, error)
-	// Cards replaces the card plugin the app ships. A test hands in one that
-	// throws, to prove the review goes on without it.
-	Cards *ext.JSRunner
-	// WithoutCards opens the library with no card plugin at all: no paragraph
-	// makes a new card, and a card reads its paragraph's own words.
-	WithoutCards bool
-	// Scheduler replaces the scheduling plugin the app ships.
-	Scheduler *ext.JSRunner
-	// WithoutScheduler schedules with the app's own defaults, and stamps no
-	// scheduler on new reviews.
-	WithoutScheduler bool
-	// BindHotkey binds the global shortcut, replacing the one bound now, and
-	// reports a combination that is invalid or already taken. cmd registers it
-	// on MyGo's GlobalShortcut; a test replaces it.
-	BindHotkey func(accelerator string) error
-	// AgentControls is the loopback agent API as the settings page drives it.
-	// cmd passes its own; nil leaves the page saying there is no such service.
-	AgentControls AgentControls
-	// CheckUpdate looks for a newer version. It is checkForUpdate unless a
-	// test replaces it.
-	CheckUpdate func(context.Context, settings.Settings) (update.Result, error)
-}
-
-// libraryData is the library as the views read it: a snapshot the app retakes
-// after every write, so that no frame has to touch the store. Everything the
-// notes list, the editor, review and browse show is derived here once, per
-// write.
-type libraryData struct {
-	notes  []core.Note
-	cards  []core.Card
-	byID   map[core.ID]core.Card
-	blocks core.BlockSet
-
-	// titles name a note, so a card can say which note it came from.
-	titles map[core.ID]string
-	// perBlock and perNote are the card counts the editor's badge and the
-	// note's summary show.
-	perBlock map[core.ID]int
-	perNote  map[core.ID]int
-	// noteOf is the note a block belongs to, so a card can open its source.
-	noteOf map[core.ID]core.ID
-	// tags counts how many notes carry each tag, and noteTags is what each note
-	// carries: the sidebar's filter reads them without asking the store.
-	tags     map[string]int
-	noteTags map[core.ID][]string
-}
-
-// newLibraryData derives the snapshot from the store's notes and cards.
-func newLibraryData(notes []core.Note, cards []core.Card) libraryData {
-	d := libraryData{
-		notes:    notes,
-		tags:     map[string]int{},
-		noteTags: map[core.ID][]string{},
-		cards:    cards,
-		byID:     make(map[core.ID]core.Card, len(cards)),
-		blocks:   make(core.BlockSet),
-		titles:   make(map[core.ID]string, len(notes)),
-		perBlock: make(map[core.ID]int, len(cards)),
-		perNote:  make(map[core.ID]int, len(notes)),
-		noteOf:   make(map[core.ID]core.ID, len(notes)),
-	}
-	for _, note := range notes {
-		d.titles[note.ID] = note.Title
-		seen := map[string]bool{}
-		for _, block := range note.Blocks {
-			if block.ID == "" {
-				continue
-			}
-			d.blocks[block.ID] = block
-			d.noteOf[block.ID] = note.ID
-			for _, tag := range core.Tags(block.Text) {
-				if seen[tag] {
-					continue
-				}
-				seen[tag] = true
-				d.noteTags[note.ID] = append(d.noteTags[note.ID], tag)
-				d.tags[tag]++
-			}
-		}
-	}
-	for _, card := range cards {
-		d.byID[card.ID] = card
-		d.perBlock[card.Ref.Block]++
-		if note, ok := d.noteOf[card.Ref.Block]; ok {
-			d.perNote[note]++
-		}
-	}
-	return d
-}
-
-// card is a card as the library has it now.
-func (d libraryData) card(id core.ID) (core.Card, bool) {
-	card, ok := d.byID[id]
-	return card, ok
-}
-
-// cardsForBlock counts the cards that reference a block.
-func (d libraryData) cardsForBlock(id core.ID) int { return d.perBlock[id] }
-
-// cardsInNote counts the cards that reference any block of a note.
-func (d libraryData) cardsInNote(note core.Note) int { return d.perNote[note.ID] }
-
-// noteOfBlock finds the note that holds a block.
-func (d libraryData) noteOfBlock(id core.ID) (core.ID, bool) {
-	note, ok := d.noteOf[id]
-	return note, ok
-}
-
-// titleOf names a note.
-func (d libraryData) titleOf(note core.ID) string { return d.titles[note] }
 
 // messageWidth caps a message that is about the library rather than a card:
 // the error state's one line, centred in the window.
@@ -247,74 +111,6 @@ func (a *App) close() {
 		slog.Warn("remit: close library", "err", err)
 	}
 	a.lib = nil
-}
-
-// loadSettings reads the app's settings from its data directory, so that a
-// choice made in an earlier run is shown in this one. Settings that cannot be
-// read leave the defaults and a log line: a broken settings file must not keep
-// the window from opening.
-func (a *App) loadSettings() {
-	if a.settingsDir == "" {
-		a.syncPrefs()
-		return
-	}
-	s, err := settings.Load(a.settingsDir)
-	if err != nil {
-		slog.Warn("remit: read settings", "err", err)
-		a.syncPrefs()
-		return
-	}
-	a.settings = s
-	if a.dir == "" {
-		a.dir = s.LibraryDir
-	}
-	a.syncPrefs()
-}
-
-// Settings returns the app's preferences as the last read from or written to
-// disk. It is a copy: change them with UpdateSettings, so the write, the page
-// and the services that read one preference all see the change.
-func (a *App) Settings() settings.Settings { return a.settings }
-
-// UpdateSettings applies fn to the settings, writes them atomically and with
-// owner-only permissions, reads them back and tells whoever registered
-// OnSettings. What the app and its page show is then what the file holds; a
-// write that fails leaves the settings as they were and returns the error.
-func (a *App) UpdateSettings(fn func(*settings.Settings)) error {
-	next := a.settings
-	fn(&next)
-	if a.settingsDir != "" {
-		if err := settings.Save(a.settingsDir, next); err != nil {
-			return err
-		}
-		saved, err := settings.Load(a.settingsDir)
-		if err != nil {
-			return err
-		}
-		next = saved
-	}
-	a.settings = next
-	a.syncPrefs()
-	if a.settingsChanged != nil {
-		a.settingsChanged(next)
-	}
-	return nil
-}
-
-// OnSettings registers a function told about the settings whenever the app
-// writes them, which is how the tray's pause item follows the page and the page
-// follows the tray. Setting it again replaces the previous one.
-func (a *App) OnSettings(fn func(settings.Settings)) {
-	a.settingsChanged = fn
-	if fn != nil {
-		fn(a.settings)
-	}
-}
-
-// remember writes the library the user chose into the settings, keeping every
-// other preference, so the next start opens it without asking again.
-func (a *App) remember(dir string) error {
-	return a.UpdateSettings(func(s *settings.Settings) { s.LibraryDir = dir })
 }
 
 // DefaultLibraryDir is where a library goes when the caller names none:
