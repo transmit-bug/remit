@@ -3,6 +3,9 @@
 一条规则的落地稿：**UI 的每一个需求，都先问「哪个官方组件承载这个含义」；问不到才手写，并且记录。**
 手写一个官方已有的组件是 bug，不是风格选择——它一次丢掉键盘、焦点、禁用态、无障碍角色。
 
+> 状态列与测试名按今日代码和 `docs/ui-inventory.md`（v0.8.1）校正：`已建` / `已合规` 是
+> 今天的行为，`待迁` 是下一片 S3，测试名以仓库里真实存在者为准。本稿是规则，清单是逐面状态。
+
 ## 1. 规则
 
 1. **需求，不是形状。**「两栏用户能拖」是需求，「一个 Width(220) 的 Column」是形状。
@@ -43,16 +46,18 @@
 | 命令面板 | `ui.List` 承载行：选择、键盘、读屏角色都在组件里 | — | 已迁 |
 | 重链选择器 | 自绘 overlay + 行 + 键盘 | `ui.Autocomplete` | 待迁 |
 | 浏览（卡片列表） | `ListState` + 手拼行 | `ui.Table` + `Columns`/`Sortable`/`CellMenu` | 待迁 |
-| 笔记栏 | 视图 `Segmented`（编辑/分栏/阅读）+ `⋯` 菜单 + 面板开关，在 `Split` 之外，所以三种视图里都在 | — | 已建 |
-| 格式工具条 | `Toolbar` + `MenuButton` + `richtext` 的 `Formatting()`/`Toggle*`，含链接气泡 | — | 已建（`RoleFormatMenu` 仍未接系统菜单） |
-| 段落手柄（+ / ⋮⋮） | 无（用 `::` 后缀制卡） | `Document.VisibleParagraphs()` 的 `ParagraphBox` + `MenuButton` | 待评估 |
+| 笔记栏 | 视图 `Segmented`（编辑/分栏/阅读）+ `⋯` 菜单 + 面板开关，在窗口顶栏里，所以在三种视图里都在 | — | 已建 |
+| 格式工具条 | `Toolbar` + `MenuButton` + `richtext` 的 `Formatting()`/`Toggle*`，含链接气泡 | — | 已建 |
+| 段落手柄（+ / ⋮⋮） | 无（`::` 分隔符即制卡） | `Document.VisibleParagraphs()` 的 `ParagraphBox` + `MenuButton` | 待评估 |
 | 标签筛选 | `ButtonBase` chip | `ui.ToggleGroup` | 待迁 |
 | 笔记列表 | `ui.Sidebar` ✓ | — | 已合规 |
+| 纸面 + 状态行 | 居中的 `Column(MaxWidth 760)` + `Row`/`Text` 11px | — | 已建（组合） |
+| 卡片徽章条 | 文档上方的徽章 `Button` 行 + 字段编辑 `ui.DialogBase` | — | 已建（组合） |
 | 编辑器 | `richtext.Editor` ✓ | — | 已合规 |
 | 查找 | `ui.FindBar` ✓ | — | 已合规 |
 | 搜索框 | `ui.SearchField` ✓ | — | 已合规 |
 | 统计图表 | `ui/chart` ✓ | — | 已合规 |
-| 复习页 | `Progress` + `Button` + `kit.Keycap` ✓ | — | 已合规 |
+| 复习页 | `Progress` + `Button` + `kit.Keycap` + 完成总结的 `kit.Card`/`kit.Stat` ✓ | — | 已合规 |
 | 设置页 | `Form`/`Field`/`Switch`/`Segmented` ✓ | — | 已合规 |
 | 反馈 | `c.Toast` ✓ | — | 已合规 |
 
@@ -73,9 +78,12 @@
 | `TestOutlineFollowsTheCaret` | 光标进入某标题下 → 大纲把该项标为当前 | 手写列表没有当前节 | 有 |
 | `TestFormatBarBoldsTheSelection` | 选中文本点 B → `doc.Formatting().Bold == FormatOn`，且落盘 | 没有格式条 | 有 |
 | `TestViewModesSwitchPanes` | 编辑/分栏/阅读三个视图各自成立，切换器始终可达 | 面板里没有视图概念 | 有 |
-| `TestMinimumSizeControls` | 命令面板的行在最小窗口可点，且点了会执行 | 手写行缺选择语义 | 有（S3 的 List 换来） |
-| `TestBrowseSortsByColumn` | 点表头 → 行序变化 | 手拼行没有排序 | 待 S3 |
-| `TestRelinkNarrowsAsYouType` | 输入收窄候选、Enter 选中、Esc 取消 | 自绘行缺焦点/键盘 | 待 S3 |
+| `TestMinimumSizeControls` | 命令面板的行在最小窗口可点，且点了会执行 | 手写行缺选择语义 | 有 |
+| `TestPalette` | 输入收窄候选、键盘选中并执行 | 自绘行缺键盘/选择 | 有 |
+| `TestNotebookFillsTheWindowHeight` | 纸面填满工作区，而不是停在内容高度 | 内容高的纸面留下死白 | 有 |
+| `TestThePageCountsCardsNotBlocks` | 页面只报卡数，不出现“blocks” | 数块会多报，且说的是实现 | 有 |
+| `TestBrowseSortsByColumn` | 点表头 → 行序变化 | 手拼行没有排序 | 待建（S3） |
+| `TestRelinkNarrowsAsYouType` | 输入收窄候选、Enter 选中、Esc 取消 | 自绘行缺焦点/键盘 | 待建（S3） |
 
 配套文件 `docs/ui-inventory.md`：一屏一块，每行写「需求 → 组件 → 核对的 MyGo 版本」。
 评审看这张表，不看注释。
@@ -88,15 +96,17 @@
 `narrowWindow` + `panelShown` 保留：窄窗口自动收起面板是产品规则，不是布局计算。
 验收：`TestSplitResizesTheNotesColumn`、`TestOutlineFollowsTheCaret`，最小宽度下文档仍可输入。
 
-**S2 · 笔记页工具**（已完成；字号、导出仍缺，见清单）
-顶栏：文档保存状态、`编辑/分栏/阅读` 视图（分栏用 `Split` + `secondPane` 点亮现成的阅读视图）、
-字号 `MenuButton`、导出 `MenuButton`、`⋯` 溢出菜单。
-格式条：`Toolbar` + 分组 + `Divider` + `richtext.Formatting()` 驱动 `Toggle` 状态 + `RoleFormatMenu`。
-验收：`TestFormatBarBoldsSelection`、`TestViewModesSwitchPanes`。
+**S2 · 笔记页工具**（已完成的部分：视图切换、格式条、`⋯` 菜单；未做：字号、导出）
+顶栏：`编辑/分栏/阅读` 视图（分栏用 `Split` + `secondPane` 点亮现成的阅读视图）、
+`⋯` 溢出菜单（导入 Anki / 在光标处制卡 / 设置）。标题与保存状态在纸面与状态行，不进
+顶栏（`ui-redesign.md` §2.1 已改判）。
+格式条：`Toolbar` + 分组 + `Divider` + `richtext.Formatting()` 驱动按下态。
+验收：`TestFormatBarBoldsTheSelection`、`TestViewModesSwitchPanes`。
 
 **S3 · 列表**（剩余：browse、relink、标签；palette 已随 S2 完成）
-`browse` → `ui.Table`；`relink` → `ui.Autocomplete`；`palette` → `ui.List`；标签 → `ToggleGroup`。
-验收：`TestBrowseSortsByColumn`、`TestRelinkNarrowsAsYouType`、`TestPaletteTypesToChoose`。
+`browse` → `ui.Table`；`relink` → `ui.Autocomplete`；标签 → `ToggleGroup`。
+验收：`TestBrowseSortsByColumn`、`TestRelinkNarrowsAsYouType`（两个都待建）；palette 的门
+是已存在的 `TestPalette`。
 
 每片各自一个 PR，squash 合并；PR 正文写清「用了哪个组件、删了哪段手写、哪些测试证明它真的是组件在干活」。
 
