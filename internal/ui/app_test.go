@@ -666,7 +666,7 @@ func TestCorruptLibrary(t *testing.T) {
 	}
 	assertControl(t, tt, 1024, 720, "Try again")
 
-	if err := os.WriteFile(config, []byte(`{"format": "remit/1"}`), 0o644); err != nil {
+	if err := os.WriteFile(config, []byte(`{"format": "remit/2"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := tt.Click("Try again"); err != nil {

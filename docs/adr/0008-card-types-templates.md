@@ -50,10 +50,10 @@ This refines the spec's "card = type + fields": what a card file stores is
 **edited** it (`edited: true`). At render time the derive plugin answers the
 fields for the card's source (the block for a live reference, the snapshot
 for a frozen one), the card's stored fields overlay it field by field, and
-the type's templates render the two sides. This keeps today's behaviour
+the type's templates render the two sides. This keeps the behaviour
 one-for-one — a live card follows its block, an edit sticks, a frozen card
-reads its snapshot — without a whole-library derive at migration time and
-without the store depending on the extension loader. The producer stamp
+reads its snapshot — without a whole-library derive and without the store
+depending on the extension loader. The producer stamp
 stays on the card, so a derived card remains explainable after its plugin is
 gone.
 
@@ -68,9 +68,10 @@ entry stays out of the product; the note is the form.
 
 ## Consequences
 
-- Card files migrate once (format version bump): `kind` maps to a type,
-  stored prompt/answer overrides become edited `Front`/`Back` fields.
-  `reviews.jsonl` is untouched; history stays replayable.
+- There is no migration path and no older format to read: `remit/2` is the
+  first released format, and a library declaring another is refused on open.
+  Pre-1.0, no released libraries exist to keep (the migration layer built on
+  this branch was deleted rather than shipped).
 - The agent API's card shape is `type` + `fields` + rendered `front`/`back`;
   a breaking change, allowed pre-1.0.
 - Golden faces stay byte-identical for basic and bidirectional cards; the

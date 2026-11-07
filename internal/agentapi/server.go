@@ -121,7 +121,7 @@ func (s *Server) getLibrary(w http.ResponseWriter, r *http.Request) {
 		due = n
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"format": "remit/1",
+		"format": "remit/2",
 		"notes":  len(notes),
 		"cards":  len(s.lib.Cards()),
 		"due":    due,

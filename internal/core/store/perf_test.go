@@ -4,6 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/queue"
+	"github.com/transmit-bug/remit/internal/core/schedule"
+	"github.com/transmit-bug/remit/internal/core/store"
 	"os"
 	"path/filepath"
 	"sort"
@@ -11,10 +15,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/transmit-bug/remit/internal/core/queue"
-	"github.com/transmit-bug/remit/internal/core/schedule"
-	"github.com/transmit-bug/remit/internal/core/store"
 )
 
 // The v1 budget: a due-queue read and a review write stay well inside what a
@@ -166,8 +166,7 @@ func writeFixture(t *testing.T, dir string, cards int, now time.Time) {
 		for i := start; i < end; i++ {
 			card := map[string]string{
 				"block":   blockID(i),
-				"prompt":  "",
-				"answer":  "",
+				"type":    string(core.TypeBasic),
 				"status":  "new",
 				"created": created,
 			}

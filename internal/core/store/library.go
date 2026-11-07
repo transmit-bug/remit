@@ -43,11 +43,10 @@ const (
 	logName    = "reviews.jsonl"
 	indexDir   = ".remit"
 	indexName  = "index.sqlite"
-
-	// formatVersion is what this build writes; legacyFormat is the remit/1
-	// layout (prompt/answer/kind card files), which Open migrates once.
+	// formatVersion is what this build writes and the only one it reads: a
+	// library declaring anything else is refused, pre-1.0 with no released
+	// libraries to keep.
 	formatVersion = "remit/2"
-	legacyFormat  = "remit/1"
 
 	noteKind  = "note"
 	cardKind  = "card"
@@ -192,17 +191,6 @@ func Open(dir string, opts Options) (*Library, error) {
 	if params.IsZero() {
 		params = opts.Params.Normalized()
 	}
-
-	// A remit/1 library migrates once on open: every card file is rewritten
-	// in the type+fields shape, and remit.json declares the new format. The
-	// review log is not touched; rewriting the card files moves their marks,
-	// so the index rebuilds itself on the same open.
-	if config.Format == legacyFormat {
-		if err := migrateLibrary(dir, params, config.Extensions); err != nil {
-			return nil, err
-		}
-	}
-
 	library := newLibrary(dir, opts)
 	library.params = params
 	// What schedules this library is what the app says it schedules with, or
@@ -214,47 +202,6 @@ func Open(dir string, opts Options) (*Library, error) {
 		return nil, err
 	}
 	return library, nil
-}
-
-// migrateLibrary rewrites a remit/1 library in place, once: every card file
-// trades its prompt/answer overrides and kind for type, fields and edited,
-// and remit.json declares the format this build writes. reviews.jsonl is left
-// alone — scheduling history never changes shape.
-func migrateLibrary(dir string, params schedule.Params, extensions []string) error {
-	entries, err := os.ReadDir(filepath.Join(dir, cardsDir))
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	for _, entry := range entries {
-		id, ok := splitCardName(entry.Name())
-		if entry.IsDir() || !ok {
-			continue
-		}
-		path := filepath.Join(dir, cardsDir, entry.Name())
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		card, created, migrated, err := decodeCard(id, data)
-		if err != nil {
-			return err
-		}
-		if !migrated {
-			continue
-		}
-		encoded, err := encodeCard(card, created)
-		if err != nil {
-			return err
-		}
-		if err := writeFileAtomic(path, encoded); err != nil {
-			return err
-		}
-	}
-	config, err := encodeConfig(params, extensions)
-	if err != nil {
-		return err
-	}
-	return writeFileAtomic(filepath.Join(dir, configName), config)
 }
 
 func newLibrary(dir string, opts Options) *Library {
@@ -650,20 +597,9 @@ func (l *Library) readCards() (map[core.ID]cardEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-		card, created, migrated, err := decodeCard(id, data)
+		card, created, err := decodeCard(id, data)
 		if err != nil {
 			return nil, err
-		}
-		if migrated {
-			// A remit/1 card file that arrived after the one-time
-			// migration: rewrite it where it stands.
-			encoded, err := encodeCard(card, created)
-			if err != nil {
-				return nil, err
-			}
-			if err := writeFileAtomic(filepath.Join(l.dir, cardsDir, entry.Name()), encoded); err != nil {
-				return nil, err
-			}
 		}
 		cards[id] = cardEntry{card: card, created: created}
 	}
@@ -930,7 +866,7 @@ func (l *Library) Card(id core.ID) (core.Card, bool) {
 		return core.Card{}, false
 	}
 	l.sources.cards++
-	card, _, _, err := decodeCard(id, data)
+	card, _, err := decodeCard(id, data)
 	if err != nil {
 		return core.Card{}, false
 	}
@@ -1538,7 +1474,7 @@ func decodeConfig(data []byte) (configFile, error) {
 	if err := json.Unmarshal(data, &config); err != nil {
 		return configFile{}, fmt.Errorf("store: %s: %w", configName, err)
 	}
-	if config.Format != formatVersion && config.Format != legacyFormat {
+	if config.Format != formatVersion {
 		return configFile{}, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, formatVersion)
 	}
 	return config, nil

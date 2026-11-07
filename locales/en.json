@@ -258,7 +258,7 @@
     "placeholders": {
       "reason": {
         "type": "String",
-        "example": "remit.json: format \"rust/1\", want \"remit/1\""
+        "example": "remit.json: format \"rust/1\", want \"remit/2\""
       }
     }
   },

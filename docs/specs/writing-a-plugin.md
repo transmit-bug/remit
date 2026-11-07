@@ -26,7 +26,7 @@ down.
 A library runs the plugins its own config names, in `remit.json`:
 
 ```json
-{ "format": "remit/1", "extensions": ["cards-mini"] }
+{ "format": "remit/2", "extensions": ["cards-mini"] }
 ```
 
 `store.Library.EnabledExtensions` / `SetEnabledExtensions` read and write that
