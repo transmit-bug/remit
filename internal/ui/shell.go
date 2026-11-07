@@ -214,7 +214,7 @@ func (a *App) outlineList(c *ui.Context, tk tokens) {
 	}
 	for _, entry := range entries {
 		at := entry.offset
-		ui.ButtonBase(c).Key(entry.label).Justify(ui.Start).
+		ui.ButtonBase(c.Key(entry.label)).Justify(ui.Start).
 			Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control - tk.spaceS).
 			Radius(tk.radiusControl).Label(entry.label).
 			OnClick(func() { a.jumpInDocument(c, at) }).
@@ -245,7 +245,7 @@ func (a *App) backlinkList(c *ui.Context, tk tokens) {
 	for _, link := range a.backlinks {
 		label := msgs.BacklinkAt(link.NoteTitle, link.Paragraph)
 		target := link
-		ui.ButtonBase(c).Key(string(link.Block)).Justify(ui.Start).
+		ui.ButtonBase(c.Key(string(link.Block))).Justify(ui.Start).
 			Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control - tk.spaceS).
 			Radius(tk.radiusControl).Label(label).
 			OnClick(func() {
@@ -284,7 +284,7 @@ func (a *App) tagFilterBar(c *ui.Context, tk tokens) {
 			for _, tag := range tags {
 				chosen := a.tagFilter == tag
 				label := "#" + tag
-				chip := ui.ButtonBase(c).Key(label).
+				chip := ui.ButtonBase(c.Key(label)).
 					Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control-tk.spaceS).
 					Radius(tk.radiusControl).Label(label).
 					Border(tk.hairline, tk.Border)
@@ -565,7 +565,7 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 				ui.Text(c, m(c).NoActions()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
 			}
 			for i, it := range items {
-				row := ui.ButtonBase(c).Key(it.label).Gap(tk.spaceS).Justify(ui.Start).
+				row := ui.ButtonBase(c.Key(it.label)).Gap(tk.spaceS).Justify(ui.Start).
 					MinHeight(tk.control).Padding(tk.spaceXS, tk.spaceS).
 					Radius(tk.radiusControl).Label(it.label)
 				if i == sel {

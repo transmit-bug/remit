@@ -144,7 +144,7 @@ func (a *App) moveRelink(n, delta int) {
 // note it lives in. A click chooses it there and then, as the palette's rows
 // run their action.
 func (a *App) relinkRowView(c *ui.Context, tk tokens, row relinkRow, chosen bool, i int) {
-	item := ui.ButtonBase(c).Key(row.block).Gap(tk.spaceXS).Justify(ui.Start).
+	item := ui.ButtonBase(c.Key(row.block)).Gap(tk.spaceXS).Justify(ui.Start).
 		MinHeight(tk.control).Padding(tk.spaceXS, tk.spaceS).
 		Radius(tk.radiusControl).Label(row.text)
 	if chosen {

@@ -5,13 +5,13 @@ go 1.27.3
 tool github.com/egoist/mygo/cmd/mygo
 
 require (
-	github.com/egoist/mygo v0.7.4
+	github.com/MoeForge/moejs v0.1.0-alpha.11
+	github.com/egoist/mygo v0.8.1
 	github.com/open-spaced-repetition/go-fsrs/v4 v4.0.0
 	modernc.org/sqlite v1.61.1
 )
 
 require (
-	github.com/MoeForge/moejs v0.1.0-alpha.11 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/ebitengine/purego v0.11.1 // indirect
 	github.com/go-text/typesetting v0.3.5 // indirect

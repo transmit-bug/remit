@@ -117,7 +117,7 @@ func (a *App) cardsStrip(c *ui.Context, tk tokens, note core.Note) {
 			for _, para := range paras {
 				for _, card := range para.cards {
 					label := m(c).CardOnParagraph(para.paragraph, len(para.cards))
-					badge := ui.ButtonBase(c).Key(string(card.ID)).
+					badge := ui.ButtonBase(c.Key(string(card.ID))).
 						Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control-tk.spaceS).
 						Radius(tk.radiusControl).Background(tk.Surface).
 						Border(tk.hairline, tk.ratingEdge(cardColour(tk, card))).

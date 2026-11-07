@@ -322,7 +322,7 @@ func statusBar(c *ui.Context, s *State) {
 // suspending — the one action that never touches history — is the way out.
 func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 	msgs := locales.In(c.Locale())
-	kit.StyleCard(c, ui.Column(c).Key(string(card.ID)).
+	kit.StyleCard(c, ui.Column(c.Key(string(card.ID))).
 		Padding(design.SpaceXL).Gap(design.SpaceL)).Transition(advance).
 		Children(func() {
 			switch card.State {
