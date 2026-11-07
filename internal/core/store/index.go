@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -18,7 +19,7 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "7"
+const schemaVersion = "8"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -64,6 +65,7 @@ CREATE TABLE cards (
 	producer_version TEXT NOT NULL DEFAULT '',
 	edited      INTEGER NOT NULL DEFAULT 0,
 	fields      TEXT NOT NULL DEFAULT '{}',
+	fields_text TEXT NOT NULL DEFAULT '',
 	ordinal     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX cards_block ON cards (block_id);
@@ -382,13 +384,32 @@ func putCard(e execer, row cardRow) error {
 	_, err = e.Exec(
 		`INSERT OR REPLACE INTO cards
 		 (id, block_id, status, stored, created, frozen, frozen_text, frozen_at, live,
-		  type, producer_id, producer_version, edited, fields, ordinal)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		  type, producer_id, producer_version, edited, fields, fields_text, ordinal)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		string(row.card.ID), string(row.card.Ref.Block), row.card.Status.String(), row.stored.String(),
 		row.created.UnixNano(), frozen, frozenText, frozenAt, live,
 		string(row.card.Type), row.card.Producer.ID, row.card.Producer.Version, edited, string(fields),
-		row.card.Ordinal)
+		cardFieldsText(row.card.Fields), row.card.Ordinal)
 	return err
+}
+
+// cardFieldsText flattens a card's hand-edited field values for the search. It
+// holds the values and not the keys: a search is for what the card says. The
+// newline keeps a match inside one value, and sorting the keys keeps the same
+// edit the same text, so an index and a rebuild agree.
+func cardFieldsText(fields map[string]string) string {
+	keys := make([]string, 0, len(fields))
+	for key, value := range fields {
+		if value != "" {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	values := make([]string, 0, len(keys))
+	for _, key := range keys {
+		values = append(values, fields[key])
+	}
+	return strings.Join(values, "\n")
 }
 
 func deleteCard(e execer, card core.ID) error {

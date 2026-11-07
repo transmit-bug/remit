@@ -20,14 +20,28 @@ func TestSearchCards(t *testing.T) {
 		{Text: "spacing beats cramming :: yes"},
 		{Text: "half of 50% is 25% :: maths"},
 		{Text: "under_score matters :: yes"},
+		{Text: "::: type remit.basic\nFront: a form field\nBack: a form answer\n:::"},
 	}})
 	if err != nil {
 		t.Fatalf("note: %v", err)
 	}
+	var cards []core.Card
 	for _, b := range note.Blocks {
-		if _, err := firstCard(lib, b.ID); err != nil {
+		card, err := firstCard(lib, b.ID)
+		if err != nil {
 			t.Fatalf("card: %v", err)
 		}
+		cards = append(cards, card)
+	}
+
+	// An edit is the only way a card's own text enters the index: what it did
+	// not edit is still the block's text, and the word "rewritten" is nowhere
+	// but the override.
+	edited := cards[0]
+	edited.Fields = map[string]string{"Front": "rewritten 7% tighter_phrasing"}
+	edited.Edited = true
+	if err := lib.SaveCard(edited); err != nil {
+		t.Fatalf("save edited card: %v", err)
 	}
 
 	tests := []struct {
@@ -40,19 +54,51 @@ func TestSearchCards(t *testing.T) {
 		{"nothing", "quantum", 0},
 		{"percent is literal", "50%", 1},
 		{"underscore is literal", "under_score", 1},
-		{"a bare percent matches nothing literal", "%", 1},
+		{"a bare percent matches only the literal percents", "%", 2},
+		{"a bare underscore matches only the literal underscores", "_", 2},
 		{"empty", "   ", 0},
+		{"an edited field value", "rewritten", 1},
+		{"an edited field value case insensitively", "REWRITTEN", 1},
+		{"a percent in an edited field value is literal", "7%", 1},
+		{"an underscore in an edited field value is literal", "tighter_phrasing", 1},
+		{"a field row in the block body", "form field", 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := lib.SearchCards(tt.query)
-			if err != nil {
-				t.Fatalf("SearchCards(%q): %v", tt.query, err)
-			}
-			if len(got) != tt.want {
-				t.Errorf("SearchCards(%q) = %d cards, want %d", tt.query, len(got), tt.want)
-			}
+			assertSearch(t, lib, tt.query, tt.want)
 		})
+	}
+
+	t.Run("a rebuilt index finds an edit", func(t *testing.T) {
+		if err := lib.Rebuild(); err != nil {
+			t.Fatalf("rebuild: %v", err)
+		}
+		assertSearch(t, lib, "rewritten", 1)
+		assertSearch(t, lib, "tighter_phrasing", 1)
+	})
+
+	t.Run("clearing an edit drops its text", func(t *testing.T) {
+		cleared := edited
+		cleared.Fields = nil
+		cleared.Edited = false
+		if err := lib.SaveCard(cleared); err != nil {
+			t.Fatalf("save cleared card: %v", err)
+		}
+		assertSearch(t, lib, "rewritten", 0)
+		assertSearch(t, lib, "tighter_phrasing", 0)
+		// The block the card renders from is still what a search finds.
+		assertSearch(t, lib, "spacing", 1)
+	})
+}
+
+func assertSearch(t *testing.T, lib *store.Library, query string, want int) {
+	t.Helper()
+	got, err := lib.SearchCards(query)
+	if err != nil {
+		t.Fatalf("SearchCards(%q): %v", query, err)
+	}
+	if len(got) != want {
+		t.Errorf("SearchCards(%q) = %d cards, want %d", query, len(got), want)
 	}
 }
 
