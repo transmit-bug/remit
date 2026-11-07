@@ -113,33 +113,31 @@ func (a *App) editorView(c *ui.Context, tk tokens) {
 	}
 
 	edited, retitled := false, false
-	ui.Scroll(c).Grow(1).Padding(tk.spaceXL).Children(func() {
-		ui.Column(c).Gap(tk.spaceM).Children(func() {
-			title := ui.TextInput(c, &note.Title).FontSize(tk.typeTitle).Bold().
-				Placeholder(m(c).NoteTitle()).Bind(&a.editor.title).
-				Label(m(c).NoteTitle())
-			if a.editor.focus {
-				a.editor.title.Focus(c)
-				a.editor.focus = false
-			}
-			if title.Changed() {
-				retitled = true
-			}
+	ui.Column(c).Grow(1).MinWidth(0).Padding(tk.spaceXL).Gap(tk.spaceM).Children(func() {
+		title := ui.TextInput(c, &note.Title).FontSize(tk.typeTitle).Bold().
+			Placeholder(m(c).NoteTitle()).Bind(&a.editor.title).
+			Label(m(c).NoteTitle())
+		if a.editor.focus {
+			a.editor.title.Focus(c)
+			a.editor.focus = false
+		}
+		if title.Changed() {
+			retitled = true
+		}
 
-			ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
-				ui.Text(c, m(c).EditorHint()).
-					FontSize(tk.typeSmall).TextColor(tk.TextMuted).Grow(1)
-				ui.Button(c, "").Label(m(c).PanelTitle()).Tooltip(m(c).PanelTitle()).
-					Children(func() { tk.icon(c, "sparkles", iconSmall) }).
-					OnClick(a.togglePanel)
-			})
-
-			if richtext.Editor(c, a.editor.doc).
-				Fill().MinHeight(tk.control * 8).
-				Label(m(c).NoteBody()).Bind(&a.editor.body).Changed() {
-				edited = true
-			}
+		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
+			ui.Text(c, m(c).EditorHint()).
+				FontSize(tk.typeSmall).TextColor(tk.TextMuted).Grow(1)
+			ui.Button(c, "").Label(m(c).PanelTitle()).Tooltip(m(c).PanelTitle()).
+				Children(func() { tk.icon(c, "sparkles", iconSmall) }).
+				OnClick(a.togglePanel)
 		})
+
+		if richtext.Editor(c, a.editor.doc).
+			Grow(1).MinHeight(tk.control * 8).
+			Label(m(c).NoteBody()).Bind(&a.editor.body).Changed() {
+			edited = true
+		}
 	})
 	switch {
 	case edited:

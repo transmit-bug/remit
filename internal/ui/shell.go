@@ -131,7 +131,7 @@ const (
 // the focus only when one of its rows is chosen.
 func (a *App) notePanel(c *ui.Context, tk tokens) {
 	msgs := m(c)
-	ui.Column(c).Width(panelWidth).MaxWidth(panelWidth).Padding(tk.spaceM).Gap(tk.spaceM).Children(func() {
+	ui.Column(c).Width(panelWidth).MaxWidth(panelWidth).Shrink(0).Padding(tk.spaceM).Gap(tk.spaceM).Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
 			chosen := int(a.panelTab)
 			if ui.Segmented(c, &chosen, msgs.Outline(), msgs.Backlinks()).Label(msgs.PanelTitle()).Changed() {
@@ -323,7 +323,7 @@ func hasTag(tags []string, tag string) bool {
 // notesList is the source list of notes: today at the top, then every note
 // newest first, with how many cards each one feeds.
 func (a *App) notesList(c *ui.Context, tk tokens, width float32) {
-	ui.Column(c).Width(width).Children(func() {
+	ui.Column(c).Width(width).Shrink(0).Children(func() {
 		// The tags are their own row: inside a Sidebar a click belongs to the
 		// list's selection, not to a button.
 		a.tagFilterBar(c, tk)
@@ -342,7 +342,7 @@ func (a *App) notesList(c *ui.Context, tk tokens, width float32) {
 					}
 				}
 			})
-		})
+		}).Grow(1)
 	})
 }
 

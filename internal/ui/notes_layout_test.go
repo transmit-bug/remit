@@ -133,3 +133,56 @@ func TestThePageCountsCardsNotBlocks(t *testing.T) {
 		}
 	}
 }
+
+// The notebook is elastic: the document and the notes tree take the height the
+// window gives them, not the height their content happens to have. A window
+// taller than the content used to leave both columns stopping halfway down.
+func TestNotebookFillsTheWindowHeight(t *testing.T) {
+	msgs := locales.In("en")
+	for _, size := range []struct {
+		name string
+		w, h int
+	}{
+		{"default", 1024, 720},
+		{"tall", 1024, 1400},
+		{"wide", 1600, 1000},
+	} {
+		t.Run(size.name, func(t *testing.T) {
+			_, tt, _ := notesOnTheNotebook(t, size.w, size.h)
+			assertNotebookFills(t, tt, msgs, size.w, size.h)
+		})
+	}
+
+	t.Run("resized", func(t *testing.T) {
+		_, tt, _ := notesOnTheNotebook(t, 1024, 720)
+		tt.SetSize(1600, 1000)
+		tt.Frame()
+		assertNotebookFills(t, tt, msgs, 1600, 1000)
+	})
+}
+
+// assertNotebookFills checks the document and the notes tree reach the window's
+// bottom edge, allowing for the document's padding.
+func assertNotebookFills(t *testing.T, tt *ui.Tester, msgs locales.Messages, w, h int) {
+	t.Helper()
+	note, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the document is missing; texts %q", tt.Texts())
+	}
+	// The document sits inside the column's padding: at most 32 DIPs from the
+	// window's bottom edge.
+	if bottom := note.Y + note.H; bottom < float32(h)-32 {
+		t.Errorf("the document ends at %v, want the %v-high window's bottom", bottom, h)
+	}
+	if note.X+note.W > float32(w) {
+		t.Errorf("the document reaches %v, past the %v-wide window", note.X+note.W, w)
+	}
+
+	tree, ok := tt.AccessByRole(ui.RoleTree, "")
+	if !ok {
+		t.Fatalf("the notes tree is missing; texts %q", tt.Texts())
+	}
+	if bottom := tree.Bounds.Y + tree.Bounds.H; bottom < float32(h)-1 {
+		t.Errorf("the notes tree ends at %v, want the %v-high window's bottom", bottom, h)
+	}
+}
