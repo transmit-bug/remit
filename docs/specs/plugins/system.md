@@ -129,8 +129,8 @@
   已有的类型。
 - `activation` 只决定何时加载，不决定谁被选中；角色决定选中。宿主今天记录它，不据此
   加载（启用列表决定加载）。
-- 没有 `contributes` 字段：今天插件不做 UI。UI 贡献（命令 / 菜单 / 页面 / 设置）的契约
-  已在 [`ui.md`](ui.md) 冻结（#146：宿主绘制，插件只给声明），尚未实现。
+- `contributes` 是静态的 UI 声明：命令 / 菜单 / 页面 / 设置 / 文案（[`ui.md`](ui.md)）。
+  契约与宿主绘制在 #146 落地；单个贡献非法只丢那一条，插件照常启用。
 - `runtime: "exec"` 仍被接受（ADR 0006）：需要原生库或长计算的扩展走进程协议；js
   manifest 不带 `protocol`，exec manifest 必须带 `protocol: 1`。类型体系相关钩子今天
   只有 JS 插件在用，宿主未禁止 exec 声明它们，但没有 exec 插件能跑通这些钩子。
@@ -284,4 +284,4 @@ discovered → enabled(remit.json 里有名字) → loaded(Open；角色插件�
 | [#142](https://github.com/transmit-bug/remit/issues/142) | 六个 capability 的宿主函数 | JS 全局只有 `remit.echo` / `remit.now`；`store:own` 的存储层已落地，`remit.store` 未装；未声明的调用仍是 `TypeError`，没有 `CapabilityError` |
 | [#144](https://github.com/transmit-bug/remit/issues/144) | 设置 UI：启用批准、角色单选、类型管理 | 已建：插件批准与 capabilities、两个角色单选、类型列表 / 字段 / 模板与实时预览；need→widget 见 [`ui-inventory.md`](../ui-inventory.md) |
 | [#145](https://github.com/transmit-bug/remit/issues/145) | `ext test` / `ext check`、`remit.d.ts`、文档清扫 | `writing-a-plugin.md` 已按现行契约重写，示例被 `internal/ext/example_test.go` 加载；CLI、`.d.ts`、GLOSSARY 词条与 ADR 清扫未做 |
-| [#146](https://github.com/transmit-bug/remit/issues/146) | 插件 UI 贡献（命令 / 菜单 / 页面 / 设置） | 契约见 [`ui.md`](ui.md)；无实现（manifest 没有 `contributes`） |
+| [#146](https://github.com/transmit-bug/remit/issues/146) | 插件 UI 贡献（命令 / 菜单 / 页面 / 设置） | 已建：`contributes`、`internal/ext/contrib`、命令面板与菜单槽位、插件页面屏、设置页插件表单、`remit -check-ext`；`remit.d.ts` 与 `go tool remit ext` 仍在 #145 |
