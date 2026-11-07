@@ -6,6 +6,7 @@ import (
 	"flag"
 	"log"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -24,7 +25,12 @@ func main() {
 	export := flag.String("export", "", "write the library to a .remitlib file and exit")
 	importPath := flag.String("import", "", "unpack a .remitlib into the library directory and exit")
 	ankiPath := flag.String("import-apkg", "", "import an Anki .apkg into the library and exit")
+	checkExt := flag.String("check-ext", "", "check a plugin directory's manifest and contributions, then exit")
 	flag.Parse()
+
+	if runCheckExtension(*checkExt, os.Stdout) {
+		return
+	}
 
 	// The settings hold the library an earlier run chose; the flag wins over
 	// them. No library at all is the window's start view, not an error.
@@ -85,6 +91,14 @@ func main() {
 		AgentControls: agent,
 		Discover:      plugins.Discover,
 		Plugin:        plugins.Open,
+		Manifests:     plugins.Manifests,
+		Contribution: func(name string) (appui.CommandRunner, error) {
+			runner, err := plugins.Open(name)
+			if err != nil {
+				return nil, err
+			}
+			return runner, nil
+		},
 	})
 	hotkey = newHotkeyBinder(func() {
 		a.ShowQueue()
