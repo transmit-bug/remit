@@ -36,9 +36,9 @@ Update a row in the same change that touches its surface.
 |---|---|---|---|
 | Title | one line of text | `ui.TextInput` | ok |
 | Body | attributed text with headings, lists, links | `richtext.Editor` + `richtext.ParseMarkdown` | ok |
-| Save state | a short status label | `ui.Badge` / `ui.Text` | n/a — every edit is written at once, so a status label would report nothing |
+| Save state | a short status label | `ui.Text` 11px in the status line | ok — every edit is written at once, so the label reports a fact ("Saved"), not a promise |
 | View modes (编辑/分栏/阅读) | one of a few adjacent views | `ui.Segmented` + `ui.Split` + `ui/markdown.View` | ok |
-| Text size | a choice from a menu | `ui.MenuButton` + `c.SetTheme` | todo (the desktop's text scale already reaches the whole window) |
+| Text size | a choice from a menu | `ui.MenuButton` + `c.SetTheme` | todo — chrome follows the desktop text scale (`design.Tokens`); the document's own size (`noteFont`) reads the scale constant, so it does not follow yet |
 | Export | a menu of commands | `ui.MenuButton` | todo — no export exists yet to put in the menu |
 | Overflow | a menu of rare commands | icon `Button` + `Element.Menu` | ok (import, make card, settings) |
 | Format bar | toggles that report the selection's formats | `ui.Toolbar` + `ui.MenuButton` + `Document.Formatting()` + `Document.Toggle*` | ok (the pressed look is a `Button` in the accent tint, as MyGo's notes example does) |

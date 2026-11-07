@@ -5,7 +5,7 @@
 
 参照物：留白（liubai）的 `DESIGN.md`/`PRODUCT.md`（MIT，仅参考结构与规则，不抄代码——它跑在 web 视图 + CodeMirror，Remit 跑在原生 `ui`）。
 
-> **口径（按今日代码校正）**：状态列以 `docs/ui-inventory.md`（v0.8.1）+ `internal/ui` 为准。
+> **口径（按今日代码校正）**：状态列以 `docs/specs/ui-inventory.md`（v0.8.1）+ `internal/ui` 为准。
 > `缺` 是未做，不是回归；`半` 是做了但与本稿不一致。P0 的要素已经落地，§2.1 的
 > “标题进顶栏、保存状态在顶栏”已改判为“标题在纸面首行、保存状态在状态行”。
 
