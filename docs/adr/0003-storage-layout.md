@@ -2,6 +2,10 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-06
+- **Amended:** 2026-11-08 — `reviews.jsonl` also carries reading events (a note
+  queued, read or dropped), so one replay answers cards and the reading queue
+  (#156, `docs/specs/incremental-reading.md`); the file name and the format
+  version stand
 - **Related:** #23, #7, ADR 0002
 
 ## Context
@@ -45,6 +49,12 @@ for both a person and the stdlib; reviews never rewrite a card file, only
 **Undo is a log event, not a rewrite.** A review appends
 `{seq, card, rating, at}`; an undo appends a void event naming the `seq` it
 cancels, and replay skips voided entries. The log is never rewritten.
+
+**Reading entries live in the same log.** A note joining, being read or leaving
+the reading queue appends an event that names the note instead of a card (`note`
+instead of `card`, a `kind` of `queued` / `dropped` / `reviewed`, and the block
+a session stopped at). Replay derives the reading queue's due dates and
+positions the way it derives a card's schedule; the index caches both.
 
 ## Consequences
 
