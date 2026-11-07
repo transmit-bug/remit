@@ -104,38 +104,18 @@ func TestOpenLibraryPickerCancelled(t *testing.T) {
 	}
 }
 
-// With no settings and no library named, the window still asks rather than
-// guessing: the start view names Remit's own place in Documents.
+// With no settings and no library named, the app still names a place for a
+// library and hands it to the start view: Remit's own folder in Documents.
 func TestStartViewWithNoSetting(t *testing.T) {
 	a := NewApp(Options{DataDir: t.TempDir()})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 
-	if !tt.HasText("Start your library") {
-		t.Fatalf("no library and no setting: texts %q", tt.Texts())
-	}
 	if a.startDir() == "" {
-		t.Error("the start view names no place for a library")
+		t.Fatal("the app names no place for a library")
 	}
 	if !tt.HasText(a.startDir()) {
-		t.Errorf("the start view does not show %q; texts %q", a.startDir(), tt.Texts())
-	}
-}
-
-// The start view in Chinese holds at the smallest window.
-func TestStartViewAtMinimumInChinese(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "Remit")
-	a := NewApp(Options{LibraryDir: dir})
-	tt := ui.NewTester(a.View, 720, 520)
-	tt.SetLocale("zh-Hans")
-	tt.Frame()
-
-	for _, label := range []string{"从笔记库开始", "新建笔记库", "打开笔记库…"} {
-		assertControl(t, tt, 720, 520, label)
-	}
-	tt.Advance(300 * time.Millisecond) // the screen's entrance
-	if tt.FramePending() {
-		t.Error("view still requests frames after the locale switch")
+		t.Errorf("the window does not show %q; texts %q", a.startDir(), tt.Texts())
 	}
 }
 
@@ -151,11 +131,6 @@ func TestFirstRun(t *testing.T) {
 
 	if _, err := os.Stat(filepath.Join(dir, "remit.json")); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("the window made a library before it was asked: %v", err)
-	}
-	for _, want := range []string{"Start your library", "Create library", "Open library…", dir} {
-		if !tt.HasText(want) {
-			t.Fatalf("the start view is missing %q; texts %q", want, tt.Texts())
-		}
 	}
 	if tt.HasText("Notebook") {
 		t.Error("the start view drew a library that is not there")

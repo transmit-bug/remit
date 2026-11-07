@@ -18,6 +18,8 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/screens/start"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // messageWidth caps a message that is about the library rather than a card:
@@ -101,6 +103,77 @@ func openOrCreate(dir string) (*store.Library, error) {
 		return store.Create(dir, store.Options{})
 	}
 	return lib, err
+}
+
+// startView draws the window before a library is open: the screen itself lives
+// in its own package, and this hands it the place and the app's own actions
+// (ADR 0004).
+func (a *App) startView(c *ui.Context) {
+	start.View(c, start.State{Dir: a.startDir()}, a.startDeps())
+}
+
+// startDeps is what the screen asks of the app: where a library would go, and
+// the two ways to begin, each run here on the UI thread.
+func (a *App) startDeps() start.Deps {
+	return start.Deps{
+		Dir:    a.startDir,
+		Create: a.createLibrary,
+		Choose: a.chooseLibrary,
+	}
+}
+
+// startDir is the folder the start view names: the one the app was pointed at,
+// or Remit's own place in Documents.
+func (a *App) startDir() string {
+	if a.dir != "" {
+		return a.dir
+	}
+	return a.defaultLibrary
+}
+
+// createLibrary makes a library at the place the start view named, opens it,
+// and remembers it for the next start.
+func (a *App) createLibrary(c *ui.Context) {
+	dir := a.startDir()
+	if dir == "" {
+		slog.Error("remit: create library: no place for it")
+		c.Toast(m(c).NoLibraryPlace())
+		return
+	}
+	a.install(c, dir)
+}
+
+// chooseLibrary asks the system for a folder and opens the library in it,
+// making one when the folder holds none. A canceled dialog changes nothing.
+func (a *App) chooseLibrary(c *ui.Context) {
+	dir, err := a.pickLibrary()
+	if err != nil {
+		a.report(c, "choose library", err)
+		return
+	}
+	if dir == "" {
+		return
+	}
+	a.install(c, dir)
+}
+
+// pickLibraryDir is the start view's folder picker: the system's, attached to
+// no window so it is a free-standing panel on every platform. It blocks until
+// the user answers, which is why it is only ever called from a handler.
+func pickLibraryDir() (string, error) {
+	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
+		Title:             locales.OpenLibrary(),
+		ButtonLabel:       locales.OpenLibrary(),
+		Directory:         true,
+		CreateDirectories: true,
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(paths) == 0 {
+		return "", nil
+	}
+	return paths[0], nil
 }
 
 // close releases the library open now, if any.
