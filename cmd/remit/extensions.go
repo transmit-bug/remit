@@ -163,6 +163,9 @@ func (s *pluginService) SetLibrary(lib *store.Library) {
 	if err != nil {
 		slog.Warn("remit: extensions: the card plugin did not start", "err", err)
 	}
+	for _, runner := range s.open {
+		_ = runner.Close()
+	}
 	s.host = host
 	s.open = map[string]*ext.JSRunner{}
 }

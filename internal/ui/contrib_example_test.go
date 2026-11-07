@@ -2,6 +2,7 @@ package ui
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -160,5 +161,35 @@ func TestAnEventReloadsTheOpenPage(t *testing.T) {
 
 	if !tt.HasText("A fourth note") {
 		t.Fatalf("an event did not reload the open page; texts %q", tt.Texts())
+	}
+}
+
+// An item's own when decides where it shows: the paused-and-tag command's
+// note.overflow item names note.open, so the merged menu offers it in the notes
+// and not in browse, even though the command itself carries no when.
+func TestAMenuItemsWhenDecidesWhereItShows(t *testing.T) {
+	tt := exampleContributionApp(t, "")
+
+	tt.Key(ui.Cmd, ui.Key3) // browse: the toolbar is up, no note is open
+	tt.Advance(320 * time.Millisecond)
+	if err := tt.Click("More"); err != nil {
+		t.Fatalf("the window's overflow menu: %v", err)
+	}
+	menu := strings.Join(tt.Menu(), "\n")
+	if strings.Contains(menu, "Pause and tag") {
+		t.Fatalf("the note slot's item showed with no note open: %q", menu)
+	}
+	if !strings.Contains(menu, "Leech report") {
+		t.Fatalf("the toolbar slot's item did not show: %q", menu)
+	}
+	tt.CloseMenu()
+
+	tt.Key(ui.Cmd, ui.Key2) // notes: a note is open, so its slot item shows
+	tt.Advance(320 * time.Millisecond)
+	if err := tt.Click("More"); err != nil {
+		t.Fatalf("the window's overflow menu: %v", err)
+	}
+	if menu := strings.Join(tt.Menu(), "\n"); !strings.Contains(menu, "Pause and tag") {
+		t.Fatalf("the note slot's item did not show with a note open: %q", menu)
 	}
 }

@@ -331,3 +331,48 @@ func TestCheck(t *testing.T) {
 		t.Error("a directory without a manifest reported nothing")
 	}
 }
+
+// A slot's items are drawn in the host's order — primary, secondary, plugin,
+// each by order — and each keeps the when that decides whether it shows.
+func TestMenuItemsKeepTheirGroupOrderAndWhen(t *testing.T) {
+	raw := `{
+	  "commands": [
+	    {"id": "p.a", "title": "%a%", "action": "command:a"},
+	    {"id": "p.b", "title": "%b%", "action": "command:b"},
+	    {"id": "p.c", "title": "%c%", "action": "command:c"}
+	  ],
+	  "menus": {
+	    "toolbar.overflow": [
+	      {"command": "p.c", "group": "plugin", "order": 1},
+	      {"command": "p.a", "group": "primary", "order": 20},
+	      {"command": "p.b", "group": "primary", "order": 10, "when": "note.open"},
+	      {"command": "p.a", "group": "secondary", "order": 0}
+	    ]
+	  },
+	  "locales": {"en": {"a": "A", "b": "B", "c": "C"}}
+	}`
+	got, problems := contrib.Parse(extension("p.x", "x", raw), contrib.Options{})
+	if len(problems) != 0 {
+		t.Fatalf("problems: %v", problems)
+	}
+	index, problems := contrib.BuildIndex([]contrib.Contributions{got})
+	if len(problems) != 0 {
+		t.Fatalf("index problems: %v", problems)
+	}
+	items := index.Menu("toolbar.overflow")
+	if len(items) != 4 {
+		t.Fatalf("items = %+v, want four", items)
+	}
+	want := []string{"p.b", "p.a", "p.a", "p.c"}
+	for i, id := range want {
+		if items[i].Command.ID != id {
+			t.Fatalf("item %d is %q, want %q: %+v", i, items[i].Command.ID, id, items)
+		}
+	}
+	if items[0].When.Eval(contrib.Context{}) {
+		t.Error("the note item's when shows with no note open")
+	}
+	if !items[0].When.Eval(contrib.Context{NoteOpen: true}) {
+		t.Error("the note item's when hides with a note open")
+	}
+}
