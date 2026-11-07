@@ -18,6 +18,7 @@ import (
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
+	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/internal/update"
 )
 
@@ -71,7 +72,7 @@ type App struct {
 	review         review.State
 	editor         editorState
 	browse         browseState
-	stats          statsState
+	stats          screenstats.State
 	palette        paletteState
 	relink         relinkState
 	cardEdit       cardEditState

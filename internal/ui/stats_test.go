@@ -101,20 +101,20 @@ func TestStatsPage(t *testing.T) {
 			// Every day the log holds a review on has its own square, named
 			// with that day and its count.
 			labelled, counted := 0, 0
-			for _, week := range a.stats.heat {
+			for _, week := range a.stats.Heat {
 				for _, day := range week {
-					if day.count == 0 {
+					if day.Count == 0 {
 						continue
 					}
 					labelled++
-					counted += day.count
-					if want := locales.In("en").StatsDayCount(day.day, day.count); !tt.HasText(want) {
+					counted += day.Count
+					if want := locales.In("en").StatsDayCount(day.Day, day.Count); !tt.HasText(want) {
 						t.Errorf("the heatmap has no square for %q; texts %q", want, tt.Texts())
 					}
 				}
 			}
-			if counted != a.stats.heatTotal || labelled == 0 {
-				t.Errorf("%d labelled squares hold %d reviews, the log %d", labelled, counted, a.stats.heatTotal)
+			if counted != a.stats.HeatTotal || labelled == 0 {
+				t.Errorf("%d labelled squares hold %d reviews, the log %d", labelled, counted, a.stats.HeatTotal)
 			}
 			for _, gone := range []string{
 				"No reviews yet. Grade a card and the map fills in.",

@@ -5,6 +5,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/ui/design"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
+	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 )
 
 // View draws the window. It reads state and returns; anything that changes
@@ -44,7 +45,7 @@ func (a *App) View(c *ui.Context) {
 			case a.mode == modeBrowse:
 				a.browseView(c, tk)
 			case a.mode == modeStats:
-				a.statsView(c, tk)
+				screenstats.View(c, a.stats, screenstats.Deps{})
 			default:
 				a.notesView(c, tk)
 			}
