@@ -17,6 +17,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/browse"
+	"github.com/transmit-bug/remit/internal/ui/screens/relink"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
@@ -76,7 +77,7 @@ type App struct {
 	browseRows     []browse.Row // the cards browse lists, as loadBrowse derived them
 	stats          screenstats.State
 	palette        paletteState
-	relink         relinkState
+	relink         relink.State
 	cardEdit       cardEditState
 	prefs          screensettings.State
 	prefsBack      mode                 // the face the settings page goes back to
@@ -160,7 +161,6 @@ func NewApp(opts ...Options) *App {
 		pendingJump:    -1,
 		outlineFor:     "",
 		editor:         editorState{},
-		relink:         relinkState{selected: -1},
 		pickLibrary:    pickLibraryDir,
 		pickAnki:       pickAnkiPackage,
 		checkUpdate:    screensettings.CheckForUpdate,

@@ -52,7 +52,7 @@ func (a *App) View(c *ui.Context) {
 		})
 
 		a.paletteView(c, tk)
-		a.relinkView(c, tk)
+		a.relinkView(c)
 		a.cardEditView(c, tk)
 	})
 
