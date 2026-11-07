@@ -15,6 +15,11 @@ func (a *App) View(c *ui.Context) {
 	// so the frame that draws it draws the result. The work itself already ran
 	// off this pass: no frame ever waits on a plugin.
 	a.applyBackground(c)
+	// The library's writes are the contract's event: drop what each page was
+	// loaded against, so the page on screen asks again off this frame.
+	if a.stale.Swap(false) {
+		a.invalidatePages()
+	}
 
 	tk := design.NewTokens(c.Theme())
 	c.SetTheme(tk.Theme)

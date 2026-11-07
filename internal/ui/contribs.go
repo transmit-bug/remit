@@ -505,13 +505,23 @@ func (a *App) pageState(ref contrib.PageRef) *pluginpage.State {
 }
 
 // pluginPageView draws the page on screen. The screen only reads what the last
-// load left: a frame never asks a plugin for anything.
+// load left: a frame never asks a plugin for anything. A page whose cache key no
+// longer matches what it was loaded in — a write invalidated it — asks again off
+// this frame, which is how the contract's event refreshes an open page.
 func (a *App) pluginPageView(c *ui.Context) {
 	ref := a.page
 	if ref.Page.ID == "" {
 		return
 	}
-	pluginpage.View(c, a.pageState(ref), pluginpage.Deps{
+	state := a.pageState(ref)
+	key := pageKey(ref.Plugin, ref.Page.ID)
+	// A page that has been drawn before has its runner; opening one is the
+	// handler's job (openPage), so a frame never starts a plugin.
+	_, ready := a.ui.runners[ref.Name]
+	if ready && state.Err == "" && !a.ui.loading[key] && a.ui.pagesFor[key] != contextHash(a.contributionPayload()) {
+		a.loadPage(c, ref, false)
+	}
+	pluginpage.View(c, state, pluginpage.Deps{
 		Message: func(c *ui.Context, raw string) string { return a.pluginText(c, ref.Plugin, raw) },
 		Run:     func(c *ui.Context, command string) { a.runPageCommand(c, ref, command) },
 		Retry:   func(c *ui.Context) { a.loadPage(c, ref, true) },
@@ -575,11 +585,18 @@ type pendingWork struct {
 
 // invalidatePages forgets what each page's cache key was, so that the next entry
 // asks its plugin again: a page is what the library was when it loaded, and a
-// write makes it old. That is the contract's event, as far as this host has one
-// — the page on screen keeps what it has until its refresh is pressed, because a
-// frame never asks a plugin for anything (ui.md §9).
+// write makes it old. A page on screen asks again on the next frame, off that
+// frame (ui.md §9).
 func (a *App) invalidatePages() {
 	clear(a.ui.pagesFor)
+}
+
+// LibraryEvent is the library saying something was written. It is the one call
+// the event handler makes into the window, so it takes no lock and touches no
+// state: the next frame picks the flag up on the UI thread, where the page
+// states live.
+func (a *App) LibraryEvent() {
+	a.stale.Store(true)
 }
 
 // contextHash is a page load's cache key: the context it was asked in, as JSON,

@@ -24,11 +24,11 @@ import (
 // The runners reach the library through the same source the loopback API uses:
 // the store's read/write layer plus card derivation, so a plugin's cards.create
 // makes what the app would.
-func startExtensions(lib *store.Library) {
+//
+// The window is told about every event too, so an open plugin page reloads what
+// it shows: a page is what the library was when it loaded.
+func startExtensions(lib *store.Library, app *appui.App) {
 	enabled := lib.EnabledExtensions()
-	if len(enabled) == 0 {
-		return
-	}
 	host, err := newCardSource(lib)
 	if err != nil {
 		slog.Warn("remit: extensions: the card plugin did not start", "err", err)
@@ -61,17 +61,17 @@ func startExtensions(lib *store.Library) {
 		}
 		runners = append(runners, r)
 	}
-	if len(runners) == 0 {
-		return
-	}
-
 	// Events are notifications, not vetoes: a failing extension is logged and
-	// the review goes on.
+	// the review goes on. The handler is set even with no runner, because the
+	// window's contributed pages read the library's events as their refresh.
 	lib.SetEventHandler(func(ev store.Event) {
 		for _, r := range runners {
 			if err := r.Call("on_event", map[string]any{"kind": ev.Kind, "id": string(ev.ID)}, nil); err != nil {
 				slog.Warn("remit: extension event failed", "extension", r.Name(), "err", err)
 			}
+		}
+		if app != nil {
+			app.LibraryEvent()
 		}
 	})
 }
@@ -83,6 +83,7 @@ type pluginService struct {
 	root string
 	mu   sync.Mutex
 	open map[string]*ext.JSRunner
+	host ext.Host
 }
 
 // newPluginService serves the plugins installed under root.
@@ -151,16 +152,30 @@ func (s *pluginService) Open(name string) (*ext.JSRunner, error) {
 	return runner, nil
 }
 
+// SetLibrary gives the plugins the library their callbacks act on. Runners
+// opened before it are dropped: a plugin started without a host answers every
+// capability call with an error, and a page that reads nothing is worse than
+// one that asks again.
+func (s *pluginService) SetLibrary(lib *store.Library) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	host, err := newCardSource(lib)
+	if err != nil {
+		slog.Warn("remit: extensions: the card plugin did not start", "err", err)
+	}
+	s.host = host
+	s.open = map[string]*ext.JSRunner{}
+}
+
 // start opens one plugin by manifest name. A role's hooks are pure — derive a
-// card, answer a policy — so the runner is given no library host; an extension
-// that is also enabled reaches the library through the event runners
-// startExtensions opens.
+// card, answer a policy — and a contributed command or page reads the library,
+// so every runner gets the host of the library open now.
 func (s *pluginService) start(name string) (*ext.JSRunner, error) {
 	switch name {
 	case store.DefaultCardsPlugin:
-		return builtin.Cards(nil, ext.JSLimits{})
+		return builtin.Cards(s.host, ext.JSLimits{})
 	case store.DefaultSchedulerPlugin:
-		return builtin.Scheduler(nil, ext.JSLimits{})
+		return builtin.Scheduler(s.host, ext.JSLimits{})
 	}
 	found, err := ext.Discover(s.root)
 	if err != nil {
@@ -173,7 +188,7 @@ func (s *pluginService) start(name string) (*ext.JSRunner, error) {
 		if ext.Runtime(candidate.Manifest.Runtime) != ext.RuntimeJS {
 			return nil, fmt.Errorf("remit: %q is not a js plugin, and no role runs on another runtime", name)
 		}
-		return ext.OpenJS(candidate.Dir, nil, ext.JSLimits{})
+		return ext.OpenJS(candidate.Dir, s.host, ext.JSLimits{})
 	}
 	return nil, fmt.Errorf("remit: no plugin named %q", name)
 }
