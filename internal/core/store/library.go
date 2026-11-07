@@ -115,6 +115,7 @@ type Library struct {
 	types []core.Type
 
 	extensions []string
+	roles      map[string]string
 	onEvent    func(Event)
 }
 
@@ -141,6 +142,9 @@ type configFile struct {
 	FSRS   schedule.Params `json:"fsrs"`
 	// Extensions are the extensions this library enabled, by manifest name.
 	Extensions []string `json:"extensions,omitempty"`
+	// Roles are the plugins that play each role in this library, by role name.
+	// A role left out plays the built-in (see Roles).
+	Roles map[string]string `json:"roles,omitempty"`
 }
 
 // Blocks reports whether a Library can stand in for a card's source of text.
@@ -161,7 +165,7 @@ func Create(dir string, opts Options) (*Library, error) {
 	if err := os.MkdirAll(dir, dirPerms); err != nil {
 		return nil, err
 	}
-	config, err := encodeConfig(library.params, nil)
+	config, err := encodeConfig(library.params, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +201,7 @@ func Open(dir string, opts Options) (*Library, error) {
 	// what the library was last written with.
 	library.scheduler = firstNonEmpty(opts.Scheduler, params.Scheduler)
 	library.extensions = config.Extensions
+	library.roles = config.Roles
 	if err := library.load(); err != nil {
 		library.Close()
 		return nil, err
@@ -898,6 +903,12 @@ func (l *Library) Cards() []core.Card {
 func (l *Library) SaveCard(card core.Card) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	return l.saveCard(card)
+}
+
+// saveCard writes a card's definition and its place in the index, assuming the
+// lock is held. It is also the write a type's field rename makes once per card.
+func (l *Library) saveCard(card core.Card) error {
 	if l.index == nil {
 		return ErrClosed
 	}
@@ -1476,9 +1487,9 @@ func slugify(title string) string {
 }
 
 // encodeConfig renders remit.json, the library's declaration of how it
-// schedules.
-func encodeConfig(params schedule.Params, extensions []string) ([]byte, error) {
-	data, err := json.MarshalIndent(configFile{Format: formatVersion, FSRS: params, Extensions: extensions}, "", "  ")
+// schedules, which extensions it runs and which plugin plays each role.
+func encodeConfig(params schedule.Params, extensions []string, roles map[string]string) ([]byte, error) {
+	data, err := json.MarshalIndent(configFile{Format: formatVersion, FSRS: params, Extensions: extensions, Roles: roles}, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("store: %s: %w", configName, err)
 	}
@@ -1541,14 +1552,26 @@ func (l *Library) EnabledExtensions() []string {
 
 // SetEnabledExtensions records which extensions this library runs, in
 // remit.json. Enabling is per library and deliberate: an extension installed
-// on the machine does nothing until a library names it.
+// on the machine does nothing until a library names it. Withdrawing a plugin
+// also takes it out of any role it played, so the file never names a plugin the
+// library does not run.
 func (l *Library) SetEnabledExtensions(names []string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.index == nil {
 		return ErrClosed
 	}
-	data, err := encodeConfig(l.params, names)
+	roles := make(map[string]string, len(l.roles))
+	runs := make(map[string]bool, len(names))
+	for _, name := range names {
+		runs[name] = true
+	}
+	for role, name := range l.roles {
+		if runs[name] {
+			roles[role] = name
+		}
+	}
+	data, err := encodeConfig(l.params, names, roles)
 	if err != nil {
 		return err
 	}
@@ -1557,6 +1580,7 @@ func (l *Library) SetEnabledExtensions(names []string) error {
 		return err
 	}
 	l.extensions = append([]string(nil), names...)
+	l.roles = roles
 	return nil
 }
 
