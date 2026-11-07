@@ -6,6 +6,13 @@ Remit is a local-first, open-source knowledge-memory desktop app: plain-text
 notes and FSRS-scheduled flashcards share one library. Go on MyGo
 (`github.com/egoist/mygo`), AGPL-3.0, pre-1.0 — the data format may still change.
 
+Design philosophy — **Remember it**: every feature either helps the user
+remember (writing, review, revisiting, incremental digestion) or carries the
+memory (the plaintext library, the plugin system); a feature serving neither is
+out of scope. Notes are complete Markdown documents — the block is the unit of
+reference, not the shape of the note. The plugin system is a core capability:
+it extends both notes and flashcards, and the built-in behaviours are plugins.
+
 This file holds what stays true as the code moves: what the app is, the
 architecture it keeps, where things live, and how to build it. It states
 direction, not implementation detail; where the code and this file disagree,
@@ -17,7 +24,7 @@ the code wins and this file follows.
 | --- | --- |
 | `GLOSSARY.md` | the domain vocabulary — name things with its terms |
 | `docs/adr/` | decisions already taken, one per file; read the one covering the area before reshaping it |
-| `docs/specs/` | designs in progress for an area that is being rewritten |
+| `docs/specs/` | designs in progress for an area that is being rewritten; plugin contracts live under `docs/specs/plugins/` |
 
 ## Architecture
 
