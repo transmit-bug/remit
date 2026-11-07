@@ -27,9 +27,10 @@ const Note = "Frozen answers of the Go implementation (ADR 0005/0007): the faces
 
 // Set is the whole frozen answer set.
 type Set struct {
-	Note     string `json:"note"`
-	Faces    []Face `json:"faces"`
-	Schedule []Step `json:"schedule"`
+	Note     string    `json:"note"`
+	Faces    []Face    `json:"faces"`
+	Schedule []Step    `json:"schedule"`
+	Excerpts []Excerpt `json:"excerpts"`
 }
 
 // Face is one card's sides, as the content model resolves them.
@@ -68,6 +69,7 @@ func Build() Set {
 		Note:     Note,
 		Faces:    faces(),
 		Schedule: schedule_(),
+		Excerpts: excerpts(),
 	}
 }
 
@@ -236,6 +238,112 @@ func schedule_() []Step {
 				Difficulty: round(next.Memory.Difficulty),
 			})
 		}
+	}
+	return out
+}
+
+// Excerpt is one excerpt's frozen output: the block a child note is given for a
+// selection, and the card that block makes, verbatim. It is the reading closure
+// in one case: a passage, its way back, and the card it becomes.
+type Excerpt struct {
+	Proves string `json:"proves"`
+	// What the reader selected, and the block of the note it came from.
+	SourceTitle string `json:"source_title"`
+	SourceBlock string `json:"source_block"`
+	SourceText  string `json:"source_text"`
+	Selected    string `json:"selected"`
+	// The child note's first block, as the store would hold it.
+	BlockText string `json:"block_text"`
+	// The reference the block carries, as the index reads it.
+	LinkTitle string `json:"link_title"`
+	LinkBlock string `json:"link_block"`
+	// The card the block makes, as its type's templates render it.
+	CardKind  string `json:"card_kind"`
+	Ordinal   int    `json:"ordinal"`
+	CardFront string `json:"card_front"`
+	CardBack  string `json:"card_back"`
+}
+
+// excerptSource is the note every excerpt case quotes from.
+var excerptSource = core.Note{
+	Title: "Memory and recall",
+	Blocks: []core.Block{
+		{ID: "block_00000000000000000000000000000011",
+			Text: "Spacing beats cramming :: reviewing just before you forget strengthens recall."},
+		{ID: "block_00000000000000000000000000000012",
+			Text: "The {{first}} blank and the {{second}} one."},
+	},
+}
+
+// excerpts is what a selection from a note makes: a child note's block, and the
+// card that block asks for.
+func excerpts() []Excerpt {
+	cases := []struct {
+		proves   string
+		block    int
+		selected string
+		kind     core.ID
+		ordinal  int
+	}{
+		{
+			proves:   "an excerpt of a card-shaped paragraph is a card of its own",
+			block:    0,
+			selected: excerptSource.Blocks[0].Text,
+			kind:     core.TypeBasic,
+		},
+		{
+			proves:   "a selection of one sentence makes one card, and the reference stays in the answer",
+			block:    0,
+			selected: "reviewing just before you forget strengthens recall.",
+			kind:     core.TypeBasic,
+		},
+		{
+			proves:   "a selection of two lines keeps both, and the reference below them",
+			block:    0,
+			selected: "Spacing beats cramming.\nReviewing just before you forget strengthens recall.",
+			kind:     core.TypeBasic,
+		},
+		{
+			proves: "a cloze passage is a cloze card of the excerpt, asked at its first blank",
+			block:  1, selected: excerptSource.Blocks[1].Text, kind: core.TypeCloze, ordinal: 0,
+		},
+	}
+
+	runner, err := builtin.Cards(nil, ext.JSLimits{})
+	if err != nil {
+		panic("golden: the card plugin did not start: " + err.Error())
+	}
+	defer runner.Close()
+	resolver := cards.New(runner, core.BuiltinTypes())
+
+	out := make([]Excerpt, 0, len(cases))
+	for _, c := range cases {
+		source := excerptSource.Blocks[c.block]
+		block := core.Excerpt(excerptSource, source, c.selected)
+		// The child block's own ID is minted when the note is saved, and it is
+		// never part of the text: a fixed one keeps the file comparable.
+		block.ID = "block_00000000000000000000000000000021"
+		card := core.Card{ID: "card_excerpt", Type: c.kind, Ordinal: c.ordinal,
+			Ref: core.Reference{Block: block.ID}}
+		face := resolver.Face(card, core.BlockSet{block.ID: block})
+		link := core.Links(block.Text)
+		excerpt := Excerpt{
+			Proves:      c.proves,
+			SourceTitle: excerptSource.Title,
+			SourceBlock: string(source.ID),
+			SourceText:  source.Text,
+			Selected:    c.selected,
+			BlockText:   block.Text,
+			CardKind:    kindOf(c.kind),
+			Ordinal:     c.ordinal,
+			CardFront:   face.Front,
+			CardBack:    face.Back,
+		}
+		if len(link) > 0 {
+			excerpt.LinkTitle = link[0].Title
+			excerpt.LinkBlock = string(link[0].Block)
+		}
+		out = append(out, excerpt)
 	}
 	return out
 }
