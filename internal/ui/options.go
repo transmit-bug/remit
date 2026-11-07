@@ -19,6 +19,10 @@ type AgentControls = screensettings.AgentControls
 // holding the bearer token.
 type AgentStatus = screensettings.AgentStatus
 
+// Plugin is one plugin this build can run, as the settings page lists it. The
+// alias keeps cmd from importing a screen package for one struct.
+type Plugin = screensettings.Plugin
+
 // Options configures an App.
 type Options struct {
 	// LibraryDir is the directory the library lives in. Empty means the one a
@@ -51,6 +55,16 @@ type Options struct {
 	// WithoutScheduler schedules with the app's own defaults, and stamps no
 	// scheduler on new reviews.
 	WithoutScheduler bool
+	// Discover lists the plugins this build can run: the built-ins and what
+	// the user installed, each with what its manifest declares. cmd owns the
+	// extensions directory; nil is a build with none, whose settings page
+	// says so and whose roles stay at the built-ins.
+	Discover func() ([]Plugin, error)
+	// Plugin starts the plugin a manifest name names, for the role that chose
+	// it. The app asks once per library open, before the library reads. nil
+	// leaves Options.Cards and Options.Scheduler, or the built-ins, playing
+	// every role.
+	Plugin func(name string) (*ext.JSRunner, error)
 	// BindHotkey binds the global shortcut, replacing the one bound now, and
 	// reports a combination that is invalid or already taken. cmd registers it
 	// on MyGo's GlobalShortcut; a test replaces it.

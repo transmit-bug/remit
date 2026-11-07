@@ -58,20 +58,22 @@
   `::: type <id>` 带内容，与单独成行的 `:::`（双向卡标记）可区分。字段块由内置
   derive 插件解析：`字段名: 值` 每行一条。类型没有的字段由插件列进 `unknown`，宿主记日志
   并丢弃，卡片仍按能对上的那部分生成；今天没有面向用户的报告。
-- **schema 的来源**：内置三类型（随库种入）+ 手改 `types/<id>.json`（类型编辑界面归 #144，未建）。
+- **schema 的来源**：内置三类型（随库种入）+ 设置页管理的 `types/<id>.json`（类型列表、
+  字段编辑、模板编辑与预览，#144）。
   derive 插件的 `produces` 只是声明：宿主只接受库内已有的类型，插件不能凭空带来类型定义。
   表单式"单独建卡"不做——产品是笔记优先，字段块即录入。
 
 ### 2.3 类型编辑的安全边界
 
-v1 的类型管理界面归 #144（未建）；下表先约束手改文件，也是将来编辑器的验收条件。因为字段只在
+类型编辑界面按上表实现：设置页保存类型时由 store 的写路径执行改名的全库重写与删除守卫
+（#144）。因为字段只在
 **编辑过的卡片**上持久化，"全库重写"的范围是那些 `fields` 映射，不是每一张卡。
 
 | 操作 | 行为 |
 |---|---|
 | 字段改名 | 改 `types/<id>.json` 的 `fields`，并把 `edited` 卡片的 `fields` 键一并重写；笔记里 `::: type` 字段块仍用旧键的行变成 `unknown`（丢弃 + 日志），所以编辑器要先搜再改 |
 | 字段删除 | 有 `edited` 卡片存着非空值即拒绝；否则旧字段块的行按 `unknown` 处理 |
-| 类型删除 | 被任何卡片引用即拒绝（今天没有删除入口；手删非内置类型的文件会让引用它的卡片回退字段列表，内置三件缺文件则被重新种入） |
+| 类型删除 | 被任何卡片引用即拒绝；内置三件不可删（缺文件时下次打开会重新种入）。手删非内置类型的文件会让引用它的卡片回退字段列表 |
 | 模板编辑 | 立即生效，卡片面随下次渲染更新（本就不落库）；模板编译失败 → 回退字段列表 |
 
 ### 2.4 没有存量迁移
@@ -242,11 +244,12 @@ discovered → enabled(remit.json 里有名字) → loaded(Open；角色插件�
                     └──────── 重开 = 重新启用 ←────────┘
 ```
 
-- 启用是按库的显式动作，今天就是在 `remit.json` 的 `extensions` 里写名字；能力审批
-  （#144 的启用流程）发生在启用时，但除 echo/now 外还没有可授予的函数，所以启用不询问。
-- 角色两个（卡片、调度）今天固定为内置插件；`Options.Cards` / `Options.Scheduler` 是
-  宿主给测试的注入点，没有按库选择角色的设置页（#144）。第三方 js 插件被启用后只收到
-  `on_event`。
+- 启用是按库的显式动作：设置页列出已发现插件声明的 capabilities，批准后才把名字写进
+  `remit.json` 的 `extensions`（#144）。写入立即生效，插件在下一次开库时启动——与今天的
+  启用行为一致，运行中的复习不会换插件。
+- 角色两个（卡片、调度）按库各选一个插件，默认内置，写在 `remit.json` 的 `roles`（#144）；
+  角色名与插件名都在 store 里校验，被选中的插件必须已启用。选择同样在下一次开库生效：
+  调度策略要在索引重放之前确定。
 - 完成文案归调度插件：已落地为 `summary` 钩子（§5）。
 
 ## 11. 内置默认插件
@@ -279,6 +282,6 @@ discovered → enabled(remit.json 里有名字) → loaded(Open；角色插件�
 |---|---|---|
 | [#141](https://github.com/transmit-bug/remit/issues/141) | 键入作答与提示的复习面 | 模板把 `{{type:}}` / `{{hint:}}` 捕获进 `template.Output`，经 `cards.Answer` 交给 UI；复习屏只渲染卡面，没有输入框、逐字比对或折叠提示 |
 | [#142](https://github.com/transmit-bug/remit/issues/142) | 六个 capability 的宿主函数 | JS 全局只有 `remit.echo` / `remit.now`；`store:own` 的存储层已落地，`remit.store` 未装；未声明的调用仍是 `TypeError`，没有 `CapabilityError` |
-| [#144](https://github.com/transmit-bug/remit/issues/144) | 设置 UI：启用批准、角色单选、类型管理 | 无；插件按库写在 `remit.json` 的 `extensions`，类型只能手改 `types/<id>.json` |
+| [#144](https://github.com/transmit-bug/remit/issues/144) | 设置 UI：启用批准、角色单选、类型管理 | 已建：插件批准与 capabilities、两个角色单选、类型列表 / 字段 / 模板与实时预览；need→widget 见 [`ui-inventory.md`](../ui-inventory.md) |
 | [#145](https://github.com/transmit-bug/remit/issues/145) | `ext test` / `ext check`、`remit.d.ts`、文档清扫 | `writing-a-plugin.md` 已按现行契约重写，示例被 `internal/ext/example_test.go` 加载；CLI、`.d.ts`、GLOSSARY 词条与 ADR 清扫未做 |
 | [#146](https://github.com/transmit-bug/remit/issues/146) | 插件 UI 贡献（命令 / 菜单 / 页面 / 设置） | 契约见 [`ui.md`](ui.md)；无实现（manifest 没有 `contributes`） |

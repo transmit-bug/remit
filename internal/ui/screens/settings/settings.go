@@ -1,12 +1,14 @@
 // Package settings is the settings page: the agent API, the update check, the
-// global shortcut and the daily reminder, each written as soon as it changes.
-// The page shows the app's settings as a copy and reports every change through
-// Deps; the app owns the writes, the shortcut binding and the listener.
+// global shortcut, the daily reminder, the library's plugins and its card
+// types, each written as soon as it changes. The page shows the app's state as
+// a copy and reports every change through Deps; the app owns the writes, the
+// shortcut binding, the listener and the store.
 package settings
 
 import (
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/core"
 	appsettings "github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
@@ -33,10 +35,34 @@ type Deps struct {
 	SetUpdateCheck func(*ui.Context, bool)
 	// SetNotifications remembers whether the daily reminder is on.
 	SetNotifications func(*ui.Context, bool)
+
+	// Plugins is what discovery found, as the app last saw it: the built-ins
+	// and what this user installed. An empty list is stated on the page as
+	// such, never as an error.
+	Plugins func() []Plugin
+	// SetEnabled approves a plugin for this library, or withdraws it. It is
+	// the grant: the capabilities the plugin declares apply from the next
+	// library open.
+	SetEnabled func(*ui.Context, string, bool)
+	// Roles is the plugin each role names in this library, the built-in when
+	// the library names none.
+	Roles func() map[string]string
+	// SetRole chooses the plugin for a role; "" returns to the built-in.
+	SetRole func(*ui.Context, string, string)
+	// Types is this library's card types, with how many cards reference each.
+	Types func() []Type
+	// SaveType writes a type, minting the ID of a new one and rewriting the
+	// references a field rename touches. It answers the type's ID, "" when the
+	// app refused the write and said why in the page's State.
+	SaveType func(*ui.Context, core.Type) core.ID
+	// DeleteType removes a type no card references, and says why in the
+	// page's State when one does.
+	DeleteType func(*ui.Context, core.ID)
 }
 
-// View draws the settings page: the agent API, updates, the global shortcut
-// and the daily reminder, each written as soon as it is changed.
+// View draws the settings page: the agent API, updates, the global shortcut,
+// the daily reminder, the plugin roles and the card types, each written as soon
+// as it is changed.
 func View(c *ui.Context, s *State, d Deps) {
 	msgs := locales.In(c.Locale())
 	tk := design.NewTokens(c.Theme())
@@ -50,6 +76,8 @@ func View(c *ui.Context, s *State, d Deps) {
 					updateFieldset(c, s, d, msgs, tk)
 					hotkeyFieldset(c, s, d, msgs, tk)
 					reminderFieldset(c, s, d, msgs, tk)
+					pluginsFieldset(c, s, d, msgs, tk)
+					typesFieldset(c, s, d, msgs, tk)
 				})
 			})
 		})
@@ -147,4 +175,54 @@ func hotkeyError(msgs locales.Messages, s *State) string {
 		return ""
 	}
 	return msgs.ShortcutUnavailable(s.HotkeyErr)
+}
+
+// The rest of the page reads and writes through Deps, which may be partly
+// empty: a build with no plugin service, or a test that drives one group, says
+// so on the page rather than panicking in a frame.
+
+func (d Deps) pluginList() []Plugin {
+	if d.Plugins == nil {
+		return nil
+	}
+	return d.Plugins()
+}
+
+func (d Deps) roles() map[string]string {
+	if d.Roles == nil {
+		return nil
+	}
+	return d.Roles()
+}
+
+func (d Deps) typeList() []Type {
+	if d.Types == nil {
+		return nil
+	}
+	return d.Types()
+}
+
+func (d Deps) enable(c *ui.Context, name string, on bool) {
+	if d.SetEnabled != nil {
+		d.SetEnabled(c, name, on)
+	}
+}
+
+func (d Deps) chooseRole(c *ui.Context, role, name string) {
+	if d.SetRole != nil {
+		d.SetRole(c, role, name)
+	}
+}
+
+func (d Deps) save(c *ui.Context, typ core.Type) core.ID {
+	if d.SaveType == nil {
+		return ""
+	}
+	return d.SaveType(c, typ)
+}
+
+func (d Deps) removeType(c *ui.Context, id core.ID) {
+	if d.DeleteType != nil {
+		d.DeleteType(c, id)
+	}
 }

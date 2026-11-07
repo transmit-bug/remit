@@ -2992,3 +2992,567 @@ func StatRemembered() string { return In(i18n.Locale()).StatRemembered() }
 func (msgs Messages) StatRemembered() string {
 	return Catalog.Format(msgs.locale, "statRemembered", nil)
 }
+
+// SettingsPlugins says "Plugins"
+// in the language the app shows.
+//
+// Settings section: the plugins this library runs and the roles they play.
+func SettingsPlugins() string { return In(i18n.Locale()).SettingsPlugins() }
+
+// SettingsPlugins says "Plugins"
+// in the language of msgs.
+//
+// Settings section: the plugins this library runs and the roles they play.
+func (msgs Messages) SettingsPlugins() string {
+	return Catalog.Format(msgs.locale, "settingsPlugins", nil)
+}
+
+// SettingsPluginsBody says "Remit runs only what this library approves. Approving a plugin grants the capabilities it lists."
+// in the language the app shows.
+//
+// Description of the plugins settings section.
+func SettingsPluginsBody() string { return In(i18n.Locale()).SettingsPluginsBody() }
+
+// SettingsPluginsBody says "Remit runs only what this library approves. Approving a plugin grants the capabilities it lists."
+// in the language of msgs.
+//
+// Description of the plugins settings section.
+func (msgs Messages) SettingsPluginsBody() string {
+	return Catalog.Format(msgs.locale, "settingsPluginsBody", nil)
+}
+
+// SettingsPluginsNeedsLibrary says "Open a library to manage its plugins."
+// in the language the app shows.
+//
+// The plugins section before a library is open.
+func SettingsPluginsNeedsLibrary() string { return In(i18n.Locale()).SettingsPluginsNeedsLibrary() }
+
+// SettingsPluginsNeedsLibrary says "Open a library to manage its plugins."
+// in the language of msgs.
+//
+// The plugins section before a library is open.
+func (msgs Messages) SettingsPluginsNeedsLibrary() string {
+	return Catalog.Format(msgs.locale, "settingsPluginsNeedsLibrary", nil)
+}
+
+// PluginEmpty says "No plugins were found. Remit looks for extensions in its user data folder."
+// in the language the app shows.
+//
+// The plugins section when discovery found nothing.
+func PluginEmpty() string { return In(i18n.Locale()).PluginEmpty() }
+
+// PluginEmpty says "No plugins were found. Remit looks for extensions in its user data folder."
+// in the language of msgs.
+//
+// The plugins section when discovery found nothing.
+func (msgs Messages) PluginEmpty() string {
+	return Catalog.Format(msgs.locale, "pluginEmpty", nil)
+}
+
+// PluginBuiltin says "Built-in"
+// in the language the app shows.
+//
+// Badge: the plugin ships with the app and is always enabled.
+func PluginBuiltin() string { return In(i18n.Locale()).PluginBuiltin() }
+
+// PluginBuiltin says "Built-in"
+// in the language of msgs.
+//
+// Badge: the plugin ships with the app and is always enabled.
+func (msgs Messages) PluginBuiltin() string {
+	return Catalog.Format(msgs.locale, "pluginBuiltin", nil)
+}
+
+// PluginNoCapabilities says "Declares no capabilities"
+// in the language the app shows.
+//
+// A plugin whose manifest declares no capability.
+func PluginNoCapabilities() string { return In(i18n.Locale()).PluginNoCapabilities() }
+
+// PluginNoCapabilities says "Declares no capabilities"
+// in the language of msgs.
+//
+// A plugin whose manifest declares no capability.
+func (msgs Messages) PluginNoCapabilities() string {
+	return Catalog.Format(msgs.locale, "pluginNoCapabilities", nil)
+}
+
+// PluginRoleCards says "Card derivation"
+// in the language the app shows.
+//
+// Settings field: the plugin that turns a block into cards.
+func PluginRoleCards() string { return In(i18n.Locale()).PluginRoleCards() }
+
+// PluginRoleCards says "Card derivation"
+// in the language of msgs.
+//
+// Settings field: the plugin that turns a block into cards.
+func (msgs Messages) PluginRoleCards() string {
+	return Catalog.Format(msgs.locale, "pluginRoleCards", nil)
+}
+
+// PluginRoleCardsBody says "Turns a block of a note into cards, in the types it names."
+// in the language the app shows.
+//
+// Description of the card derivation role.
+func PluginRoleCardsBody() string { return In(i18n.Locale()).PluginRoleCardsBody() }
+
+// PluginRoleCardsBody says "Turns a block of a note into cards, in the types it names."
+// in the language of msgs.
+//
+// Description of the card derivation role.
+func (msgs Messages) PluginRoleCardsBody() string {
+	return Catalog.Format(msgs.locale, "pluginRoleCardsBody", nil)
+}
+
+// PluginRoleSchedule says "Scheduling"
+// in the language the app shows.
+//
+// Settings field: the plugin that sets the scheduling policy.
+func PluginRoleSchedule() string { return In(i18n.Locale()).PluginRoleSchedule() }
+
+// PluginRoleSchedule says "Scheduling"
+// in the language of msgs.
+//
+// Settings field: the plugin that sets the scheduling policy.
+func (msgs Messages) PluginRoleSchedule() string {
+	return Catalog.Format(msgs.locale, "pluginRoleSchedule", nil)
+}
+
+// PluginRoleScheduleBody says "Sets the scheduling policy and what a finished session is worth saying."
+// in the language the app shows.
+//
+// Description of the scheduling role.
+func PluginRoleScheduleBody() string { return In(i18n.Locale()).PluginRoleScheduleBody() }
+
+// PluginRoleScheduleBody says "Sets the scheduling policy and what a finished session is worth saying."
+// in the language of msgs.
+//
+// Description of the scheduling role.
+func (msgs Messages) PluginRoleScheduleBody() string {
+	return Catalog.Format(msgs.locale, "pluginRoleScheduleBody", nil)
+}
+
+// PluginEnableFailed says "The plugin was not enabled: {reason}"
+// in the language the app shows.
+//
+// Approving or withdrawing a plugin failed.
+func PluginEnableFailed(reason string) string { return In(i18n.Locale()).PluginEnableFailed(reason) }
+
+// PluginEnableFailed says "The plugin was not enabled: {reason}"
+// in the language of msgs.
+//
+// Approving or withdrawing a plugin failed.
+func (msgs Messages) PluginEnableFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "pluginEnableFailed", map[string]any{"reason": reason})
+}
+
+// PluginRoleFailed says "The role was not changed: {reason}"
+// in the language the app shows.
+//
+// Choosing the plugin for a role failed.
+func PluginRoleFailed(reason string) string { return In(i18n.Locale()).PluginRoleFailed(reason) }
+
+// PluginRoleFailed says "The role was not changed: {reason}"
+// in the language of msgs.
+//
+// Choosing the plugin for a role failed.
+func (msgs Messages) PluginRoleFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "pluginRoleFailed", map[string]any{"reason": reason})
+}
+
+// SettingsTypes says "Card types"
+// in the language the app shows.
+//
+// Settings section: the library's card types.
+func SettingsTypes() string { return In(i18n.Locale()).SettingsTypes() }
+
+// SettingsTypes says "Card types"
+// in the language of msgs.
+//
+// Settings section: the library's card types.
+func (msgs Messages) SettingsTypes() string {
+	return Catalog.Format(msgs.locale, "settingsTypes", nil)
+}
+
+// SettingsTypesBody says "A type is a field list and two templates. Cards render through it, so a template edit shows on the next frame."
+// in the language the app shows.
+//
+// Description of the card types settings section.
+func SettingsTypesBody() string { return In(i18n.Locale()).SettingsTypesBody() }
+
+// SettingsTypesBody says "A type is a field list and two templates. Cards render through it, so a template edit shows on the next frame."
+// in the language of msgs.
+//
+// Description of the card types settings section.
+func (msgs Messages) SettingsTypesBody() string {
+	return Catalog.Format(msgs.locale, "settingsTypesBody", nil)
+}
+
+// SettingsTypesNeedsLibrary says "Open a library to manage its types."
+// in the language the app shows.
+//
+// The card types section before a library is open.
+func SettingsTypesNeedsLibrary() string { return In(i18n.Locale()).SettingsTypesNeedsLibrary() }
+
+// SettingsTypesNeedsLibrary says "Open a library to manage its types."
+// in the language of msgs.
+//
+// The card types section before a library is open.
+func (msgs Messages) SettingsTypesNeedsLibrary() string {
+	return Catalog.Format(msgs.locale, "settingsTypesNeedsLibrary", nil)
+}
+
+// TypeColumnName says "Type"
+// in the language the app shows.
+//
+// Card types table header: the type's name.
+func TypeColumnName() string { return In(i18n.Locale()).TypeColumnName() }
+
+// TypeColumnName says "Type"
+// in the language of msgs.
+//
+// Card types table header: the type's name.
+func (msgs Messages) TypeColumnName() string {
+	return Catalog.Format(msgs.locale, "typeColumnName", nil)
+}
+
+// TypeColumnFields says "Fields"
+// in the language the app shows.
+//
+// Card types table header: how many fields the type has.
+func TypeColumnFields() string { return In(i18n.Locale()).TypeColumnFields() }
+
+// TypeColumnFields says "Fields"
+// in the language of msgs.
+//
+// Card types table header: how many fields the type has.
+func (msgs Messages) TypeColumnFields() string {
+	return Catalog.Format(msgs.locale, "typeColumnFields", nil)
+}
+
+// TypeColumnCards says "Cards"
+// in the language the app shows.
+//
+// Card types table header: how many cards reference the type.
+func TypeColumnCards() string { return In(i18n.Locale()).TypeColumnCards() }
+
+// TypeColumnCards says "Cards"
+// in the language of msgs.
+//
+// Card types table header: how many cards reference the type.
+func (msgs Messages) TypeColumnCards() string {
+	return Catalog.Format(msgs.locale, "typeColumnCards", nil)
+}
+
+// TypeNew says "New type"
+// in the language the app shows.
+//
+// Button: start a new card type.
+func TypeNew() string { return In(i18n.Locale()).TypeNew() }
+
+// TypeNew says "New type"
+// in the language of msgs.
+//
+// Button: start a new card type.
+func (msgs Messages) TypeNew() string {
+	return Catalog.Format(msgs.locale, "typeNew", nil)
+}
+
+// TypeDelete says "Delete type"
+// in the language the app shows.
+//
+// Button: delete the chosen card type.
+func TypeDelete() string { return In(i18n.Locale()).TypeDelete() }
+
+// TypeDelete says "Delete type"
+// in the language of msgs.
+//
+// Button: delete the chosen card type.
+func (msgs Messages) TypeDelete() string {
+	return Catalog.Format(msgs.locale, "typeDelete", nil)
+}
+
+// TypeFieldName says "Field {number}"
+// in the language the app shows.
+//
+// Label of one field's name in the type editor.
+func TypeFieldName(number int) string { return In(i18n.Locale()).TypeFieldName(number) }
+
+// TypeFieldName says "Field {number}"
+// in the language of msgs.
+//
+// Label of one field's name in the type editor.
+func (msgs Messages) TypeFieldName(number int) string {
+	return Catalog.Format(msgs.locale, "typeFieldName", map[string]any{"number": number})
+}
+
+// TypeRemoveField says "Remove"
+// in the language the app shows.
+//
+// Button: remove one field from the type being edited.
+func TypeRemoveField() string { return In(i18n.Locale()).TypeRemoveField() }
+
+// TypeRemoveField says "Remove"
+// in the language of msgs.
+//
+// Button: remove one field from the type being edited.
+func (msgs Messages) TypeRemoveField() string {
+	return Catalog.Format(msgs.locale, "typeRemoveField", nil)
+}
+
+// TypeAddField says "Add field"
+// in the language the app shows.
+//
+// Button: append a field to the type being edited.
+func TypeAddField() string { return In(i18n.Locale()).TypeAddField() }
+
+// TypeAddField says "Add field"
+// in the language of msgs.
+//
+// Button: append a field to the type being edited.
+func (msgs Messages) TypeAddField() string {
+	return Catalog.Format(msgs.locale, "typeAddField", nil)
+}
+
+// TypeFrontTemplate says "Front template"
+// in the language the app shows.
+//
+// Label of the front template's text area.
+func TypeFrontTemplate() string { return In(i18n.Locale()).TypeFrontTemplate() }
+
+// TypeFrontTemplate says "Front template"
+// in the language of msgs.
+//
+// Label of the front template's text area.
+func (msgs Messages) TypeFrontTemplate() string {
+	return Catalog.Format(msgs.locale, "typeFrontTemplate", nil)
+}
+
+// TypeBackTemplate says "Back template"
+// in the language the app shows.
+//
+// Label of the back template's text area.
+func TypeBackTemplate() string { return In(i18n.Locale()).TypeBackTemplate() }
+
+// TypeBackTemplate says "Back template"
+// in the language of msgs.
+//
+// Label of the back template's text area.
+func (msgs Messages) TypeBackTemplate() string {
+	return Catalog.Format(msgs.locale, "typeBackTemplate", nil)
+}
+
+// TypeSave says "Save type"
+// in the language the app shows.
+//
+// Button: write the type being edited.
+func TypeSave() string { return In(i18n.Locale()).TypeSave() }
+
+// TypeSave says "Save type"
+// in the language of msgs.
+//
+// Button: write the type being edited.
+func (msgs Messages) TypeSave() string {
+	return Catalog.Format(msgs.locale, "typeSave", nil)
+}
+
+// TypePreview says "Preview"
+// in the language the app shows.
+//
+// Heading of the rendered preview of the type being edited.
+func TypePreview() string { return In(i18n.Locale()).TypePreview() }
+
+// TypePreview says "Preview"
+// in the language of msgs.
+//
+// Heading of the rendered preview of the type being edited.
+func (msgs Messages) TypePreview() string {
+	return Catalog.Format(msgs.locale, "typePreview", nil)
+}
+
+// TypePreviewFront says "Front"
+// in the language the app shows.
+//
+// Label of the previewed front face.
+func TypePreviewFront() string { return In(i18n.Locale()).TypePreviewFront() }
+
+// TypePreviewFront says "Front"
+// in the language of msgs.
+//
+// Label of the previewed front face.
+func (msgs Messages) TypePreviewFront() string {
+	return Catalog.Format(msgs.locale, "typePreviewFront", nil)
+}
+
+// TypePreviewBack says "Back"
+// in the language the app shows.
+//
+// Label of the previewed back face.
+func TypePreviewBack() string { return In(i18n.Locale()).TypePreviewBack() }
+
+// TypePreviewBack says "Back"
+// in the language of msgs.
+//
+// Label of the previewed back face.
+func (msgs Messages) TypePreviewBack() string {
+	return Catalog.Format(msgs.locale, "typePreviewBack", nil)
+}
+
+// TypeEmpty says "No card types in this library."
+// in the language the app shows.
+//
+// The type list when the library holds none.
+func TypeEmpty() string { return In(i18n.Locale()).TypeEmpty() }
+
+// TypeEmpty says "No card types in this library."
+// in the language of msgs.
+//
+// The type list when the library holds none.
+func (msgs Messages) TypeEmpty() string {
+	return Catalog.Format(msgs.locale, "typeEmpty", nil)
+}
+
+// TypeChoose says "Choose a type to edit it."
+// in the language the app shows.
+//
+// The type editor when no type is chosen.
+func TypeChoose() string { return In(i18n.Locale()).TypeChoose() }
+
+// TypeChoose says "Choose a type to edit it."
+// in the language of msgs.
+//
+// The type editor when no type is chosen.
+func (msgs Messages) TypeChoose() string {
+	return Catalog.Format(msgs.locale, "typeChoose", nil)
+}
+
+// TypeUnknown says "That type is not in this library."
+// in the language the app shows.
+//
+// A type action named a type the library no longer holds.
+func TypeUnknown() string { return In(i18n.Locale()).TypeUnknown() }
+
+// TypeUnknown says "That type is not in this library."
+// in the language of msgs.
+//
+// A type action named a type the library no longer holds.
+func (msgs Messages) TypeUnknown() string {
+	return Catalog.Format(msgs.locale, "typeUnknown", nil)
+}
+
+// TypeBuiltinDelete says "A built-in type cannot be deleted: the next open seeds it again."
+// in the language the app shows.
+//
+// Deleting one of the three types every library seeds.
+func TypeBuiltinDelete() string { return In(i18n.Locale()).TypeBuiltinDelete() }
+
+// TypeBuiltinDelete says "A built-in type cannot be deleted: the next open seeds it again."
+// in the language of msgs.
+//
+// Deleting one of the three types every library seeds.
+func (msgs Messages) TypeBuiltinDelete() string {
+	return Catalog.Format(msgs.locale, "typeBuiltinDelete", nil)
+}
+
+// TypeInUse says "The type is still used by {cards, plural, one {# card} other {# cards}}; delete them first."
+// in the language the app shows.
+//
+// Deleting a type some card references.
+func TypeInUse(cards int) string { return In(i18n.Locale()).TypeInUse(cards) }
+
+// TypeInUse says "The type is still used by {cards, plural, one {# card} other {# cards}}; delete them first."
+// in the language of msgs.
+//
+// Deleting a type some card references.
+func (msgs Messages) TypeInUse(cards int) string {
+	return Catalog.Format(msgs.locale, "typeInUse", map[string]any{"cards": cards})
+}
+
+// TypeFieldHeld says "Cannot delete {field}: {cards, plural, one {# card holds a value in it} other {# cards hold a value in it}}."
+// in the language the app shows.
+//
+// Deleting a field some card holds a value in.
+func TypeFieldHeld(field string, cards int) string {
+	return In(i18n.Locale()).TypeFieldHeld(field, cards)
+}
+
+// TypeFieldHeld says "Cannot delete {field}: {cards, plural, one {# card holds a value in it} other {# cards hold a value in it}}."
+// in the language of msgs.
+//
+// Deleting a field some card holds a value in.
+func (msgs Messages) TypeFieldHeld(field string, cards int) string {
+	return Catalog.Format(msgs.locale, "typeFieldHeld", map[string]any{"field": field, "cards": cards})
+}
+
+// TypeBad says "The type was not saved: {reason}"
+// in the language the app shows.
+//
+// Saving a type the store refused.
+func TypeBad(reason string) string { return In(i18n.Locale()).TypeBad(reason) }
+
+// TypeBad says "The type was not saved: {reason}"
+// in the language of msgs.
+//
+// Saving a type the store refused.
+func (msgs Messages) TypeBad(reason string) string {
+	return Catalog.Format(msgs.locale, "typeBad", map[string]any{"reason": reason})
+}
+
+// TypeTemplateBroken says "That template does not compile: {reason}"
+// in the language the app shows.
+//
+// The preview's report when the draft template does not compile.
+func TypeTemplateBroken(reason string) string { return In(i18n.Locale()).TypeTemplateBroken(reason) }
+
+// TypeTemplateBroken says "That template does not compile: {reason}"
+// in the language of msgs.
+//
+// The preview's report when the draft template does not compile.
+func (msgs Messages) TypeTemplateBroken(reason string) string {
+	return Catalog.Format(msgs.locale, "typeTemplateBroken", map[string]any{"reason": reason})
+}
+
+// TypeSaved says "Type saved."
+// in the language the app shows.
+//
+// The type editor's type was written.
+func TypeSaved() string { return In(i18n.Locale()).TypeSaved() }
+
+// TypeSaved says "Type saved."
+// in the language of msgs.
+//
+// The type editor's type was written.
+func (msgs Messages) TypeSaved() string {
+	return Catalog.Format(msgs.locale, "typeSaved", nil)
+}
+
+// TypeDeleted says "Type deleted."
+// in the language the app shows.
+//
+// The type editor's type was deleted.
+func TypeDeleted() string { return In(i18n.Locale()).TypeDeleted() }
+
+// TypeDeleted says "Type deleted."
+// in the language of msgs.
+//
+// The type editor's type was deleted.
+func (msgs Messages) TypeDeleted() string {
+	return Catalog.Format(msgs.locale, "typeDeleted", nil)
+}
+
+// PluginEnable says "Enable {name}"
+// in the language the app shows.
+//
+// The switch that approves one plugin for this library, named by the
+// plugin.
+func PluginEnable(name string) string { return In(i18n.Locale()).PluginEnable(name) }
+
+// PluginEnable says "Enable {name}"
+// in the language of msgs.
+//
+// The switch that approves one plugin for this library, named by the
+// plugin.
+func (msgs Messages) PluginEnable(name string) string {
+	return Catalog.Format(msgs.locale, "pluginEnable", map[string]any{"name": name})
+}

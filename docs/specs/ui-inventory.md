@@ -71,6 +71,13 @@ Update a row in the same change that touches its surface.
 | Review heatmap | a calendar of levels | — | gap: `ui/chart` has no heatmap at v0.8.1 |
 | Settings rows | a form | `ui.Form` + `ui.Field` + `ui.Fieldset` | ok |
 | Toggles | on/off setting | `ui.Switch` | ok |
+| Settings: plugin list | every installed plugin with its own approval | `ui.Fieldset` + a `Row` per plugin + `ui.Switch` | ok — the switch is the grant; a list of settings objects is composition, no widget carries it |
+| Settings: declared capabilities | short labels | `ui.Badge` | ok |
+| Settings: plugin role | one of a few plugins, all visible, one on | `ui.RadioGroup` + `ui.Radio` | ok |
+| Settings: card types | a data table with a chosen row | `ui.Table` + `ListState.Selected` | ok |
+| Settings: type fields | a field name per line, removable | `ui.TextInput` + `ui.Button` in a `Column` | ok (composition: a field row is not a widget) |
+| Settings: type templates | text over several lines | `ui.TextArea` | ok |
+| Settings: template preview | Markdown, read-only, live | `ui/markdown.View` | ok — it is the card-face widget, so the preview reads as the next card will |
 | About | a dialog | `ui.DialogBase` | ok |
 
 ## Known gaps (not violations)
