@@ -12,12 +12,13 @@ the issue tracker; this file says how code is written, gated and merged.
 - Split a package when a boundary is needed. Do not create packages in
   anticipation of one. The design language and the kit are such a boundary
   (`internal/ui/design`, `internal/ui/kit`); screen packages are split only when
-  a screen is rewritten, and then in one shape (ADR 0004).
+  a screen is rewritten, and then in one shape (ADR 0004), under
+  `internal/ui/screens/` (ADR 0009).
 - A screen package is `State` / `Deps` / `View`: the session's state, one
   function per thing the user can do, and the frame. It imports `design`, `kit`
   and `internal/core`'s model — never the store, never `internal/ui`, never a
-  sibling screen. The app assembles it and owns every write (`internal/ui/review`
-  is the first).
+  sibling screen. The app assembles it and owns every write
+  (`internal/ui/screens/review` is the first).
 
 ## Tests
 

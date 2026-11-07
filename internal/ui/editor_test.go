@@ -10,7 +10,6 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
-
 	"github.com/transmit-bug/remit/internal/settings"
 )
 
@@ -135,5 +134,52 @@ func TestDocumentRoundTripsRichText(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Errorf("the reopened document lost %q:\n%s", want, text)
 		}
+	}
+}
+
+// Editing a block's text is a note save, so the card that follows the block
+// shows the new sides and the note file holds them.
+func TestEditDocument(t *testing.T) {
+	a, seed := newTestApp(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	notesMode(t, a, tt)
+	openNote(t, tt, "Memory and recall")
+
+	if err := tt.Click("Note"); err != nil {
+		t.Fatalf("open the note's document: %v", err)
+	}
+	tt.Type("Read this first. ")
+	tt.Advance(320 * time.Millisecond)
+
+	source, err := os.ReadFile(filepath.Join(seed.dir, "notes", "memory-and-recall-"+string(seed.memory.ID)+".md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), "Read this first.") {
+		t.Fatalf("the edit did not reach the file:\n%s", source)
+	}
+	// Every paragraph keeps the marker that names it, so the card that points
+	// at one still finds it.
+	for _, block := range seed.memory.Blocks {
+		if !strings.Contains(string(source), core.BlockMarker(block.ID)) {
+			t.Errorf("block %s lost its marker:\n%s", block.ID, source)
+		}
+	}
+	card, ok := a.Library().Card(seed.spacing.ID)
+	if !ok {
+		t.Fatal("the card is gone")
+	}
+	prompt, _, state := a.faces(card)
+	if state != core.LinkLive {
+		t.Errorf("the card is %s, want live", state)
+	}
+	// The caret sits at the document's end, so what was typed joined the last
+	// paragraph; the card's own paragraph is untouched and still found.
+	if !strings.Contains(string(source), "Read this first.") {
+		t.Errorf("the typed text is not in the last paragraph:\n%s", source)
+	}
+	if prompt != "Spacing beats cramming" {
+		t.Errorf("the card reads %q, want its own paragraph", prompt)
 	}
 }

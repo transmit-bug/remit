@@ -2,6 +2,8 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-07
+- **Amended by:** ADR 0009 (a screen's package is `internal/ui/screens/<name>/`;
+  the shape below stands)
 - **Related:** #82, #88, ADR 0001, ADR 0005
 
 ## Context

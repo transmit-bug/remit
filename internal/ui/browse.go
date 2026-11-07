@@ -7,6 +7,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
 // browseFilter is which cards browse lists: every card, those the queue has
@@ -149,20 +150,20 @@ func keepSearched(cards, found []core.Card) []core.Card {
 // browseView draws browse mode: a search field, the filters, and the cards they
 // found. The rows outlive the pass, so what the view derives from a keystroke is
 // loaded after the fields have taken it.
-func (a *App) browseView(c *ui.Context, tk tokens) {
+func (a *App) browseView(c *ui.Context, tk design.Tokens) {
 	reload, open := false, -1
 
-	ui.Column(c).Grow(1).Padding(tk.spaceXL).Gap(tk.spaceL).Children(func() {
+	ui.Column(c).Grow(1).Padding(tk.SpaceXL).Gap(tk.SpaceL).Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, m(c).BrowseTitle()).FontSize(tk.typeTitle).Bold()
+			ui.Text(c, m(c).BrowseTitle()).FontSize(tk.TypeTitle).Bold()
 			ui.Spacer(c)
 			ui.Badge(c, cardCount(c, len(a.browse.rows)))
 		})
 
-		ui.Row(c).Gap(tk.spaceM).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Children(func() {
 			field := ui.SearchField(c, &a.browse.query).
 				Placeholder(m(c).BrowseSearch()).Label(m(c).BrowseSearch()).
-				MinHeight(tk.control).Grow(1).Bind(&a.browse.field)
+				MinHeight(tk.Control).Grow(1).Bind(&a.browse.field)
 			if field.Changed() {
 				reload, open = true, -1
 			}
@@ -178,13 +179,13 @@ func (a *App) browseView(c *ui.Context, tk tokens) {
 
 		a.browseRows(c, tk, &open)
 
-		ui.Row(c).Gap(tk.spaceS).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
 			_, chosen := a.browse.chosen()
-			if ui.Button(c, m(c).BrowseOpen()).MinHeight(tk.control).Disabled(!chosen).Clicked() {
+			if ui.Button(c, m(c).BrowseOpen()).MinHeight(tk.Control).Disabled(!chosen).Clicked() {
 				open = a.browse.selected
 			}
 			if len(a.browse.rows) == 0 {
-				ui.Text(c, m(c).BrowseEmpty()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+				ui.Text(c, m(c).BrowseEmpty()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 			}
 		})
 	})
@@ -201,7 +202,7 @@ func (a *App) browseView(c *ui.Context, tk tokens) {
 
 // browseRows is the list of cards found: a row chooses on a click, and opens on
 // Enter, a double click, or the Open button.
-func (a *App) browseRows(c *ui.Context, tk tokens, open *int) {
+func (a *App) browseRows(c *ui.Context, tk design.Tokens, open *int) {
 	msgs := m(c)
 	a.browse.list.Selected = &a.browse.selected
 	a.browse.list.Key = func(row int) any { return a.browse.rows[row].card.ID }
@@ -223,22 +224,22 @@ func (a *App) browseRows(c *ui.Context, tk tokens, open *int) {
 // browseRowView draws one card: its prompt, the note it came from, the state
 // of its reference, and — for a lost one — the action that repairs it. It is a
 // row of ui.List, not a widget of its own.
-func (a *App) browseRowView(c *ui.Context, tk tokens, row browseRow) {
-	ui.Row(c).Gap(tk.spaceM).AlignItems(ui.Center).Padding(tk.spaceS, tk.spaceM).Children(func() {
-		ui.Column(c).Grow(1).Gap(tk.spaceXS).Children(func() {
+func (a *App) browseRowView(c *ui.Context, tk design.Tokens, row browseRow) {
+	ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Padding(tk.SpaceS, tk.SpaceM).Children(func() {
+		ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {
 			text, colour := row.prompt, tk.Text
 			if row.state == core.LinkLost {
 				text, colour = m(c).LostBody(), tk.TextMuted
 			}
-			ui.Text(c, text).FontSize(tk.typeBody).TextColor(colour).SingleLine()
+			ui.Text(c, text).FontSize(tk.TypeBody).TextColor(colour).SingleLine()
 			if row.note != "" {
-				ui.Text(c, row.note).FontSize(tk.typeSmall).TextColor(tk.TextMuted).SingleLine()
+				ui.Text(c, row.note).FontSize(tk.TypeSmall).TextColor(tk.TextMuted).SingleLine()
 			}
 		})
 		switch {
 		case row.state == core.LinkLost:
 			stateBadge(c, tk, m(c).Lost(), tk.Danger)
-			ui.Button(c, m(c).Relink()).MinHeight(tk.control).
+			ui.Button(c, m(c).Relink()).MinHeight(tk.Control).
 				OnClick(func() { a.openRelink(c, row.card.ID) })
 		case row.state == core.LinkFrozen:
 			stateBadge(c, tk, m(c).Frozen(), tk.Warning)
@@ -250,9 +251,9 @@ func (a *App) browseRowView(c *ui.Context, tk tokens, row browseRow) {
 }
 
 // stateBadge marks a row whose reference is not live text.
-func stateBadge(c *ui.Context, tk tokens, label string, colour ui.Color) {
+func stateBadge(c *ui.Context, tk design.Tokens, label string, colour ui.Color) {
 	ui.Badge(c, label).
-		Background(tk.linkFill(colour)).TextColor(tk.linkInk(colour))
+		Background(tk.LinkFill(colour)).TextColor(tk.LinkInk(colour))
 }
 
 // openRow shows the row chosen: its note in the editor, or the card in review

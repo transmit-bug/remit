@@ -8,6 +8,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
 )
 
@@ -57,32 +58,32 @@ func (a *App) reconcileCards(c *ui.Context) {
 			// already has keep reading it.
 			continue
 		}
-	type place struct {
-		typ     core.ID
-		ordinal int
-	}
-	wanted := make(map[place]bool, len(asked))
-	for _, d := range asked {
-		wanted[place{d.Type, d.Ordinal}] = true
-	}
-	held := map[place]bool{}
-	for _, card := range a.data.cards {
-		if card.Ref.Block != block.ID || card.Status == core.StatusSuspended {
-			continue
+		type place struct {
+			typ     core.ID
+			ordinal int
 		}
-		place := place{card.Type, card.Ordinal}
-		if !wanted[place] {
-			// The paragraph stopped asking this: it leaves the queue.
-			card.Status = core.StatusSuspended
-			if err := a.lib.SaveCard(card); err != nil {
-				a.report(c, "suspend card", err)
-				return
+		wanted := make(map[place]bool, len(asked))
+		for _, d := range asked {
+			wanted[place{d.Type, d.Ordinal}] = true
+		}
+		held := map[place]bool{}
+		for _, card := range a.data.cards {
+			if card.Ref.Block != block.ID || card.Status == core.StatusSuspended {
+				continue
 			}
-			wrote = true
-			continue
+			place := place{card.Type, card.Ordinal}
+			if !wanted[place] {
+				// The paragraph stopped asking this: it leaves the queue.
+				card.Status = core.StatusSuspended
+				if err := a.lib.SaveCard(card); err != nil {
+					a.report(c, "suspend card", err)
+					return
+				}
+				wrote = true
+				continue
+			}
+			held[place] = true
 		}
-		held[place] = true
-	}
 		missing := 0
 		for range wanted {
 			missing++
@@ -109,26 +110,26 @@ func (a *App) reconcileCards(c *ui.Context) {
 // feeds, and a button that edits the overrides of each. It sits above the
 // document rather than in a gutter, so that it never covers the text it
 // describes.
-func (a *App) cardsStrip(c *ui.Context, tk tokens, note core.Note) {
+func (a *App) cardsStrip(c *ui.Context, tk design.Tokens, note core.Note) {
 	paras := a.cardsByParagraph(note)
 	if len(paras) == 0 {
 		return
 	}
 	ui.ScrollHorizontal(c).Children(func() {
-		ui.Row(c).Gap(tk.spaceS).Padding(tk.spaceXS, 0).Children(func() {
+		ui.Row(c).Gap(tk.SpaceS).Padding(tk.SpaceXS, 0).Children(func() {
 			for _, para := range paras {
 				for _, card := range para.cards {
 					label := m(c).CardOnParagraph(para.paragraph, len(para.cards))
 					badge := ui.ButtonBase(c.Key(string(card.ID))).
-						Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control-tk.spaceS).
-						Radius(tk.radiusControl).Background(tk.Surface).
-						Border(tk.hairline, tk.ratingEdge(cardColour(tk, card))).
+						Padding(tk.SpaceXS, tk.SpaceS).MinHeight(tk.Control-tk.SpaceS).
+						Radius(tk.RadiusControl).Background(tk.Surface).
+						Border(tk.Hairline, tk.RatingEdge(cardColour(tk, card))).
 						Label(label).Tooltip(m(c).EditCard()).
 						OnClick(func() { a.openCardEdit(c, card.ID) })
 					badge.Children(func() {
-						tk.icon(c, cardIcon(card), iconSmall).
+						tk.Icon(c, cardIcon(card), design.IconSmall).
 							TextColor(cardColour(tk, card))
-						ui.Text(c, label).FontSize(tk.typeSmall).TextColor(tk.Text)
+						ui.Text(c, label).FontSize(tk.TypeSmall).TextColor(tk.Text)
 					})
 				}
 			}
@@ -150,7 +151,7 @@ func cardIcon(card core.Card) string {
 }
 
 // cardColour is the badge's edge for the state the icon names.
-func cardColour(tk tokens, card core.Card) ui.Color {
+func cardColour(tk design.Tokens, card core.Card) ui.Color {
 	switch {
 	case card.Ref.Frozen != nil:
 		return tk.Warning
@@ -197,7 +198,7 @@ func (a *App) openCardEdit(c *ui.Context, id core.ID) {
 // cardEditView draws the field editor over the window: one input per field of
 // the card's type. An empty field takes the paragraph's value, which is what
 // a card is until someone edits it.
-func (a *App) cardEditView(c *ui.Context, tk tokens) {
+func (a *App) cardEditView(c *ui.Context, tk design.Tokens) {
 	if !a.cardEdit.open {
 		return
 	}
@@ -205,14 +206,14 @@ func (a *App) cardEditView(c *ui.Context, tk tokens) {
 	submit := false
 
 	ui.DialogBase(c, &a.cardEdit.open, func(backdrop, panel ui.Element) {
-		backdrop.Background(tk.scrim)
-		panel = kit.StylePanel(c, panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM))
+		backdrop.Background(tk.Scrim)
+		panel = kit.StylePanel(c, panel.Width(paletteWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
 
 		panel.Children(func() {
-			ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
-				ui.Text(c, msgs.EditCard()).FontSize(tk.typeHeading).Bold().Grow(1)
+			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
+				ui.Text(c, msgs.EditCard()).FontSize(tk.TypeHeading).Bold().Grow(1)
 				ui.Button(c, "").Label(msgs.Close()).Tooltip(msgs.Close()).
-					Children(func() { tk.icon(c, "x", iconSmall) }).
+					Children(func() { tk.Icon(c, "x", design.IconSmall) }).
 					OnClick(func() { a.cardEdit.open = false })
 			})
 
@@ -220,19 +221,19 @@ func (a *App) cardEditView(c *ui.Context, tk tokens) {
 				name := a.fieldName(i)
 				input := ui.TextInput(c, &a.cardEdit.fields[i]).
 					Placeholder(name).Bind(&a.cardEdit.focus[i]).
-					Label(name).MinHeight(tk.control)
+					Label(name).MinHeight(tk.Control)
 				if input.Submitted() {
 					submit = true
 				}
 				_ = value
 			}
 
-			ui.Row(c).Gap(tk.spaceS).Children(func() {
+			ui.Row(c).Gap(tk.SpaceS).Children(func() {
 				// A handler runs after this pass, so it writes directly rather
 				// than leaving a flag the view would read too early.
-				ui.PrimaryButton(c, msgs.Save()).MinHeight(tk.control).
+				ui.PrimaryButton(c, msgs.Save()).MinHeight(tk.Control).
 					OnClick(func() { a.writeCardEdit(c) })
-				ui.Button(c, msgs.Cancel()).MinHeight(tk.control).
+				ui.Button(c, msgs.Cancel()).MinHeight(tk.Control).
 					OnClick(func() { a.cardEdit.open = false })
 			})
 		})

@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -181,5 +184,136 @@ func TestGradeKeysShowTheSchedulesIntervals(t *testing.T) {
 		if !tt.HasText(want(o.Wait)) {
 			t.Errorf("the %v key does not show %q; texts %q", o.Rating, want(o.Wait), tt.Texts())
 		}
+	}
+}
+
+// Review runs on keys: reveal, grade, the next card, undo, suspend and the
+// remaining count, on the real view over the real store.
+func TestReviewKeys(t *testing.T) {
+	a, seed := newTestApp(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	tt.Key(ui.Cmd, ui.Key1)
+
+	answer := "reviewing just before you forget strengthens recall."
+	if !tt.HasText("Spacing beats cramming") {
+		t.Fatalf("review did not open on the first card; texts %q", tt.Texts())
+	}
+	tt.Key(0, ui.KeySpace)
+	if !tt.HasText(answer) {
+		t.Fatalf("Space did not reveal the answer; texts %q", tt.Texts())
+	}
+
+	// Grading advances at once, to the frozen card.
+	tt.Key(0, ui.Key1)
+	if tt.HasText(answer) {
+		t.Error("the graded card's answer is still shown")
+	}
+	for _, want := range []string{"Frozen", "A good card asks", "3 cards left"} {
+		if !tt.HasText(want) {
+			t.Fatalf("missing %q after grading; texts %q", want, tt.Texts())
+		}
+	}
+
+	// A card cannot be graded before it is revealed.
+	tt.Key(0, ui.Key3)
+	if !tt.HasText("3 cards left") || !tt.HasText("Frozen") {
+		t.Error("a grade moved the queue before the answer was revealed")
+	}
+
+	// The frozen card shows its snapshot, not the block's current text.
+	if tt.HasText("one question with one answer.") {
+		t.Error("the frozen card follows its block instead of its snapshot")
+	}
+	tt.Key(0, ui.KeySpace)
+	if !tt.HasText("one question at a time.") {
+		t.Fatalf("the frozen snapshot's answer is missing; texts %q", tt.Texts())
+	}
+
+	// Undo goes back one card, answer shown, and says so once.
+	tt.Key(0, ui.KeyU)
+	for _, want := range []string{answer, "4 cards left", "Grade undone"} {
+		if !tt.HasText(want) {
+			t.Fatalf("missing %q after undo; texts %q", want, tt.Texts())
+		}
+	}
+
+	// Grade again, then Easy moves on without the answer coming back up.
+	tt.Key(0, ui.Key1)
+	tt.Key(0, ui.KeySpace)
+	tt.Key(0, ui.Key4)
+	for _, want := range []string{"The testing effect", "2 cards left"} {
+		if !tt.HasText(want) {
+			t.Fatalf("missing %q after grading; texts %q", want, tt.Texts())
+		}
+	}
+	if tt.HasText("one question at a time.") {
+		t.Error("the answer stayed up on the next card")
+	}
+
+	// S suspends the card shown; it leaves the queue without a review.
+	tt.Key(0, ui.KeyS)
+	for _, want := range []string{"A block divides at", "1 card left"} {
+		if !tt.HasText(want) {
+			t.Fatalf("missing %q after suspend; texts %q", want, tt.Texts())
+		}
+	}
+	suspended, err := os.ReadFile(filepath.Join(seed.dir, "cards", string(seed.testing.ID)+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(suspended), `"status": "suspended"`) {
+		t.Errorf("suspending did not reach the card file: %s", suspended)
+	}
+
+	// E opens the note the card came from.
+	tt.Key(0, ui.KeyE)
+	if !tt.HasText("Notebook") || a.editor.loaded != string(seed.writing.ID) {
+		t.Fatalf("E did not open the card's note; texts %q", tt.Texts())
+	}
+
+	tt.Advance(5 * time.Second) // past the undo toast and the card's exit
+	if tt.FramePending() {
+		t.Error("view still requests frames after it should settle")
+	}
+}
+
+// A grade is a review event in the library, so a later run finds the card
+// scheduled rather than due.
+func TestReviewPersists(t *testing.T) {
+	dir := t.TempDir()
+	seed := seedLibrary(t, dir)
+	a := NewApp(Options{LibraryDir: dir})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	tt.Key(ui.Cmd, ui.Key1)
+	tt.Key(0, ui.KeySpace)
+	tt.Key(0, ui.Key3) // Good
+	if !tt.HasText("3 cards left") {
+		t.Fatalf("Good did not move the queue on; texts %q", tt.Texts())
+	}
+
+	// The log is the source of truth, and it holds the review.
+	logged, err := os.ReadFile(filepath.Join(dir, "reviews.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(logged), string(seed.spacing.ID)) || !strings.Contains(string(logged), `"rating":"good"`) {
+		t.Fatalf("the review is not in the log: %s", logged)
+	}
+
+	// A second app on the same directory opens it without the graded card, so
+	// the due date survived the write.
+	next := NewApp(Options{LibraryDir: dir})
+	tt = ui.NewTester(next.View, 1024, 720)
+	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key1)
+	for _, want := range []string{"A good card asks", "3 cards left"} {
+		if !tt.HasText(want) {
+			t.Fatalf("reopened review is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+	if tt.HasText("Spacing beats cramming") {
+		t.Error("the graded card is due again in the reopened library")
 	}
 }
