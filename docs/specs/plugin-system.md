@@ -5,18 +5,24 @@
 配套 ADR 0008 落地时同步修订 0002（内容模型）、0003（存储）、0005（笔记编辑器）、
 0007（插件面）。`apiVersion` 仍为 1：旧契约从未对第三方发布，不存在兼容承诺。
 
+> **落地口径（2026-11-07 之后）**：本稿按 `0d87ffd`（类型/模板与宿主 API v1 落地）与
+> `70e7b8f`（无迁移）校正。钩子与能力以 `internal/ext/manifest.go`、`internal/ext/js.go`
+> 为准，卡片面以 `internal/cards` + `internal/core/template` 为准。标 **计划** 的是尚未建
+> 的部分，其余按今天的行为写。
+
 ## 1. 原则
 
 | 原则 | 出处 | 我们怎么落 |
 |---|---|---|
-| **静态声明 + 惰性激活** | VS Code：`contributes`（静态）+ `activationEvents`（何时加载） | manifest 用**宿主定义的钩子词汇表**声明 `implements` 与 capabilities；宿主不启动插件即可展示、校验与索引它的全部表面 |
+| **静态声明 + 惰性激活** | VS Code：`contributes`（静态）+ `activationEvents`（何时加载） | manifest 用**宿主定义的钩子词汇表**声明 `implements` 与 capabilities；宿主不启动插件即可展示、校验与索引它的全部表面。`activation` 今天只被记录，启用列表才是加载时机（惰性加载：**计划**） |
 | **能力即对象，不是权限弹窗** | Obsidian：没有沙箱，API 面（Vault / MetadataCache）本身就是边界 | JS 全局只有 `remit`，标准库冻结；拿不到 `fs` / `net` / 定时器以外的宿主能力 |
-| **安装时授权，运行时不再问** | VS Code：扩展信任在安装时建立 | 启用插件时展示它声明的 capabilities 并让用户批准；运行期只安装已批准的 `remit.*` |
-| **插件失败不得阻塞主流程** | Anki：add-on 出错不影响复习 | 抛错/超时/内存超限 → 回退内置默认插件，计数，三次停用 |
+| **安装时授权，运行时不再问** | VS Code：扩展信任在安装时建立 | **计划**：启用插件时展示它声明的 capabilities 并让用户批准；今天启用只写名字，且除 `remit.echo` / `remit.now` 外没有可授予的函数（§6） |
+| **插件失败不得阻塞主流程** | Anki：add-on 出错不影响复习 | 抛错/超时/内存超限 → 记数并降级：卡片回退段落原文、调度回退宿主默认，三次停用 |
 | **内置也是插件** | VS Code：built-in extensions 走同一 API，无特权 | 默认制卡/调度随应用打包，同样走 manifest 与 capability |
 | **卡片是数据，模板是库资产** | Anki：note type 存在 collection 里，模板即渲染 | 类型（字段表+模板）是库的明文数据；渲染是宿主模板引擎，没有"渲染插件"这个角色 |
 
-**不要 legacy 双实现**：插件路径跑通、金标准 fixtures 全绿之后，删除 core 里的 Go 实现。
+**已执行**：插件路径跑通、金标准 fixtures 全绿之后，core 里 Go 的制卡切分已删除
+（`aecb7de`）；金标准现在对着内置插件跑（§12）。
 
 ## 2. 卡片类型体系
 
@@ -24,15 +30,21 @@
 
 - **类型（type）**：一份命名的卡片 schema = 有序**字段**表（字段名 + 值为标量/字符串）+
   一组**模板**（front/back 两段模板文本）+ 版本。类型随库走：`types/<id>.json` 明文，
-  ID 一次性铸造。卡片引用类型。
-- **卡片**：`type + fields（字段值表）+ ordinal + producer`。同一 Block 派生多张卡
+  ID 一次性铸造；内置三件随库种入，缺文件时补齐。今天改类型是手改这些文件（类型编辑
+  界面：**计划**）。卡片引用类型。
+- **卡片**：`type + ordinal + producer`，外加**只在用户手工编辑过时**才有的字段覆盖
+  （`fields` + `edited`）。字段值本身不落库：渲染时按卡片的来源现算（live = 块文本，
+  frozen = 快照），卡片自己的覆盖逐字段压在上面（ADR 0008）。同一 Block 派生多张卡
   （cloze 的每个空、双向的两个方向）靠 ordinal 区分。
 - **卡片面永不落库**：渲染时由模板引擎从字段现算；模板缺失/渲染出错时回退到
   **字段原文列表**，不显示空白。
 - 每条派生数据带 **producer {id, version}**：卸载插件后卡片仍可读、可解释。
+
 ### 2.2 内置类型与通用字段块
 
-- 内置类型三件：basic（`::` 前提示、后答案）、bidirectional（`:::`）、cloze（`{{ }}`）。
+- 内置类型三件：`remit.basic`（`::` 前提示、后答案，字段 Front/Back）、
+  `remit.bidirectional`（`:::`，字段 Front/Back，ordinal 记方向）、`remit.cloze`
+  （`{{ }}`，字段 Text，每空一张卡）。
 - **通用字段块**让任何类型都能被笔记直接使用：
 
   ```
@@ -44,18 +56,23 @@
   ```
 
   `::: type <id>` 带内容，与单独成行的 `:::`（双向卡标记）可区分。字段块由内置
-  derive 插件解析：`字段名: 值` 每行一条，类型不匹配（字段不存在）在保存时报告。
-- **schema 的来源**：内置三类型 + 用户在类型管理界面创建（字段表 + 模板 + 实时预览）
-  + derive 插件声明产出的 typeId。表单式"单独建卡"不做——产品是笔记优先，字段块即录入。
+  derive 插件解析：`字段名: 值` 每行一条。类型没有的字段由插件列进 `unknown`，宿主记日志
+  并丢弃，卡片仍按能对上的那部分生成；今天没有面向用户的报告。
+- **schema 的来源**：内置三类型（随库种入）+ 手改 `types/<id>.json`（类型编辑界面：**计划**）。
+  derive 插件的 `produces` 只是声明：宿主只接受库内已有的类型，插件不能凭空带来类型定义。
+  表单式"单独建卡"不做——产品是笔记优先，字段块即录入。
 
 ### 2.3 类型编辑的安全边界
 
+v1 没有类型管理界面；下表先约束手改文件，也是将来编辑器的验收条件。因为字段只在
+**编辑过的卡片**上持久化，"全库重写"的范围是那些 `fields` 映射，不是每一张卡。
+
 | 操作 | 行为 |
 |---|---|
-| 字段改名 | 全库卡片键名一次性重写 |
-| 字段删除 | 任一卡片该字段非空即拒绝 |
-| 类型删除 | 被任何卡片引用即拒绝 |
-| 模板编辑 | 立即生效，卡片面随下次渲染更新（本就不落库） |
+| 字段改名 | 改 `types/<id>.json` 的 `fields`，并把 `edited` 卡片的 `fields` 键一并重写；笔记里 `::: type` 字段块仍用旧键的行变成 `unknown`（丢弃 + 日志），所以编辑器要先搜再改 |
+| 字段删除 | 有 `edited` 卡片存着非空值即拒绝；否则旧字段块的行按 `unknown` 处理 |
+| 类型删除 | 被任何卡片引用即拒绝（今天没有删除入口；手删非内置类型的文件会让引用它的卡片回退字段列表，内置三件缺文件则被重新种入） |
+| 模板编辑 | 立即生效，卡片面随下次渲染更新（本就不落库）；模板编译失败 → 回退字段列表 |
 
 ### 2.4 没有存量迁移
 
@@ -73,51 +90,57 @@
 | `{{Field}}` | 字段替换（markdown 内联渲染） |
 | `{{#Field}}…{{/Field}}` / `{{^Field}}…{{/Field}}` | 字段非空/为空的条件段 |
 | `{{cloze:Text}}` | 按 ordinal（0-based）渲染当前空：front 只罩 ordinal 空（`[…]`）、其余揭示；back 全揭示去标记；ordinal 超界=两侧全揭示（"asks what it can"） |
-| `{{hint:Field}}` | 折叠提示，展开动效归宿主 |
-| `{{type:Field}}` | 键入作答：复习界面出输入框与比对视图 |
-| `{{Field\|filter}}`（预留） | 过滤器管道；过滤器是**宿主内建注册表**，v1 允许为空，插件不可注册 |
+| `{{hint:Field}}` | 折叠提示：宿主把值捕获进渲染结果，复习屏尚未显示（**计划**） |
+| `{{type:Field}}` | 键入作答：宿主捕获答案值，复习屏尚未出输入框与比对（**计划**） |
+| `{{Field\|filter}}`（预留） | 过滤器管道；过滤器是**宿主内建注册表**，v1 允许为空，插件不可注册；今天引用过滤器 = 模板编译失败 → 回退字段列表 |
 
-未知字段名、未知构造、渲染错误 → 该卡回退字段原文列表。方言语法一次性定全（含保留字）。
+未知字段名、未知构造、渲染错误 → 该卡回退字段原文列表。方言语法一次性定全（含保留字）；
+重复的 `{{hint:}}` / `{{type:}}` 标签在编译期报错。
 
 ## 4. 包与 manifest
 
 ```
 <App data>/extensions/<id>/
 ├── extension.json
-└── main.js          # 单文件 ES module；多文件走宿主解析的模块图，不读磁盘其它位置
+└── main.js          # 单文件 ES module；没有模块解析器，import 不被支持（多文件：计划）
 ```
 
 ```json
 {
   "id": "remit.cards.standard",
-  "name": "Standard cards",
+  "name": "cards",
   "version": "1.0.0",
   "apiVersion": 1,
   "runtime": "js",
-  "entrypoint": "main.js",
-  "capabilities": ["notes:read", "review:read", "schedule:fsrs"],
-  "implements": { "cards.derive": 1 },
-  "activation": ["onReview", "onNoteSaved"],
-  "contributes": { "settings": [] },
-  "produces": ["remit.basic", "remit.cloze"]
+  "entry": "main.js",
+  "capabilities": [],
+  "implements": { "describe": 1, "deriveBlock": 1 },
+  "activation": [],
+  "produces": ["remit.basic", "remit.bidirectional", "remit.cloze"]
 }
 ```
 
-- `implements` 的键是宿主词汇表里的钩子 ID，值是该钩子的契约版本；导出函数名由宿主固定。
-  宿主不加载插件即可校验它声称实现了什么。
-- `produces` 声明该 derive 插件会产出的卡片类型（可引用库内已有类型或自带类型定义）。
-- `activation` 只决定何时加载，不决定谁被选中；角色决定选中。
-- `contributes.settings` 声明由宿主渲染的设置项（插件不做 UI）。v1 允许为空数组。
-- `runtime: "exec"` 仍被接受（ADR 0006）：需要原生库或长计算的扩展走进程协议；
-  类型体系相关钩子仅 JS 运行时可 `implements`。
+- `implements` 的键是宿主词汇表里的钩子 ID（`describe` / `deriveBlock` / `policy` /
+  `identity` / `summary` / `on_event`），值是该钩子的契约版本；导出函数名由宿主固定。
+  宿主不加载插件即可校验它声称实现了什么，词汇表外的键直接拒绝。
+- `produces` 声明该 derive 插件会产出的卡片类型。它是声明，不是授权：宿主只接受库内
+  已有的类型。
+- `activation` 只决定何时加载，不决定谁被选中；角色决定选中。宿主今天记录它，不据此
+  加载（启用列表决定加载）。
+- 没有 `contributes`：插件不做 UI。由插件声明、宿主渲染的设置项是**计划**。
+- `runtime: "exec"` 仍被接受（ADR 0006）：需要原生库或长计算的扩展走进程协议；js
+  manifest 不带 `protocol`，exec manifest 必须带 `protocol: 1`。类型体系相关钩子今天
+  只有 JS 插件在用，宿主未禁止 exec 声明它们，但没有 exec 插件能跑通这些钩子。
 
 ## 5. Hooks 与数据契约
 
 derive 一个 + 调度/展示 + 一个事件回调。纯函数不得写库，写入只能通过 capability，
-由宿主在 hook 返回后应用（与 immediate-mode 纪律一致）。
+由宿主在 hook 返回后应用（与 immediate-mode 纪律一致）；今天还没有写 capability，所以
+插件按定义不写库。
 
 ```ts
-type Block = { id: string; noteId: string; text: string; title: string }
+// 宿主交给插件的块视图：今天只有 text（id 尚未传入）
+type Block = { id?: string; text: string }
 type Type  = { id: string; fields: string[]; version: number }   // 库内类型的宿主视图
 
 // derive：一块文本 → 若干张卡（选定类型、填字段值；宿主校验后落库并盖 producer 戳）
@@ -125,39 +148,52 @@ export function deriveBlock(block: Block, types: Type[]): Array<{
   typeId: string
   ordinal: number
   fields: Record<string, string>
+  unknown?: string[]   // 插件自报：类型没有的字段名，可选
 }>
 
-// schedule：评分 → 间隔与预览。FSRS 数学在宿主，插件只给策略；state 对插件不透明
-export function scheduleGrade(input: {
-  cardId: string; grade: 1 | 2 | 3 | 4; now: string; state: unknown
-}): { intervalSeconds: number; state: unknown; previews?: Record<number, number> }
+// 调度：插件只给策略，不给间隔。FSRS 数学与 state 都在宿主（ADR 0007）
+export function policy(): { family: string; version: string; retention: number }
 
-// summary：队列空了 → 说什么（内容归插件，动效归宿主）
-export function reviewSummary(input: {
-  graded: number; again: number; hard: number; good: number; easy: number
-  dueTomorrow: number; streakDays: number; durationSeconds: number
-}): { title: string; lines: string[]; tone: "quiet" | "celebrate" }
+// 身份钩子在词汇表里，但宿主今天从 policy 拼 `family-version`，不调用它
+export function identity(): string
+
+// summary：队列空了 → 补什么话（数字由宿主用用户的语言说）
+export function summary(input: {
+  reviewed: number; dueTomorrow: number; accuracy: number
+}): { tone: "quiet" | "celebrated"; lines: string[] }
 
 // 通知，不是否决
-export function onEvent(event: { kind: string; id: string }): void
+export function on_event(event: { kind: string; id: string }): void
 ```
 
-**产出即建议**：宿主校验结构（类型存在、字段名在类型里、夹取边界），然后由宿主写库。
-渲染不再经过任何插件：`cards.render` 角色删除，模板引擎即渲染器。
+**产出即建议**：宿主校验结构（类型存在；`unknown` 里自报的多余字段记日志；ordinal 照存；
+字段值不落库，渲染时按类型字段取用），然后由宿主写库。渲染不再经过任何插件：
+`cards.render` 已删除，模板引擎即渲染器。调用是同步且有界的：`Call` 跑在调用方 goroutine，
+超 1s 打断；derive 按文本缓存（失败也缓存），所以同一段文本在一帧里只问一次。
 
 ## 6. Capabilities
 
+**已落地**：宿主今天只装这两个函数，插件声明的其它名字不报错，也不会装上函数。
+
 | 能力 | 授予的宿主面 | 拒绝时 |
 |---|---|---|
-| `notes:read` | `remit.notes.list/get/search` | hook 抛 `CapabilityError` |
-| `cards:write` | `remit.cards.create/update/delete` | 同上 |
-| `review:read` | `remit.review.history/dueCount` | 同上 |
-| `review:write` | `remit.review.record` | 同上 |
-| `schedule:fsrs` | `remit.fsrs.review(state, grade, now)` | 同上 |
-| `store:own` | `remit.store.get/set`，命名空间绑定插件 id | 同上 |
+| `remit.echo` | `remit.echo(v)` 原样返回，给插件自测 | 未声明时函数不存在，调用抛 `TypeError` |
+| `remit.now` | `remit.now()` 当前时间，RFC 3339 | 同上 |
 
-`store:own` 落在**库内**明文 `plugins-data/<id>.json`，随 `.remitlib` 归档走（启用按库，
-数据按库——Obsidian 的 per-vault 模型；VS Code 式机器级层等真实需求出现再加）。
+**计划**（名字先定，宿主函数未装）：
+
+| 能力 | 授予的宿主面 |
+|---|---|
+| `notes:read` | `remit.notes.list/get/search` |
+| `cards:write` | `remit.cards.create/update/delete` |
+| `review:read` | `remit.review.history/dueCount` |
+| `review:write` | `remit.review.record` |
+| `schedule:fsrs` | `remit.fsrs.review(state, grade, now)` |
+| `store:own` | `remit.store.get/set`，命名空间绑定插件 id |
+
+`store:own` 的**存储**已落地：库内明文 `plugins-data/<id>.json`，随 `.remitlib` 归档走
+（启用按库，数据按库——Obsidian 的 per-vault 模型；VS Code 式机器级层等真实需求出现再
+加）。但 `remit.store` 还没有装进 JS 全局，插件今天读不到自己的数据。
 
 **没有** `fs` / `net` / `ui` / 任意 SQL。需要联网的插件是 v2 议题（那时加 `net:fetch` +
 allowlist）。
@@ -172,50 +208,59 @@ allowlist）。
 
 | 情况 | 宿主行为 |
 |---|---|
-| 抛异常 / 返回结构非法 | 记一次失败；该 hook 回退内置默认插件；错误写进插件日志 |
+| 抛异常 / 返回结构非法 | 记一次失败；卡片回退段落原文（不重试内置），调度回退宿主默认；错误写进插件日志 |
 | 超过 1s | `Interrupt`；记一次失败 |
-| 超过 64 MiB | `ErrMemoryLimit`；记一次失败 |
-| 连续 3 次失败 | 停用该插件，通知用户，流程继续走内置默认 |
+| 超过 64 MiB（仅 js） | `ErrMemoryLimit`；记一次失败 |
+| 连续 3 次失败 | 停用该插件，记日志；流程继续（卡片读原文，调度用宿主默认） |
 | 加载失败（语法错） | 只影响该插件；库照常打开 |
 | 模板渲染出错 | 回退字段原文列表，不显示空白 |
 
 每插件一个 **2-runtime 池**，**激活时预热**（首次使用不付加载成本，语法错在激活期暴露）。
-插件调用永不占用 UI 线程；结果经回调回填。
+今天只有卡片 / 调度两个角色插件被预热（内置或测试注入）；`remit.json` 启用的插件第一次调用
+才加载。调用是同步且有界的：插件代码跑在调用方的 goroutine 上，最多占用 1s，没有后台调度；
+derive 按文本缓存（含失败），所以 View 不会每帧重问。
 
 ## 9. 版本
 
 - `apiVersion`：整数，契约产物 `remit.d.ts` 的版本。宿主按**最低版本**语义接受：
-  插件声明的 `apiVersion` ≤ 宿主即可加载。破坏性变更 +1，旧版一个大版本内继续可用。
-- `protocol`（exec 线协议）与 `apiVersion`（JS 宿主面）分开。
-- 复习记录写 `scheduler: { family, flags, version }`：换调度插件后历史仍可读，只是不再
-  可比；切换点作为边界记录写入。
+  插件声明的 `apiVersion` ≤ 宿主即可加载。今天宿主只讲 1（`ext.HostAPIVersion`）。破坏性
+  变更 +1，旧版一个大版本内继续可用（窗口策略随 2 落地再写）。
+- `protocol`（exec 线协议）与 `apiVersion`（JS 宿主面）分开；js manifest 带 `protocol`
+  会被拒绝。
+- 复习记录写 `scheduler: "<family>-<version>"`（如 `"fsrs-1"`），不是对象：换调度插件后
+  历史仍可读，只是不再可比。把切换点写成边界记录是**计划**，今天日志里没有这个事件。
 
 ## 10. 生命周期
 
 ```
-discovered → enabled(能力已批准) → loaded(惰性, 池已预热) → failed(n) → disabled
+discovered → enabled(remit.json 里有名字) → loaded(Open；角色插件的 js 池已预热) → failed(n) → disabled
                     ↑                                  │
-                    └──────── 用户手动重新启用 ←────────┘
+                    └──────── 重开 = 重新启用 ←────────┘
 ```
 
-- 启用是按库的显式动作，批准发生在启用时。
-- 角色两个：`cards.derive`、`review.schedule`，每库各选**一个**插件，默认内置。
-  多个插件声明同一角色时由设置页选择，宿主不做自动仲裁（`reviewSummary` 归调度插件）。
+- 启用是按库的显式动作，今天就是在 `remit.json` 的 `extensions` 里写名字；能力审批
+  （**计划**）发生在启用时，但除 echo/now 外还没有可授予的函数，所以启用不询问。
+- 角色两个（卡片、调度）今天固定为内置插件；`Options.Cards` / `Options.Scheduler` 是
+  宿主给测试的注入点，没有按库选择角色的设置页。第三方 js 插件被启用后只收到 `on_event`。
+- 完成文案归调度插件：已落地为 `summary` 钩子（§5）。
 
 ## 11. 内置默认插件
 
-- 制卡（`remit.cards.standard`）：`::` / `:::` / `{{ }}` 三个内置类型 + 通用字段块解析。
-- 调度（`remit.scheduler.default`）：FSRS 策略与队列清空文案。
+- 制卡（`remit.cards.standard`）：`describe` + `deriveBlock`，`::` / `:::` / `{{ }}` 三个内置类型 + 通用字段块解析。
+- 调度（`remit.scheduler.default`）：`policy` / `identity` / `summary` 三钩。FSRS 策略、调度器名与完成文案；内置的 `summary` 答 `quiet` 且无自定文案，数字由宿主说。
 - 随应用打包（`//go:embed`），走与三方插件相同的加载路径与 capability 检查，无特权入口。
-- 回退 = 回退到它们，不是第二份 Go 代码。
+- 没有第二份实现：插件失败时卡片读段落原文、调度用宿主默认，而不是切到一份 Go 代码。
 
 ## 12. 怎么测一个插件
 
-`go tool remit ext test <dir>`：载入插件，用 fixtures（笔记 + 复习历史）跑全部 hook，
-逐字比对输出。内置插件用金标准 fixtures（兼作删除 Go 实现的凭据）；三方插件自带
-`fixtures/` 目录（输入 + 期望输出），宿主只提供 harness 与比对。
+内置插件用金标准 fixtures：`internal/ext/builtin` 的测试逐项比对
+`internal/golden/testdata/golden.json`（兼作删除 Go 实现的凭据），`internal/cards` 测字段
+解析与回退，`internal/core/template` 测方言。第三方插件的 harness 与 `ext test <dir>` CLI
+都还没有；今天最近的路径是照 `internal/ext/example_test.go` 用 `ext.OpenJS` 加载自己的
+目录，宿主不代为运行插件自带 fixtures（**计划**）。
 
 ## 13. v1 不做
 
 插件市场 / 签名 / 自动更新 · `net:fetch` · 插件间依赖 · 移动端 · 插件注册模板函数 ·
-排序字段（sort field） · 表单式建卡 · 机器级插件存储层。
+排序字段（sort field） · 表单式建卡 · 机器级插件存储层 · 类型管理界面 · 按角色选择插件 ·
+能力审批 · `activation` 生效 · 插件自带的 fixtures harness。
