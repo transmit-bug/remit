@@ -168,18 +168,71 @@ func (i Index) PageByID(id string) (PageRef, bool) {
 	return PageRef{}, false
 }
 
-// Menu lists one slot's commands in the order the host draws them: its primary
-// group, then its secondary, then the plugins', each by order.
-func (i Index) Menu(slot string) []CommandRef {
-	var out []CommandRef
-	for _, plugin := range i.plugins {
+// MenuRef is one slot item: the command it points at and the item's own rules.
+// A menu item is hidden by its own when and by the command's, so a plugin can
+// put one command in two slots and show it in only one.
+type MenuRef struct {
+	CommandRef
+	// Group is where the item sits among the slot's: primary, secondary or
+	// plugin, in that order.
+	Group string
+	// Order sorts the item within its group.
+	Order int
+	// When decides whether the slot shows the item now; the zero value shows it.
+	When Expr
+}
+
+// menuGroup is a group's place in a slot: the host's primary first, then its
+// secondary, then the plugins'. An item that names none is the host's first.
+func menuGroup(group string) int {
+	switch group {
+	case "secondary":
+		return 1
+	case "plugin":
+		return 2
+	}
+	return 0
+}
+
+// Menu lists one slot's items in the order the host draws them: its primary
+// group, then its secondary, then the plugins', each by order, and the order a
+// plugin declared them within a tie.
+func (i Index) Menu(slot string) []MenuRef {
+	type placed struct {
+		ref    MenuRef
+		plugin int
+		seq    int
+	}
+	var items []placed
+	for pi, plugin := range i.plugins {
 		for _, item := range plugin.Menus[slot] {
 			command, ok := i.Command(item.Command)
 			if !ok {
 				continue
 			}
-			out = append(out, command)
+			items = append(items, placed{
+				ref:    MenuRef{CommandRef: command, Group: item.Group, Order: item.Order, When: item.When},
+				plugin: pi,
+				seq:    len(items),
+			})
 		}
+	}
+	sort.SliceStable(items, func(a, b int) bool {
+		x, y := items[a], items[b]
+		if gx, gy := menuGroup(x.ref.Group), menuGroup(y.ref.Group); gx != gy {
+			return gx < gy
+		}
+		if x.ref.Order != y.ref.Order {
+			return x.ref.Order < y.ref.Order
+		}
+		if x.plugin != y.plugin {
+			return x.plugin < y.plugin
+		}
+		return x.seq < y.seq
+	})
+	out := make([]MenuRef, len(items))
+	for n, item := range items {
+		out[n] = item.ref
 	}
 	return out
 }

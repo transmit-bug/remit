@@ -236,12 +236,16 @@ func commandKey(plugin, id string) string { return plugin + "/" + id }
 func (a *App) contributionMenuItems(slots ...string) []contrib.CommandRef {
 	var out []contrib.CommandRef
 	seen := map[string]bool{}
+	ctx := a.contributionContext()
 	for _, slot := range slots {
-		for _, ref := range a.ui.index.Menu(slot) {
+		for _, item := range a.ui.index.Menu(slot) {
+			ref := item.CommandRef
 			if seen[ref.Command.ID] || a.ui.hidden[commandKey(ref.Plugin, ref.Command.ID)] {
 				continue
 			}
-			if !ref.Command.When.Eval(a.contributionContext()) {
+			// The item's when and the command's both decide: a plugin can put
+			// one command in two slots and show it in only one.
+			if !item.When.Eval(ctx) || !ref.Command.When.Eval(ctx) {
 				continue
 			}
 			seen[ref.Command.ID] = true
