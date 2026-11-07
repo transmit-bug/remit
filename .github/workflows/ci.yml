@@ -1,14 +1,30 @@
 name: ci
 
+# A PR runs the things a local macOS run cannot: Linux, and the cross-platform
+# build. Docs-only changes match none of the paths below and run nothing —
+# compiling a Markdown file three ways buys no confidence.
 on:
   push:
     branches: [master]
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".agents/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Three pushes to one PR used to mean three full runs. The branch is what this
+# pipeline answers, so a superseded run is cancelled rather than paid for.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # The shipped build is cgo-free (AGENTS.md), so this is the suite that matters
+  # and the only one a PR pays for.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -19,8 +35,6 @@ jobs:
           cache: true
       - name: vet
         run: go vet ./...
-      - name: test
-        run: go test ./...
       - name: test without cgo
         run: CGO_ENABLED=0 go test ./...
       - name: catalogs
@@ -31,7 +45,11 @@ jobs:
       - name: mygo vet
         run: go tool mygo vet .
 
-  perf:
+  # Master carries the default suite too: a developer runs that one locally, so
+  # a break there is about a difference between the two builds, which no PR
+  # needs to pay a second minute for.
+  test-default:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,12 +57,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      # The v1 budget at the size the storage research measured: a due-queue
-      # read and a review write at 100k cards. The test writes the fixture's
-      # sources directly, so the run is a measurement, not a hundred thousand
-      # card creations.
-      - name: performance budget at 100k cards
-        run: REMIT_PERF_CARDS=100000 go test ./internal/core/store/ -run TestPerformanceBudget -v -count=1 -timeout 20m
+      - name: test
+        run: go test ./...
 
   privacy:
     runs-on: ubuntu-latest
@@ -63,6 +77,9 @@ jobs:
           fi
           echo "no unexpected outbound URLs"
 
+  # Platform breakage must surface before merge, not at release: every PR builds
+  # all three targets. The artifacts themselves are a release concern, so only
+  # master uploads them.
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -91,6 +108,25 @@ jobs:
           CGO_ENABLED: "0"
         run: go build -o dist/${{ matrix.name }} ./cmd/remit
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           name: ${{ matrix.name }}
           path: dist/${{ matrix.name }}
+
+  # A measurement, not a gate on someone's paragraph: master (and a manual run)
+  # is where a budget regression gets noticed.
+  perf:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      # The v1 budget at the size the storage research measured: a due-queue
+      # read and a review write at 100k cards. The test writes the fixture's
+      # sources directly, so the run is a measurement, not a hundred thousand
+      # card creations.
+      - name: performance budget at 100k cards
+        run: REMIT_PERF_CARDS=100000 go test ./internal/core/store/ -run TestPerformanceBudget -v -count=1 -timeout 20m
