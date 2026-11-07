@@ -192,3 +192,114 @@ func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
 	}
 	return cards[0], nil
 }
+
+// readingNotes queues notes at one moment and answers with them in the order
+// they were made, so a test names the order the queue should hold.
+func readingNotes(t *testing.T, lib *store.Library, at time.Time, titles ...string) []core.Note {
+	t.Helper()
+	out := make([]core.Note, 0, len(titles))
+	for _, title := range titles {
+		note, err := lib.SaveNote(core.Note{Title: title, Blocks: []core.Block{{Text: "a paragraph"}}})
+		if err != nil {
+			t.Fatalf("save note: %v", err)
+		}
+		if err := lib.AddToReading(note.ID, at); err != nil {
+			t.Fatalf("add to reading: %v", err)
+		}
+		out = append(out, note)
+	}
+	return out
+}
+
+// The reading queue is the notes due now, soonest first: a note never read is
+// due when it joined, and a note read comes back on the cadence reading gave
+// it. Neither the order nor the counts turn on the store being the same object.
+func TestReadingQueueOrder(t *testing.T) {
+	lib := library(t)
+	notes := readingNotes(t, lib, now.AddDate(0, 0, -10), "alpha", "beta", "gamma")
+
+	// alpha was read four days ago and is due again; beta was read just now and
+	// is scheduled ahead; gamma was never read, so it has been due since it
+	// joined.
+	for _, read := range []struct {
+		note   core.Note
+		at     time.Time
+		rating schedule.Rating
+	}{
+		{notes[0], now.AddDate(0, 0, -4), schedule.Good},
+		{notes[1], now, schedule.Easy},
+	} {
+		if err := lib.ReadNote(read.note.ID, read.rating, read.note.Blocks[0].ID, read.at); err != nil {
+			t.Fatalf("ReadNote: %v", err)
+		}
+	}
+
+	got, err := Reading(lib, now, Options{})
+	if err != nil {
+		t.Fatalf("Reading: %v", err)
+	}
+	order := make([]core.ID, len(got))
+	for i, entry := range got {
+		order[i] = entry.Note
+	}
+	if len(order) != 2 || order[0] != notes[2].ID || order[1] != notes[0].ID {
+		t.Fatalf("reading queue = %v, want the unread note then the one read four days ago", order)
+	}
+
+	count, err := ReadingCount(lib, now)
+	if err != nil {
+		t.Fatalf("ReadingCount: %v", err)
+	}
+	if count != len(got) {
+		t.Errorf("count = %d, queue = %d", count, len(got))
+	}
+
+	limited, err := Reading(lib, now, Options{Limit: 1})
+	if err != nil {
+		t.Fatalf("Reading with a limit: %v", err)
+	}
+	if len(limited) != 1 || limited[0].Note != order[0] {
+		t.Errorf("limited queue = %+v, want the first entry alone", limited)
+	}
+}
+
+// A note read today and scheduled for later is not in today's reading queue,
+// and not counted either: the queue is a promise of what can be read now.
+func TestReadingQueueLeavesWhatIsNotDue(t *testing.T) {
+	lib := library(t)
+	notes := readingNotes(t, lib, now, "alpha")
+	if err := lib.ReadNote(notes[0].ID, schedule.Easy, notes[0].Blocks[0].ID, now); err != nil {
+		t.Fatalf("ReadNote: %v", err)
+	}
+	got, err := Reading(lib, now.Add(time.Minute), Options{})
+	if err != nil {
+		t.Fatalf("Reading: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("reading queue = %v, want nothing due a minute after it was read", got)
+	}
+	count, err := ReadingCount(lib, now.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("ReadingCount: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("count = %d, want 0", count)
+	}
+
+	// When the schedule says it is due, it comes back where it stopped.
+	entry, ok := lib.ReadingFor(notes[0].ID)
+	if !ok {
+		t.Fatal("the read note left the reading queue for good")
+	}
+	later := entry.State.Due.Add(time.Minute)
+	got, err = Reading(lib, later, Options{})
+	if err != nil {
+		t.Fatalf("Reading when it is due: %v", err)
+	}
+	if len(got) != 1 || got[0].Note != notes[0].ID {
+		t.Fatalf("reading queue = %+v, want the note back", got)
+	}
+	if got[0].Position != notes[0].Blocks[0].ID {
+		t.Errorf("position = %q, want the block it stopped at", got[0].Position)
+	}
+}

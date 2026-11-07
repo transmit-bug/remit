@@ -17,8 +17,14 @@ type DayCount struct {
 	Count int
 }
 
+// isReview reports whether an event is a review — a card answered or a note read
+// — rather than a change to the reading queue's membership, which is a record of
+// intent and not of memory work.
+func isReview(ev schedule.Event) bool { return ev.Kind == schedule.Reviewed }
+
 // ReviewsPerDay counts live reviews per day in [from, to). It reads the reviews
 // in that range out of the log, so its cost follows the range, not the library.
+// A reading session counts here as a card's answer does: one log, one picture.
 func ReviewsPerDay(lib *store.Library, from, to time.Time) []DayCount {
 	events, err := lib.LiveReviews(from, to)
 	if err != nil {
@@ -26,6 +32,9 @@ func ReviewsPerDay(lib *store.Library, from, to time.Time) []DayCount {
 	}
 	counts := map[string]int{}
 	for _, ev := range events {
+		if !isReview(ev) {
+			continue
+		}
 		counts[ev.At.In(from.Location()).Format("2006-01-02")]++
 	}
 	return sorted(counts)
@@ -63,7 +72,10 @@ func RetentionOf(lib *store.Library, params schedule.Params) Retention {
 
 	applier := schedule.NewApplier(params)
 	for _, ev := range events {
-		prev, had := applier.State(ev.Card)
+		if !isReview(ev) {
+			continue
+		}
+		prev, had := applier.State(ev.Entry())
 		if had && prev.Reviews > 0 {
 			elapsed := ev.At.Sub(prev.LastReview).Hours() / 24
 			predicted := params.PredictedRetention(elapsed, prev.Memory.Stability)
@@ -108,6 +120,9 @@ func Summarize(lib *store.Library, now time.Time) Summary {
 	if events, err := lib.LiveReviews(start, end); err == nil {
 		pass := 0
 		for _, ev := range events {
+			if !isReview(ev) {
+				continue
+			}
 			out.Reviewed++
 			if ev.Rating != schedule.Again {
 				pass++
@@ -121,6 +136,43 @@ func Summarize(lib *store.Library, now time.Time) Summary {
 		out.DueTomorrow = next[0].Count
 	}
 	return out
+}
+
+// ForecastAll is what the statistics page plots: the cards due on each of the
+// next days and the reading queue's due notes on the same series, because a
+// memory's schedule is one picture whichever way it was made.
+func ForecastAll(lib *store.Library, from time.Time, days int) []DayCount {
+	counts := map[string]int{}
+	for _, day := range Forecast(lib, from, days) {
+		counts[day.Day] += day.Count
+	}
+	for _, day := range ReadingForecast(lib, from, days) {
+		counts[day.Day] += day.Count
+	}
+	return sorted(counts)
+}
+
+// ReadingForecast counts the reading queue's notes due on each of the next
+// days, starting at from. A note that was never read is due now, not later, so
+// it never lands in a forecast of the days ahead.
+func ReadingForecast(lib *store.Library, from time.Time, days int) []DayCount {
+	counts := map[string]int{}
+	day := func(t time.Time) string { return t.In(from.Location()).Format("2006-01-02") }
+	queued, err := lib.ReadingQueue()
+	if err != nil {
+		return nil
+	}
+	for _, entry := range queued {
+		if entry.State.Reviews == 0 || entry.State.Due.Before(from) {
+			continue
+		}
+		offset := int(entry.State.Due.In(from.Location()).Truncate(24*time.Hour).Sub(from.Truncate(24*time.Hour)).Hours() / 24)
+		if offset < 0 || offset >= days {
+			continue
+		}
+		counts[day(entry.State.Due)]++
+	}
+	return sorted(counts)
 }
 
 // Forecast counts cards due on each of the next days, starting at from. It asks

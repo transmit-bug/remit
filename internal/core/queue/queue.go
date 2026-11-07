@@ -1,6 +1,6 @@
-// Package queue turns a library's cards into today's review queue: what is
-// due, what is new, and how many remain, in an order that does not change
-// between two identical calls.
+// Package queue turns a library's cards and reading entries into today's
+// queues: what is due, what is new, and how many remain, in an order that does
+// not change between two identical calls.
 package queue
 
 import (
@@ -110,6 +110,52 @@ func introduce(lib *store.Library, fresh []core.Card, now time.Time, perDay int)
 func startOfDay(now time.Time) time.Time {
 	y, m, d := now.Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, now.Location())
+}
+
+// Reading returns the notes to read now, soonest due first and then by ID so the
+// order is stable. A note that joined the queue and was never read is due at
+// once; one that was read comes back on the schedule FSRS gave it, which is what
+// makes reading incremental rather than a second to-do list.
+func Reading(lib *store.Library, now time.Time, opts Options) ([]store.Reading, error) {
+	queued, err := lib.ReadingQueue()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]store.Reading, 0, len(queued))
+	for _, entry := range queued {
+		if readingDue(entry, now) {
+			out = append(out, entry)
+		}
+	}
+	if opts.Limit > 0 && len(out) > opts.Limit {
+		out = out[:opts.Limit]
+	}
+	return out, nil
+}
+
+// ReadingCount is how many notes wait to be read now: the number the tray and
+// the review screen report beside the cards' count, so reading is not drowned
+// out by reviewing.
+func ReadingCount(lib *store.Library, now time.Time) (int, error) {
+	queued, err := lib.ReadingQueue()
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, entry := range queued {
+		if readingDue(entry, now) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// readingDue reports whether a reading entry comes up now. A note never read is
+// due from the moment it joined the queue; one that was read waits for its
+// schedule.
+func readingDue(entry store.Reading, now time.Time) bool {
+	due := entry.Due()
+	return due.IsZero() || !due.After(now)
 }
 
 // String names a time for a log line.
