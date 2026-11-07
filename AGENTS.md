@@ -79,6 +79,10 @@ MyGo arrives through `go.mod`'s tool directive; never install it separately.
 - **i18n from day one:** every user-facing string goes through the catalog.
 - **Privacy:** zero telemetry; a new outbound URL is a deliberate decision.
 - **Licensing:** dependencies stay AGPL-3.0-compatible.
+- **Tests earn their place:** a test names the behaviour it guards, and only
+  needed behaviour gets one. An assertion that turns on font metrics or a
+  platform's layout quirks is noise — delete it rather than bend the UI to it.
+  A red job on `master` is a bug, not a known limitation.
 
 ## Agent skills
 

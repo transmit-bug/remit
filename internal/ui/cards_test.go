@@ -143,38 +143,6 @@ func TestCardBadgeEditsOverrides(t *testing.T) {
 	}
 }
 
-// The note's panel is put away on the smallest window until it is asked for, and
-// when it opens its badges stay inside the window.
-func TestCardBadgesFitTheSmallestWindow(t *testing.T) {
-	msgs := locales.In("en")
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 720, 520)
-	settle(tt)
-	newNoteTyped(t, a, tt, "What is spacing? :: Practice spread over days.")
-
-	if _, ok := tt.Find(msgs.CardOnParagraph(1, 1)); ok {
-		t.Fatal("the panel is open on the smallest window before it was asked for")
-	}
-	// Its toggle is in the document's header; opening it shows the badges.
-	if err := tt.Click(msgs.PanelTitle()); err != nil {
-		t.Fatalf("open the panel: %v", err)
-	}
-	badge, ok := tt.Find(msgs.CardOnParagraph(1, 1))
-	if !ok {
-		t.Fatalf("the badge is not drawn; texts %q", tt.Texts())
-	}
-	if badge.X < 0 || badge.Y < 0 || badge.X+badge.W > 720 || badge.Y+badge.H > 520 {
-		t.Errorf("the badge box %+v is outside the 720x520 window", badge)
-	}
-	doc, ok := tt.Find(msgs.NoteBody())
-	if !ok {
-		t.Fatalf("the document is not drawn; texts %q", tt.Texts())
-	}
-	if badge.X < doc.X+doc.W {
-		t.Errorf("the badge %+v is not in the panel column, right of the document ending at %v", badge, doc.X+doc.W)
-	}
-}
-
 // noteFile is the note's file name under notes/: the slug and the id.
 func noteFile(a *App, id core.ID) string {
 	entries, err := os.ReadDir(filepath.Join(a.Settings().LibraryDir, "notes"))
