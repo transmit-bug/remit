@@ -77,8 +77,8 @@ func TestTagFilterNarrowsTheList(t *testing.T) {
 			t.Errorf("clearing did not bring %q back; texts %q", want, tt.Texts())
 		}
 	}
-	if a.tagFilter != "" {
-		t.Errorf("the filter is still %q", a.tagFilter)
+	if a.notes.TagFilter != "" {
+		t.Errorf("the filter is still %q", a.notes.TagFilter)
 	}
 }
 
@@ -99,8 +99,8 @@ func TestFindStaysInTheOpenDocument(t *testing.T) {
 	tt.Advance(320 * time.Millisecond)
 
 	// The word is in this note once; the query selects it.
-	anchor, caret := a.editor.doc.Selection()
-	text := a.editor.doc.Text().String()
+	anchor, caret := a.notes.Doc.Selection()
+	text := a.notes.Doc.Text().String()
 	at := strings.Index(strings.ToLower(text), "gaps")
 	if at < 0 {
 		t.Fatalf("the note does not hold the word: %q", text)
@@ -124,7 +124,7 @@ func TestFindCloses(t *testing.T) {
 	tt.Advance(200 * time.Millisecond)
 	tt.Key(0, ui.KeyEscape)
 	tt.Advance(200 * time.Millisecond)
-	if a.editor.findOpen {
+	if a.notes.FindOpen {
 		t.Error("the find bar stayed open")
 	}
 	if !tt.HasText("Spacing notes") {

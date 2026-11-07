@@ -19,10 +19,10 @@ func TestNotesList(t *testing.T) {
 	if err := tt.Click("Writing cards"); err != nil {
 		t.Fatal(err)
 	}
-	if a.editor.doc == nil || !strings.Contains(a.editor.doc.Text().String(), "A good card asks") {
+	if a.notes.Doc == nil || !strings.Contains(a.notes.Doc.Text().String(), "A good card asks") {
 		t.Fatalf("the editor did not follow the list; texts %q", tt.Texts())
 	}
-	if strings.Contains(a.editor.doc.Text().String(), "When to review") {
+	if strings.Contains(a.notes.Doc.Text().String(), "When to review") {
 		t.Error("the editor still shows the note chosen before")
 	}
 	if !tt.HasText("Note panel") {

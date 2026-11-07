@@ -6,6 +6,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/about"
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 )
 
@@ -29,14 +30,14 @@ func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 
 		ui.Spacer(c)
 		if a.mode == modeNotes {
-			view := int(a.view)
+			view := int(a.notes.View)
 			if ui.Segmented(c, &view, msgs.ViewEdit(), msgs.ViewSplit(), msgs.ViewRead()).
 				Label(msgs.ViewMode()).Changed() {
-				a.view = viewMode(view)
+				a.notes.View = notes.ViewMode(view)
 			}
 			ui.Button(c, "").Label(msgs.PanelTitle()).Tooltip(msgs.PanelTitle()).
 				Children(func() { tk.Icon(c, "notebook-pen", design.IconSmall) }).
-				OnClick(func() { a.togglePanel(c) })
+				OnClick(func() { a.notes.TogglePanel(c) })
 		}
 		ui.Button(c, "").Label(msgs.More()).Tooltip(msgs.More()).
 			Children(func() { tk.Icon(c, "ellipsis", design.IconSmall) }).
@@ -74,18 +75,18 @@ func (a *App) shortcuts(c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.Key2, func() { a.setMode(modeNotes) })
 	c.OnShortcut(ui.Cmd, ui.Key3, func() { a.setMode(modeBrowse) })
 	c.OnShortcut(ui.Cmd, ui.KeyF, func() {
-		if a.mode == modeNotes && a.editor.draft.ID != "" {
+		if a.mode == modeNotes && a.notes.Draft.ID != "" {
 			// The notebook's find looks in the note that is open; the library's
 			// search is the browse page's.
-			a.editor.findOpen = true
+			a.notes.FindOpen = true
 			return
 		}
 		a.focusSearch(c)
 	})
 	c.OnShortcut(ui.Cmd, ui.KeyN, func() { a.newNote(c) })
 	c.OnShortcut(ui.Cmd, ui.KeyD, func() { a.openDailyNote(c) })
-	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyO, func() { a.showPanel(panelOutline) })
-	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyB, func() { a.showPanel(panelBacklinks) })
+	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyO, func() { a.showPanel(notes.PanelOutline) })
+	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyB, func() { a.showPanel(notes.PanelBacklinks) })
 
 	switch a.mode {
 	case modeReview:

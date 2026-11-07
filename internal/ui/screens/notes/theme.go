@@ -1,4 +1,4 @@
-package ui
+package notes
 
 import (
 	"github.com/egoist/mygo/ui"
@@ -56,6 +56,3 @@ func noteTheme(tk design.Tokens) *richtext.Theme {
 func noteFont(tk design.Tokens) ui.Font {
 	return ui.Font{Size: design.TypeBody * 1.2, LineHeight: design.TextLineHeight}
 }
-
-// paperFace is the page's face: the paper colour, no border, no shadow.
-func paperFace(tk design.Tokens) ui.Color { return tk.Background }

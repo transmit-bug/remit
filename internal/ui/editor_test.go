@@ -126,10 +126,10 @@ func TestDocumentRoundTripsRichText(t *testing.T) {
 	settle(reopened)
 	notesMode(t, next, reopened)
 	openNote(t, reopened, "Writing cards")
-	if next.editor.doc == nil {
+	if next.notes.Doc == nil {
 		t.Fatal("the reopened note has no document")
 	}
-	text := next.editor.doc.Text().String()
+	text := next.notes.Doc.Text().String()
 	for _, want := range []string{"## Heading", "item one", "code line", "img.png"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the reopened document lost %q:\n%s", want, text)

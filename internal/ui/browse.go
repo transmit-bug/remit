@@ -132,7 +132,7 @@ func (a *App) openBrowseRow(id core.ID) {
 		return
 	}
 	if note, ok := a.data.noteOfBlock(card.Ref.Block); ok {
-		a.editor.selected = string(note)
+		a.notes.Selected = string(note)
 		a.setMode(modeNotes)
 		return
 	}

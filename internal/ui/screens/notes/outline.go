@@ -1,4 +1,4 @@
-package ui
+package notes
 
 import (
 	"strings"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // outlineEntry is one heading of the note: what it says, where it starts in the
@@ -71,12 +72,13 @@ func heading(body string) (level int, label string) {
 // marked; choosing one puts the caret on its paragraph, which is what scrolls it
 // into view. A heading is the arrow's to open and close, and the keys are the
 // outline's once a row has the focus.
-func (a *App) outlineList(c *ui.Context, tk design.Tokens) {
-	entries := outlineEntries(a.editor.draft.Blocks)
-	if a.editor.doc == nil || len(entries) == 0 {
+func (s *State) outlineList(c *ui.Context, tk design.Tokens) {
+	msgs := locales.In(c.Locale())
+	entries := outlineEntries(s.Draft.Blocks)
+	if s.Doc == nil || len(entries) == 0 {
 		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, 0).Children(func() {
 			tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.TextFaint)
-			ui.Text(c, m(c).OutlineEmpty()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+			ui.Text(c, msgs.OutlineEmpty()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 		})
 		return
 	}
@@ -89,25 +91,25 @@ func (a *App) outlineList(c *ui.Context, tk design.Tokens) {
 			children[entry.parent] = append(children[entry.parent], i)
 		}
 	}
-	a.openOutline(entries)
+	s.openOutline(entries)
 	// The caret marks the heading it is under; the choice stays the user's, so a
 	// click on a row is always a choice and never just a remark about the caret.
-	a.outlineCurrent = headingAt(entries, a.caretOffset())
-	a.outline.List.Selected = &a.outlineChosen
-	a.outline.List.Label = func(row int) string { return entries[a.outline.Item(row)].label }
-	list := ui.Outline(c, &a.outline, roots, func(i int) []int { return children[i] }, func(i int) {
+	s.OutlineCurrent = headingAt(entries, s.caretOffset())
+	s.outline.List.Selected = &s.outlineChosen
+	s.outline.List.Label = func(row int) string { return entries[s.outline.Item(row)].label }
+	list := ui.Outline(c, &s.outline, roots, func(i int) []int { return children[i] }, func(i int) {
 		text := ui.Text(c, entries[i].label).FontSize(tk.TypeSmall).SingleLine()
-		if i == a.outlineCurrent {
+		if i == s.OutlineCurrent {
 			text.TextColor(tk.Accent)
 			return
 		}
 		text.TextColor(tk.Text)
-	}).Grow(1).Label(m(c).Outline())
+	}).Grow(1).Label(msgs.Outline())
 	// A choice jumps to the heading; Enter or a double click on the row chosen
 	// jumps again, for a reader who scrolled away from it.
 	if list.Changed() || list.Submitted() {
-		if i := a.outline.Item(a.outlineChosen); i >= 0 && i < len(entries) {
-			a.pendingJump = entries[i].offset
+		if i := s.outline.Item(s.outlineChosen); i >= 0 && i < len(entries) {
+			s.pendingJump = entries[i].offset
 		}
 	}
 }
@@ -115,19 +117,19 @@ func (a *App) outlineList(c *ui.Context, tk design.Tokens) {
 // openOutline opens every heading a note's outline lists the first time it is
 // built, and again when the note or its shape changes, so a note reads whole;
 // the user may close what they like after that.
-func (a *App) openOutline(entries []outlineEntry) {
-	if a.outlineFor == a.editor.draft.ID && a.outlineShape == len(entries) {
+func (s *State) openOutline(entries []outlineEntry) {
+	if s.outlineFor == s.Draft.ID && s.outlineShape == len(entries) {
 		return
 	}
-	if a.outlineFor != a.editor.draft.ID {
+	if s.outlineFor != s.Draft.ID {
 		// Another note's choice means nothing here.
-		a.outlineChosen = -1
+		s.outlineChosen = -1
 	}
-	a.outline.Open.Clear()
+	s.outline.Open.Clear()
 	for i := range entries {
-		a.outline.Open.Add(i)
+		s.outline.Open.Add(i)
 	}
-	a.outlineFor, a.outlineShape = a.editor.draft.ID, len(entries)
+	s.outlineFor, s.outlineShape = s.Draft.ID, len(entries)
 }
 
 // headingAt is the heading the offset falls under, -1 before the first one.
@@ -143,20 +145,20 @@ func headingAt(entries []outlineEntry, offset int) int {
 }
 
 // caretOffset is where the caret sits in the document the editor holds.
-func (a *App) caretOffset() int {
-	if a.editor.doc == nil {
+func (s *State) caretOffset() int {
+	if s.Doc == nil {
 		return 0
 	}
-	_, caret := a.editor.doc.Selection()
+	_, caret := s.Doc.Selection()
 	return caret
 }
 
 // jumpInDocument puts the caret on a paragraph of the note open now, which the
 // editor scrolls into view.
-func (a *App) jumpInDocument(c *ui.Context, offset int) {
-	if a.editor.doc == nil {
+func (s *State) jumpInDocument(c *ui.Context, offset int) {
+	if s.Doc == nil {
 		return
 	}
-	a.editor.doc.SetSelection(offset, offset)
-	a.editor.body.Focus(c)
+	s.Doc.SetSelection(offset, offset)
+	s.body.Focus(c)
 }

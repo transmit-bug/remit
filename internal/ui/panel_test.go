@@ -8,6 +8,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -40,9 +41,9 @@ func TestOutlineJumpsToItsParagraph(t *testing.T) {
 	if err := tt.Click("The second part"); err != nil {
 		t.Fatalf("the outline does not offer the heading: %v", err)
 	}
-	text := documentText(a.editor.draft)
-	want := paragraphOffset(text, 3) // the heading's own paragraph
-	_, caret := a.editor.doc.Selection()
+	text := notes.DocumentText(a.notes.Draft)
+	want := notes.ParagraphOffset(text, 3) // the heading's own paragraph
+	_, caret := a.notes.Doc.Selection()
 	if caret != want {
 		t.Errorf("the caret is at %d, want the second paragraph at %d", caret, want)
 	}
@@ -57,12 +58,12 @@ func TestOutlineFollowsTheCaret(t *testing.T) {
 	a, tt, _ := headedNote(t, 1024, 720)
 
 	// The editor opens with the caret at the end, under the second heading.
-	if got := a.outlineCurrent; got != 1 {
+	if got := a.notes.OutlineCurrent; got != 1 {
 		t.Fatalf("the outline marks row %d, want the second heading", got)
 	}
-	a.editor.doc.SetSelection(0, 0)
+	a.notes.Doc.SetSelection(0, 0)
 	tt.Frame()
-	if got := a.outlineCurrent; got != 0 {
+	if got := a.notes.OutlineCurrent; got != 0 {
 		t.Errorf("the outline marks row %d after the caret moved to the top, want the first heading", got)
 	}
 }
@@ -94,11 +95,11 @@ func TestBacklinkOpensTheSourceAtItsParagraph(t *testing.T) {
 	}
 	tt.Advance(320 * time.Millisecond)
 
-	if a.editor.loaded != string(source.ID) {
-		t.Fatalf("the editor holds %q, want the source note", a.editor.loaded)
+	if a.notes.Loaded != string(source.ID) {
+		t.Fatalf("the editor holds %q, want the source note", a.notes.Loaded)
 	}
-	want := paragraphOffset(documentText(a.editor.draft), 2)
-	_, caret := a.editor.doc.Selection()
+	want := notes.ParagraphOffset(notes.DocumentText(a.notes.Draft), 2)
+	_, caret := a.notes.Doc.Selection()
 	if caret != want {
 		t.Errorf("the caret is at %d, want the linking paragraph at %d", caret, want)
 	}
@@ -109,7 +110,7 @@ func TestBacklinkOpensTheSourceAtItsParagraph(t *testing.T) {
 func TestPanelScrollsOnItsOwn(t *testing.T) {
 	a, tt, _ := headedNote(t, 1024, 720)
 
-	_, caretBefore := a.editor.doc.Selection()
+	_, caretBefore := a.notes.Doc.Selection()
 	before, ok := tt.Find("Note") // the document's own box
 	if !ok {
 		t.Fatalf("the document is not drawn; texts %q", tt.Texts())
@@ -125,10 +126,10 @@ func TestPanelScrollsOnItsOwn(t *testing.T) {
 	if !ok || after.X != before.X || after.W != before.W {
 		t.Errorf("the document moved from %+v to %+v", before, after)
 	}
-	if _, caret := a.editor.doc.Selection(); caret != caretBefore {
+	if _, caret := a.notes.Doc.Selection(); caret != caretBefore {
 		t.Errorf("scrolling the panel moved the caret from %d to %d", caretBefore, caret)
 	}
-	if strings.Contains(a.editor.doc.Text().String(), "  ") {
+	if strings.Contains(a.notes.Doc.Text().String(), "  ") {
 		t.Error("the document's text changed while the panel scrolled")
 	}
 }

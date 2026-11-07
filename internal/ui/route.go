@@ -11,7 +11,7 @@ func (a *App) ShowNote(id core.ID) {
 	a.reload()
 	for _, note := range a.data.notes {
 		if note.ID == id {
-			a.editor.selected = string(id)
+			a.notes.Selected = string(id)
 			a.mode = modeNotes
 			return
 		}

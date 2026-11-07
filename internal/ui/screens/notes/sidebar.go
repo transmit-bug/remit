@@ -1,4 +1,4 @@
-package ui
+package notes
 
 import (
 	"fmt"
@@ -9,29 +9,32 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // tagFilterBar is the row above the notes: every tag the library carries, with
 // how many notes hold it. Choosing one filters the list; choosing it again — or
 // the × — puts the whole library back.
-func (a *App) tagFilterBar(c *ui.Context, tk design.Tokens) {
-	if len(a.data.tags) == 0 {
+func (s *State) tagFilterBar(c *ui.Context, tk design.Tokens, d Deps) {
+	tags := d.Tags()
+	if len(tags) == 0 {
 		return
 	}
-	tags := make([]string, 0, len(a.data.tags))
-	for tag := range a.data.tags {
-		tags = append(tags, tag)
+	msgs := locales.In(c.Locale())
+	names := make([]string, 0, len(tags))
+	for tag := range tags {
+		names = append(names, tag)
 	}
-	sort.Strings(tags)
+	sort.Strings(names)
 
 	ui.ScrollHorizontal(c).Children(func() {
 		ui.Row(c).Gap(tk.SpaceXS).Padding(tk.SpaceXS, 0).Children(func() {
-			if a.tagFilter != "" {
-				ui.Button(c, m(c).ClearFilter()).MinHeight(tk.Control - tk.SpaceS).
-					OnClick(func() { a.tagFilter = "" })
+			if s.TagFilter != "" {
+				ui.Button(c, msgs.ClearFilter()).MinHeight(tk.Control - tk.SpaceS).
+					OnClick(func() { s.TagFilter = "" })
 			}
-			for _, tag := range tags {
-				chosen := a.tagFilter == tag
+			for _, tag := range names {
+				chosen := s.TagFilter == tag
 				label := "#" + tag
 				chip := ui.ButtonBase(c.Key(label)).
 					Padding(tk.SpaceXS, tk.SpaceS).MinHeight(tk.Control-tk.SpaceS).
@@ -42,15 +45,15 @@ func (a *App) tagFilterBar(c *ui.Context, tk design.Tokens) {
 						Border(tk.Hairline, tk.Accent)
 				}
 				chip.OnClick(func() {
-					if a.tagFilter == tag {
-						a.tagFilter = ""
+					if s.TagFilter == tag {
+						s.TagFilter = ""
 						return
 					}
-					a.tagFilter = tag
+					s.TagFilter = tag
 				})
 				chip.Children(func() {
 					ui.Text(c, label).FontSize(tk.TypeSmall).TextColor(tk.Text)
-					if n := a.data.tags[tag]; n > 1 {
+					if n := tags[tag]; n > 1 {
 						ui.Text(c, fmt.Sprint(n)).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 					}
 				})
@@ -71,33 +74,34 @@ func hasTag(tags []string, tag string) bool {
 
 // notesList is the source list of notes: today at the top, then every note
 // newest first, with how many cards each one feeds.
-func (a *App) notesList(c *ui.Context, tk design.Tokens) {
-	msgs := m(c)
+func (s *State) notesList(c *ui.Context, tk design.Tokens, d Deps) {
+	msgs := locales.In(c.Locale())
+	library := d.Notes()
 	ui.Column(c).Grow(1).MinWidth(0).Gap(tk.SpaceS).Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, tk.SpaceM).Children(func() {
-			ui.SearchField(c, &a.notesQuery).Placeholder(msgs.NotesSearch()).Label(msgs.NotesSearch()).Grow(1)
+			ui.SearchField(c, &s.Query).Placeholder(msgs.NotesSearch()).Label(msgs.NotesSearch()).Grow(1)
 			ui.Button(c, "").Label(msgs.NewNote()).Tooltip(msgs.NewNote()).
 				Children(func() { tk.Icon(c, "plus", design.IconSmall) }).
-				OnClick(func() { a.newNote(c) })
+				OnClick(func() { d.NewNote(c) })
 		})
 		// The tags are their own row: inside a Sidebar a click belongs to the
 		// list's selection, not to a button.
-		a.tagFilterBar(c, tk)
-		ui.Sidebar(c, &a.editor.selected, func() {
+		s.tagFilterBar(c, tk, d)
+		ui.Sidebar(c, &s.Selected, func() {
 			ui.SidebarItem(c, "today", design.Icon("layers"), msgs.Today()).
-				Children(func() { ui.Badge(c, fmt.Sprint(a.review.Remaining())) }).
-				OnClick(func() { a.setMode(modeReview) })
+				Children(func() { ui.Badge(c, fmt.Sprint(d.Due())) }).
+				OnClick(func() { d.OpenReview() })
 			ui.SidebarSection(c, msgs.Notebook(), nil, func() {
-				for _, n := range a.data.notes {
-					if a.tagFilter != "" && !hasTag(a.data.noteTags[n.ID], a.tagFilter) {
+				for _, n := range library {
+					if s.TagFilter != "" && !hasTag(n.Tags, s.TagFilter) {
 						continue
 					}
-					if !a.noteMatches(n) {
+					if !s.noteMatches(n.Note) {
 						continue
 					}
 					item := ui.SidebarItem(c, string(n.ID), design.Icon("file-text"), n.Title)
-					if cards := a.data.cardsInNote(n); cards > 0 {
-						item.Children(func() { ui.Badge(c, fmt.Sprint(cards)) })
+					if n.Cards > 0 {
+						item.Children(func() { ui.Badge(c, fmt.Sprint(n.Cards)) })
 					}
 				}
 			})
@@ -107,8 +111,8 @@ func (a *App) notesList(c *ui.Context, tk design.Tokens) {
 
 // noteMatches reports whether the sidebar's query keeps a note: its title or
 // the first line of its text, as the list reads it.
-func (a *App) noteMatches(n core.Note) bool {
-	query := strings.ToLower(strings.TrimSpace(a.notesQuery))
+func (s *State) noteMatches(n core.Note) bool {
+	query := strings.ToLower(strings.TrimSpace(s.Query))
 	if query == "" {
 		return true
 	}

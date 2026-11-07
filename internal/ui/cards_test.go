@@ -47,7 +47,7 @@ func TestSeparatorMakesACard(t *testing.T) {
 		t.Fatalf("the library holds %d cards, want the seeded four and the new one", len(cards))
 	}
 	// The card reads its paragraph, and its faces live nowhere on disk.
-	note, ok := a.Library().Note(a.editor.draft.ID)
+	note, ok := a.Library().Note(a.notes.Draft.ID)
 	if !ok {
 		t.Fatal("the new note is gone")
 	}
