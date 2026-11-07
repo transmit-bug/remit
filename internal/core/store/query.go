@@ -29,9 +29,9 @@ func (l *Library) CardsWithStatus(s core.Status) ([]core.Card, error) {
 	return cards, nil
 }
 
-// SearchCards returns the cards whose source block contains text, ignoring
-// case. The search runs on the derived index, so it costs nothing on the files
-// and needs no block text in memory.
+// SearchCards returns the cards whose source block, or whose hand-edited field
+// values, contain text, ignoring case. The search runs on the derived index, so
+// it costs nothing on the files and needs no text in memory.
 func (l *Library) SearchCards(text string) ([]core.Card, error) {
 	query := strings.TrimSpace(text)
 	if query == "" {
@@ -95,12 +95,16 @@ func escapeLike(s string) string {
 	return strings.ReplaceAll(s, "_", `\_`)
 }
 
-// searchCards matches the block text a card renders from.
+// searchCards matches the text a card renders from: the block it points at, and
+// the field values the user edited over it. Field rows in a block body ("Field:
+// value") are block text, so they match the first clause.
 func (x *index) searchCards(text string) ([]core.ID, error) {
+	like := "%" + escapeLike(text) + "%"
 	rows, err := x.db.Query(`
 		SELECT c.id FROM cards c
 		WHERE EXISTS (SELECT 1 FROM blocks b WHERE b.id = c.block_id AND b.text LIKE ? ESCAPE '\')
-		ORDER BY c.created, c.id`, "%"+escapeLike(text)+"%")
+		   OR c.fields_text LIKE ? ESCAPE '\'
+		ORDER BY c.created, c.id`, like, like)
 	if err != nil {
 		return nil, fmt.Errorf("store: search query: %w", err)
 	}
