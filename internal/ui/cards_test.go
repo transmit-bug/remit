@@ -236,3 +236,36 @@ func TestClozeMakesOneCardPerBlank(t *testing.T) {
 		t.Fatalf("the queue holds %d cloze cards, want 2", seen)
 	}
 }
+
+// A note's block becomes a card in the library, split at its first ::, and
+// joins the queue.
+func TestMakeCard(t *testing.T) {
+	a, seed := newTestApp(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	tt.Key(ui.Cmd, ui.Key2)
+
+	tt.Key(ui.Cmd, ui.KeyK)
+	tt.Type("make card")
+	tt.Key(0, ui.KeyEnter)
+	if !tt.HasText("Card made from block 1") {
+		t.Fatalf("no outcome for making a card; texts %q", tt.Texts())
+	}
+	cards, err := os.ReadDir(filepath.Join(seed.dir, "cards"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cards) != 5 {
+		t.Errorf("the library holds %d card files, want 5", len(cards))
+	}
+
+	tt.Advance(5 * time.Second) // past the toast
+	tt.Key(ui.Cmd, ui.Key1)
+	if !tt.HasText("5 cards left") {
+		t.Fatalf("the card made now is not in today's queue; texts %q", tt.Texts())
+	}
+	tt.Advance(320 * time.Millisecond) // the card's entry
+	if tt.FramePending() {
+		t.Error("view still requests frames after it should settle")
+	}
+}
