@@ -167,9 +167,8 @@ func statusBar(c *ui.Context, s *State, note Note) {
 			ui.Progress(c, float64(done)/float64(total)).Grow(1)
 		}
 		ui.Spacer(c)
-		if note.ID != "" {
-			at, _ := s.At(note)
-			ui.Text(c, msgs.ReadingWhere(at, len(note.Blocks))).
+		if at, total := s.At(note); total > 0 {
+			ui.Text(c, msgs.ReadingWhere(at, total)).
 				FontSize(design.TypeSmall).TextColor(t.TextMuted)
 		}
 		ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Children(func() {
