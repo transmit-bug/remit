@@ -75,11 +75,16 @@ func main() {
 	// told about them as seams: the settings page turns the port on and off and
 	// rebinds the key while the app runs.
 	agent := newAgentService(dataDir)
+	// The plugin directory is cmd's: the app lists it for the settings page and
+	// asks it for the runner each role names, once per library open.
+	plugins := newPluginService(filepath.Join(dataDir, "extensions"))
 	a := appui.NewApp(appui.Options{
 		LibraryDir:    dir,
 		DataDir:       dataDir,
 		BindHotkey:    func(accelerator string) error { return hotkey.apply(accelerator) },
 		AgentControls: agent,
+		Discover:      plugins.Discover,
+		Plugin:        plugins.Open,
 	})
 	hotkey = newHotkeyBinder(func() {
 		a.ShowQueue()

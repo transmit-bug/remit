@@ -70,19 +70,31 @@ type App struct {
 	data    libraryData    // the library as the view reads it
 	due     []core.ID      // today's queue, as the last reload derived it
 
-	mode           mode
-	review         review.State
-	editor         editorState
-	browse         browse.State
-	browseRows     []browse.Row // the cards browse lists, as loadBrowse derived them
-	stats          screenstats.State
-	palette        paletteState
-	relink         relink.State
-	cardEdit       cardEditState
-	prefs          screensettings.State
-	prefsBack      mode                 // the face the settings page goes back to
-	cards          *cardPlugin          // what a paragraph asks and how a card reads
-	scheduler      *schedulerPlugin     // what schedules a review, and what a session is worth
+	mode             mode
+	review           review.State
+	editor           editorState
+	browse           browse.State
+	browseRows       []browse.Row // the cards browse lists, as loadBrowse derived them
+	stats            screenstats.State
+	palette          paletteState
+	relink           relink.State
+	cardEdit         cardEditState
+	prefs            screensettings.State
+	prefsBack        mode                                    // the face the settings page goes back to
+	cards            *cardPlugin                             // what a paragraph asks and how a card reads
+	scheduler        *schedulerPlugin                        // what schedules a review, and what a session is worth
+	cardsChoice      *ext.JSRunner                           // the runner Options.Cards named, nil for the app's own
+	schedulerChoice  *ext.JSRunner                           // the runner Options.Scheduler named
+	withoutCards     bool                                    // no card plugin at all
+	withoutScheduler bool                                    // schedule with the app's own defaults
+	discover         func() ([]screensettings.Plugin, error) // what the plugin directory holds
+	openPlugin       func(string) (*ext.JSRunner, error)     // the runner a role names
+	// pluginList, roleList and typeList are the settings page's snapshots,
+	// retaken when the page opens and after every write: no frame reads the
+	// plugins directory or the store for them.
+	pluginList     []screensettings.Plugin
+	roleList       map[string]string
+	typeList       []screensettings.Type
 	summaryWord    summaryAnswer        // what the scheduling plugin says about a session
 	summaryWordFor string               // the numbers that answer was given
 	resolver       *cards.Resolver      // what a paragraph asks and how a card reads, asked once per text
@@ -191,9 +203,16 @@ func NewApp(opts ...Options) *App {
 		a.agentAPI = o.AgentControls
 		chosenCards, withoutCards = o.Cards, o.WithoutCards
 		chosenScheduler, withoutScheduler = o.Scheduler, o.WithoutScheduler
+		a.discover, a.openPlugin = o.Discover, o.Plugin
 	}
-	a.cards = openCards(chosenCards, withoutCards)
-	a.scheduler = openScheduler(chosenScheduler, withoutScheduler)
+	a.cardsChoice, a.schedulerChoice = chosenCards, chosenScheduler
+	a.withoutCards, a.withoutScheduler = withoutCards, withoutScheduler
+	// With a plugin directory the roles decide what derives and schedules, so
+	// the plugins are opened per library; without one the app's own play.
+	if a.openPlugin == nil {
+		a.cards = openCards(chosenCards, withoutCards)
+		a.scheduler = openScheduler(chosenScheduler, withoutScheduler)
+	}
 	if dir, err := DefaultLibraryDir(); err == nil {
 		a.defaultLibrary = dir
 	}

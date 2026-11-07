@@ -1177,5 +1177,217 @@
   "statRemembered": "Remembered",
   "@statRemembered": {
     "description": "Session summary: the share of cards rated as remembered."
+  },
+  "settingsPlugins": "Plugins",
+  "@settingsPlugins": {
+    "description": "Settings section: the plugins this library runs and the roles they play."
+  },
+  "settingsPluginsBody": "Remit runs only what this library approves. Approving a plugin grants the capabilities it lists.",
+  "@settingsPluginsBody": {
+    "description": "Description of the plugins settings section."
+  },
+  "settingsPluginsNeedsLibrary": "Open a library to manage its plugins.",
+  "@settingsPluginsNeedsLibrary": {
+    "description": "The plugins section before a library is open."
+  },
+  "pluginEmpty": "No plugins were found. Remit looks for extensions in its user data folder.",
+  "@pluginEmpty": {
+    "description": "The plugins section when discovery found nothing."
+  },
+  "pluginBuiltin": "Built-in",
+  "@pluginBuiltin": {
+    "description": "Badge: the plugin ships with the app and is always enabled."
+  },
+  "pluginNoCapabilities": "Declares no capabilities",
+  "@pluginNoCapabilities": {
+    "description": "A plugin whose manifest declares no capability."
+  },
+  "pluginRoleCards": "Card derivation",
+  "@pluginRoleCards": {
+    "description": "Settings field: the plugin that turns a block into cards."
+  },
+  "pluginRoleCardsBody": "Turns a block of a note into cards, in the types it names.",
+  "@pluginRoleCardsBody": {
+    "description": "Description of the card derivation role."
+  },
+  "pluginRoleSchedule": "Scheduling",
+  "@pluginRoleSchedule": {
+    "description": "Settings field: the plugin that sets the scheduling policy."
+  },
+  "pluginRoleScheduleBody": "Sets the scheduling policy and what a finished session is worth saying.",
+  "@pluginRoleScheduleBody": {
+    "description": "Description of the scheduling role."
+  },
+  "pluginEnableFailed": "The plugin was not enabled: {reason}",
+  "@pluginEnableFailed": {
+    "description": "Approving or withdrawing a plugin failed.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "pluginRoleFailed": "The role was not changed: {reason}",
+  "@pluginRoleFailed": {
+    "description": "Choosing the plugin for a role failed.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "the plugin is not enabled in this library"
+      }
+    }
+  },
+  "settingsTypes": "Card types",
+  "@settingsTypes": {
+    "description": "Settings section: the library's card types."
+  },
+  "settingsTypesBody": "A type is a field list and two templates. Cards render through it, so a template edit shows on the next frame.",
+  "@settingsTypesBody": {
+    "description": "Description of the card types settings section."
+  },
+  "settingsTypesNeedsLibrary": "Open a library to manage its types.",
+  "@settingsTypesNeedsLibrary": {
+    "description": "The card types section before a library is open."
+  },
+  "typeColumnName": "Type",
+  "@typeColumnName": {
+    "description": "Card types table header: the type's name."
+  },
+  "typeColumnFields": "Fields",
+  "@typeColumnFields": {
+    "description": "Card types table header: how many fields the type has."
+  },
+  "typeColumnCards": "Cards",
+  "@typeColumnCards": {
+    "description": "Card types table header: how many cards reference the type."
+  },
+  "typeNew": "New type",
+  "@typeNew": {
+    "description": "Button: start a new card type."
+  },
+  "typeDelete": "Delete type",
+  "@typeDelete": {
+    "description": "Button: delete the chosen card type."
+  },
+  "typeFieldName": "Field {number}",
+  "@typeFieldName": {
+    "description": "Label of one field's name in the type editor.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "typeRemoveField": "Remove",
+  "@typeRemoveField": {
+    "description": "Button: remove one field from the type being edited."
+  },
+  "typeAddField": "Add field",
+  "@typeAddField": {
+    "description": "Button: append a field to the type being edited."
+  },
+  "typeFrontTemplate": "Front template",
+  "@typeFrontTemplate": {
+    "description": "Label of the front template's text area."
+  },
+  "typeBackTemplate": "Back template",
+  "@typeBackTemplate": {
+    "description": "Label of the back template's text area."
+  },
+  "typeSave": "Save type",
+  "@typeSave": {
+    "description": "Button: write the type being edited."
+  },
+  "typePreview": "Preview",
+  "@typePreview": {
+    "description": "Heading of the rendered preview of the type being edited."
+  },
+  "typePreviewFront": "Front",
+  "@typePreviewFront": {
+    "description": "Label of the previewed front face."
+  },
+  "typePreviewBack": "Back",
+  "@typePreviewBack": {
+    "description": "Label of the previewed back face."
+  },
+  "typeEmpty": "No card types in this library.",
+  "@typeEmpty": {
+    "description": "The type list when the library holds none."
+  },
+  "typeChoose": "Choose a type to edit it.",
+  "@typeChoose": {
+    "description": "The type editor when no type is chosen."
+  },
+  "typeUnknown": "That type is not in this library.",
+  "@typeUnknown": {
+    "description": "A type action named a type the library no longer holds."
+  },
+  "typeBuiltinDelete": "A built-in type cannot be deleted: the next open seeds it again.",
+  "@typeBuiltinDelete": {
+    "description": "Deleting one of the three types every library seeds."
+  },
+  "typeInUse": "The type is still used by {cards, plural, one {# card} other {# cards}}; delete them first.",
+  "@typeInUse": {
+    "description": "Deleting a type some card references.",
+    "placeholders": {
+      "cards": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "typeFieldHeld": "Cannot delete {field}: {cards, plural, one {# card holds a value in it} other {# cards hold a value in it}}.",
+  "@typeFieldHeld": {
+    "description": "Deleting a field some card holds a value in.",
+    "placeholders": {
+      "field": {
+        "type": "String",
+        "example": "Extra"
+      },
+      "cards": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "typeBad": "The type was not saved: {reason}",
+  "@typeBad": {
+    "description": "Saving a type the store refused.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "the type needs at least one field"
+      }
+    }
+  },
+  "typeTemplateBroken": "That template does not compile: {reason}",
+  "@typeTemplateBroken": {
+    "description": "The preview's report when the draft template does not compile.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "unknown field Fron"
+      }
+    }
+  },
+  "typeSaved": "Type saved.",
+  "@typeSaved": {
+    "description": "The type editor's type was written."
+  },
+  "typeDeleted": "Type deleted.",
+  "@typeDeleted": {
+    "description": "The type editor's type was deleted."
+  },
+  "pluginEnable": "Enable {name}",
+  "@pluginEnable": {
+    "description": "The switch that approves one plugin for this library, named by the plugin.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "acme.cards"
+      }
+    }
   }
 }

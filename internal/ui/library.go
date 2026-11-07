@@ -38,6 +38,7 @@ func (a *App) open() {
 		a.start = true
 		return
 	}
+	a.openRolePlugins()
 	lib, err := store.Open(a.dir, a.storeOptions())
 	if errors.Is(err, fs.ErrNotExist) {
 		// The place has no library: the start view offers to make one here or
@@ -64,6 +65,57 @@ func (a *App) storeOptions() store.Options {
 		}
 	}
 	return options
+}
+
+// openRolePlugins resolves each role to the plugin the library names and starts
+// it, before the library reads: what schedules has to be known before the index
+// replays. A role naming a plugin that is missing or will not start falls back
+// to the built-in and says so in the log — a library always opens, whatever its
+// plugins do. A role change is written at once and picked up here, on the next
+// library open.
+func (a *App) openRolePlugins() {
+	if a.openPlugin == nil {
+		return
+	}
+	roles := store.ReadRoles(a.dir)
+	a.cards = a.cardRole(roles[core.RoleCardsDerive])
+	a.scheduler = a.schedulerRole(roles[core.RoleReviewSchedule])
+}
+
+// cardRole starts the plugin the card role names, or the app's own when it
+// cannot: no paragraph derives a card through a plugin that is not there.
+func (a *App) cardRole(name string) *cardPlugin {
+	if a.withoutCards {
+		return nil
+	}
+	runner := a.cardsChoice
+	if runner == nil {
+		opened, err := a.openPlugin(name)
+		if err != nil {
+			slog.Warn("remit: the card role's plugin did not start", "name", name, "err", err)
+		} else {
+			runner = opened
+		}
+	}
+	return openCards(runner, false)
+}
+
+// schedulerRole starts the plugin the scheduling role names, or the app's own
+// when it cannot: scheduling falls back, never stops.
+func (a *App) schedulerRole(name string) *schedulerPlugin {
+	if a.withoutScheduler {
+		return nil
+	}
+	runner := a.schedulerChoice
+	if runner == nil {
+		opened, err := a.openPlugin(name)
+		if err != nil {
+			slog.Warn("remit: the scheduling role's plugin did not start", "name", name, "err", err)
+		} else {
+			runner = opened
+		}
+	}
+	return openScheduler(runner, false)
 }
 
 // apply makes lib the open library and shows the review queue, which is the

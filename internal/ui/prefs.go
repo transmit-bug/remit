@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sort"
 	"strings"
 
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 )
@@ -114,10 +117,61 @@ func (a *App) syncPrefs() {
 	if a.agentAPI != nil {
 		a.prefs.Agent = a.agentAPI.Status()
 	}
+	a.refreshSettingsData()
+}
+
+// refreshSettingsData retakes what the plugins and types sections list: what
+// discovery finds, the roles this library plays and its types. It runs on the
+// UI thread when the page opens and after every write, so no frame reads the
+// plugins directory or the store for them.
+func (a *App) refreshSettingsData() {
+	a.prefs.HasLibrary = a.lib != nil
+	a.pluginList = a.discoveredPlugins()
+	a.roleList = map[string]string{}
+	a.typeList = nil
+	if a.lib == nil {
+		return
+	}
+	a.roleList = a.lib.Roles()
+	enabled := make(map[string]bool)
+	for _, name := range a.lib.EnabledExtensions() {
+		enabled[name] = true
+	}
+	for i := range a.pluginList {
+		a.pluginList[i].Enabled = a.pluginList[i].Builtin || enabled[a.pluginList[i].Name]
+	}
+	used := make(map[core.ID]int, 8)
+	for _, card := range a.data.cards {
+		used[card.Type]++
+	}
+	for _, typ := range a.lib.Types() {
+		a.typeList = append(a.typeList, screensettings.Type{Type: typ, Cards: used[typ.ID]})
+	}
+}
+
+// discoveredPlugins is what the plugin directory holds, built-ins first and
+// then by name. A discovery that fails is a log line and what it did find: a
+// broken directory must not keep the settings page from opening.
+func (a *App) discoveredPlugins() []screensettings.Plugin {
+	if a.discover == nil {
+		return nil
+	}
+	found, err := a.discover()
+	if err != nil {
+		slog.Warn("remit: discover plugins", "err", err)
+	}
+	sort.Slice(found, func(i, j int) bool {
+		if found[i].Builtin != found[j].Builtin {
+			return found[i].Builtin
+		}
+		return found[i].Name < found[j].Name
+	})
+	return found
 }
 
 // settingsDeps is what the settings page asks of the app: one function per
-// thing the user can do there, each run on the UI thread.
+// thing the user can do there, each run on the UI thread. The reads answer the
+// snapshots refreshSettingsData left, so a frame never reaches the store.
 func (a *App) settingsDeps() screensettings.Deps {
 	return screensettings.Deps{
 		SetAgent:         a.setAgent,
@@ -126,7 +180,127 @@ func (a *App) settingsDeps() screensettings.Deps {
 		ApplyHotkey:      a.applyHotkey,
 		SetUpdateCheck:   a.setUpdateCheck,
 		SetNotifications: a.setNotifications,
+
+		Plugins:    func() []screensettings.Plugin { return a.pluginList },
+		SetEnabled: a.setPluginEnabled,
+		Roles:      a.rolesSnapshot,
+		SetRole:    a.setRole,
+		Types:      func() []screensettings.Type { return a.typeList },
+		SaveType:   a.saveType,
+		DeleteType: a.deleteType,
 	}
+}
+
+// rolesSnapshot is the roles the page draws, as a copy: the page reads it every
+// frame and never writes it.
+func (a *App) rolesSnapshot() map[string]string {
+	roles := make(map[string]string, len(a.roleList))
+	for role, name := range a.roleList {
+		roles[role] = name
+	}
+	return roles
+}
+
+// setPluginEnabled approves a plugin for this library or withdraws it, which is
+// the grant its declared capabilities hang on. The write is immediate; the
+// plugin starts on the next library open, as enabling always has.
+func (a *App) setPluginEnabled(c *ui.Context, name string, on bool) {
+	a.prefs.PluginErr = ""
+	if a.lib == nil {
+		a.prefs.PluginErr = m(c).SettingsPluginsNeedsLibrary()
+		return
+	}
+	names := a.lib.EnabledExtensions()
+	next := make([]string, 0, len(names)+1)
+	for _, held := range names {
+		if held != name {
+			next = append(next, held)
+		}
+	}
+	if on {
+		next = append(next, name)
+	}
+	if err := a.lib.SetEnabledExtensions(next); err != nil {
+		slog.Warn("remit: enable plugin", "name", name, "on", on, "err", err)
+		a.prefs.PluginErr = m(c).PluginEnableFailed(err.Error())
+	}
+	a.refreshSettingsData()
+}
+
+// setRole chooses the plugin that plays a role in this library. Like enabling,
+// it takes effect on the next library open; the page shows what the file holds.
+func (a *App) setRole(c *ui.Context, role, name string) {
+	a.prefs.PluginErr = ""
+	if a.lib == nil {
+		a.prefs.PluginErr = m(c).SettingsPluginsNeedsLibrary()
+		return
+	}
+	if err := a.lib.SetRole(role, name); err != nil {
+		slog.Warn("remit: set plugin role", "role", role, "name", name, "err", err)
+		a.prefs.PluginErr = m(c).PluginRoleFailed(err.Error())
+	}
+	a.refreshSettingsData()
+}
+
+// saveType writes a type through the store, which mints a new ID and carries a
+// field rename through every card. The library is reloaded so the cards on
+// screen render through the type as it now is.
+func (a *App) saveType(c *ui.Context, typ core.Type) core.ID {
+	a.prefs.TypeErr = ""
+	if a.lib == nil {
+		a.prefs.TypeErr = m(c).SettingsTypesNeedsLibrary()
+		return ""
+	}
+	id, err := a.lib.SaveType(typ)
+	if err != nil {
+		slog.Warn("remit: save type", "type", typ.ID, "err", err)
+		a.prefs.TypeErr = a.typeWriteError(c, err)
+		a.refreshSettingsData()
+		return ""
+	}
+	a.reload()
+	a.refreshSettingsData()
+	c.Toast(m(c).TypeSaved())
+	return id
+}
+
+// deleteType removes a type no card references, and says why when one does.
+func (a *App) deleteType(c *ui.Context, id core.ID) {
+	a.prefs.TypeErr = ""
+	if a.lib == nil {
+		a.prefs.TypeErr = m(c).SettingsTypesNeedsLibrary()
+		return
+	}
+	if err := a.lib.DeleteType(id); err != nil {
+		slog.Warn("remit: delete type", "type", id, "err", err)
+		a.prefs.TypeErr = a.typeWriteError(c, err)
+		a.refreshSettingsData()
+		return
+	}
+	a.reload()
+	a.refreshSettingsData()
+	c.Toast(m(c).TypeDeleted())
+}
+
+// typeWriteError is the page's sentence for a refusal: which field holds the
+// values, how many cards keep the type, or what the store would not take.
+func (a *App) typeWriteError(c *ui.Context, err error) string {
+	msgs := m(c)
+	var held *store.FieldInUseError
+	if errors.As(err, &held) {
+		return msgs.TypeFieldHeld(held.Field, held.Cards)
+	}
+	var used *store.TypeInUseError
+	if errors.As(err, &used) {
+		return msgs.TypeInUse(used.Cards)
+	}
+	switch {
+	case errors.Is(err, store.ErrBuiltinType):
+		return msgs.TypeBuiltinDelete()
+	case errors.Is(err, store.ErrNoType):
+		return msgs.TypeUnknown()
+	}
+	return msgs.TypeBad(err.Error())
 }
 
 // setUpdateCheck remembers whether the app checks for updates at launch.
