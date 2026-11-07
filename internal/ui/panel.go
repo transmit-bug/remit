@@ -2,6 +2,8 @@ package ui
 
 import (
 	"github.com/egoist/mygo/ui"
+
+	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
 // panelMode is what the user said about the note's panel, when they said
@@ -54,23 +56,23 @@ const (
 // notePanel is the pane beside the document: the note's outline or the notes
 // that point at it, then what the note feeds. It scrolls on its own and takes
 // the focus only when one of its rows is chosen.
-func (a *App) notePanel(c *ui.Context, tk tokens) {
+func (a *App) notePanel(c *ui.Context, tk design.Tokens) {
 	msgs := m(c)
-	ui.Column(c).Grow(1).MinWidth(0).Padding(tk.spaceM).Gap(tk.spaceM).Children(func() {
-		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
+	ui.Column(c).Grow(1).MinWidth(0).Padding(tk.SpaceM).Gap(tk.SpaceM).Children(func() {
+		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
 			chosen := int(a.panelTab)
 			if ui.Segmented(c, &chosen, msgs.Outline(), msgs.Backlinks()).Label(msgs.PanelTitle()).Changed() {
 				a.panelTab = panelTab(chosen)
 			}
 			ui.Spacer(c)
 			ui.Button(c, "").Label(msgs.Close()).Tooltip(msgs.Close()).
-				Children(func() { tk.icon(c, "x", iconSmall) }).
+				Children(func() { tk.Icon(c, "x", design.IconSmall) }).
 				OnClick(func() { a.panel = panelClosed })
 		})
 
 		if a.panelTab == panelBacklinks {
 			ui.Scroll(c).Grow(1).Children(func() {
-				ui.Column(c).Gap(tk.spaceXS).Children(func() {
+				ui.Column(c).Gap(tk.SpaceXS).Children(func() {
 					a.backlinkList(c, tk)
 				})
 			})
@@ -84,18 +86,18 @@ func (a *App) notePanel(c *ui.Context, tk tokens) {
 
 // backlinkList shows the notes that name this one, with the paragraph that names
 // it; choosing one opens that note on that paragraph.
-func (a *App) backlinkList(c *ui.Context, tk tokens) {
+func (a *App) backlinkList(c *ui.Context, tk design.Tokens) {
 	msgs := m(c)
 	if len(a.backlinks) == 0 {
-		ui.Text(c, msgs.BacklinksEmpty()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+		ui.Text(c, msgs.BacklinksEmpty()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 		return
 	}
 	for _, link := range a.backlinks {
 		label := msgs.BacklinkAt(link.NoteTitle, link.Paragraph)
 		target := link
 		ui.ButtonBase(c.Key(string(link.Block))).Justify(ui.Start).
-			Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control - tk.spaceS).
-			Radius(tk.radiusControl).Label(label).
+			Padding(tk.SpaceXS, tk.SpaceS).MinHeight(tk.Control - tk.SpaceS).
+			Radius(tk.RadiusControl).Label(label).
 			OnClick(func() {
 				a.editor.selected = string(target.Note)
 				a.editor.jumpTo = target.Paragraph
@@ -103,8 +105,8 @@ func (a *App) backlinkList(c *ui.Context, tk tokens) {
 			}).
 			Children(func() {
 				ui.Column(c).Gap(0).Children(func() {
-					ui.Text(c, label).FontSize(tk.typeSmall).TextColor(tk.Text).SingleLine()
-					ui.Text(c, target.Text).FontSize(tk.typeSmall).TextColor(tk.TextMuted).SingleLine()
+					ui.Text(c, label).FontSize(tk.TypeSmall).TextColor(tk.Text).SingleLine()
+					ui.Text(c, target.Text).FontSize(tk.TypeSmall).TextColor(tk.TextMuted).SingleLine()
 				})
 			})
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -39,7 +40,7 @@ const (
 // written in, read beside its own source, or read whole. Each edge is a pane the
 // user drags — a split remembers the width it was given — and a narrow window
 // drops the note's panel so that the document keeps room to be typed.
-func (a *App) notesView(c *ui.Context, tk tokens) {
+func (a *App) notesView(c *ui.Context, tk design.Tokens) {
 	w, _ := c.Size()
 	ui.Split(c, &a.notesWidth, func() {
 		a.notesList(c, tk)

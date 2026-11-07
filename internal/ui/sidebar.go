@@ -14,7 +14,7 @@ import (
 // tagFilterBar is the row above the notes: every tag the library carries, with
 // how many notes hold it. Choosing one filters the list; choosing it again — or
 // the × — puts the whole library back.
-func (a *App) tagFilterBar(c *ui.Context, tk tokens) {
+func (a *App) tagFilterBar(c *ui.Context, tk design.Tokens) {
 	if len(a.data.tags) == 0 {
 		return
 	}
@@ -25,21 +25,21 @@ func (a *App) tagFilterBar(c *ui.Context, tk tokens) {
 	sort.Strings(tags)
 
 	ui.ScrollHorizontal(c).Children(func() {
-		ui.Row(c).Gap(tk.spaceXS).Padding(tk.spaceXS, 0).Children(func() {
+		ui.Row(c).Gap(tk.SpaceXS).Padding(tk.SpaceXS, 0).Children(func() {
 			if a.tagFilter != "" {
-				ui.Button(c, m(c).ClearFilter()).MinHeight(tk.control - tk.spaceS).
+				ui.Button(c, m(c).ClearFilter()).MinHeight(tk.Control - tk.SpaceS).
 					OnClick(func() { a.tagFilter = "" })
 			}
 			for _, tag := range tags {
 				chosen := a.tagFilter == tag
 				label := "#" + tag
 				chip := ui.ButtonBase(c.Key(label)).
-					Padding(tk.spaceXS, tk.spaceS).MinHeight(tk.control-tk.spaceS).
-					Radius(tk.radiusControl).Label(label).
-					Border(tk.hairline, tk.Border)
+					Padding(tk.SpaceXS, tk.SpaceS).MinHeight(tk.Control-tk.SpaceS).
+					Radius(tk.RadiusControl).Label(label).
+					Border(tk.Hairline, tk.Border)
 				if chosen {
 					chip.Background(tk.Surface.Mix(tk.Accent, 0.16)).
-						Border(tk.hairline, tk.Accent)
+						Border(tk.Hairline, tk.Accent)
 				}
 				chip.OnClick(func() {
 					if a.tagFilter == tag {
@@ -49,9 +49,9 @@ func (a *App) tagFilterBar(c *ui.Context, tk tokens) {
 					a.tagFilter = tag
 				})
 				chip.Children(func() {
-					ui.Text(c, label).FontSize(tk.typeSmall).TextColor(tk.Text)
+					ui.Text(c, label).FontSize(tk.TypeSmall).TextColor(tk.Text)
 					if n := a.data.tags[tag]; n > 1 {
-						ui.Text(c, fmt.Sprint(n)).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+						ui.Text(c, fmt.Sprint(n)).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 					}
 				})
 			}
@@ -71,13 +71,13 @@ func hasTag(tags []string, tag string) bool {
 
 // notesList is the source list of notes: today at the top, then every note
 // newest first, with how many cards each one feeds.
-func (a *App) notesList(c *ui.Context, tk tokens) {
+func (a *App) notesList(c *ui.Context, tk design.Tokens) {
 	msgs := m(c)
-	ui.Column(c).Grow(1).MinWidth(0).Gap(tk.spaceS).Children(func() {
-		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Padding(tk.spaceS, tk.spaceM).Children(func() {
+	ui.Column(c).Grow(1).MinWidth(0).Gap(tk.SpaceS).Children(func() {
+		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, tk.SpaceM).Children(func() {
 			ui.SearchField(c, &a.notesQuery).Placeholder(msgs.NotesSearch()).Label(msgs.NotesSearch()).Grow(1)
 			ui.Button(c, "").Label(msgs.NewNote()).Tooltip(msgs.NewNote()).
-				Children(func() { tk.icon(c, "plus", iconSmall) }).
+				Children(func() { tk.Icon(c, "plus", design.IconSmall) }).
 				OnClick(func() { a.newNote(c) })
 		})
 		// The tags are their own row: inside a Sidebar a click belongs to the

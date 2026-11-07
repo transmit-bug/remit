@@ -6,6 +6,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
 // outlineEntry is one heading of the note: what it says, where it starts in the
@@ -70,12 +71,12 @@ func heading(body string) (level int, label string) {
 // marked; choosing one puts the caret on its paragraph, which is what scrolls it
 // into view. A heading is the arrow's to open and close, and the keys are the
 // outline's once a row has the focus.
-func (a *App) outlineList(c *ui.Context, tk tokens) {
+func (a *App) outlineList(c *ui.Context, tk design.Tokens) {
 	entries := outlineEntries(a.editor.draft.Blocks)
 	if a.editor.doc == nil || len(entries) == 0 {
-		ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Padding(tk.spaceS, 0).Children(func() {
-			tk.icon(c, "notebook-pen", iconSmall).TextColor(tk.textFaint)
-			ui.Text(c, m(c).OutlineEmpty()).FontSize(tk.typeLabel).TextColor(tk.TextMuted)
+		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, 0).Children(func() {
+			tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.TextFaint)
+			ui.Text(c, m(c).OutlineEmpty()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 		})
 		return
 	}
@@ -95,7 +96,7 @@ func (a *App) outlineList(c *ui.Context, tk tokens) {
 	a.outline.List.Selected = &a.outlineChosen
 	a.outline.List.Label = func(row int) string { return entries[a.outline.Item(row)].label }
 	list := ui.Outline(c, &a.outline, roots, func(i int) []int { return children[i] }, func(i int) {
-		text := ui.Text(c, entries[i].label).FontSize(tk.typeSmall).SingleLine()
+		text := ui.Text(c, entries[i].label).FontSize(tk.TypeSmall).SingleLine()
 		if i == a.outlineCurrent {
 			text.TextColor(tk.Accent)
 			return

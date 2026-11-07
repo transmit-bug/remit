@@ -7,7 +7,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
-	"github.com/transmit-bug/remit/internal/ui/review"
+	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	"github.com/transmit-bug/remit/locales"
 )
 

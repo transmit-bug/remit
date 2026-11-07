@@ -6,26 +6,27 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
 
 // startView is the window before a library is open: where the notes would
 // live, one action that makes a library there, and one that opens a library
 // already on disk. Nothing is created until the user says so.
-func (a *App) startView(c *ui.Context, tk tokens) {
-	ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Padding(tk.spaceXXL).Children(func() {
-		tk.icon(c, "book-open", iconLarge).TextColor(tk.TextMuted)
-		ui.Text(c, m(c).StartTitle()).FontSize(tk.typeTitle).Bold()
+func (a *App) startView(c *ui.Context, tk design.Tokens) {
+	ui.Column(c).Grow(1).Center().Gap(tk.SpaceM).Padding(tk.SpaceXXL).Children(func() {
+		tk.Icon(c, "book-open", design.IconLarge).TextColor(tk.TextMuted)
+		ui.Text(c, m(c).StartTitle()).FontSize(tk.TypeTitle).Bold()
 		ui.Text(c, m(c).StartBody()).
-			FontSize(tk.typeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)
+			FontSize(tk.TypeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)
 		if dir := a.startDir(); dir != "" {
-			ui.Text(c, dir).FontSize(tk.typeSmall).TextColor(tk.textFaint).
+			ui.Text(c, dir).FontSize(tk.TypeSmall).TextColor(tk.TextFaint).
 				MaxWidth(messageWidth).SingleLine()
 		}
-		ui.Row(c).Gap(tk.spaceM).Children(func() {
-			ui.PrimaryButton(c, m(c).CreateLibrary()).MinHeight(tk.control).
+		ui.Row(c).Gap(tk.SpaceM).Children(func() {
+			ui.PrimaryButton(c, m(c).CreateLibrary()).MinHeight(tk.Control).
 				OnClick(func() { a.createLibrary(c) })
-			ui.Button(c, m(c).OpenLibrary()).MinHeight(tk.control).
+			ui.Button(c, m(c).OpenLibrary()).MinHeight(tk.Control).
 				OnClick(func() { a.chooseLibrary(c) })
 		})
 	})

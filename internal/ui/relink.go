@@ -69,7 +69,7 @@ func (a *App) openRelink(c *ui.Context, card core.ID) {
 
 // relinkView draws the picker over the window. DialogBase keeps the keyboard
 // inside it; Escape closes it and gives the focus back where it was.
-func (a *App) relinkView(c *ui.Context, tk tokens) {
+func (a *App) relinkView(c *ui.Context, tk design.Tokens) {
 	if !a.relink.open {
 		return
 	}
@@ -78,8 +78,8 @@ func (a *App) relinkView(c *ui.Context, tk tokens) {
 	reload, choice := false, -1
 
 	ui.DialogBase(c, &a.relink.open, func(backdrop, panel ui.Element) {
-		backdrop.Background(tk.scrim)
-		panel = kit.StylePanel(c, panel.Width(paletteWidth).MaxHeight(relinkPanel).Padding(tk.spaceL).Gap(tk.spaceM))
+		backdrop.Background(tk.Scrim)
+		panel = kit.StylePanel(c, panel.Width(paletteWidth).MaxHeight(relinkPanel).Padding(tk.SpaceL).Gap(tk.SpaceM))
 		panel.Label(msgs.RelinkTitle())
 		// The picker arrives the way the palette does.
 		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.relink})
@@ -88,17 +88,17 @@ func (a *App) relinkView(c *ui.Context, tk tokens) {
 		backdrop.Opacity(arriving)
 
 		panel.Children(func() {
-			ui.Row(c).AlignItems(ui.Center).Gap(tk.spaceS).Children(func() {
-				ui.Text(c, msgs.RelinkTitle()).FontSize(tk.typeHeading).Bold().Grow(1)
+			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
+				ui.Text(c, msgs.RelinkTitle()).FontSize(tk.TypeHeading).Bold().Grow(1)
 				// An icon-only button carries its name for the pointer and for a
 				// screen reader, since the drawing says nothing on its own.
 				ui.Button(c, "").Label(msgs.Close()).Tooltip(msgs.Close()).
-					Children(func() { tk.icon(c, "x", iconSmall) }).
+					Children(func() { tk.Icon(c, "x", design.IconSmall) }).
 					OnClick(func() { a.relink.open = false })
 			})
 			field := ui.TextInput(c, &a.relink.query).
 				Placeholder(msgs.RelinkSearch()).Bind(&a.relink.field).
-				Label(msgs.RelinkSearch()).MinHeight(tk.control)
+				Label(msgs.RelinkSearch()).MinHeight(tk.Control)
 			if field.Changed() {
 				a.relink.selected = 0
 				reload = true
@@ -110,10 +110,10 @@ func (a *App) relinkView(c *ui.Context, tk tokens) {
 			c.OnShortcut(0, ui.KeyUp, func() { a.moveRelink(len(a.relink.rows), -1) })
 
 			if len(a.relink.rows) == 0 {
-				ui.Text(c, msgs.NoBlocks()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+				ui.Text(c, msgs.NoBlocks()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 			}
 			ui.Scroll(c).Grow(1).Children(func() {
-				ui.Column(c).Gap(tk.spaceXS).Children(func() {
+				ui.Column(c).Gap(tk.SpaceXS).Children(func() {
 					for i, row := range a.relink.rows {
 						a.relinkRowView(c, tk, row, i == sel, i)
 					}
@@ -143,18 +143,18 @@ func (a *App) moveRelink(n, delta int) {
 // relinkRowView draws one candidate: the text the card would show, and the
 // note it lives in. A click chooses it there and then, as the palette's rows
 // run their action.
-func (a *App) relinkRowView(c *ui.Context, tk tokens, row relinkRow, chosen bool, i int) {
-	item := ui.ButtonBase(c.Key(row.block)).Gap(tk.spaceXS).Justify(ui.Start).
-		MinHeight(tk.control).Padding(tk.spaceXS, tk.spaceS).
-		Radius(tk.radiusControl).Label(row.text)
+func (a *App) relinkRowView(c *ui.Context, tk design.Tokens, row relinkRow, chosen bool, i int) {
+	item := ui.ButtonBase(c.Key(row.block)).Gap(tk.SpaceXS).Justify(ui.Start).
+		MinHeight(tk.Control).Padding(tk.SpaceXS, tk.SpaceS).
+		Radius(tk.RadiusControl).Label(row.text)
 	if chosen {
-		item.Background(tk.sunken)
+		item.Background(tk.Sunken)
 	}
 	item.OnClick(func() { a.relinkChoose(c, i) })
 	item.Children(func() {
-		ui.Column(c).Gap(tk.spaceXS).Children(func() {
-			ui.Text(c, row.text).FontSize(tk.typeBody).SingleLine()
-			ui.Text(c, row.note).FontSize(tk.typeSmall).TextColor(tk.TextMuted).SingleLine()
+		ui.Column(c).Gap(tk.SpaceXS).Children(func() {
+			ui.Text(c, row.text).FontSize(tk.TypeBody).SingleLine()
+			ui.Text(c, row.note).FontSize(tk.TypeSmall).TextColor(tk.TextMuted).SingleLine()
 		})
 	})
 }

@@ -16,7 +16,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
-	"github.com/transmit-bug/remit/internal/ui/review"
+	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	"github.com/transmit-bug/remit/internal/update"
 )
 

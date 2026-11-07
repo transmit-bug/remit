@@ -3,16 +3,17 @@ package ui
 import (
 	"github.com/egoist/mygo/ui"
 
-	"github.com/transmit-bug/remit/internal/ui/review"
+	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/screens/review"
 )
 
 // toolbar is the window's one row of controls, the same in every mode so that
 // switching never moves what the user is aiming at. Before a library is open
 // there is nothing to switch between, so the row holds the app's name alone.
-func (a *App) toolbar(c *ui.Context, tk tokens) ui.Element {
+func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 	msgs := m(c)
 	toolbar := ui.Toolbar(c, func() {
-		ui.Text(c, Name).FontSize(tk.typeHeading).Bold()
+		ui.Text(c, Name).FontSize(tk.TypeHeading).Bold()
 		if a.lib == nil {
 			ui.Spacer(c)
 			return
@@ -32,11 +33,11 @@ func (a *App) toolbar(c *ui.Context, tk tokens) ui.Element {
 				a.view = viewMode(view)
 			}
 			ui.Button(c, "").Label(msgs.PanelTitle()).Tooltip(msgs.PanelTitle()).
-				Children(func() { tk.icon(c, "notebook-pen", iconSmall) }).
+				Children(func() { tk.Icon(c, "notebook-pen", design.IconSmall) }).
 				OnClick(func() { a.togglePanel(c) })
 		}
 		ui.Button(c, "").Label(msgs.More()).Tooltip(msgs.More()).
-			Children(func() { tk.icon(c, "ellipsis", iconSmall) }).
+			Children(func() { tk.Icon(c, "ellipsis", design.IconSmall) }).
 			Menu(func(menu *ui.Menu) {
 				if menu.Item(msgs.ImportAnki()).Chosen() {
 					a.importAnkiPackage(c)
@@ -49,7 +50,7 @@ func (a *App) toolbar(c *ui.Context, tk tokens) ui.Element {
 				}
 			})
 	}).Label(msgs.Toolbar(Name)).
-		Padding(tk.spaceS, tk.spaceL).
+		Padding(tk.SpaceS, tk.SpaceL).
 		Background(tk.Surface)
 	return toolbar
 }

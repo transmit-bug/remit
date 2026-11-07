@@ -67,7 +67,7 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 
 // paletteView draws the palette over the window. DialogBase keeps the keyboard
 // in it, Escape closes it and gives the focus back where it was.
-func (a *App) paletteView(c *ui.Context, tk tokens) {
+func (a *App) paletteView(c *ui.Context, tk design.Tokens) {
 	if !a.palette.open {
 		return
 	}
@@ -75,8 +75,8 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 	sel := clamp(a.palette.sel, 0, len(items)-1)
 
 	ui.DialogBase(c, &a.palette.open, func(backdrop, panel ui.Element) {
-		backdrop.Background(tk.scrim)
-		panel = kit.StylePanel(c, panel.Width(paletteWidth).Padding(tk.spaceL).Gap(tk.spaceM))
+		backdrop.Background(tk.Scrim)
+		panel = kit.StylePanel(c, panel.Width(paletteWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
 		panel.Label(m(c).CommandPalette())
 		// The palette arrives a little small over a scrim that fades in.
 		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.palette})
@@ -87,7 +87,7 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 		panel.Children(func() {
 			field := ui.TextInput(c, &a.palette.query).
 				Placeholder(m(c).SearchActions()).Bind(&a.palette.field).
-				Label(m(c).SearchActions()).MinHeight(tk.control)
+				Label(m(c).SearchActions()).MinHeight(tk.Control)
 			if field.Changed() {
 				a.palette.sel = 0
 			}
@@ -98,7 +98,7 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 			c.OnShortcut(0, ui.KeyUp, func() { a.movePalette(len(items), -1) })
 
 			if len(items) == 0 {
-				ui.Text(c, m(c).NoActions()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+				ui.Text(c, m(c).NoActions()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 				return
 			}
 			// The rows are a list's: the choice, the keys and what assistive
@@ -107,8 +107,8 @@ func (a *App) paletteView(c *ui.Context, tk tokens) {
 			a.palette.list.Selected = &a.palette.sel
 			a.palette.list.Label = func(row int) string { return items[row].label }
 			rows := ui.List(c, &a.palette.list, len(items), func(i int) {
-				ui.Text(c, items[i].label).FontSize(tk.typeBody).Padding(tk.spaceXS, tk.spaceS)
-			}).Grow(1).MaxHeight(tk.control * 8).Label(m(c).CommandPalette())
+				ui.Text(c, items[i].label).FontSize(tk.TypeBody).Padding(tk.SpaceXS, tk.SpaceS)
+			}).Grow(1).MaxHeight(tk.Control * 8).Label(m(c).CommandPalette())
 			if rows.Changed() || rows.Submitted() {
 				a.runPalette(items, a.palette.sel)
 			}

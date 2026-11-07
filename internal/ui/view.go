@@ -9,15 +9,14 @@ import (
 // View draws the window. It reads state and returns; anything that changes
 // state belongs in a handler.
 func (a *App) View(c *ui.Context) {
-	t, palette := appTheme(c.Theme())
-	c.SetTheme(t)
-	tk := newTokens(t, palette)
+	tk := design.NewTokens(c.Theme())
+	c.SetTheme(tk.Theme)
 
 	// Window shortcuts belong to the window, not to the column they are built
 	// beside, so that they work with no control focused.
 	a.shortcuts(c)
 
-	ui.Column(c).Fill().Background(tk.Background).LineHeight(lineHeight).Children(func() {
+	ui.Column(c).Fill().Background(tk.Background).LineHeight(design.LineHeight).Children(func() {
 		// Review takes the window whole: no navigation, no list, just the card
 		// and its status bar. Everywhere else the first frame arrives in two
 		// beats — the toolbar, then the main area behind it.

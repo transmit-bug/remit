@@ -17,6 +17,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
 // messageWidth caps a message that is about the library rather than a card:
@@ -252,11 +253,11 @@ func (a *App) report(c *ui.Context, what string, err error) {
 
 // libraryErrorView is the window when the library could not be opened: what
 // went wrong, and the one action that tries again.
-func (a *App) libraryErrorView(c *ui.Context, tk tokens) {
-	ui.Column(c).Grow(1).Center().Gap(tk.spaceM).Padding(tk.spaceXXL).Children(func() {
+func (a *App) libraryErrorView(c *ui.Context, tk design.Tokens) {
+	ui.Column(c).Grow(1).Center().Gap(tk.SpaceM).Padding(tk.SpaceXXL).Children(func() {
 		ui.Text(c, m(c).LibraryError(a.openErr.Error())).
-			FontSize(tk.typeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)
-		ui.Button(c, m(c).RetryLibrary()).MinHeight(tk.control).
+			FontSize(tk.TypeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)
+		ui.Button(c, m(c).RetryLibrary()).MinHeight(tk.Control).
 			OnClick(func() { a.open() })
 	})
 }

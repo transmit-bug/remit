@@ -7,12 +7,13 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
-	"github.com/transmit-bug/remit/internal/ui/review"
+	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/screens/review"
 )
 
 // reviewView draws review mode: the screen itself lives in its own package, and
 // this only hands it the library and the app's own actions (ADR 0004).
-func (a *App) reviewView(c *ui.Context, tk tokens) {
+func (a *App) reviewView(c *ui.Context, tk design.Tokens) {
 	review.View(c, &a.review, a.reviewDeps(c))
 }
 
@@ -54,8 +55,8 @@ func (a *App) reviewDeps(c *ui.Context) review.Deps {
 			}
 			return out, true
 		},
-		Grade:  func(id core.ID, r review.Rating) { a.grade(c, id, r) },
-		Undo:   func() { a.undo(c) },
+		Grade: func(id core.ID, r review.Rating) { a.grade(c, id, r) },
+		Undo:  func() { a.undo(c) },
 		Suspend: func(id core.ID) {
 			a.suspend(c, id)
 		},
