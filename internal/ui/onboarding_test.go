@@ -138,3 +138,83 @@ func TestStartViewAtMinimumInChinese(t *testing.T) {
 		t.Error("view still requests frames after the locale switch")
 	}
 }
+
+// A first run has no library: the window asks whether to make one or open one,
+// and only makes the one the user chose. The choice is remembered, so the next
+// start opens the library without asking again.
+func TestFirstRun(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "Remit")
+	data := t.TempDir()
+	a := NewApp(Options{LibraryDir: dir, DataDir: data})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+
+	if _, err := os.Stat(filepath.Join(dir, "remit.json")); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("the window made a library before it was asked: %v", err)
+	}
+	for _, want := range []string{"Start your library", "Create library", "Open library…", dir} {
+		if !tt.HasText(want) {
+			t.Fatalf("the start view is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+	if tt.HasText("Notebook") {
+		t.Error("the start view drew a library that is not there")
+	}
+
+	if err := tt.Click("Create library"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "remit.json")); err != nil {
+		t.Fatalf("Create library did not make one: %v", err)
+	}
+	// A finished queue reports the session, not a bare "nothing here".
+	if !tt.HasText("Today's review") || !tt.HasText("Back to notes") {
+		t.Fatalf("a new library did not open on its empty queue; texts %q", tt.Texts())
+	}
+
+	// The choice is in the settings for the next start.
+	s, err := settings.Load(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.LibraryDir != dir {
+		t.Fatalf("the settings name %q, want %q", s.LibraryDir, dir)
+	}
+
+	// The next start opens the remembered library, not the start view.
+	next := NewApp(Options{DataDir: data})
+	tt = ui.NewTester(next.View, 1024, 720)
+	tt.Frame()
+	if tt.HasText("Start your library") {
+		t.Fatalf("the remembered library was not opened; texts %q", tt.Texts())
+	}
+	if !tt.HasText("Today's review") {
+		t.Fatalf("the remembered library's queue is not up; texts %q", tt.Texts())
+	}
+
+	if err := tt.Click("Back to notes"); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText("No notes yet.") {
+		t.Fatalf("the empty library does not say it is empty; texts %q", tt.Texts())
+	}
+	if err := tt.Click("New note"); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.Focused("Note title") {
+		t.Fatalf("the first note did not open for typing; texts %q", tt.Texts())
+	}
+
+	third := NewApp(Options{DataDir: data})
+	tt = ui.NewTester(third.View, 1024, 720)
+	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(320 * time.Millisecond) // the review card's exit
+	if !tt.HasText("Untitled note") || !tt.HasText("Note title") {
+		t.Fatalf("the new note did not survive a restart; texts %q", tt.Texts())
+	}
+	tt.Advance(320 * time.Millisecond) // the screen's entrance
+	if tt.FramePending() {
+		t.Error("view still requests frames after it should settle")
+	}
+}

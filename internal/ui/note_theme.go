@@ -11,7 +11,7 @@ import (
 // three heading steps the outline mirrors, a mark-coloured quote rule and quiet
 // code. The chrome around the paper keeps the window's 13px; only the document
 // takes this scale.
-func noteTheme(tk tokens) *richtext.Theme {
+func noteTheme(tk design.Tokens) *richtext.Theme {
 	th := richtext.DefaultTheme(tk.Theme)
 	th.Text = tk.Text
 	th.Muted = tk.TextMuted
@@ -22,8 +22,8 @@ func noteTheme(tk tokens) *richtext.Theme {
 	th.CodeFont = "monospace"
 	th.CodeSize = 0.86
 	th.Code = tk.Text
-	th.CodeBackground = tk.sunken
-	th.CodeBlockBackground = tk.sunken
+	th.CodeBackground = tk.Sunken
+	th.CodeBlockBackground = tk.Sunken
 	th.CodeBlockRadius = 0.3
 
 	// The paper sets paragraphs apart instead of indenting their first line.
@@ -53,9 +53,9 @@ func noteTheme(tk tokens) *richtext.Theme {
 
 // noteFont is the body the note is written in: the document's size at the
 // paper's line height, so a CJK paragraph has the leading it needs.
-func noteFont(tk tokens) ui.Font {
+func noteFont(tk design.Tokens) ui.Font {
 	return ui.Font{Size: design.TypeBody * 1.2, LineHeight: design.TextLineHeight}
 }
 
 // paperFace is the page's face: the paper colour, no border, no shadow.
-func paperFace(tk tokens) ui.Color { return tk.Background }
+func paperFace(tk design.Tokens) ui.Color { return tk.Background }

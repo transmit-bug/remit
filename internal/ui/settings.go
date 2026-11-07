@@ -10,6 +10,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/settings"
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/update"
 )
 
@@ -94,11 +95,11 @@ func (a *App) syncPrefs() {
 
 // settingsView is the settings page: the agent API, updates, the global
 // shortcut and the daily reminder, each written as soon as it is changed.
-func (a *App) settingsView(c *ui.Context, tk tokens) {
+func (a *App) settingsView(c *ui.Context, tk design.Tokens) {
 	ui.Scroll(c).Grow(1).Children(func() {
-		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.spaceXL).Children(func() {
-			ui.Column(c).FillWidth().MaxWidth(settingsWidth).Gap(tk.spaceL).Children(func() {
-				ui.Text(c, m(c).SettingsTitle()).FontSize(tk.typeTitle).Bold()
+		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
+			ui.Column(c).FillWidth().MaxWidth(settingsWidth).Gap(tk.SpaceL).Children(func() {
+				ui.Text(c, m(c).SettingsTitle()).FontSize(tk.TypeTitle).Bold()
 				ui.Form(c, func() {
 					a.agentFieldset(c, tk)
 					a.updateFieldset(c, tk)
@@ -113,25 +114,25 @@ func (a *App) settingsView(c *ui.Context, tk tokens) {
 // agentFieldset is the agent API's switch, and what the listener says about
 // itself: the address it chose, the token file, and the way to withdraw a
 // token that leaked.
-func (a *App) agentFieldset(c *ui.Context, tk tokens) {
+func (a *App) agentFieldset(c *ui.Context, tk design.Tokens) {
 	toggled := false
 	ui.Fieldset(c, m(c).SettingsAgent(), func() {
 		ui.Field(c, m(c).SettingsAgentServe(), func() {
-			ui.Column(c).Gap(tk.spaceS).Children(func() {
+			ui.Column(c).Gap(tk.SpaceS).Children(func() {
 				toggled = ui.Switch(c, &a.prefs.agentOn).Changed()
-				ui.Column(c).Gap(tk.spaceXS).Children(func() {
+				ui.Column(c).Gap(tk.SpaceXS).Children(func() {
 					if a.prefs.agent.Address == "" {
-						ui.Text(c, m(c).SettingsAgentStopped()).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+						ui.Text(c, m(c).SettingsAgentStopped()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 					} else {
 						ui.Text(c, m(c).SettingsAgentAddress(a.prefs.agent.Address)).
-							FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+							FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 					}
 					if a.prefs.agent.TokenPath != "" {
 						ui.Text(c, m(c).SettingsTokenPath(a.prefs.agent.TokenPath)).
-							FontSize(tk.typeSmall).TextColor(tk.textFaint).SingleLine()
+							FontSize(tk.TypeSmall).TextColor(tk.TextFaint).SingleLine()
 					}
 				})
-				ui.Button(c, m(c).RotateToken()).MinHeight(tk.control).AlignSelf(ui.Start).
+				ui.Button(c, m(c).RotateToken()).MinHeight(tk.Control).AlignSelf(ui.Start).
 					OnClick(func() { a.rotateToken(c) })
 			})
 		}).Description(m(c).SettingsAgentBody())
@@ -143,17 +144,17 @@ func (a *App) agentFieldset(c *ui.Context, tk tokens) {
 
 // updateFieldset is the update check's switch and the one action that asks
 // now, with what the last answer was.
-func (a *App) updateFieldset(c *ui.Context, tk tokens) {
+func (a *App) updateFieldset(c *ui.Context, tk design.Tokens) {
 	toggled := false
 	ui.Fieldset(c, m(c).SettingsUpdates(), func() {
 		ui.Field(c, m(c).SettingsCheckAtLaunch(), func() {
-			ui.Column(c).Gap(tk.spaceS).Children(func() {
+			ui.Column(c).Gap(tk.SpaceS).Children(func() {
 				toggled = ui.Switch(c, &a.prefs.updateCheck).Changed()
-				ui.Row(c).Gap(tk.spaceM).AlignItems(ui.Center).Children(func() {
-					ui.Button(c, m(c).CheckNow()).MinHeight(tk.control).
+				ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Children(func() {
+					ui.Button(c, m(c).CheckNow()).MinHeight(tk.Control).
 						OnClick(func() { a.checkNow(c) })
 					if a.prefs.updateMsg != "" {
-						ui.Text(c, a.prefs.updateMsg).FontSize(tk.typeSmall).TextColor(tk.TextMuted)
+						ui.Text(c, a.prefs.updateMsg).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
 					}
 				})
 			})
@@ -166,14 +167,14 @@ func (a *App) updateFieldset(c *ui.Context, tk tokens) {
 
 // hotkeyFieldset is the global shortcut: the accelerator as typed, the one
 // action that binds it, and why the last attempt did not.
-func (a *App) hotkeyFieldset(c *ui.Context, tk tokens) {
+func (a *App) hotkeyFieldset(c *ui.Context, tk design.Tokens) {
 	ui.Fieldset(c, m(c).SettingsShortcut(), func() {
 		ui.Field(c, m(c).SettingsShortcutLabel(), func() {
-			ui.Row(c).Gap(tk.spaceS).AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
 				ui.TextInput(c, &a.prefs.hotkey).
-					Placeholder(settings.DefaultHotkey).MinHeight(tk.control).Grow(1).
+					Placeholder(settings.DefaultHotkey).MinHeight(tk.Control).Grow(1).
 					Label(m(c).SettingsShortcutLabel())
-				ui.Button(c, m(c).ApplyShortcut()).MinHeight(tk.control).
+				ui.Button(c, m(c).ApplyShortcut()).MinHeight(tk.Control).
 					OnClick(func() { a.applyHotkey(c) })
 			})
 		}).Description(m(c).SettingsShortcutBody()).Error(a.hotkeyError(c))
@@ -182,7 +183,7 @@ func (a *App) hotkeyFieldset(c *ui.Context, tk tokens) {
 
 // reminderFieldset is the daily reminder's switch. It is the same setting the
 // tray's pause item flips.
-func (a *App) reminderFieldset(c *ui.Context, tk tokens) {
+func (a *App) reminderFieldset(c *ui.Context, tk design.Tokens) {
 	toggled := false
 	ui.Fieldset(c, m(c).SettingsReminders(), func() {
 		ui.Field(c, m(c).SettingsReminderLabel(), func() {
