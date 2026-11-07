@@ -64,6 +64,22 @@ Unpacking refuses an archive that escapes its target directory or one that
 would overwrite a library. Writing and reading live in
 `internal/core/transfer`.
 
+## Plugins
+
+Card derivation, scheduling policy and the window's commands, menus and pages
+are plugins. The two the app ships are plugins too, loaded by the same code.
+A plugin is a directory with an `extension.json` manifest and a JavaScript file;
+it reaches the host only through the capabilities its manifest declares.
+
+```sh
+go run ./cmd/remit ext test examples/plugins/cards-mini  # hooks against its fixtures
+go run ./cmd/remit ext check <dir>                       # manifest and contributions
+go run ./cmd/remit ext types -o remit.d.ts               # the contract artifact
+```
+
+The contract and the guide are [`remit.d.ts`](remit.d.ts) and
+[`docs/specs/plugins/writing-a-plugin.md`](docs/specs/plugins/writing-a-plugin.md).
+
 ## License
 
 Remit is licensed under the GNU Affero General Public License, version 3. See

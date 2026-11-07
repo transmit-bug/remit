@@ -20,6 +20,11 @@ import (
 // Protocol is the version of the wire protocol this package speaks.
 const Protocol = 1
 
+// CommandHook is the export a plugin answers its contributed commands and its
+// pages' data with (docs/specs/plugins/ui.md §5). It rides with contributes,
+// not with implements: one hook, because a page's data command is a command.
+const CommandHook = "command"
+
 // Timeout is how long one call may take before the extension is considered
 // hung. A hung extension is killed rather than retried: it would block the
 // review flow.

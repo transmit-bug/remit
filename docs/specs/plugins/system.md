@@ -16,7 +16,7 @@
 |---|---|---|
 | **静态声明 + 惰性激活** | VS Code：`contributes`（静态）+ `activationEvents`（何时加载） | manifest 用**宿主定义的钩子词汇表**声明 `implements` 与 capabilities；宿主不启动插件即可展示、校验与索引它的全部表面。`activation` 今天只被记录，启用列表才是加载时机（惰性加载：**计划**） |
 | **能力即对象，不是权限弹窗** | Obsidian：没有沙箱，API 面（Vault / MetadataCache）本身就是边界 | JS 全局只有 `remit`，标准库冻结；拿不到 `fs` / `net` / 定时器以外的宿主能力 |
-| **安装时授权，运行时不再问** | VS Code：扩展信任在安装时建立 | **计划**：启用插件时展示它声明的 capabilities 并让用户批准；今天启用只写名字，且除 `remit.echo` / `remit.now` 外没有可授予的函数（§6） |
+| **安装时授权，运行时不再问** | VS Code：扩展信任在安装时建立 | 设置页列出发现到的插件与它声明的 capabilities，批准后才把名字写进库的 `extensions`；宿主只装声明过的 `remit.*` 函数，未声明的调用是 `CapabilityError`（§6） |
 | **插件失败不得阻塞主流程** | Anki：add-on 出错不影响复习 | 抛错/超时/内存超限 → 记数并降级：卡片回退段落原文、调度回退宿主默认，三次停用 |
 | **内置也是插件** | VS Code：built-in extensions 走同一 API，无特权 | 默认制卡/调度随应用打包，同样走 manifest 与 capability |
 | **卡片是数据，模板是库资产** | Anki：note type 存在 collection 里，模板即渲染 | 类型（字段表+模板）是库的明文数据；渲染是宿主模板引擎，没有"渲染插件"这个角色 |
@@ -130,16 +130,17 @@
 - `activation` 只决定何时加载，不决定谁被选中；角色决定选中。宿主今天记录它，不据此
   加载（启用列表决定加载）。
 - `contributes` 是静态的 UI 声明：命令 / 菜单 / 页面 / 设置 / 文案（[`ui.md`](ui.md)）。
-  契约与宿主绘制在 #146 落地；单个贡献非法只丢那一条，插件照常启用。
+  契约与宿主绘制在 #146 落地；`remit ext check` 与 `ext test` 读同一份解析而不启动插件；
+  单个贡献非法只丢那一条，插件照常启用。
 - `runtime: "exec"` 仍被接受（ADR 0006）：需要原生库或长计算的扩展走进程协议；js
   manifest 不带 `protocol`，exec manifest 必须带 `protocol: 1`。类型体系相关钩子今天
   只有 JS 插件在用，宿主未禁止 exec 声明它们，但没有 exec 插件能跑通这些钩子。
 
 ## 5. Hooks 与数据契约
 
-derive 一个 + 调度/展示 + 一个事件回调。纯函数不得写库，写入只能通过 capability，
-由宿主在 hook 返回后应用（与 immediate-mode 纪律一致）；今天还没有写 capability，所以
-插件按定义不写库。
+derive 一个 + 调度/展示 + 一个事件回调。纯函数不直接写库：写入只能通过 capability（
+`cards:write` / `review:write` / `store:own`），由宿主在 hook 返回后应用（与 immediate-mode
+纪律一致）。
 
 ```ts
 // 宿主交给插件的块视图：今天只有 text（id 尚未传入）
@@ -176,14 +177,8 @@ export function on_event(event: { kind: string; id: string }): void
 
 ## 6. Capabilities
 
-**已落地**：宿主今天只装这两个函数，插件声明的其它名字不报错，也不会装上函数。
-
-| 能力 | 授予的宿主面 | 拒绝时 |
-|---|---|---|
-| `remit.echo` | `remit.echo(v)` 原样返回，给插件自测 | 未声明时函数不存在，调用抛 `TypeError` |
-| `remit.now` | `remit.now()` 当前时间，RFC 3339 | 同上 |
-
-**计划**（名字先定，宿主函数未装）：
+**已落地**（#142）：八个名字都在宿主词汇表里，插件声明哪个就装哪个；未声明的调用是
+`ext.CapabilityError`，错误里带插件 id 与能力名。
 
 | 能力 | 授予的宿主面 |
 |---|---|
@@ -193,13 +188,14 @@ export function on_event(event: { kind: string; id: string }): void
 | `review:write` | `remit.review.record` |
 | `schedule:fsrs` | `remit.fsrs.review(state, grade, now)` |
 | `store:own` | `remit.store.get/set`，命名空间绑定插件 id |
+| `remit.echo` | `remit.echo(v)` 原样返回，给插件自测 |
+| `remit.now` | `remit.now()` 当前时间，RFC 3339 |
 
-落地票 [#142](https://github.com/transmit-bug/remit/issues/142)。宿主面与 loopback agent API
-复用同一读写层（`internal/agentapi.Library` 是现成缝），插件调用不走 HTTP 回环。
+宿主面与 loopback agent API 复用同一读写层（`internal/agentapi.Library` 是现成缝），
+插件调用不走 HTTP 回环。
 
-`store:own` 的**存储**已落地：库内明文 `plugins-data/<id>.json`，随 `.remitlib` 归档走
-（启用按库，数据按库——Obsidian 的 per-vault 模型；VS Code 式机器级层等真实需求出现再
-加）。但 `remit.store` 还没有装进 JS 全局，插件今天读不到自己的数据。
+`store:own` 的存储是库内明文 `plugins-data/<id>.json`，随 `.remitlib` 归档走（启用按库，
+数据按库——Obsidian 的 per-vault 模型；VS Code 式机器级层等真实需求出现再加）。
 
 **没有** `fs` / `net` / `ui` / 任意 SQL。需要联网的插件是 v2 议题（那时加 `net:fetch` +
 allowlist）。
@@ -263,9 +259,15 @@ discovered → enabled(remit.json 里有名字) → loaded(Open；角色插件�
 
 内置插件用金标准 fixtures：`internal/ext/builtin` 的测试逐项比对
 `internal/golden/testdata/golden.json`（兼作删除 Go 实现的凭据），`internal/cards` 测字段
-解析与回退，`internal/core/template` 测方言。第三方插件的 harness 与 `ext test <dir>` CLI
-都还没有（#145）；今天最近的路径是照 `internal/ext/example_test.go` 用 `ext.OpenJS` 加载
-自己的目录，宿主不代为运行插件自带 fixtures（**计划**）。
+解析与回退，`internal/core/template` 测方言。内置插件随二进制打包、没有插件目录，所以
+它走这条金标准路径，`ext test` 不另造第二份金标准。
+
+第三方插件自带 `fixtures/`：`remit ext test <dir>` 载入插件、用与窗口同一份解析校验
+manifest 与 `contributes`，再把 `implements` 里的每个钩子按 fixture 调用一遍，answer 以
+规范 JSON 逐字比对；`fixtures/host.json` 给出插件能读到的库（notes / pluginData / now），
+fixture host 只答读、拒绝写。`remit ext check <dir>` 只看 manifest 与贡献，不启动插件；
+`remit ext types -o remit.d.ts` 生成契约产物，`go test ./internal/ext/ts` 在它漂移时变红。
+写法见 [`writing-a-plugin.md`](writing-a-plugin.md) §7。
 
 ## 13. v1 不做
 
@@ -281,7 +283,7 @@ discovered → enabled(remit.json 里有名字) → loaded(Open；角色插件�
 | 票 | 内容 | 今天的状态 |
 |---|---|---|
 | [#141](https://github.com/transmit-bug/remit/issues/141) | 键入作答与提示的复习面 | 模板把 `{{type:}}` / `{{hint:}}` 捕获进 `template.Output`，经 `cards.Answer` 交给 UI；复习屏只渲染卡面，没有输入框、逐字比对或折叠提示 |
-| [#142](https://github.com/transmit-bug/remit/issues/142) | 六个 capability 的宿主函数 | JS 全局只有 `remit.echo` / `remit.now`；`store:own` 的存储层已落地，`remit.store` 未装；未声明的调用仍是 `TypeError`，没有 `CapabilityError` |
+| [#142](https://github.com/transmit-bug/remit/issues/142) | 六个 capability 的宿主函数 | 已建：六个命名空间按声明安装，未声明的调用是 `CapabilityError`；`remit.store` 读写 `plugins-data/<id>.json` |
 | [#144](https://github.com/transmit-bug/remit/issues/144) | 设置 UI：启用批准、角色单选、类型管理 | 已建：插件批准与 capabilities、两个角色单选、类型列表 / 字段 / 模板与实时预览；need→widget 见 [`ui-inventory.md`](../ui-inventory.md) |
-| [#145](https://github.com/transmit-bug/remit/issues/145) | `ext test` / `ext check`、`remit.d.ts`、文档清扫 | `writing-a-plugin.md` 已按现行契约重写，示例被 `internal/ext/example_test.go` 加载；CLI、`.d.ts`、GLOSSARY 词条与 ADR 清扫未做 |
-| [#146](https://github.com/transmit-bug/remit/issues/146) | 插件 UI 贡献（命令 / 菜单 / 页面 / 设置） | 已建：`contributes`、`internal/ext/contrib`、命令面板与菜单槽位、插件页面屏、设置页插件表单、`remit -check-ext`；`remit.d.ts` 与 `go tool remit ext` 仍在 #145 |
+| [#145](https://github.com/transmit-bug/remit/issues/145) | `ext test` / `ext check`、`remit.d.ts`、文档清扫 | 已建：`remit ext test/check/types`、`internal/ext/exttest` 的 fixture harness、`remit.d.ts` 与漂移测试、示例插件 fixtures、GLOSSARY 词条与 ADR 清扫 |
+| [#146](https://github.com/transmit-bug/remit/issues/146) | 插件 UI 贡献（命令 / 菜单 / 页面 / 设置） | 已建：`contributes`、`internal/ext/contrib`、命令面板与菜单槽位、插件页面屏、设置页插件表单；校验走 `remit ext check`（#145） |

@@ -42,6 +42,14 @@ the code wins and this file follows.
   `Options` structs and callback interfaces, so the whole UI runs headless.
 - **The agent API is loopback-only** and token-gated for writes; it exposes no
   deletes.
+- **Plugins run under the app's limits, not its trust.** Two substrates, one
+  contract: `exec` (a local process speaking newline-delimited JSON on its
+  pipes) and `js` (JavaScript in this process, 1 s and 64 MiB per call, a pool
+  of two runtimes, no dynamic code). A plugin reaches the host only through the
+  capabilities its manifest declares; the host draws every pixel a plugin
+  contributes. Built-in plugins load through the same loader with no
+  privileged door. The in-process substrate is **not** process isolation — an
+  engine memory-safety bug is the app's (ADR 0006).
 
 ## Key directories
 
@@ -62,6 +70,9 @@ go build ./...
 go test ./...
 CGO_ENABLED=0 go test ./...     # the shipped build is cgo-free
 go run ./cmd/remit
+go run ./cmd/remit ext test examples/plugins/cards-mini  # a plugin's hooks against its fixtures/
+go run ./cmd/remit ext check <dir>                       # manifest and contributions only
+go run ./cmd/remit ext types -o remit.d.ts               # regenerate the plugin contract
 go tool mygo vet .
 go tool mygo i18n check .       # catalog completeness
 go tool mygo generate           # regenerate locales/
@@ -69,6 +80,8 @@ go tool mygo build .            # package
 ```
 
 MyGo arrives through `go.mod`'s tool directive; never install it separately.
+`remit` is not a tool directive, so the plugin commands run as
+`go run ./cmd/remit ext …`, not `go tool remit ext …`.
 
 ## Conventions that outlive the code
 

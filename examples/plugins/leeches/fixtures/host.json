@@ -1,0 +1,19 @@
+{
+  "now": "2026-11-08T09:00:00Z",
+  "pluginData": "{\"settings\":{\"threshold\":2}}",
+  "notes": [
+    {
+      "id": "note_1",
+      "title": "Memory",
+      "blocks": [
+        { "id": "block_1", "text": "spacing :: the gaps" },
+        { "id": "block_2", "text": "interleaving :: mixing topics" }
+      ]
+    },
+    {
+      "id": "note_2",
+      "title": "Sleep",
+      "blocks": [{ "id": "block_3", "text": "a paragraph that asks nothing" }]
+    }
+  ]
+}

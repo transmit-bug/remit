@@ -4,8 +4,9 @@
 //
 // It is also the contract's fixture: one page (stat + table + callout), two
 // commands (one navigates, one toasts), two menu items and two settings, with
-// English and Chinese text. `remit -check-ext` parses this directory without
-// running anything; copy it into <user data>/extensions/ to install it.
+// English and Chinese text. `go run ./cmd/remit ext test <dir>` runs its hooks
+// against the fixtures in this directory, without a window; copy it into
+// <user data>/extensions/ to install it.
 //
 // The host draws every pixel: `command` answers a tree of layout nodes and
 // semantic leaves, never a widget, a colour or a size.

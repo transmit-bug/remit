@@ -1,6 +1,6 @@
 # ADR 0002 — Content model
 
-- **Status:** accepted — amended by ADR 0005 (block identity and the editing surface) and ADR 0007 (a plugin derives a card)
+- **Status:** accepted — amended by ADR 0005 (block identity and the editing surface), ADR 0007 (a plugin derives a card) and ADR 0008 (the derive contract is typed; the host renders a type's templates)
 - **Date:** 2026-11-06
 - **Related:** #8, #7, ADR 0001
 
@@ -21,7 +21,10 @@ follows position.
 **A card references exactly one block.** The card renders its two sides from
 that block: the text before the first `::` is the prompt, the rest is the
 answer; a block without `::` is all prompt. A card may override either side,
-and the override wins.
+and the override wins. (ADR 0008 keeps the reference and the one-block rule,
+and withdraws the idea that the two sides are the model: a card is a type plus
+field values, and `::` is the *basic* type's convention, not the card's shape.
+The card's stored overrides remain the user's edited fields.)
 
 **A reference is live by default and freezable.** A frozen reference keeps a
 snapshot (text plus the moment it was taken) and stops following the block; it

@@ -1,0 +1,47 @@
+{
+  "children": [
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "kind": "stat",
+              "label": "%stat.notes%",
+              "value": "2"
+            },
+            {
+              "kind": "stat",
+              "label": "%stat.cards%",
+              "value": "2"
+            }
+          ],
+          "direction": "row",
+          "gap": "m",
+          "kind": "stack"
+        },
+        {
+          "kind": "callout",
+          "text": "%callout.body%",
+          "title": "%callout.title%",
+          "tone": "info"
+        },
+        {
+          "columns": [
+            "%col.note%",
+            "%col.cards%"
+          ],
+          "kind": "table",
+          "rows": [
+            [
+              "Memory",
+              "2"
+            ]
+          ]
+        }
+      ],
+      "kind": "section",
+      "title": "%section.overview%"
+    }
+  ],
+  "kind": "page"
+}

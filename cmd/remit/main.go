@@ -21,15 +21,21 @@ import (
 )
 
 func main() {
+	// The plugin tools run before the window exists: no library, no data
+	// directory, no settings read.
+	if code, handled := runExt(os.Args[1:], os.Stdout, os.Stderr); handled {
+		os.Exit(code)
+	}
+
 	library := flag.String("library", "", "the library directory (default: Remit in Documents)")
 	export := flag.String("export", "", "write the library to a .remitlib file and exit")
 	importPath := flag.String("import", "", "unpack a .remitlib into the library directory and exit")
 	ankiPath := flag.String("import-apkg", "", "import an Anki .apkg into the library and exit")
-	checkExt := flag.String("check-ext", "", "check a plugin directory's manifest and contributions, then exit")
+	checkExt := flag.String("check-ext", "", "check a plugin directory's manifest and contributions, then exit (deprecated: remit ext check <dir>)")
 	flag.Parse()
 
-	if runCheckExtension(*checkExt, os.Stdout) {
-		return
+	if code, checked := runCheckExtension(*checkExt, os.Stdout); checked {
+		os.Exit(code)
 	}
 
 	// The settings hold the library an earlier run chose; the flag wins over

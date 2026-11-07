@@ -1,6 +1,6 @@
 # ADR 0003 — Storage layout
 
-- **Status:** accepted
+- **Status:** accepted — amended by ADR 0008 (a library also holds `types/<id>.json`, and a card file stores a type, an ordinal and a producer stamp) and #147 (`plugins-data/<id>.json`)
 - **Date:** 2026-11-06
 - **Amended:** 2026-11-08 — `reviews.jsonl` also carries reading events (a note
   queued, read or dropped), so one replay answers cards and the reading queue
@@ -69,3 +69,17 @@ positions the way it derives a card's schedule; the index caches both.
   concern, and any compaction must preserve replay output.
 - SQLite must be a pure-Go driver (`modernc.org/sqlite`, BSD-3) so the shipped
   build stays cgo-free.
+
+## Amendment (2026-11-08)
+
+Two directories joined the library and neither changes the rule above — they
+are sources of truth in the same text files:
+
+- `types/<id>.json` is a card type: an ordered field list and two templates
+  (ADR 0008). A card file is JSON of `type`, `ordinal` and `producer`, plus the
+  field map only when the user edited it.
+- `plugins-data/<id>.json` is a plugin's own value, keyed by its manifest id,
+  and it travels in the `.remitlib` archive with the rest (#147).
+
+`.remit/index.sqlite` is still derived and still disposable: a copied library's
+index is discarded and rebuilt from the notes, the card files and the log.

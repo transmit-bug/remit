@@ -39,6 +39,9 @@ const (
 	NavHidden Nav = "hidden"
 )
 
+// Navs are every navigation choice a page has.
+var Navs = []Nav{NavPlugins, NavHidden}
+
 // SettingType is what a contributed setting holds.
 type SettingType string
 
@@ -47,6 +50,9 @@ const (
 	SettingNumber SettingType = "number"
 	SettingText   SettingType = "text"
 )
+
+// SettingTypes are every value type a contributed setting may hold.
+var SettingTypes = []SettingType{SettingBool, SettingNumber, SettingText}
 
 // HostActions are the app's own actions a contributed command may run instead
 // of answering a callback. The list is the host's: a name outside it is a
@@ -557,11 +563,10 @@ func (p *parser) page(w pageWire, where string) (Page, error) {
 		return Page{}, fmt.Errorf("icon %q: the host has no such icon", w.Icon)
 	}
 	nav := Nav(w.Nav)
-	switch nav {
-	case "":
+	switch {
+	case nav == "":
 		nav = NavPlugins
-	case NavPlugins, NavHidden:
-	default:
+	case !knownNav(nav):
 		return Page{}, fmt.Errorf("nav %q, the host has plugins and hidden", w.Nav)
 	}
 	when, err := p.when(w.When, where)
@@ -658,6 +663,16 @@ func settingDefault(typ SettingType, raw json.RawMessage) (any, error) {
 		return nil, errors.New("type: a setting needs one: bool, number or text")
 	}
 	return nil, fmt.Errorf("type %q, the host has bool, number and text", typ)
+}
+
+// knownNav reports whether the window has a place for a page's nav choice.
+func knownNav(n Nav) bool {
+	for _, known := range Navs {
+		if known == n {
+			return true
+		}
+	}
+	return false
 }
 
 // useMessage checks that raw is the %key% a message must be, and records the key
