@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"sync"
 
@@ -15,9 +14,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/builtin"
-	"github.com/transmit-bug/remit/internal/ext/contrib"
 	appui "github.com/transmit-bug/remit/internal/ui"
-	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
 // startExtensions runs the extensions this library enabled. A broken or
@@ -181,24 +178,15 @@ func (s *pluginService) start(name string) (*ext.JSRunner, error) {
 	return nil, fmt.Errorf("remit: no plugin named %q", name)
 }
 
-// runCheckExtension prints what one plugin directory declares that this build
-// cannot use, and exits non-zero when it found any: the same parse the window
-// runs when it reads a library's plugins, without a window. It answers whether
-// it ran at all, as the library commands do.
-func runCheckExtension(dir string, out io.Writer) bool {
+// runCheckExtension answers the -check-ext flag, the name this command had
+// before `remit ext check` existed: it prints what one plugin directory declares
+// that this build cannot use, and exits non-zero when it found any. It answers
+// whether it ran at all, as the library commands do.
+func runCheckExtension(dir string, out io.Writer) (int, bool) {
 	if dir == "" {
-		return false
+		return extOK, false
 	}
-	problems := contrib.Check(dir, contrib.Options{Icon: design.HasIcon})
-	if len(problems) == 0 {
-		fmt.Fprintf(out, "%s: ok\n", dir)
-		return true
-	}
-	for _, problem := range problems {
-		fmt.Fprintf(out, "%s: %v\n", dir, problem)
-	}
-	os.Exit(1)
-	return true
+	return extCheck(dir, out), true
 }
 
 // pluginOf is one manifest as the settings page lists it.

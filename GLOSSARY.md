@@ -40,6 +40,18 @@ _Avoid_: flashcard, block（block 是笔记侧概念）
 库资产：一份有序字段表加正/反两面模板，明文存于库内、随库归档；卡片引用类型。内置三件（basic / bidirectional / cloze）随库种入，无特权路径。见 [ADR 0008](docs/adr/0008-card-types-templates.md)。
 _Avoid_: note type（Anki 词汇，模型不同）, 模板（template 是类型的组成部分，不是独立概念）
 
+**Field**（字段）:
+卡片类型里的一个具名值位，值是标量。字段值默认不落库：渲染时按卡片来源（live 读块 / frozen 读快照）由制卡插件现算，只有用户手工编辑过的字段存为覆盖。见 [ADR 0008](docs/adr/0008-card-types-templates.md)。
+_Avoid_: 属性（attribute 是存储细节）, 列（column 是表格的词）
+
+**Template**（模板）:
+卡片类型自带的正、反两段文本，宿主用纯数据方言（`{{Field}}`、`{{cloze:Text}}`、`{{hint:}}`、`{{type:}}`）在 Go 里渲染成卡片面。模板是类型的一部分、是用户可编辑的库数据，不经插件；模板坏掉时回退字段原文列表，不出白卡。见 [ADR 0008](docs/adr/0008-card-types-templates.md)。
+_Avoid_: 卡面（face 是渲染结果，不是模板）, 布局（layout 是窗口的事）
+
+**Field Block**（字段块）:
+笔记里以单独一行 `::: type <typeId>` 开启、`Field: value` 每行一条、`:::` 结束的一段明文，让库里的任何类型都能直接从笔记录入。由内置制卡插件解析；类型没有的字段作为 `unknown` 丢弃并记日志，卡片仍按对得上的部分生成。
+_Avoid_: 表单（form 指宿主 UI）, front matter（不是笔记元数据，而是块内容）
+
 **Reference**（引用）:
 卡片与它所指块之间的联系，三态：live（默认，跟随块）/ frozen（保留快照、不再跟随）/ lost（块已消失且无快照，但调度史保留）。见 [ADR 0002](docs/adr/0002-content-model.md)。摘录的块用同一种形式指回它来自的块：`[[笔记标题#^块 ID]]`。
 _Avoid_: 链接（link 指笔记间连接，若进入模型属另一概念）

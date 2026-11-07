@@ -21,6 +21,15 @@ const (
 	CapStoreOwn = "store:own"
 )
 
+// Capabilities are every name a manifest may declare, in the order the contract
+// lists them: the six plugin capabilities, then the two host functions a plugin
+// uses to test itself. This is the one list the host validates against and the
+// one the contract artifact remit.d.ts is generated from.
+var Capabilities = []string{
+	CapNotesRead, CapCardsWrite, CapReviewRead, CapReviewWrite, CapScheduleFSRS, CapStoreOwn,
+	CapEcho, CapNow,
+}
+
 // CapabilityError is a call to a remit.* function the extension did not
 // declare. It names the extension and the capability, so the plugin log says
 // which plugin asked for what.
@@ -38,10 +47,10 @@ func (e *CapabilityError) Error() string {
 // caps.go are the plugin capabilities; remit.echo and remit.now are the host
 // functions the app offers for a plugin's own tests (js.go).
 func knownCapability(name string) bool {
-	switch name {
-	case CapNotesRead, CapCardsWrite, CapReviewRead, CapReviewWrite, CapScheduleFSRS, CapStoreOwn,
-		CapEcho, CapNow:
-		return true
+	for _, known := range Capabilities {
+		if known == name {
+			return true
+		}
 	}
 	return false
 }

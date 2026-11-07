@@ -42,6 +42,13 @@ jobs:
           go tool mygo i18n check .
           go tool mygo generate
           git diff --exit-code -- locales
+      - name: example plugins
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          for dir in examples/plugins/*/; do
+            go run ./cmd/remit ext test "${dir%/}"
+          done
       - name: mygo vet
         run: go tool mygo vet .
 

@@ -40,3 +40,14 @@ docs/adr/         decisions with a lasting architectural effect
 - UI tests use `ui.NewTester` against `internal/ui`.
 - Moving code from `internal/ui` into `internal/core` is the normal way to
   remove a dependency in the wrong direction; the reverse is a review smell.
+
+## Amendment (2026-11-08)
+
+The tree has grown focused services beside the three above — `internal/ext`
+(loader, manifests, capabilities, the JS host), `internal/ext/contrib` (the
+window contract), `internal/ext/builtin` (the shipped plugins), `internal/agentapi`,
+`internal/settings`, `internal/update`, `internal/deeplink`, `internal/logging`
+— and the plugin tools (#145) are subcommands of `cmd/remit`, not a second
+binary. The rule this ADR exists for is unchanged: nothing in `internal/core`
+imports a UI toolkit or `internal/ui`, and a screen package reaches neither the
+store nor `internal/ui`.

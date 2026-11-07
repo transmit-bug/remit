@@ -42,6 +42,16 @@ This is the list a person runs before calling a build good.
 - [ ] Check now says what it found, and with the setting off no request leaves
       the machine.
 
+## Plugins
+
+- [ ] Copying `examples/plugins/leeches` into `<user data>/extensions/` makes it
+      appear in Settings with its two capabilities; approving it and reopening
+      the library puts its page and its commands in the window.
+- [ ] A plugin page reshapes at 720×520 without horizontal scrolling, and its
+      table reads correctly with a screen reader.
+- [ ] `go run ./cmd/remit ext test <a plugin directory outside the repo>` passes,
+      and a deliberately changed hook answer fails naming the fixture.
+
 ## Data
 
 - [ ] A library copied by hand (without `.remit/`) opens with its due dates.

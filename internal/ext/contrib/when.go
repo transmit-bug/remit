@@ -42,31 +42,43 @@ type Context struct {
 // hide a contribution by accident.
 func (c Context) value(key string) (any, bool) { return contextValue(key, c) }
 
-// contextValue is the frozen key table, one entry per key the contract names.
+// ContextKeys are the keys a when expression may read, in the order the
+// contract lists them (docs/specs/plugins/ui.md §3). This is the one list the
+// host's parser reads and the one remit.d.ts is generated from.
+var ContextKeys = []string{
+	"mode",
+	"library.open",
+	"note.open",
+	"note.selection",
+	"card.present",
+	"card.status",
+	"browse.selection",
+	"scope.active",
+	"page.id",
+	"plugin.id",
+}
+
+// contextReads is the frozen key table, one reader per key ContextKeys names.
+var contextReads = map[string]func(Context) any{
+	"mode":             func(c Context) any { return c.Mode },
+	"library.open":     func(c Context) any { return c.LibraryOpen },
+	"note.open":        func(c Context) any { return c.NoteOpen },
+	"note.selection":   func(c Context) any { return c.NoteSelection },
+	"card.present":     func(c Context) any { return c.CardPresent },
+	"card.status":      func(c Context) any { return c.CardStatus },
+	"browse.selection": func(c Context) any { return c.BrowseSelection },
+	"scope.active":     func(c Context) any { return c.ScopeActive },
+	"page.id":          func(c Context) any { return c.PageID },
+	"plugin.id":        func(c Context) any { return c.PluginID },
+}
+
+// contextValue is what one context key answers, and whether the host knows it.
 func contextValue(key string, c Context) (any, bool) {
-	switch key {
-	case "mode":
-		return c.Mode, true
-	case "library.open":
-		return c.LibraryOpen, true
-	case "note.open":
-		return c.NoteOpen, true
-	case "note.selection":
-		return c.NoteSelection, true
-	case "card.present":
-		return c.CardPresent, true
-	case "card.status":
-		return c.CardStatus, true
-	case "browse.selection":
-		return c.BrowseSelection, true
-	case "scope.active":
-		return c.ScopeActive, true
-	case "page.id":
-		return c.PageID, true
-	case "plugin.id":
-		return c.PluginID, true
+	read, ok := contextReads[key]
+	if !ok {
+		return nil, false
 	}
-	return nil, false
+	return read(c), true
 }
 
 // Expr is a when expression, compiled once when the contribution was read: what

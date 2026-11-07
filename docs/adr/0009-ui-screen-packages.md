@@ -34,7 +34,7 @@ with ADR 0004's `State` / `Deps` / `View`. The vocabulary stays beside `ui`:
 
 ```
 internal/ui/
-  app.go view.go window.go sidebar.go panel.go outline.go palette.go
+  app.go view.go window.go palette.go
   library.go snapshot.go prefs.go options.go route.go i18n.go
   design/            theme, scale, tokens, motion, icons   (leaf)
   kit/               composition vocabulary                (leaf)
@@ -42,7 +42,7 @@ internal/ui/
   screens/
     review/          State / Deps / View (ADR 0004)
     reading/         the reading session, the other side of the dual mode
-    notes/ browse/ stats/ settings/ start/ about/        (extracted one at a time)
+    notes/ browse/ stats/ settings/ start/ about/ relink/ pluginpage/
 ```
 
 `screens/` rather than directly under `internal/ui/` because the window keeps
@@ -68,6 +68,7 @@ possible):
 | `window.go` | the toolbar, the key map, the window's find |
 | `notes.go` | the notebook's assembly, and the note writes it owns |
 | `cards.go` | the card gestures — making a card, reconciling it — and the field editor |
+| `contribs.go` | the plugins' declared UI: the index, the runners and the frame-free calls (#146) |
 | `palette.go` | the command palette |
 | `library.go` | open, close, reload, the derived queue |
 | `snapshot.go` | `libraryData`, the store as the views read it |
@@ -106,6 +107,11 @@ moving with it and the app-level tests staying to prove the assembly:
 3. `browse`, `relink` — rows derived by the app, written back through `Deps`.
 4. `notes` — the editor, the document, the notes list and the card panel; most
    of `a.editor` moves into the screen's `State`.
+
+Done: `start` and `about` (#159, #171), `settings` (#173), `browse` (#174),
+`stats` (#175), `relink` (#176), `reading` (#180) and `notes` (#178). What is left of ADR 0004's
+shape is the second `notes` bullet: `App` still holds the editor session the
+screen reads through `Deps`.
 
 `internal/ui` is done when no screen state is left on `App` and every screen's
 test runs without a library on disk.

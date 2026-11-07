@@ -1,6 +1,6 @@
 # ADR 0005 — The note editor: a document whose paragraphs are addressable
 
-- **Status:** accepted
+- **Status:** accepted — amended by ADR 0008 (the derive contract is typed: `deriveBlock` answers `{typeId, ordinal, fields}` and the host stores `type`, not `kind` and two faces)
 - **Date:** 2026-11-07
 - **Amends:** ADR 0002 (block identity and who derives a card)
 - **Related:** #59, #60 (research), #61, #62, #65
@@ -42,7 +42,9 @@ and the per-block "make card" button disappears.
 `{ ordinal, kind, front, back }` per card, and the host stores
 `{ ref, ordinal, kind, producer }`. Faces are re-derived rather than stored, so
 the live reference of ADR 0002 keeps working, including for cloze and
-bidirectional cards.
+bidirectional cards. (ADR 0008 replaced the two strings with a typed answer —
+`{ typeId, ordinal, fields }`, stored as `type`, `ordinal` and `producer` plus
+the user's edited fields; re-derivation and the live reference are unchanged.)
 
 **Maths is source in the editor.** `richtext` keeps maths as written and does not
 render it; `ui/markdown` renders it. The editor shows the source, review shows

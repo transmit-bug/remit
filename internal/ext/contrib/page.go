@@ -38,6 +38,15 @@ const (
 	KindActions  Kind = "actions"
 )
 
+// Kinds are every node a page may name, in the order the contract lists them:
+// the layout nodes, then the semantic leaves. This is the one list the host
+// validates against and the one remit.d.ts is generated from.
+var Kinds = []Kind{
+	KindPage, KindSection, KindStack, KindGrid, KindSplit, KindTabs, KindCard,
+	KindMarkdown, KindText, KindStat, KindTable, KindList, KindTree, KindForm,
+	KindChart, KindCallout, KindActions,
+}
+
 // Gap is the only spacing a plugin names: a step of the host's scale, never a
 // number of its own.
 type Gap string
@@ -49,6 +58,9 @@ const (
 	GapM  Gap = "m"
 	GapL  Gap = "l"
 )
+
+// Gaps are every spacing step a page may name.
+var Gaps = []Gap{GapXS, GapS, GapM, GapL}
 
 // Tone is the only colour a plugin names: the meaning, which the theme answers.
 type Tone string
@@ -62,6 +74,9 @@ const (
 	ToneSuccess Tone = "success"
 )
 
+// Tones are every tone a page may name.
+var Tones = []Tone{ToneNeutral, ToneInfo, ToneWarn, ToneDanger, ToneSuccess}
+
 // Direction is a stack's order.
 type Direction string
 
@@ -71,6 +86,9 @@ const (
 	DirectionColumn Direction = "column"
 	DirectionRow    Direction = "row"
 )
+
+// Directions are every order a stack may take.
+var Directions = []Direction{DirectionColumn, DirectionRow}
 
 // The page contract's limits. A page over any of them is a page error — the
 // host says so and offers a retry — rather than a frame that pays for it.
@@ -304,27 +322,28 @@ func (v *validator) walkItems(items []Item, path string, depth int) error {
 }
 
 func knownKind(k Kind) bool {
-	switch k {
-	case KindPage, KindSection, KindStack, KindGrid, KindSplit, KindTabs, KindCard,
-		KindMarkdown, KindText, KindStat, KindTable, KindList, KindTree, KindForm,
-		KindChart, KindCallout, KindActions:
-		return true
+	for _, known := range Kinds {
+		if known == k {
+			return true
+		}
 	}
 	return false
 }
 
 func knownGap(g Gap) bool {
-	switch g {
-	case GapXS, GapS, GapM, GapL:
-		return true
+	for _, known := range Gaps {
+		if known == g {
+			return true
+		}
 	}
 	return false
 }
 
 func knownTone(t Tone) bool {
-	switch t {
-	case ToneNeutral, ToneInfo, ToneWarn, ToneDanger, ToneSuccess:
-		return true
+	for _, known := range Tones {
+		if known == t {
+			return true
+		}
 	}
 	return false
 }

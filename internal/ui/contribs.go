@@ -13,6 +13,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/pluginpage"
@@ -29,8 +30,9 @@ type CommandRunner interface {
 // CommandHook is the export a plugin answers its contributed commands and its
 // pages' data with: command({name, context}), answering either a command's
 // result or a page's node tree. One hook, because a page's data command is a
-// command (docs/specs/plugins/ui.md §5, §9).
-const CommandHook = "command"
+// command (docs/specs/plugins/ui.md §5, §9). It is ext's name for the hook, so
+// the loader, the checker and the window cannot drift apart.
+const CommandHook = ext.CommandHook
 
 // contributionErrorLimit is how many times one contribution may fail in a row
 // before the window stops showing it. The count is per contribution, not per

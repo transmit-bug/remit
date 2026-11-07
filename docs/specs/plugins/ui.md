@@ -7,12 +7,13 @@
 字段（ADR 0008/#140）。本稿不碰卡片模型——复习卡信息仍只读 `card.type` / `fields` /
 `ordinal` / `producer`，没有 `cards.describe`，也没有 `cards.render`。
 
-> **现状（2026-11-08，#146 落地）**：已实现。`contributes` 随 manifest 读入，
+> **现状（2026-11-08，#146 与 #145 落地）**：已实现。`contributes` 随 manifest 读入，
 > `internal/ext/contrib` 解析 / 校验 / 索引 / 求值 `when`；命令进命令面板与宿主菜单槽位，
-> 页面由 `internal/ui/screens/pluginpage` 用宿主组件绘制，设置项落在设置页的宿主表单里，
-> `remit -check-ext <dir>` 跑同一份解析。仍未做的：`remit.d.ts` 与 `go tool remit ext`
-> （#145）、`review.card` 等宿主今天没有接收方的槽位（§4）、
-> `activation` 与页面数据的 onEvent 触发（§9）。
+> 页面由 `internal/ui/screens/pluginpage` 用宿主组件绘制，设置项落在设置页的宿主表单里。
+> `remit ext check <dir>` 跑同一份解析；`remit ext test <dir>` 用插件自带的 `fixtures/`
+> 逐字比对钩子答案；`remit.d.ts` 由宿主的表生成并随 `apiVersion` 版本化。仍未做的：
+> `review.card` 等宿主今天没有接收方的槽位（§4）、`activation` 与页面数据的 onEvent
+> 触发（§9）。
 
 ## 1. 原则
 
@@ -89,12 +90,12 @@
 
 | Key | Values |
 |---|---|
-| `mode` | `notes` / `review` / `browse` / `stats` / `settings` |
+| `mode` | `notes` / `review` / `browse` / `stats` / `settings`（插件页面及其它状态为空串） |
 | `library.open` | bool |
 | `note.open` | bool |
 | `note.selection` | bool |
 | `card.present` | bool |
-| `card.status` | `new` / `learning` / `review` / `suspended` / `lost` |
+| `card.status` | `new` / `learning` / `review` / `suspended` / `reading`（卡片自身的状态；`lost` 是引用状态） |
 | `browse.selection` | bool |
 | `scope.active` | bool |
 | `page.id` | string |
@@ -213,11 +214,15 @@
 - `apiVersion` 沿用最低版本语义（`system.md` §9）；`contributes` schema 是其一部分。
 - 新增叶/节点/上下文键 = 兼容；删除/改义 = 破坏性 +1。未知节点/叶降级为占位，未知槽位
   是校验错误。
-- `remit.d.ts` 增加 `Contributes`、`Command`、`MenuSlot`、`Page`、`Node`、`ContextKey`（#145）。
-- `go tool remit ext test` / `ext check` 校验：命令 id 唯一、菜单槽位已知、命令存在、`when`
-  可解析、图标存在、页面节点已知、上限、locale 键齐全（#145）。
-- 示例插件 `examples/plugins/leeches`（待建，随 C/D 落地）同时是测试 fixture：一个页面
-  （stat + table + grid）、一个命令、一个菜单项、一个设置项、en/zh-Hans 文案。
+- `remit.d.ts` 是契约产物：从宿主的钩子 / 能力 / 贡献 / 节点 / 上下文键表生成，随
+  `apiVersion` 版本化；`go test ./internal/ext/ts` 在代码与文件不一致时变红。
+- `remit ext check <dir>` / `remit ext test <dir>` 校验：manifest 与 `contributes` 能解析、
+  命令 id 唯一、菜单槽位已知、命令存在、`when` 可解析、图标存在、页面节点已知、上限、
+  locale 键齐全；`ext test` 再把每个声明的钩子按 fixture 跑一遍。命令在仓库里是
+  `go run ./cmd/remit ext …`（不是 `go tool remit ext …`）。
+- 示例插件 `examples/plugins/leeches` 同时是测试 fixture：一个页面（stat + table +
+  callout）、两个命令、三个菜单项、两个设置项、en/zh-Hans 文案，`fixtures/` 的 fixture
+  逐字比对（`internal/ext/exttest`）。
 
 ## 11. 怎么测
 

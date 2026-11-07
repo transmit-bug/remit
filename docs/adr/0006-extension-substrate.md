@@ -42,14 +42,23 @@ in-process `moejs` runtime.
 - The contract of #9 does not change: a per-library explicit enable, `describe`
   and `on_event`, one-second per-call budget, failure disables rather than
   retries, reads through the agent's read-only surface, writes through a token,
-  no UI injection, no direct SQLite.
+  no UI injection, no direct SQLite. *Amended (#142):* a plugin reaches the
+  host in process through `ext.Host` — the same read/write layer
+  `internal/agentapi` serves, not an HTTP round trip and not a token — and the
+  six named capabilities of ADR 0007 are the door.
 - New extensions are written in JavaScript. `exec` remains for an extension that
   needs a native library or a long computation, and for the operating systems'
   own tooling.
-- Limits are part of the substrate, not a tuning knob: 1 s per call (expressed
-  as `context.WithTimeout` plus `Interrupt`), `MemoryLimit` of 64 MiB per
-  runtime, a pool of two runtimes per extension, three consecutive failures
-  disable it, and no plugin ever runs on the UI thread.
+- Limits are part of the substrate, not a tuning knob: 1 s per call (a timer
+  plus `Interrupt`), `MemoryLimit` of 64 MiB per runtime, a pool of two
+  runtimes per extension, three consecutive failures disable it.
+
+  *Amended (2026-11-08):* the ruling above also said no plugin ever runs on the
+  UI thread. Today a contributed command and a page's data run off the frame,
+  but `deriveBlock` is asked from the path that renders a card — on a cache
+  miss, once per block text, with the failure cached too. The bound is the 1 s
+  budget and the cache, not the thread; #141 and later screens keep the rule
+  for everything that can wait.
 
 ## Known risk, stated plainly
 
