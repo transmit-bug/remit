@@ -4,6 +4,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/ui/design"
+	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 )
 
 // View draws the window. It reads state and returns; anything that changes
@@ -35,7 +36,7 @@ func (a *App) View(c *ui.Context) {
 			case a.openErr != nil:
 				a.libraryErrorView(c, tk)
 			case a.mode == modeSettings:
-				a.settingsView(c, tk)
+				screensettings.View(c, &a.prefs, a.settingsDeps())
 			case a.start:
 				a.startView(c)
 			case a.mode == modeReview:

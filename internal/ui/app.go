@@ -17,6 +17,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
+	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	"github.com/transmit-bug/remit/internal/update"
 )
 
@@ -74,7 +75,8 @@ type App struct {
 	palette        paletteState
 	relink         relinkState
 	cardEdit       cardEditState
-	prefs          prefsState
+	prefs          screensettings.State
+	prefsBack      mode                 // the face the settings page goes back to
 	cards          *cardPlugin          // what a paragraph asks and how a card reads
 	scheduler      *schedulerPlugin     // what schedules a review, and what a session is worth
 	summaryWord    summaryAnswer        // what the scheduling plugin says about a session
@@ -158,7 +160,7 @@ func NewApp(opts ...Options) *App {
 		relink:         relinkState{selected: -1},
 		pickLibrary:    pickLibraryDir,
 		pickAnki:       pickAnkiPackage,
-		checkUpdate:    checkForUpdate,
+		checkUpdate:    screensettings.CheckForUpdate,
 	}
 	// The importer reads the library open now, which a dropped archive can
 	// replace, so it takes it at call time rather than at construction.

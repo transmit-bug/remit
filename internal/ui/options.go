@@ -6,8 +6,18 @@ import (
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
+	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	"github.com/transmit-bug/remit/internal/update"
 )
+
+// AgentControls is the loopback agent API as the settings page drives it. The
+// page owns the interface; the alias keeps cmd from importing a screen package
+// for one interface. A nil one leaves the page saying there is no such service.
+type AgentControls = screensettings.AgentControls
+
+// AgentStatus is what that service reports: where it listens, and the file
+// holding the bearer token.
+type AgentStatus = screensettings.AgentStatus
 
 // Options configures an App.
 type Options struct {
@@ -48,7 +58,7 @@ type Options struct {
 	// AgentControls is the loopback agent API as the settings page drives it.
 	// cmd passes its own; nil leaves the page saying there is no such service.
 	AgentControls AgentControls
-	// CheckUpdate looks for a newer version. It is checkForUpdate unless a
-	// test replaces it.
+	// CheckUpdate looks for a newer version. It is the settings page's default
+	// check unless a test replaces it.
 	CheckUpdate func(context.Context, settings.Settings) (update.Result, error)
 }
