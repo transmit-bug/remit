@@ -267,5 +267,63 @@
       "stability": 36500,
       "difficulty": 3.314461369
     }
+  ],
+  "excerpts": [
+    {
+      "proves": "an excerpt of a card-shaped paragraph is a card of its own",
+      "source_title": "Memory and recall",
+      "source_block": "block_00000000000000000000000000000011",
+      "source_text": "Spacing beats cramming :: reviewing just before you forget strengthens recall.",
+      "selected": "Spacing beats cramming :: reviewing just before you forget strengthens recall.",
+      "block_text": "Spacing beats cramming :: reviewing just before you forget strengthens recall.\n[[Memory and recall#^block_00000000000000000000000000000011]]",
+      "link_title": "Memory and recall",
+      "link_block": "block_00000000000000000000000000000011",
+      "card_kind": "basic",
+      "ordinal": 0,
+      "card_front": "Spacing beats cramming",
+      "card_back": "reviewing just before you forget strengthens recall.\n[[Memory and recall#^block_00000000000000000000000000000011]]"
+    },
+    {
+      "proves": "a selection of one sentence makes one card, and the reference stays in the answer",
+      "source_title": "Memory and recall",
+      "source_block": "block_00000000000000000000000000000011",
+      "source_text": "Spacing beats cramming :: reviewing just before you forget strengthens recall.",
+      "selected": "reviewing just before you forget strengthens recall.",
+      "block_text": "reviewing just before you forget strengthens recall.\n[[Memory and recall#^block_00000000000000000000000000000011]]",
+      "link_title": "Memory and recall",
+      "link_block": "block_00000000000000000000000000000011",
+      "card_kind": "basic",
+      "ordinal": 0,
+      "card_front": "reviewing just before you forget strengthens recall.\n[[Memory and recall#^block_00000000000000000000000000000011]]",
+      "card_back": ""
+    },
+    {
+      "proves": "a selection of two lines keeps both, and the reference below them",
+      "source_title": "Memory and recall",
+      "source_block": "block_00000000000000000000000000000011",
+      "source_text": "Spacing beats cramming :: reviewing just before you forget strengthens recall.",
+      "selected": "Spacing beats cramming.\nReviewing just before you forget strengthens recall.",
+      "block_text": "Spacing beats cramming.\nReviewing just before you forget strengthens recall.\n[[Memory and recall#^block_00000000000000000000000000000011]]",
+      "link_title": "Memory and recall",
+      "link_block": "block_00000000000000000000000000000011",
+      "card_kind": "basic",
+      "ordinal": 0,
+      "card_front": "Spacing beats cramming.\nReviewing just before you forget strengthens recall.\n[[Memory and recall#^block_00000000000000000000000000000011]]",
+      "card_back": ""
+    },
+    {
+      "proves": "a cloze passage is a cloze card of the excerpt, asked at its first blank",
+      "source_title": "Memory and recall",
+      "source_block": "block_00000000000000000000000000000012",
+      "source_text": "The {{first}} blank and the {{second}} one.",
+      "selected": "The {{first}} blank and the {{second}} one.",
+      "block_text": "The {{first}} blank and the {{second}} one.\n[[Memory and recall#^block_00000000000000000000000000000012]]",
+      "link_title": "Memory and recall",
+      "link_block": "block_00000000000000000000000000000012",
+      "card_kind": "cloze",
+      "ordinal": 0,
+      "card_front": "The […] blank and the second one.\n[[Memory and recall#^block_00000000000000000000000000000012]]",
+      "card_back": "The first blank and the second one.\n[[Memory and recall#^block_00000000000000000000000000000012]]"
+    }
   ]
 }

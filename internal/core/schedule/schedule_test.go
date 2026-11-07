@@ -331,3 +331,163 @@ func TestPreviewMatchesStep(t *testing.T) {
 		})
 	}
 }
+
+// reading is one log line for a reading event.
+func reading(seq int64, note core.ID, kind schedule.Kind, at time.Time) schedule.Event {
+	return schedule.Event{Seq: seq, Note: note, Kind: kind, At: at}
+}
+
+// read is one log line for a reading session.
+func read(seq int64, note core.ID, rating schedule.Rating, position core.ID, at time.Time) schedule.Event {
+	return schedule.Event{Seq: seq, Note: note, Rating: rating, Position: position, At: at}
+}
+
+// A note's place in the reading queue replays from the same log a card's
+// schedule does: joining, reading a block, and leaving again.
+func TestReplayReading(t *testing.T) {
+	note := core.NewID("note")
+	place := core.NewID("block")
+	other := core.NewID("block")
+	queued := reading(1, note, schedule.Queued, t0)
+
+	tests := []struct {
+		name         string
+		events       []schedule.Event
+		wantQueued   bool
+		wantReviews  int
+		wantPosition core.ID
+	}{
+		{"queued and not read", []schedule.Event{queued}, true, 0, ""},
+		{"read once", []schedule.Event{queued, read(2, note, schedule.Good, place, t0.Add(time.Hour))}, true, 1, place},
+		{
+			name: "read further the next time",
+			events: []schedule.Event{
+				queued,
+				read(2, note, schedule.Good, place, t0.Add(time.Hour)),
+				read(3, note, schedule.Good, other, t0.AddDate(0, 0, 3)),
+			},
+			wantQueued: true, wantReviews: 2, wantPosition: other,
+		},
+		{
+			name: "dropped",
+			events: []schedule.Event{
+				queued,
+				read(2, note, schedule.Good, place, t0.Add(time.Hour)),
+				reading(3, note, schedule.Dropped, t0.AddDate(0, 0, 4)),
+			},
+			wantQueued: false, wantReviews: 1, wantPosition: place,
+		},
+		{
+			name: "dropped and added back",
+			events: []schedule.Event{
+				queued,
+				reading(2, note, schedule.Dropped, t0.Add(time.Hour)),
+				reading(3, note, schedule.Queued, t0.AddDate(0, 0, 2)),
+			},
+			wantQueued: true, wantReviews: 0, wantPosition: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			applier := schedule.NewApplier(schedule.Params{})
+			if err := applier.Apply(tt.events...); err != nil {
+				t.Fatalf("Apply: %v", err)
+			}
+			got, ok := applier.ReadingOf(note)
+			if !ok {
+				t.Fatalf("the log knows no reading entry for %q", note)
+			}
+			if got.Queued != tt.wantQueued {
+				t.Errorf("queued = %v, want %v", got.Queued, tt.wantQueued)
+			}
+			if got.State.Reviews != tt.wantReviews {
+				t.Errorf("reviews = %d, want %d", got.State.Reviews, tt.wantReviews)
+			}
+			if got.Position != tt.wantPosition {
+				t.Errorf("position = %q, want %q", got.Position, tt.wantPosition)
+			}
+		})
+	}
+}
+
+// A queue entry that was never read is due when it joined, so the queue is read
+// in the order it was filled.
+func TestReadingQueueEntryIsDueWhenItJoined(t *testing.T) {
+	note := core.NewID("note")
+	entries, err := schedule.Replay([]schedule.Event{reading(1, note, schedule.Queued, t0)}, schedule.Params{})
+	if err != nil {
+		t.Fatalf("Replay: %v", err)
+	}
+	state, ok := entries[note]
+	if !ok {
+		t.Fatalf("Replay returned no entry for %q", note)
+	}
+	if state.Reviews != 0 || !state.Due.Equal(t0) {
+		t.Errorf("entry = %+v, want it due at %v and never read", state, t0)
+	}
+}
+
+// Reading cadence is the host's own, not the library's card schedule: a card
+// answered Easy and a note read Easy leave the same interval even when the
+// library's card parameters were changed.
+func TestReadingCadenceIgnoresTheCardParams(t *testing.T) {
+	note, card := core.NewID("note"), core.NewID("card")
+	place := core.NewID("block")
+	at := t0.Add(time.Hour)
+
+	tuned := schedule.DefaultParams()
+	tuned.DesiredRetention = 0.5
+
+	applier := schedule.NewApplierFor(tuned, schedule.DefaultReadingParams())
+	if err := applier.Apply(
+		read(1, note, schedule.Easy, place, at),
+		review(2, card, schedule.Easy, at),
+	); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	noteState, _ := applier.State(note)
+	cardState, _ := applier.State(card)
+	if noteState.Due.Equal(cardState.Due) {
+		t.Fatalf("the note and the card come due together: %v", noteState.Due)
+	}
+
+	want := schedule.DefaultReadingParams().Step(schedule.State{}, read(1, note, schedule.Easy, place, at))
+	if !noteState.Due.Equal(want.Due) {
+		t.Errorf("note due %v, want the reading defaults' %v", noteState.Due, want.Due)
+	}
+}
+
+// Voiding a reading session takes the session back, not the note's membership,
+// and puts the position back where the newest live session left it.
+func TestVoidRestoresTheReadingPosition(t *testing.T) {
+	note := core.NewID("note")
+	first, second := core.NewID("block"), core.NewID("block")
+	events := []schedule.Event{
+		reading(1, note, schedule.Queued, t0),
+		read(2, note, schedule.Good, first, t0.Add(time.Hour)),
+		read(3, note, schedule.Good, second, t0.AddDate(0, 0, 3)),
+	}
+	applier := schedule.NewApplier(schedule.Params{})
+	if err := applier.Apply(events...); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if got, _ := applier.ReadingOf(note); got.Position != second || got.State.Reviews != 2 {
+		t.Fatalf("before the void: %+v", got)
+	}
+	if err := applier.Apply(schedule.Event{Seq: 4, Void: 3}); err != nil {
+		t.Fatalf("Apply void: %v", err)
+	}
+	got, ok := applier.ReadingOf(note)
+	if !ok {
+		t.Fatal("the void took the whole entry with it")
+	}
+	if !got.Queued {
+		t.Error("the void took the note out of the reading queue")
+	}
+	if got.Position != first {
+		t.Errorf("position = %q after the void, want %q", got.Position, first)
+	}
+	if got.State.Reviews != 1 {
+		t.Errorf("reviews = %d after the void, want 1", got.State.Reviews)
+	}
+}

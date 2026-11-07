@@ -16,14 +16,19 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 )
 
-// logRecord is one line of reviews.jsonl. A review names its card, its rating
-// and its moment; a void names only the sequence it cancels.
+// logRecord is one line of reviews.jsonl. A review names its card — or the note
+// it read — its rating and its moment; a reading event may also name where the
+// reader stopped and what it did to the queue; a void names only the sequence it
+// cancels.
 type logRecord struct {
-	Seq    int64   `json:"seq"`
-	Card   core.ID `json:"card,omitempty"`
-	Rating string  `json:"rating,omitempty"`
-	At     string  `json:"at,omitempty"`
-	Void   int64   `json:"void,omitempty"`
+	Seq      int64   `json:"seq"`
+	Card     core.ID `json:"card,omitempty"`
+	Note     core.ID `json:"note,omitempty"`
+	Kind     string  `json:"kind,omitempty"`
+	Rating   string  `json:"rating,omitempty"`
+	Position core.ID `json:"position,omitempty"`
+	At       string  `json:"at,omitempty"`
+	Void     int64   `json:"void,omitempty"`
 	// Scheduler names what wrote this review, once logs carried the name.
 	Scheduler string `json:"scheduler,omitempty"`
 }
@@ -61,8 +66,11 @@ func parseLogMark(s string) (logMark, bool) {
 }
 
 func marshalRecord(event schedule.Event) ([]byte, error) {
-	rec := logRecord{Seq: event.Seq, Card: event.Card, Rating: event.Rating.String(),
-		At: formatTime(event.At), Scheduler: event.Scheduler}
+	rec := logRecord{Seq: event.Seq, Card: event.Card, Note: event.Note, Kind: kindName(event.Kind),
+		Position: event.Position, At: formatTime(event.At), Scheduler: event.Scheduler}
+	if event.Kind == schedule.Reviewed {
+		rec.Rating = event.Rating.String()
+	}
 	if event.IsVoid() {
 		rec = logRecord{Seq: event.Seq, Void: event.Void}
 	}
@@ -71,6 +79,15 @@ func marshalRecord(event schedule.Event) ([]byte, error) {
 		return nil, fmt.Errorf("store: encode review %d: %w", event.Seq, err)
 	}
 	return append(line, '\n'), nil
+}
+
+// kindName writes a review's kind as nothing: a log written before reading
+// existed carries no kind, and one review is the only kind a card knows.
+func kindName(k schedule.Kind) string {
+	if k == schedule.Reviewed {
+		return ""
+	}
+	return k.String()
 }
 
 // decodeRecord reads one log line. A blank line is not an event.
@@ -88,19 +105,29 @@ func decodeRecord(line []byte) (schedule.Event, bool, error) {
 	if rec.Void != 0 {
 		return schedule.Event{Seq: rec.Seq, Void: rec.Void}, true, nil
 	}
-	rating, ok := schedule.ParseRating(rec.Rating)
-	if !ok {
-		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: unknown rating %q", rec.Seq, rec.Rating)
+	kind, known := schedule.ParseKind(rec.Kind)
+	if !known {
+		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: unknown kind %q", rec.Seq, rec.Kind)
 	}
 	at, err := parseTime(rec.At)
 	if err != nil {
 		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: %w", rec.Seq, err)
 	}
-	if rec.Card == "" {
-		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: no card", rec.Seq)
+	if kind != schedule.Reviewed {
+		if rec.Note == "" {
+			return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: no note to %s", rec.Seq, kind)
+		}
+		return schedule.Event{Seq: rec.Seq, Note: rec.Note, Kind: kind, At: at}, true, nil
 	}
-	return schedule.Event{Seq: rec.Seq, Card: rec.Card, Rating: rating, At: at,
-		Scheduler: rec.Scheduler}, true, nil
+	rating, ok := schedule.ParseRating(rec.Rating)
+	if !ok {
+		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: unknown rating %q", rec.Seq, rec.Rating)
+	}
+	if (rec.Card == "") == (rec.Note == "") {
+		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: names a card or a note, not both", rec.Seq)
+	}
+	return schedule.Event{Seq: rec.Seq, Card: rec.Card, Note: rec.Note, Rating: rating,
+		Position: rec.Position, At: at, Scheduler: rec.Scheduler}, true, nil
 }
 
 // streamLog calls fn for every event from byte offset to the end of the log,
@@ -199,6 +226,18 @@ func liveBetween(events []schedule.Event, from, to time.Time) []schedule.Event {
 // or a plugin's "what happened" view asks for. It is read-only, and a void
 // takes its review with it, so an undone answer is not in the history.
 func (l *Library) History(cardID core.ID) ([]schedule.Event, error) {
+	return l.entryHistory(cardID)
+}
+
+// ReadingEvents returns one note's live reading events, oldest first: the
+// sessions that recorded where the reader stopped, and the changes to the
+// queue's membership. It is what the agent API shows of a reading entry.
+func (l *Library) ReadingEvents(noteID core.ID) ([]schedule.Event, error) {
+	return l.entryHistory(noteID)
+}
+
+// entryHistory returns one entry's live events, oldest first.
+func (l *Library) entryHistory(id core.ID) ([]schedule.Event, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.index == nil {
@@ -211,7 +250,7 @@ func (l *Library) History(cardID core.ID) ([]schedule.Event, error) {
 	live := liveBetween(events, time.Time{}, time.Time{})
 	out := make([]schedule.Event, 0, 4)
 	for _, ev := range live {
-		if ev.Card == cardID {
+		if ev.Entry() == id {
 			out = append(out, ev)
 		}
 	}

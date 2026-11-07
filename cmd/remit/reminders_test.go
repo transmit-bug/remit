@@ -18,7 +18,7 @@ type reminderFixture struct {
 	r        *reminder
 	now      time.Time
 	day      string
-	due      int
+	due      appui.Counts
 	on       bool
 	sent     []string
 	sendFail error
@@ -26,7 +26,8 @@ type reminderFixture struct {
 }
 
 func newReminderFixture() *reminderFixture {
-	f := &reminderFixture{now: time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC), due: 3, on: true}
+	f := &reminderFixture{now: time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC),
+		due: appui.Counts{Cards: 3}, on: true}
 	f.r = &reminder{
 		now:     func() time.Time { return f.now },
 		enabled: func() bool { return f.on },
@@ -38,7 +39,7 @@ func newReminderFixture() *reminderFixture {
 			f.day = day
 			return nil
 		},
-		due: func() (int, error) { return f.due, nil },
+		due: func() (appui.Counts, error) { return f.due, nil },
 		notify: func(title, body string) error {
 			if f.sendFail != nil {
 				return f.sendFail
@@ -63,7 +64,7 @@ func TestReminderOncePerDay(t *testing.T) {
 	if len(f.sent) != 1 {
 		t.Fatalf("sent %d reminders, want 1", len(f.sent))
 	}
-	if got, want := f.sent[0], "3 cards are due today."; got != want {
+	if got, want := f.sent[0], "3 cards and no notes are due today."; got != want {
 		t.Errorf("body = %q, want %q", got, want)
 	}
 	if f.day != "2026-11-06" {
@@ -122,7 +123,7 @@ func TestReminderOffSendsNothing(t *testing.T) {
 // records nothing, so the next start tries again.
 func TestReminderNeedsDueCardsAndADelivery(t *testing.T) {
 	f := newReminderFixture()
-	f.due = 0
+	f.due = appui.Counts{}
 	if shown, _ := f.r.remind(); shown {
 		t.Error("a reminder was sent with nothing due")
 	}
@@ -130,7 +131,7 @@ func TestReminderNeedsDueCardsAndADelivery(t *testing.T) {
 		t.Fatalf("sent %d reminders with nothing due", len(f.sent))
 	}
 
-	f.due = 2
+	f.due = appui.Counts{Cards: 2}
 	f.sendFail = errors.New("notifications are not allowed")
 	if shown, err := f.r.remind(); shown || err == nil {
 		t.Fatalf("remind with a refused notification = %v, %v", shown, err)

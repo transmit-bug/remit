@@ -112,6 +112,10 @@ func trayMenu(a *appui.App, show func()) (*mygo.Menu, *mygo.MenuItem) {
 			a.ShowQueue()
 			show()
 		}},
+		{ID: "reading", Label: locales.ActionReading(), Click: func(*mygo.MenuItem, *mygo.Window) {
+			a.ShowReading()
+			show()
+		}},
 		{ID: "open", Label: locales.OpenRemit(), Click: func(*mygo.MenuItem, *mygo.Window) { show() }},
 		mygo.Separator(),
 		pause,
@@ -138,7 +142,17 @@ func installTray(a *appui.App, show func()) *trayUI {
 		return &trayUI{menu: menu, pause: pause}
 	}
 	t := &trayUI{tray: tray, menu: menu, pause: pause}
-	a.OnRemaining(func(n int) { tray.SetTitle(locales.TrayTitle(n)) })
+	// The title reports both queues, so a reader is not drowned out by the
+	// cards that are due; the notes' number joins it only when there is one,
+	// and the tooltip always names both.
+	a.OnCounts(func(counts appui.Counts) {
+		title := locales.TrayTitle(counts.Cards)
+		if counts.Reading > 0 {
+			title = locales.TrayTitleReading(counts.Cards, counts.Reading)
+		}
+		tray.SetTitle(title)
+		tray.SetToolTip(locales.TrayTooltipQueues(counts.Cards, counts.Reading))
+	})
 	a.OnSettings(t.followSettings)
 	return t
 }

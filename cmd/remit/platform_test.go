@@ -72,9 +72,10 @@ func TestHotkeyBinder(t *testing.T) {
 	}
 }
 
-// The tray menu starts a review, opens the window, pauses reminders and quits,
-// in that order, and its pause item is the notification setting: flipping it
-// writes settings.json, and a change made on the page moves it back.
+// The tray menu starts a review or a reading session, opens the window, pauses
+// reminders and quits, in that order, and its pause item is the notification
+// setting: flipping it writes settings.json, and a change made on the page moves
+// it back.
 func TestTrayMenu(t *testing.T) {
 	data := t.TempDir()
 	a := appui.NewApp(appui.Options{DataDir: data})
@@ -82,20 +83,23 @@ func TestTrayMenu(t *testing.T) {
 	menu, pause := trayMenu(a, func() { shown++ })
 
 	items := menu.Items()
-	if len(items) != 6 {
-		t.Fatalf("tray menu has %d items, want 6", len(items))
+	if len(items) != 7 {
+		t.Fatalf("tray menu has %d items, want 7", len(items))
 	}
 	if got := items[0].Label; got != locales.ActionReviewCards() {
 		t.Errorf("first item is %q, want the review action", got)
 	}
-	if got := items[1].Label; got != locales.OpenRemit() {
-		t.Errorf("second item is %q, want Open Remit", got)
+	if got := items[1].Label; got != locales.ActionReading() {
+		t.Errorf("second item is %q, want the reading action", got)
 	}
-	if items[2].Type != mygo.MenuItemSeparator || items[4].Type != mygo.MenuItemSeparator {
+	if got := items[2].Label; got != locales.OpenRemit() {
+		t.Errorf("third item is %q, want Open Remit", got)
+	}
+	if items[3].Type != mygo.MenuItemSeparator || items[5].Type != mygo.MenuItemSeparator {
 		t.Error("the menu's separators are not where they belong")
 	}
-	if items[3] != pause || pause.Type != mygo.MenuItemCheckbox {
-		t.Fatalf("the pause item is not the menu's checkbox: %+v", items[3])
+	if items[4] != pause || pause.Type != mygo.MenuItemCheckbox {
+		t.Fatalf("the pause item is not the menu's checkbox: %+v", items[4])
 	}
 	if got := pause.Label; got != locales.PauseReminders() {
 		t.Errorf("pause item is %q", got)
@@ -104,7 +108,7 @@ func TestTrayMenu(t *testing.T) {
 	if !pause.Checked {
 		t.Error("the pause item says reminders are running while they are off")
 	}
-	if got := items[5].Label; got != locales.QuitRemit() {
+	if got := items[6].Label; got != locales.QuitRemit() {
 		t.Errorf("last item is %q, want Quit", got)
 	}
 
@@ -112,11 +116,15 @@ func TestTrayMenu(t *testing.T) {
 	if shown != 1 {
 		t.Errorf("Start review brought the window forward %d times", shown)
 	}
+	items[1].Click(items[1], nil)
+	if shown != 2 {
+		t.Errorf("the reading action brought the window forward %d times", shown)
+	}
 
 	// MyGo toggles a checkbox before Click runs: unchecked pause means the
 	// user just asked for reminders.
-	items[3].Checked = false
-	items[3].Click(items[3], nil)
+	items[4].Checked = false
+	items[4].Click(items[4], nil)
 	saved, err := settings.Load(data)
 	if err != nil {
 		t.Fatalf("settings.Load: %v", err)
@@ -160,13 +168,13 @@ func TestTrayUpdateItem(t *testing.T) {
 	tray := &trayUI{menu: menu}
 	tray.addUpdate("0.2.0", open)
 	items := menu.Items()
-	if len(items) != 7 {
+	if len(items) != 8 {
 		t.Fatalf("menu has %d items after the update was added", len(items))
 	}
-	if got := items[4].Label; got != "Update to v0.2.0" {
-		t.Errorf("the update item is at %d (%q), want above Quit", 4, got)
+	if got := items[5].Label; got != "Update to v0.2.0" {
+		t.Errorf("the update item is at %d (%q), want above Quit", 5, got)
 	}
-	if got := items[6].Label; got != locales.QuitRemit() {
+	if got := items[7].Label; got != locales.QuitRemit() {
 		t.Errorf("Quit moved to %q", got)
 	}
 }

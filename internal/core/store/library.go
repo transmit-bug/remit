@@ -9,12 +9,12 @@
 //	.remit/index.sqlite   derived index: delete it and it comes back
 //
 // The text files are the truth. The index is a cache of what they say: it holds
-// every card and its replayed schedule, the text of every note block, and the
-// watermark of the log it has applied. An open reads the sources only when the
-// index has fallen behind them, so a library of a hundred thousand cards opens
-// by reading one file and no cards. A rebuild costs a replay of the log and a
-// walk over the notes, never a loss. Nothing here reads the clock: time arrives
-// through Options.Now.
+// every card and its replayed schedule, every note's place in the reading queue,
+// the text of every note block, and the watermark of the log it has applied. An
+// open reads the sources only when the index has fallen behind them, so a library
+// of a hundred thousand cards opens by reading one file and no cards. A rebuild
+// costs a replay of the log and a walk over the notes, never a loss. Nothing here
+// reads the clock: time arrives through Options.Now.
 package store
 
 import (
@@ -65,6 +65,8 @@ var (
 	ErrNothingToAsk = errors.New("store: the block asks nothing")
 	// ErrNoReview is returned by UndoLast when a card has nothing to undo.
 	ErrNoReview = errors.New("store: no review to undo")
+	// ErrEmptyExcerpt is returned by Excerpt when there is nothing to quote.
+	ErrEmptyExcerpt = errors.New("store: the excerpt is empty")
 	// ErrExists is returned by Create when the directory already holds a library.
 	ErrExists = errors.New("store: directory already holds a library")
 )
@@ -94,6 +96,9 @@ type Library struct {
 	now       func() time.Time
 	params    schedule.Params
 	scheduler string
+	// readingDefaults is what reading entries are scheduled with: the host's own
+	// defaults, never what a scheduling plugin made of the cards.
+	readingDefaults schedule.Params
 
 	index   *index
 	nextSeq int64
@@ -113,6 +118,10 @@ type Library struct {
 	createdOK bool
 
 	types []core.Type
+
+	// readings is every note the log put in the reading queue, queued or not:
+	// its schedule and the block it stopped at.
+	readings map[core.ID]*readingRow
 
 	extensions []string
 	roles      map[string]string
@@ -215,9 +224,11 @@ func newLibrary(dir string, opts Options) *Library {
 		now = time.Now
 	}
 	return &Library{
-		dir:   dir,
-		now:   now,
-		cards: map[core.ID]*cardMeta{},
+		dir:             dir,
+		now:             now,
+		readingDefaults: schedule.DefaultReadingParams().Normalized(),
+		cards:           map[core.ID]*cardMeta{},
+		readings:        map[core.ID]*readingRow{},
 	}
 }
 
@@ -230,6 +241,7 @@ func (l *Library) Close() error {
 	err := l.index.close()
 	l.index = nil
 	l.cards = map[core.ID]*cardMeta{}
+	l.readings = map[core.ID]*readingRow{}
 	l.byDue, l.byCreated = nil, nil
 	l.dueOK, l.createdOK = false, false
 	return err
@@ -343,11 +355,12 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 		return err
 	}
 
-	applier := schedule.NewApplier(l.params)
+	applier := schedule.NewApplierFor(l.params, l.readingParams())
 	if err := applier.Apply(events...); err != nil {
 		return fmt.Errorf("store: review log: %w", err)
 	}
 	states := applier.States()
+	readings := applier.Reading()
 
 	live := make(map[core.ID]bool, len(notes)*4)
 	for _, entry := range notes {
@@ -358,12 +371,13 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 		}
 	}
 
-	// The newest live review of each card is what an undo cancels, so it is
-	// kept beside the state instead of being looked up in the log again.
+	// The newest live event of each entry is what an undo cancels, so it is
+	// kept beside the state instead of being looked up in the log again. Card
+	// and note IDs are minted with different kinds, so one map holds both.
 	lastSeq := make(map[core.ID]int64, len(states))
 	liveEvents := liveBetween(events, time.Time{}, time.Time{})
 	for _, event := range liveEvents {
-		lastSeq[event.Card] = event.Seq
+		lastSeq[event.Entry()] = event.Seq
 	}
 	l.nextSeq = 0
 	if len(events) > 0 {
@@ -412,6 +426,14 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 				}
 			}
 		}
+		for note, entry := range readings {
+			if err := putReading(e, readingRow{
+				note: note, state: entry.State, position: entry.Position,
+				queued: entry.Queued, lastSeq: lastSeq[note],
+			}); err != nil {
+				return err
+			}
+		}
 		if err := l.putMarks(e, marks); err != nil {
 			return err
 		}
@@ -423,10 +445,11 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 }
 
 // replayLogTail applies the lines appended since the index last read the log.
-// A review advances the card's cached schedule on its own; a void sends the
-// library back to a full replay, because undoing one event needs that card's
-// whole history and a tail that carries a void is a crash recovery, not a path
-// worth carrying state for.
+// A review advances the card's cached schedule on its own; a reading event does
+// the same for the note's place in the reading queue; a void sends the library
+// back to a full replay, because undoing one event needs that entry's whole
+// history and a tail that carries a void is a crash recovery, not a path worth
+// carrying state for.
 func (l *Library) replayLogTail(from logMark) error {
 	var tail []schedule.Event
 	applied, err := l.streamLog(from.size, func(ev schedule.Event) error {
@@ -458,7 +481,7 @@ func (l *Library) replayLogTail(from logMark) error {
 	}
 	written, logOK := l.logMarkAfter(applied, nextSeq)
 
-	// The cards are read before the transaction: the index has one connection,
+	// The rows are read before the transaction: the index has one connection,
 	// and a read inside the write would wait for itself.
 	type advance struct {
 		card   core.ID
@@ -466,8 +489,20 @@ func (l *Library) replayLogTail(from logMark) error {
 		state  schedule.State
 		status core.Status
 	}
+	type readingAdvance struct {
+		row readingRow
+	}
 	advances := make([]advance, 0, len(tail))
+	readingAdvances := make([]readingAdvance, 0, len(tail))
 	for _, ev := range tail {
+		if ev.IsReading() {
+			row := readingRow{note: ev.Note}
+			if current, ok := l.index.readingRow(ev.Note); ok {
+				row = current
+			}
+			readingAdvances = append(readingAdvances, readingAdvance{row: applyReading(row, ev, l.readingParams())})
+			continue
+		}
 		row, ok := l.index.cardRow(ev.Card)
 		if !ok {
 			continue // the card file is gone; its reviews schedule nothing
@@ -487,6 +522,11 @@ func (l *Library) replayLogTail(from logMark) error {
 				return err
 			}
 			if err := setCardStatus(e, next.card, next.status); err != nil {
+				return err
+			}
+		}
+		for _, next := range readingAdvances {
+			if err := putReading(e, next.row); err != nil {
 				return err
 			}
 		}
@@ -530,15 +570,25 @@ func (l *Library) logMarkAfter(offset, seq int64) (logMark, bool) {
 	return logMark{fileMark: mark, seq: seq}, true
 }
 
-// loadCatalog reads the index into memory: every card, and the queue order.
+// loadCatalog reads the index into memory: every card, the queue order, and
+// every note the log put in the reading queue.
 func (l *Library) loadCatalog() error {
 	rows, err := l.index.cardRows()
+	if err != nil {
+		return err
+	}
+	readings, err := l.index.readingRows()
 	if err != nil {
 		return err
 	}
 	l.cards = make(map[core.ID]*cardMeta, len(rows))
 	l.byCreated = make([]core.ID, 0, len(rows))
 	l.byDue = make([]dueEntry, 0, len(rows))
+	l.readings = make(map[core.ID]*readingRow, len(readings))
+	for _, row := range readings {
+		row := row
+		l.readings[row.note] = &row
+	}
 	for _, row := range rows {
 		meta := &cardMeta{
 			card:    row.card,
@@ -838,6 +888,30 @@ func (l *Library) refreshCards(blockIDs []core.ID) error {
 // CreateNote makes an empty note with a title.
 func (l *Library) CreateNote(title string) (core.Note, error) {
 	return l.SaveNote(core.Note{ID: core.NewID(noteKind), Title: title})
+}
+
+// Excerpt writes a child note whose first block is text taken from one block of
+// a note, and answers with the note as stored. The block carries a reference
+// back to the block it came from, so the source's backlink panel finds the
+// excerpt and the excerpt says where it was taken from. An excerpt is a note
+// like any other: it can be read, queued, and made into cards.
+func (l *Library) Excerpt(noteID, blockID core.ID, text, title string) (core.Note, error) {
+	source, ok := l.Note(noteID)
+	if !ok {
+		return core.Note{}, fmt.Errorf("store: no note %q", noteID)
+	}
+	block, ok := source.Block(blockID)
+	if !ok {
+		return core.Note{}, fmt.Errorf("store: no block %q in note %q", blockID, noteID)
+	}
+	if strings.TrimSpace(text) == "" {
+		return core.Note{}, fmt.Errorf("%w: block %q", ErrEmptyExcerpt, blockID)
+	}
+	return l.SaveNote(core.Note{
+		ID:     core.NewID(noteKind),
+		Title:  title,
+		Blocks: []core.Block{core.Excerpt(source, block, text)},
+	})
 }
 
 // Block returns a referencable block, so a card can render itself from the
@@ -1533,6 +1607,12 @@ const (
 	EventCardCreated = "card.created"
 	// EventReviewRecorded fires after a review enters the log.
 	EventReviewRecorded = "review.recorded"
+	// EventReadingRecorded fires after a reading session enters the log.
+	EventReadingRecorded = "reading.recorded"
+	// EventReadingQueued fires after a note joins the reading queue.
+	EventReadingQueued = "reading.queued"
+	// EventReadingDropped fires after a note leaves the reading queue.
+	EventReadingDropped = "reading.dropped"
 )
 
 // SetEventHandler registers the function told about events, replacing any

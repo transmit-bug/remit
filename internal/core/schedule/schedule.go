@@ -87,14 +87,60 @@ func (r Rating) fsrs() (fsrs.Rating, error) {
 	return 0, fmt.Errorf("schedule: unknown rating %d", uint8(r))
 }
 
-// Event is one line of the review log: either a review, or a void naming the
-// review it cancels. A void carries no card, rating or time of its own.
+// Kind is what a log event records: a review, or a change to the reading
+// queue's membership.
+type Kind uint8
+
+const (
+	// Reviewed is a review: a card answered, or a note read. The rating says
+	// how it went, and a reading review names the block it stopped at.
+	Reviewed Kind = iota
+	// Queued puts a note in the reading queue.
+	Queued
+	// Dropped takes a note out of the reading queue. Its history stays.
+	Dropped
+)
+
+// String names the kind, for logs and for the review log format.
+func (k Kind) String() string {
+	switch k {
+	case Queued:
+		return "queued"
+	case Dropped:
+		return "dropped"
+	}
+	return "reviewed"
+}
+
+// ParseKind reads a kind back from the name String writes.
+func ParseKind(s string) (Kind, bool) {
+	switch s {
+	case "reviewed", "":
+		return Reviewed, true
+	case "queued":
+		return Queued, true
+	case "dropped":
+		return Dropped, true
+	}
+	return Reviewed, false
+}
+
+// Event is one line of the review log: a review (of a card, or of a note
+// read), a change to the reading queue, or a void naming the review it
+// cancels. A void carries no entry, rating or time of its own.
+//
+// Cards and reading entries share the log on purpose (ADR 0003): one append-only
+// history, one replay, one place to count what was remembered from.
 type Event struct {
 	Seq    int64
-	Card   core.ID
+	Card   core.ID // the card reviewed, empty on a reading event
+	Note   core.ID // the note a reading event is about, empty on a card review
+	Kind   Kind
 	Rating Rating
-	At     time.Time
-	Void   int64
+	// Position is where a reading session stopped: the block the reader was on.
+	Position core.ID
+	At       time.Time
+	Void     int64
 	// Scheduler is what wrote this review: a family and its version, as the
 	// plugin that scheduled it named itself. Empty means the review was written
 	// before the log carried one.
@@ -104,6 +150,19 @@ type Event struct {
 // IsVoid reports whether the event cancels another review instead of recording
 // one.
 func (e Event) IsVoid() bool { return e.Void != 0 }
+
+// Entry returns the ID this event schedules: the card it reviewed, or the note
+// it read or queued.
+func (e Event) Entry() core.ID {
+	if e.Note != "" {
+		return e.Note
+	}
+	return e.Card
+}
+
+// IsReading reports whether the event belongs to the reading queue rather than
+// to a card's schedule.
+func (e Event) IsReading() bool { return e.Note != "" }
 
 // Memory is a card's FSRS memory state: how stable the memory is and how hard
 // the card is. It is the whole of what one review hands to the next.
@@ -137,6 +196,12 @@ type Params struct {
 func DefaultParams() Params {
 	return Params{Weights: defaultWeights(), DesiredRetention: DefaultRetention}
 }
+
+// DefaultReadingParams is what a reading entry is scheduled with: the same FSRS
+// mathematics and the published defaults, independent of the library's card
+// schedule. Reading cadence is the host's, so the scheduling plugin that shapes
+// cards (ADR 0007) has no say over when a note comes back.
+func DefaultReadingParams() Params { return DefaultParams() }
 
 // IsZero reports whether nothing was configured, so the defaults apply.
 func (p Params) IsZero() bool {
@@ -175,9 +240,9 @@ func (p Params) parameters() fsrs.Parameters {
 // ErrDuplicateSeq reports a log that carries the same review twice.
 var ErrDuplicateSeq = errors.New("schedule: duplicate event sequence")
 
-// Replay returns the state of every card that has at least one live review.
-// Voided reviews leave no trace: a card whose reviews were all voided is absent
-// from the result.
+// Replay returns the state of every entry that has at least one live review.
+// Voided reviews leave no trace: an entry whose reviews were all voided is
+// absent from the result.
 func Replay(events []Event, params Params) (map[core.ID]State, error) {
 	a := NewApplier(params)
 	if err := a.Apply(events...); err != nil {
@@ -186,30 +251,55 @@ func Replay(events []Event, params Params) (map[core.ID]State, error) {
 	return a.States(), nil
 }
 
-// Applier replays a log incrementally. It keeps each card's live events, so a
-// void costs a replay of that one card rather than of the whole log, and
+// Reading is a note's place in the reading queue, as replay derives it.
+type Reading struct {
+	// State is the note's schedule. Zero means it was queued and never read,
+	// which makes it due at once.
+	State State
+	// Position is the block the newest live session stopped at.
+	Position core.ID
+	// Queued reports whether the note is still in the queue now.
+	Queued bool
+}
+
+// Applier replays a log incrementally. It keeps each entry's live events, so a
+// void costs a replay of that one entry rather than of the whole log, and
 // applying events in batches reaches the same state as replaying everything at
 // once.
 type Applier struct {
-	fsrs   *fsrs.FSRS
-	params Params
+	fsrs    *fsrs.FSRS
+	params  Params
+	reading Params
 
-	states map[core.ID]State
-	live   map[core.ID][]Event // per card, in sequence order
-	card   map[int64]core.ID   // sequence -> the card it reviewed
-	seen   map[int64]bool      // every sequence applied, reviews and voids
+	states  map[core.ID]State
+	live    map[core.ID][]Event // per entry, in sequence order
+	entry   map[int64]core.ID   // sequence -> the entry it reviewed
+	seen    map[int64]bool      // every sequence applied, reviews and voids
+	members map[core.ID]bool    // notes in the reading queue
+	places  map[core.ID]core.ID // notes: the block their newest live session stopped at
 }
 
-// NewApplier returns an applier with no history.
+// NewApplier returns an applier with no history. Reading entries are scheduled
+// with DefaultReadingParams; NewApplierFor names them.
 func NewApplier(params Params) *Applier {
+	return NewApplierFor(params, DefaultReadingParams())
+}
+
+// NewApplierFor returns an applier that schedules cards with params and reading
+// entries with reading.
+func NewApplierFor(params, reading Params) *Applier {
 	params = params.Normalized()
+	reading = reading.Normalized()
 	return &Applier{
-		fsrs:   fsrs.NewFSRS(params.parameters()),
-		params: params,
-		states: make(map[core.ID]State),
-		live:   make(map[core.ID][]Event),
-		card:   make(map[int64]core.ID),
-		seen:   make(map[int64]bool),
+		fsrs:    fsrs.NewFSRS(params.parameters()),
+		params:  params,
+		reading: reading,
+		states:  make(map[core.ID]State),
+		live:    make(map[core.ID][]Event),
+		entry:   make(map[int64]core.ID),
+		seen:    make(map[int64]bool),
+		members: make(map[core.ID]bool),
+		places:  make(map[core.ID]core.ID),
 	}
 }
 
@@ -231,52 +321,95 @@ func (a *Applier) Apply(events ...Event) error {
 			a.void(ev)
 			continue
 		}
+		id := ev.Entry()
+		if id == "" {
+			return fmt.Errorf("schedule: event %d: no card and no note", ev.Seq)
+		}
+		if ev.Card != "" && ev.Note != "" {
+			return fmt.Errorf("schedule: event %d: reviews a card and a note", ev.Seq)
+		}
+
+		switch ev.Kind {
+		case Queued:
+			a.members[id] = true
+			state := a.states[id]
+			if state.Reviews == 0 {
+				// A note never read is due when it joined the queue, which is
+				// what puts the queue in the order it was filled in.
+				state.Due = ev.At.UTC()
+			}
+			a.states[id] = state
+			continue
+		case Dropped:
+			a.members[id] = false
+			continue
+		}
+
 		if _, err := ev.Rating.fsrs(); err != nil {
 			return fmt.Errorf("schedule: event %d: %w", ev.Seq, err)
 		}
-		if ev.Card == "" {
-			return fmt.Errorf("schedule: event %d: no card", ev.Seq)
+		a.entry[ev.Seq] = id
+		a.live[id] = append(a.live[id], ev)
+		a.states[id] = a.step(a.states[id], ev)
+		if ev.IsReading() {
+			// Reading a note puts it in the queue: it comes back on its own
+			// cadence even if it was never added by hand.
+			a.members[id] = true
+			if ev.Position != "" {
+				a.places[id] = ev.Position
+			}
 		}
-
-		a.card[ev.Seq] = ev.Card
-		a.live[ev.Card] = append(a.live[ev.Card], ev)
-		a.states[ev.Card] = a.step(a.states[ev.Card], ev)
 	}
 	return nil
 }
 
-// void cancels a review and replays the one card it belonged to, so the card
-// reads exactly as if the review had never been written.
+// void cancels a review and replays the one entry it belonged to, so the entry
+// reads exactly as if the review had never been written. Membership is not
+// touched: undoing an answer takes back the answer, not the reading.
 func (a *Applier) void(void Event) {
-	cardID, ok := a.card[void.Void]
+	id, ok := a.entry[void.Void]
 	if !ok {
 		return
 	}
-	delete(a.card, void.Void)
+	delete(a.entry, void.Void)
 
-	kept := a.live[cardID][:0]
-	for _, ev := range a.live[cardID] {
+	kept := a.live[id][:0]
+	for _, ev := range a.live[id] {
 		if ev.Seq != void.Void {
 			kept = append(kept, ev)
 		}
 	}
 
 	if len(kept) == 0 {
-		delete(a.live, cardID)
-		delete(a.states, cardID)
+		delete(a.live, id)
+		delete(a.states, id)
+		delete(a.places, id)
 		return
 	}
 
-	a.live[cardID] = kept
-	state := State{}
+	a.live[id] = kept
+	state, place := State{}, core.ID("")
 	for _, ev := range kept {
 		state = a.step(state, ev)
+		if ev.Position != "" {
+			place = ev.Position
+		}
 	}
-	a.states[cardID] = state
+	a.states[id] = state
+	if place == "" {
+		delete(a.places, id)
+	} else {
+		a.places[id] = place
+	}
 }
 
-// step applies one review to a card's state.
+// step applies one review to an entry's state, with the parameters that entry
+// is scheduled by: a card follows the library's schedule, a reading entry the
+// host's own.
 func (a *Applier) step(state State, ev Event) State {
+	if ev.IsReading() {
+		return a.reading.step(a.fsrs.Parameters, state, ev)
+	}
 	return a.params.step(a.fsrs.Parameters, state, ev)
 }
 
@@ -316,22 +449,22 @@ func (p Params) step(fsrsParameters fsrs.Parameters, state State, ev Event) Stat
 	return state
 }
 
-// State returns one card's state, and whether it has any live review.
-func (a *Applier) State(card core.ID) (State, bool) {
-	state, ok := a.states[card]
+// State returns one entry's state, and whether it has any live review.
+func (a *Applier) State(entry core.ID) (State, bool) {
+	state, ok := a.states[entry]
 	return state, ok
 }
 
-// Last returns the newest live review of a card: the one an undo cancels.
-func (a *Applier) Last(card core.ID) (Event, bool) {
-	events := a.live[card]
+// Last returns the newest live review of an entry: the one an undo cancels.
+func (a *Applier) Last(entry core.ID) (Event, bool) {
+	events := a.live[entry]
 	if len(events) == 0 {
 		return Event{}, false
 	}
 	return events[len(events)-1], true
 }
 
-// States returns every card's state. The result is a copy: changing it does not
+// States returns every entry's state. The result is a copy: changing it does not
 // change the applier.
 func (a *Applier) States() map[core.ID]State {
 	states := make(map[core.ID]State, len(a.states))
@@ -339,6 +472,27 @@ func (a *Applier) States() map[core.ID]State {
 		states[id] = state
 	}
 	return states
+}
+
+// Reading returns every note the log knows, with where it stands in the reading
+// queue. The result is a copy: changing it does not change the applier.
+func (a *Applier) Reading() map[core.ID]Reading {
+	queued := make(map[core.ID]Reading, len(a.states))
+	for id, state := range a.states {
+		queued[id] = Reading{State: state, Position: a.places[id], Queued: a.members[id]}
+	}
+	return queued
+}
+
+// ReadingOf returns one note's place in the reading queue, and whether the log
+// knows it at all: a note that was queued and dropped again before it was ever
+// read is unknown, and not queued.
+func (a *Applier) ReadingOf(note core.ID) (Reading, bool) {
+	state, has := a.states[note]
+	if !has {
+		return Reading{}, false
+	}
+	return Reading{State: state, Position: a.places[note], Queued: a.members[note]}, true
 }
 
 // Outlook is what one answer would do to a card, for the interval a grade key

@@ -105,6 +105,33 @@ func TestFrozenSetCovers(t *testing.T) {
 	if !strings.Contains(set.Note, "go test ./internal/golden -update") {
 		t.Error("the set does not say how to regenerate it")
 	}
+
+	// The reading closure is frozen too: a selection's block, the reference it
+	// carries, and the card it makes.
+	if len(set.Excerpts) < 3 {
+		t.Errorf("the set holds %d excerpts, want at least three shapes", len(set.Excerpts))
+	}
+	excerptKinds := map[string]bool{}
+	for _, excerpt := range set.Excerpts {
+		if excerpt.Proves == "" {
+			t.Error("an excerpt does not say what it proves")
+		}
+		if !strings.Contains(excerpt.BlockText, "[["+excerpt.LinkTitle+"#^"+excerpt.LinkBlock+"]]") {
+			t.Errorf("the excerpt does not carry its reference: %q", excerpt.BlockText)
+		}
+		if excerpt.LinkBlock != excerpt.SourceBlock {
+			t.Errorf("the reference points at %q, want the source block %q", excerpt.LinkBlock, excerpt.SourceBlock)
+		}
+		if excerpt.CardFront == "" {
+			t.Errorf("the excerpt from %q makes no card", excerpt.SourceBlock)
+		}
+		excerptKinds[excerpt.CardKind] = true
+	}
+	for _, want := range []string{"basic", "cloze"} {
+		if !excerptKinds[want] {
+			t.Errorf("no excerpt makes a %s card", want)
+		}
+	}
 }
 
 // The set is deterministic: built twice, it is the same bytes. The scheduler

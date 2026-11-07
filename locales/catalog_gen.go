@@ -2459,18 +2459,20 @@ func (msgs Messages) TrayTooltipUpdate(version string) string {
 	return Catalog.Format(msgs.locale, "trayTooltipUpdate", map[string]any{"version": version})
 }
 
-// ReminderBody says "{count, plural, one {# card is due today.} other {# cards are due today.}}"
+// ReminderBody says "{cards, plural, =0 {No cards} one {# card} other {# cards}} and {reading, plural, =0 {no notes} one {# note} other {#…"
 // in the language the app shows.
 //
-// The daily reminder's body.
-func ReminderBody(count int) string { return In(i18n.Locale()).ReminderBody(count) }
+// The daily reminder's body: cards to review and notes to read.
+func ReminderBody(cards int, reading int) string {
+	return In(i18n.Locale()).ReminderBody(cards, reading)
+}
 
-// ReminderBody says "{count, plural, one {# card is due today.} other {# cards are due today.}}"
+// ReminderBody says "{cards, plural, =0 {No cards} one {# card} other {# cards}} and {reading, plural, =0 {no notes} one {# note} other {#…"
 // in the language of msgs.
 //
-// The daily reminder's body.
-func (msgs Messages) ReminderBody(count int) string {
-	return Catalog.Format(msgs.locale, "reminderBody", map[string]any{"count": count})
+// The daily reminder's body: cards to review and notes to read.
+func (msgs Messages) ReminderBody(cards int, reading int) string {
+	return Catalog.Format(msgs.locale, "reminderBody", map[string]any{"cards": cards, "reading": reading})
 }
 
 // ImportAnki says "Import Anki package…"
@@ -3555,6 +3557,408 @@ func PluginEnable(name string) string { return In(i18n.Locale()).PluginEnable(na
 // plugin.
 func (msgs Messages) PluginEnable(name string) string {
 	return Catalog.Format(msgs.locale, "pluginEnable", map[string]any{"name": name})
+}
+
+// ModeReading says "Reading"
+// in the language the app shows.
+//
+// The reading side of the review screen's mode switch.
+func ModeReading() string { return In(i18n.Locale()).ModeReading() }
+
+// ModeReading says "Reading"
+// in the language of msgs.
+//
+// The reading side of the review screen's mode switch.
+func (msgs Messages) ModeReading() string {
+	return Catalog.Format(msgs.locale, "modeReading", nil)
+}
+
+// ReadingProgress says "Read {done} of {total}"
+// in the language the app shows.
+//
+// How far the reading session has come: notes finished of the notes it
+// started with.
+func ReadingProgress(done int, total int) string {
+	return In(i18n.Locale()).ReadingProgress(done, total)
+}
+
+// ReadingProgress says "Read {done} of {total}"
+// in the language of msgs.
+//
+// How far the reading session has come: notes finished of the notes it
+// started with.
+func (msgs Messages) ReadingProgress(done int, total int) string {
+	return Catalog.Format(msgs.locale, "readingProgress", map[string]any{"done": done, "total": total})
+}
+
+// ReadingWhere says "Paragraph {at} of {total}"
+// in the language the app shows.
+//
+// Where the reading position is in the note on screen.
+func ReadingWhere(at int, total int) string { return In(i18n.Locale()).ReadingWhere(at, total) }
+
+// ReadingWhere says "Paragraph {at} of {total}"
+// in the language of msgs.
+//
+// Where the reading position is in the note on screen.
+func (msgs Messages) ReadingWhere(at int, total int) string {
+	return Catalog.Format(msgs.locale, "readingWhere", map[string]any{"at": at, "total": total})
+}
+
+// ReadingParagraph says "Paragraph {number}"
+// in the language the app shows.
+//
+// One paragraph of the note being read, as assistive technology names it.
+func ReadingParagraph(number int) string { return In(i18n.Locale()).ReadingParagraph(number) }
+
+// ReadingParagraph says "Paragraph {number}"
+// in the language of msgs.
+//
+// One paragraph of the note being read, as assistive technology names it.
+func (msgs Messages) ReadingParagraph(number int) string {
+	return Catalog.Format(msgs.locale, "readingParagraph", map[string]any{"number": number})
+}
+
+// ReadingCurrent says "Reading position: paragraph {number}"
+// in the language the app shows.
+//
+// One paragraph of the note being read, named as the reading position.
+func ReadingCurrent(number int) string { return In(i18n.Locale()).ReadingCurrent(number) }
+
+// ReadingCurrent says "Reading position: paragraph {number}"
+// in the language of msgs.
+//
+// One paragraph of the note being read, named as the reading position.
+func (msgs Messages) ReadingCurrent(number int) string {
+	return Catalog.Format(msgs.locale, "readingCurrent", map[string]any{"number": number})
+}
+
+// ReadingMove says "Move the reading position"
+// in the language the app shows.
+//
+// The keys that move the reading position paragraph by paragraph.
+func ReadingMove() string { return In(i18n.Locale()).ReadingMove() }
+
+// ReadingMove says "Move the reading position"
+// in the language of msgs.
+//
+// The keys that move the reading position paragraph by paragraph.
+func (msgs Messages) ReadingMove() string {
+	return Catalog.Format(msgs.locale, "readingMove", nil)
+}
+
+// ReadingDigest says "How it digested"
+// in the language the app shows.
+//
+// The keys that record how a reading digested.
+func ReadingDigest() string { return In(i18n.Locale()).ReadingDigest() }
+
+// ReadingDigest says "How it digested"
+// in the language of msgs.
+//
+// The keys that record how a reading digested.
+func (msgs Messages) ReadingDigest() string {
+	return Catalog.Format(msgs.locale, "readingDigest", nil)
+}
+
+// ReadingTooHard says "Too hard"
+// in the language the app shows.
+//
+// Say a note was hard to take in: it comes back soon.
+func ReadingTooHard() string { return In(i18n.Locale()).ReadingTooHard() }
+
+// ReadingTooHard says "Too hard"
+// in the language of msgs.
+//
+// Say a note was hard to take in: it comes back soon.
+func (msgs Messages) ReadingTooHard() string {
+	return Catalog.Format(msgs.locale, "readingTooHard", nil)
+}
+
+// ReadingJustRight says "Just right"
+// in the language the app shows.
+//
+// Say a note digested as it should.
+func ReadingJustRight() string { return In(i18n.Locale()).ReadingJustRight() }
+
+// ReadingJustRight says "Just right"
+// in the language of msgs.
+//
+// Say a note digested as it should.
+func (msgs Messages) ReadingJustRight() string {
+	return Catalog.Format(msgs.locale, "readingJustRight", nil)
+}
+
+// ReadingTooShallow says "Too shallow"
+// in the language the app shows.
+//
+// Say a note was easy: it need not come back so soon.
+func ReadingTooShallow() string { return In(i18n.Locale()).ReadingTooShallow() }
+
+// ReadingTooShallow says "Too shallow"
+// in the language of msgs.
+//
+// Say a note was easy: it need not come back so soon.
+func (msgs Messages) ReadingTooShallow() string {
+	return Catalog.Format(msgs.locale, "readingTooShallow", nil)
+}
+
+// ReadingReference says "From the source note"
+// in the language the app shows.
+//
+// The line naming where an excerpt was taken from.
+func ReadingReference() string { return In(i18n.Locale()).ReadingReference() }
+
+// ReadingReference says "From the source note"
+// in the language of msgs.
+//
+// The line naming where an excerpt was taken from.
+func (msgs Messages) ReadingReference() string {
+	return Catalog.Format(msgs.locale, "readingReference", nil)
+}
+
+// OpenSource says "Open source"
+// in the language the app shows.
+//
+// Open the note an excerpt's reference link names.
+func OpenSource() string { return In(i18n.Locale()).OpenSource() }
+
+// OpenSource says "Open source"
+// in the language of msgs.
+//
+// Open the note an excerpt's reference link names.
+func (msgs Messages) OpenSource() string {
+	return Catalog.Format(msgs.locale, "openSource", nil)
+}
+
+// NoReading says "Nothing to read right now."
+// in the language the app shows.
+//
+// The reading screen's empty state.
+func NoReading() string { return In(i18n.Locale()).NoReading() }
+
+// NoReading says "Nothing to read right now."
+// in the language of msgs.
+//
+// The reading screen's empty state.
+func (msgs Messages) NoReading() string {
+	return Catalog.Format(msgs.locale, "noReading", nil)
+}
+
+// Excerpt says "Excerpt (E)"
+// in the language the app shows.
+//
+// Take the paragraph at the reading position out into a note of its own.
+func Excerpt() string { return In(i18n.Locale()).Excerpt() }
+
+// Excerpt says "Excerpt (E)"
+// in the language of msgs.
+//
+// Take the paragraph at the reading position out into a note of its own.
+func (msgs Messages) Excerpt() string {
+	return Catalog.Format(msgs.locale, "excerpt", nil)
+}
+
+// ExcerptWithCard says "Make a card too"
+// in the language the app shows.
+//
+// The checkbox that makes an excerpt a card as well as a note.
+func ExcerptWithCard() string { return In(i18n.Locale()).ExcerptWithCard() }
+
+// ExcerptWithCard says "Make a card too"
+// in the language of msgs.
+//
+// The checkbox that makes an excerpt a card as well as a note.
+func (msgs Messages) ExcerptWithCard() string {
+	return Catalog.Format(msgs.locale, "excerptWithCard", nil)
+}
+
+// Skip says "Skip (S)"
+// in the language the app shows.
+//
+// Move on to the next note without recording anything.
+func Skip() string { return In(i18n.Locale()).Skip() }
+
+// Skip says "Skip (S)"
+// in the language of msgs.
+//
+// Move on to the next note without recording anything.
+func (msgs Messages) Skip() string {
+	return Catalog.Format(msgs.locale, "skip", nil)
+}
+
+// RemoveReading says "Remove from reading (X)"
+// in the language the app shows.
+//
+// Take the note out of the reading queue.
+func RemoveReading() string { return In(i18n.Locale()).RemoveReading() }
+
+// RemoveReading says "Remove from reading (X)"
+// in the language of msgs.
+//
+// Take the note out of the reading queue.
+func (msgs Messages) RemoveReading() string {
+	return Catalog.Format(msgs.locale, "removeReading", nil)
+}
+
+// ReadingEdit says "Edit note (M)"
+// in the language the app shows.
+//
+// Open the note being read in the notebook.
+func ReadingEdit() string { return In(i18n.Locale()).ReadingEdit() }
+
+// ReadingEdit says "Edit note (M)"
+// in the language of msgs.
+//
+// Open the note being read in the notebook.
+func (msgs Messages) ReadingEdit() string {
+	return Catalog.Format(msgs.locale, "readingEdit", nil)
+}
+
+// ReadingAdded says "Added to the reading queue."
+// in the language the app shows.
+//
+// The write that put a note in the reading queue landed.
+func ReadingAdded() string { return In(i18n.Locale()).ReadingAdded() }
+
+// ReadingAdded says "Added to the reading queue."
+// in the language of msgs.
+//
+// The write that put a note in the reading queue landed.
+func (msgs Messages) ReadingAdded() string {
+	return Catalog.Format(msgs.locale, "readingAdded", nil)
+}
+
+// ReadingRemoved says "Removed from the reading queue."
+// in the language the app shows.
+//
+// The note was taken out of the reading queue.
+func ReadingRemoved() string { return In(i18n.Locale()).ReadingRemoved() }
+
+// ReadingRemoved says "Removed from the reading queue."
+// in the language of msgs.
+//
+// The note was taken out of the reading queue.
+func (msgs Messages) ReadingRemoved() string {
+	return Catalog.Format(msgs.locale, "readingRemoved", nil)
+}
+
+// ExcerptTitle says "Excerpt of {title}"
+// in the language the app shows.
+//
+// The title of the child note an excerpt makes.
+func ExcerptTitle(title string) string { return In(i18n.Locale()).ExcerptTitle(title) }
+
+// ExcerptTitle says "Excerpt of {title}"
+// in the language of msgs.
+//
+// The title of the child note an excerpt makes.
+func (msgs Messages) ExcerptTitle(title string) string {
+	return Catalog.Format(msgs.locale, "excerptTitle", map[string]any{"title": title})
+}
+
+// ExcerptSaved says "Excerpted into a new note."
+// in the language the app shows.
+//
+// An excerpt became a child note.
+func ExcerptSaved() string { return In(i18n.Locale()).ExcerptSaved() }
+
+// ExcerptSaved says "Excerpted into a new note."
+// in the language of msgs.
+//
+// An excerpt became a child note.
+func (msgs Messages) ExcerptSaved() string {
+	return Catalog.Format(msgs.locale, "excerptSaved", nil)
+}
+
+// ExcerptSavedCard says "Excerpted into a note and a card."
+// in the language the app shows.
+//
+// An excerpt became a child note and a card of its paragraph.
+func ExcerptSavedCard() string { return In(i18n.Locale()).ExcerptSavedCard() }
+
+// ExcerptSavedCard says "Excerpted into a note and a card."
+// in the language of msgs.
+//
+// An excerpt became a child note and a card of its paragraph.
+func (msgs Messages) ExcerptSavedCard() string {
+	return Catalog.Format(msgs.locale, "excerptSavedCard", nil)
+}
+
+// ActionReading says "Reading queue"
+// in the language the app shows.
+//
+// Command palette: show the reading queue.
+func ActionReading() string { return In(i18n.Locale()).ActionReading() }
+
+// ActionReading says "Reading queue"
+// in the language of msgs.
+//
+// Command palette: show the reading queue.
+func (msgs Messages) ActionReading() string {
+	return Catalog.Format(msgs.locale, "actionReading", nil)
+}
+
+// ActionAddReading says "Add to reading queue"
+// in the language the app shows.
+//
+// Command palette: put the note open in the notebook in the reading queue.
+func ActionAddReading() string { return In(i18n.Locale()).ActionAddReading() }
+
+// ActionAddReading says "Add to reading queue"
+// in the language of msgs.
+//
+// Command palette: put the note open in the notebook in the reading queue.
+func (msgs Messages) ActionAddReading() string {
+	return Catalog.Format(msgs.locale, "actionAddReading", nil)
+}
+
+// ReadingWaiting says "{count, plural, =0 {Nothing to read} one {# note to read} other {# notes to read}}"
+// in the language the app shows.
+//
+// How many notes wait in the reading queue, shown beside the review switch.
+func ReadingWaiting(count int) string { return In(i18n.Locale()).ReadingWaiting(count) }
+
+// ReadingWaiting says "{count, plural, =0 {Nothing to read} one {# note to read} other {# notes to read}}"
+// in the language of msgs.
+//
+// How many notes wait in the reading queue, shown beside the review switch.
+func (msgs Messages) ReadingWaiting(count int) string {
+	return Catalog.Format(msgs.locale, "readingWaiting", map[string]any{"count": count})
+}
+
+// TrayTitleReading says "Remit · {cards} · {reading}"
+// in the language the app shows.
+//
+// Tray title when notes also wait to be read: the cards left and the notes
+// left.
+func TrayTitleReading(cards int, reading int) string {
+	return In(i18n.Locale()).TrayTitleReading(cards, reading)
+}
+
+// TrayTitleReading says "Remit · {cards} · {reading}"
+// in the language of msgs.
+//
+// Tray title when notes also wait to be read: the cards left and the notes
+// left.
+func (msgs Messages) TrayTitleReading(cards int, reading int) string {
+	return Catalog.Format(msgs.locale, "trayTitleReading", map[string]any{"cards": cards, "reading": reading})
+}
+
+// TrayTooltipQueues says "{cards, plural, =0 {No cards due} one {# card due} other {# cards due}} · {reading, plural, =0 {nothing to read} one…"
+// in the language the app shows.
+//
+// Tray tooltip naming both queues and how much waits in each.
+func TrayTooltipQueues(cards int, reading int) string {
+	return In(i18n.Locale()).TrayTooltipQueues(cards, reading)
+}
+
+// TrayTooltipQueues says "{cards, plural, =0 {No cards due} one {# card due} other {# cards due}} · {reading, plural, =0 {nothing to read} one…"
+// in the language of msgs.
+//
+// Tray tooltip naming both queues and how much waits in each.
+func (msgs Messages) TrayTooltipQueues(cards int, reading int) string {
+	return Catalog.Format(msgs.locale, "trayTooltipQueues", map[string]any{"cards": cards, "reading": reading})
 }
 
 // PluginPages says "Plugin pages"

@@ -19,7 +19,7 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "8"
+const schemaVersion = "9"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -91,6 +91,18 @@ CREATE TABLE card_state (
 	reviews     INTEGER NOT NULL,
 	last_rating TEXT NOT NULL,
 	last_seq    INTEGER NOT NULL
+);
+CREATE TABLE reading (
+	note        TEXT PRIMARY KEY,
+	stability   REAL NOT NULL,
+	difficulty  REAL NOT NULL,
+	due         INTEGER NOT NULL,
+	last_review INTEGER NOT NULL,
+	reviews     INTEGER NOT NULL,
+	last_rating TEXT NOT NULL,
+	last_seq    INTEGER NOT NULL,
+	position    TEXT NOT NULL,
+	queued      INTEGER NOT NULL
 );
 `
 
@@ -592,6 +604,85 @@ func putState(e execer, card core.ID, state schedule.State, lastSeq int64) error
 func deleteState(e execer, card core.ID) error {
 	_, err := e.Exec(`DELETE FROM card_state WHERE card_id = ?`, string(card))
 	return err
+}
+
+// ---------------------------------------------------------------------------
+// reading: a note's place in the reading queue, as replaying the log derived it.
+
+// readingRow is one note in the reading queue: its schedule, where the reader
+// stopped, and whether it is still queued.
+type readingRow struct {
+	note     core.ID
+	state    schedule.State
+	position core.ID
+	queued   bool
+	lastSeq  int64
+}
+
+func putReading(e execer, row readingRow) error {
+	queued := 0
+	if row.queued {
+		queued = 1
+	}
+	_, err := e.Exec(
+		`INSERT OR REPLACE INTO reading
+		 (note, stability, difficulty, due, last_review, reviews, last_rating, last_seq, position, queued)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		string(row.note), row.state.Memory.Stability, row.state.Memory.Difficulty,
+		row.state.Due.UnixNano(), row.state.LastReview.UnixNano(), row.state.Reviews,
+		row.state.LastRating.String(), row.lastSeq, string(row.position), queued)
+	return err
+}
+
+func (x *index) readingRow(note core.ID) (readingRow, bool) {
+	rows, err := x.db.Query(`SELECT`+readingColumns+` FROM reading WHERE note = ?`, string(note))
+	if err != nil {
+		return readingRow{}, false
+	}
+	defer rows.Close()
+	found, err := scanReadingRows(rows)
+	if err != nil || len(found) == 0 {
+		return readingRow{}, false
+	}
+	return found[0], true
+}
+
+// readingRows reads every note the log has put in the reading queue.
+func (x *index) readingRows() ([]readingRow, error) {
+	rows, err := x.db.Query(`SELECT` + readingColumns + ` FROM reading`)
+	if err != nil {
+		return nil, fmt.Errorf("store: reading query: %w", err)
+	}
+	defer rows.Close()
+	return scanReadingRows(rows)
+}
+
+const readingColumns = ` note, stability, difficulty, due, last_review, reviews, last_rating, last_seq, position, queued`
+
+func scanReadingRows(rows *sql.Rows) ([]readingRow, error) {
+	var out []readingRow
+	for rows.Next() {
+		var (
+			row                     readingRow
+			note, lastRating, place string
+			due, lastReview         int64
+			queued                  int
+		)
+		if err := rows.Scan(&note, &row.state.Memory.Stability, &row.state.Memory.Difficulty,
+			&due, &lastReview, &row.state.Reviews, &lastRating, &row.lastSeq, &place, &queued); err != nil {
+			return nil, err
+		}
+		row.note = core.ID(note)
+		row.position = core.ID(place)
+		row.queued = queued == 1
+		if row.state.Reviews > 0 {
+			row.state.Due = time.Unix(0, due).UTC()
+			row.state.LastReview = time.Unix(0, lastReview).UTC()
+			row.state.LastRating, _ = schedule.ParseRating(lastRating)
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
 }
 
 func scanIDs(rows *sql.Rows) ([]core.ID, error) {

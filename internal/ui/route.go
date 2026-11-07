@@ -36,6 +36,13 @@ func (a *App) ShowQueue() {
 	a.mode = modeReview
 }
 
+// ShowReading enters the reading queue: the other side of the dual mode, with
+// the notes that are due now.
+func (a *App) ShowReading() {
+	a.reload()
+	a.mode = modeReading
+}
+
 // Search shows browse on a query from outside the window and puts the caret in
 // its field. A query that finds nothing leaves its empty state up, which says
 // the search ran.
@@ -46,12 +53,27 @@ func (a *App) Search(query string) {
 	a.browse.Focus()
 }
 
-// OnRemaining registers a function told how many cards remain whenever the
-// queue is rebuilt; the tray shows that number. Setting it again replaces the
-// previous one.
-func (a *App) OnRemaining(fn func(int)) {
-	a.remaining = fn
+// Counts is what a service outside the window reports of the queues: the cards
+// to review now, and the notes to read now. The tray and the daily reminder
+// report both, so reading is not drowned out by reviewing.
+type Counts struct {
+	Cards   int
+	Reading int
+}
+
+// OnCounts registers a function told the queues' lengths whenever they are
+// rebuilt; the tray shows both numbers. Setting it again replaces the previous
+// one.
+func (a *App) OnCounts(fn func(Counts)) {
+	a.counts = fn
 	if fn != nil {
-		fn(a.review.Remaining())
+		fn(a.queueCounts())
 	}
+}
+
+// queueCounts is what the window reports: the cards left in today's queue and
+// the notes due in the reading queue. Both are the store's answer as the last
+// reload derived it, not the session's place in it.
+func (a *App) queueCounts() Counts {
+	return Counts{Cards: a.review.Remaining(), Reading: a.readingCount}
 }

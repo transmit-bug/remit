@@ -46,6 +46,7 @@ func (a *App) openPalette(c *ui.Context) {
 func (a *App) paletteActions(c *ui.Context) []paletteAction {
 	actions := []paletteAction{
 		{label: m(c).ActionReviewCards(), run: func() { a.setMode(modeReview) }},
+		{label: m(c).ActionReading(), run: func() { a.setMode(modeReading) }},
 		{label: m(c).ActionEditNotes(), run: func() { a.setMode(modeNotes) }},
 		{label: m(c).BrowseTitle(), run: func() { a.setMode(modeBrowse) }},
 		{label: m(c).StatsTitle(), run: func() { a.setMode(modeStats) }},
@@ -61,6 +62,11 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 		// blank lines. Making a card from the paragraph at the caret stays a
 		// command until the typing gesture lands (#94).
 		paletteAction{label: m(c).MakeCard(), run: func() { a.makeCardAtCaret(c) }},
+		// The note open in the notebook is the one the reading queue takes: any
+		// note can be read, so the command is where the user already is.
+		paletteAction{label: m(c).ActionAddReading(), run: func() {
+			a.addReading(c, a.openNoteID())
+		}},
 	)
 	// The plugins' commands last, and only the ones their when shows now: the
 	// palette lists what the window can do, not what every plugin can do.

@@ -45,8 +45,8 @@ func (a *App) View(c *ui.Context) {
 				screensettings.View(c, &a.prefs, a.settingsDeps())
 			case a.start:
 				a.startView(c)
-			case a.mode == modeReview:
-				a.reviewView(c, tk)
+			case a.mode == modeReview, a.mode == modeReading:
+				a.queueView(c, tk)
 			case a.mode == modeBrowse:
 				a.browseView(c)
 			case a.mode == modeStats:
@@ -73,4 +73,38 @@ func (a *App) setMode(m mode) {
 	}
 	a.mode = m
 	a.loadCurrent()
+}
+
+// queueView draws the two sides of the dual mode: the review queue and the
+// reading queue under one switch, with how many notes wait to be read in sight
+// from both, so reading is not drowned out by reviewing.
+func (a *App) queueView(c *ui.Context, tk design.Tokens) {
+	msgs := m(c)
+	ui.Column(c).Fill().Children(func() {
+		ui.Row(c).Padding(tk.SpaceXS, tk.SpaceL).AlignItems(ui.Center).
+			Gap(tk.SpaceS).Children(func() {
+			chosen := 0
+			if a.mode == modeReading {
+				chosen = 1
+			}
+			if ui.Segmented(c, &chosen, msgs.ModeReview(), msgs.ModeReading()).
+				Label(msgs.ModeLabel()).Changed() {
+				if chosen == 1 {
+					a.setMode(modeReading)
+				} else {
+					a.setMode(modeReview)
+				}
+			}
+			ui.Spacer(c)
+			ui.Text(c, msgs.ReadingWaiting(a.readingCount)).
+				FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+		})
+		ui.Column(c).Grow(1).Children(func() {
+			if a.mode == modeReading {
+				a.readingView(c)
+				return
+			}
+			a.reviewView(c, tk)
+		})
+	})
 }

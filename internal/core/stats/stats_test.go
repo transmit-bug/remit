@@ -169,3 +169,48 @@ func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
 	}
 	return cards[0], nil
 }
+
+// Reading is the same kind of memory activity: a session counts on the heatmap
+// and its due note lands in the forecast beside the cards.
+func TestReadingJoinsTheHeatmapAndForecast(t *testing.T) {
+	lib, cards := library(t)
+	note, err := lib.SaveNote(core.Note{Title: "long read", Blocks: []core.Block{{Text: "a paragraph"}}})
+	if err != nil {
+		t.Fatalf("note: %v", err)
+	}
+	if err := lib.AddToReading(note.ID, day0); err != nil {
+		t.Fatalf("add to reading: %v", err)
+	}
+	if err := lib.Review(cards[0].ID, schedule.Good, day0); err != nil {
+		t.Fatalf("review: %v", err)
+	}
+	if err := lib.ReadNote(note.ID, schedule.Good, note.Blocks[0].ID, day0.Add(time.Hour)); err != nil {
+		t.Fatalf("ReadNote: %v", err)
+	}
+
+	// Two activities on the first day: one card answered, one note read.
+	counts := ReviewsPerDay(lib, day0, day0.Add(24*time.Hour))
+	if len(counts) != 1 || counts[0].Count != 2 {
+		t.Fatalf("heatmap = %+v, want the card and the reading on one day", counts)
+	}
+
+	// Both come due later, on the same series.
+	cardDue, _ := lib.CardState(cards[0].ID)
+	entry, _ := lib.ReadingFor(note.ID)
+	all := ForecastAll(lib, day0.Add(24*time.Hour), 400)
+	sum := 0
+	for _, day := range all {
+		sum += day.Count
+	}
+	if sum != 2 {
+		t.Fatalf("forecast = %+v, want the card and the note", all)
+	}
+	// The card's own forecast stays the review session's question.
+	if got := Forecast(lib, day0.Add(24*time.Hour), 400); len(got) != 1 || got[0].Day != cardDue.Due.Format("2006-01-02") {
+		t.Errorf("card forecast = %+v, want only the card", got)
+	}
+	reading := ReadingForecast(lib, day0.Add(24*time.Hour), 400)
+	if len(reading) != 1 || reading[0].Day != entry.State.Due.Format("2006-01-02") {
+		t.Errorf("reading forecast = %+v, want only the note", reading)
+	}
+}

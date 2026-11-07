@@ -41,7 +41,8 @@ internal/ui/
   maths/                                                   (leaf)
   screens/
     review/          State / Deps / View (ADR 0004)
-    notes/ browse/ stats/ settings/ start/ about/          (extracted one at a time)
+    reading/         the reading session, the other side of the dual mode
+    notes/ browse/ stats/ settings/ start/ about/        (extracted one at a time)
 ```
 
 `screens/` rather than directly under `internal/ui/` because the window keeps

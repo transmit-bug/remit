@@ -129,8 +129,8 @@ func TestTypedAnswerTakesTheKeys(t *testing.T) {
 	}
 }
 
-// Review takes the window whole: no navigation and no notes list, only the card
-// and its status bar — and Esc gives the notebook back.
+// Review takes the window whole: no navigation and no notes list, only the dual
+// mode's switch, the card and its status bar — and Esc gives the notebook back.
 func TestReviewTakesTheWindow(t *testing.T) {
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
@@ -138,15 +138,16 @@ func TestReviewTakesTheWindow(t *testing.T) {
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
 
-			// The toolbar's words are gone, so are the notes list's.
-			for _, gone := range []string{"Mode", "New note", "Notebook"} {
+			// The toolbar's words are gone, so are the notes list's; the switch
+			// between the two queues is all the navigation that is left.
+			for _, gone := range []string{"New note", "Notebook", "Browse", "Stats"} {
 				if tt.HasText(gone) {
 					t.Errorf("the taking-over screen still shows %q", gone)
 				}
 			}
-			for _, want := range []string{"Show answer", "4 cards left"} {
+			for _, want := range []string{"Review", "Reading", "Show answer", "4 cards left"} {
 				if !tt.HasText(want) {
-					t.Fatalf("the card lost %q; texts %q", want, tt.Texts())
+					t.Fatalf("the screen lost %q; texts %q", want, tt.Texts())
 				}
 			}
 
@@ -178,8 +179,10 @@ func TestReviewStatusBarIsThin(t *testing.T) {
 			if !ok {
 				t.Fatalf("the status bar does not say what is left; texts %q", tt.Texts())
 			}
-			if remaining.Y+remaining.H > 28 {
-				t.Errorf("the status bar's line reaches %v DIP, want 28 or less", remaining.Y+remaining.H)
+			// The switch between the queues is the window's top line; under it
+			// the status bar keeps one thin line of its own.
+			if remaining.H > 28 {
+				t.Errorf("the status bar's line is %v DIP tall, want 28 or less", remaining.H)
 			}
 			// It holds the keys as well, so the whole flow needs no pointer.
 			for _, key := range []string{"Space", "U", "S", "E", "Esc"} {

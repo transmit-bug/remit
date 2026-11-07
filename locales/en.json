@@ -978,13 +978,17 @@
       }
     }
   },
-  "reminderBody": "{count, plural, one {# card is due today.} other {# cards are due today.}}",
+  "reminderBody": "{cards, plural, =0 {No cards} one {# card} other {# cards}} and {reading, plural, =0 {no notes} one {# note} other {# notes}} are due today.",
   "@reminderBody": {
-    "description": "The daily reminder's body.",
+    "description": "The daily reminder's body: cards to review and notes to read.",
     "placeholders": {
-      "count": {
+      "cards": {
         "type": "int",
         "example": "12"
+      },
+      "reading": {
+        "type": "int",
+        "example": "3"
       }
     }
   },
@@ -1387,6 +1391,182 @@
       "name": {
         "type": "String",
         "example": "acme.cards"
+      }
+    }
+  },
+  "modeReading": "Reading",
+  "@modeReading": {
+    "description": "The reading side of the review screen's mode switch."
+  },
+  "readingProgress": "Read {done} of {total}",
+  "@readingProgress": {
+    "description": "How far the reading session has come: notes finished of the notes it started with.",
+    "placeholders": {
+      "done": {
+        "type": "int",
+        "example": "2"
+      },
+      "total": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "readingWhere": "Paragraph {at} of {total}",
+  "@readingWhere": {
+    "description": "Where the reading position is in the note on screen.",
+    "placeholders": {
+      "at": {
+        "type": "int",
+        "example": "3"
+      },
+      "total": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "readingParagraph": "Paragraph {number}",
+  "@readingParagraph": {
+    "description": "One paragraph of the note being read, as assistive technology names it.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "readingCurrent": "Reading position: paragraph {number}",
+  "@readingCurrent": {
+    "description": "One paragraph of the note being read, named as the reading position.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "readingMove": "Move the reading position",
+  "@readingMove": {
+    "description": "The keys that move the reading position paragraph by paragraph."
+  },
+  "readingDigest": "How it digested",
+  "@readingDigest": {
+    "description": "The keys that record how a reading digested."
+  },
+  "readingTooHard": "Too hard",
+  "@readingTooHard": {
+    "description": "Say a note was hard to take in: it comes back soon."
+  },
+  "readingJustRight": "Just right",
+  "@readingJustRight": {
+    "description": "Say a note digested as it should."
+  },
+  "readingTooShallow": "Too shallow",
+  "@readingTooShallow": {
+    "description": "Say a note was easy: it need not come back so soon."
+  },
+  "readingReference": "From the source note",
+  "@readingReference": {
+    "description": "The line naming where an excerpt was taken from."
+  },
+  "openSource": "Open source",
+  "@openSource": {
+    "description": "Open the note an excerpt's reference link names."
+  },
+  "noReading": "Nothing to read right now.",
+  "@noReading": {
+    "description": "The reading screen's empty state."
+  },
+  "excerpt": "Excerpt (E)",
+  "@excerpt": {
+    "description": "Take the paragraph at the reading position out into a note of its own."
+  },
+  "excerptWithCard": "Make a card too",
+  "@excerptWithCard": {
+    "description": "The checkbox that makes an excerpt a card as well as a note."
+  },
+  "skip": "Skip (S)",
+  "@skip": {
+    "description": "Move on to the next note without recording anything."
+  },
+  "removeReading": "Remove from reading (X)",
+  "@removeReading": {
+    "description": "Take the note out of the reading queue."
+  },
+  "readingEdit": "Edit note (M)",
+  "@readingEdit": {
+    "description": "Open the note being read in the notebook."
+  },
+  "readingAdded": "Added to the reading queue.",
+  "@readingAdded": {
+    "description": "The write that put a note in the reading queue landed."
+  },
+  "readingRemoved": "Removed from the reading queue.",
+  "@readingRemoved": {
+    "description": "The note was taken out of the reading queue."
+  },
+  "excerptTitle": "Excerpt of {title}",
+  "@excerptTitle": {
+    "description": "The title of the child note an excerpt makes.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Spacing"
+      }
+    }
+  },
+  "excerptSaved": "Excerpted into a new note.",
+  "@excerptSaved": {
+    "description": "An excerpt became a child note."
+  },
+  "excerptSavedCard": "Excerpted into a note and a card.",
+  "@excerptSavedCard": {
+    "description": "An excerpt became a child note and a card of its paragraph."
+  },
+  "actionReading": "Reading queue",
+  "@actionReading": {
+    "description": "Command palette: show the reading queue."
+  },
+  "actionAddReading": "Add to reading queue",
+  "@actionAddReading": {
+    "description": "Command palette: put the note open in the notebook in the reading queue."
+  },
+  "readingWaiting": "{count, plural, =0 {Nothing to read} one {# note to read} other {# notes to read}}",
+  "@readingWaiting": {
+    "description": "How many notes wait in the reading queue, shown beside the review switch.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "trayTitleReading": "Remit · {cards} · {reading}",
+  "@trayTitleReading": {
+    "description": "Tray title when notes also wait to be read: the cards left and the notes left.",
+    "placeholders": {
+      "cards": {
+        "type": "int",
+        "example": "12"
+      },
+      "reading": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "trayTooltipQueues": "{cards, plural, =0 {No cards due} one {# card due} other {# cards due}} · {reading, plural, =0 {nothing to read} one {# note to read} other {# notes to read}}",
+  "@trayTooltipQueues": {
+    "description": "Tray tooltip naming both queues and how much waits in each.",
+    "placeholders": {
+      "cards": {
+        "type": "int",
+        "example": "12"
+      },
+      "reading": {
+        "type": "int",
+        "example": "3"
       }
     }
   }
