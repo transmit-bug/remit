@@ -97,7 +97,12 @@ MyGo arrives through `go.mod`'s tool directive; never install it separately.
 
 ## Preference
 
-### Prefer MyGo's own mature widgets
+### UI work starts with a MyGo skill
+
+Every change that touches the UI starts by reading the matching skill under
+`.agents/skills/`: widgets and screens, motion, drawing, desktop services, wiring
+a view and its test, a crash or an upgrade. The skill answers which widget and
+how — before a layout is composed by hand.
 
 ### Tests catch regressions
 
