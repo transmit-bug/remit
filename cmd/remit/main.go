@@ -31,6 +31,8 @@ func main() {
 	export := flag.String("export", "", "write the library to a .remitlib file and exit")
 	importPath := flag.String("import", "", "unpack a .remitlib into the library directory and exit")
 	ankiPath := flag.String("import-apkg", "", "import an Anki .apkg into the library and exit")
+	mdImport := flag.String("import-md", "", "import Markdown files (a file or a directory) into the library and exit")
+	mdExport := flag.String("export-md", "", "write every note's Markdown file into this directory and exit")
 	checkExt := flag.String("check-ext", "", "check a plugin directory's manifest and contributions, then exit (deprecated: remit ext check <dir>)")
 	flag.Parse()
 
@@ -66,6 +68,9 @@ func main() {
 		return
 	}
 	if runImportAnki(dir, *ankiPath) {
+		return
+	}
+	if runMarkdown(dir, *mdImport, *mdExport) {
 		return
 	}
 

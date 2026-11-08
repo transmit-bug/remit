@@ -58,6 +58,9 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 	}
 	actions = append(actions,
 		paletteAction{label: m(c).ImportAnki(), run: func() { a.importAnkiPackage(c) }},
+		paletteAction{label: m(c).ImportMarkdown(), run: func() { a.importMarkdownFiles(c) }},
+		paletteAction{label: m(c).ExportNote(), run: func() { a.exportNoteMarkdown(c) }},
+		paletteAction{label: m(c).ExportAllNotes(), run: func() { a.exportAllMarkdown(c) }},
 		// A note's shape is typed, not commanded: paragraphs are separated by
 		// blank lines. Making a card from the paragraph at the caret stays a
 		// command until the typing gesture lands (#94).
@@ -111,12 +114,15 @@ func (a *App) paletteView(c *ui.Context, tk design.Tokens) {
 			}
 			// The rows are a list's: the choice, the keys and what assistive
 			// technology reads come with it, and the filter is the query above.
+			// Twelve rows, not eight: the host's own actions and the ones the
+			// plugins declare stay all visible at the default window, and a
+			// filter narrows what a smaller window cannot show.
 			a.palette.sel = clamp(a.palette.sel, 0, len(items)-1)
 			a.palette.list.Selected = &a.palette.sel
 			a.palette.list.Label = func(row int) string { return items[row].label }
 			rows := ui.List(c, &a.palette.list, len(items), func(i int) {
 				ui.Text(c, items[i].label).FontSize(tk.TypeBody).Padding(tk.SpaceXS, tk.SpaceS)
-			}).Grow(1).MaxHeight(tk.Control * 8).Label(m(c).CommandPalette())
+			}).Grow(1).MaxHeight(tk.Control * 12).Label(m(c).CommandPalette())
 			if rows.Changed() || rows.Submitted() {
 				a.runPalette(items, a.palette.sel)
 			}

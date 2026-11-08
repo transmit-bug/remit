@@ -48,6 +48,15 @@ func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 				if menu.Item(msgs.ImportAnki()).Chosen() {
 					a.importAnkiPackage(c)
 				}
+				if menu.Item(msgs.ImportMarkdown()).Chosen() {
+					a.importMarkdownFiles(c)
+				}
+				if menu.Item(msgs.ExportNote()).Chosen() {
+					a.exportNoteMarkdown(c)
+				}
+				if menu.Item(msgs.ExportAllNotes()).Chosen() {
+					a.exportAllMarkdown(c)
+				}
 				if menu.Item(msgs.MakeCard()).Chosen() {
 					a.makeCardAtCaret(c)
 				}

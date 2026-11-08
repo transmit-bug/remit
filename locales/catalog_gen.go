@@ -2503,6 +2503,150 @@ func (msgs Messages) AnkiPackage() string {
 	return Catalog.Format(msgs.locale, "ankiPackage", nil)
 }
 
+// MarkdownFiles says "Markdown files"
+// in the language the app shows.
+//
+// File dialog filter for Markdown files.
+func MarkdownFiles() string { return In(i18n.Locale()).MarkdownFiles() }
+
+// MarkdownFiles says "Markdown files"
+// in the language of msgs.
+//
+// File dialog filter for Markdown files.
+func (msgs Messages) MarkdownFiles() string {
+	return Catalog.Format(msgs.locale, "markdownFiles", nil)
+}
+
+// ImportMarkdown says "Import Markdown files…"
+// in the language the app shows.
+//
+// Command palette: import whole Markdown files as notes.
+func ImportMarkdown() string { return In(i18n.Locale()).ImportMarkdown() }
+
+// ImportMarkdown says "Import Markdown files…"
+// in the language of msgs.
+//
+// Command palette: import whole Markdown files as notes.
+func (msgs Messages) ImportMarkdown() string {
+	return Catalog.Format(msgs.locale, "importMarkdown", nil)
+}
+
+// ExportNote says "Export note as Markdown…"
+// in the language the app shows.
+//
+// Command palette: write the open note's Markdown file.
+func ExportNote() string { return In(i18n.Locale()).ExportNote() }
+
+// ExportNote says "Export note as Markdown…"
+// in the language of msgs.
+//
+// Command palette: write the open note's Markdown file.
+func (msgs Messages) ExportNote() string {
+	return Catalog.Format(msgs.locale, "exportNote", nil)
+}
+
+// ExportAllNotes says "Export all notes as Markdown…"
+// in the language the app shows.
+//
+// Command palette: write every note's Markdown file into a folder.
+func ExportAllNotes() string { return In(i18n.Locale()).ExportAllNotes() }
+
+// ExportAllNotes says "Export all notes as Markdown…"
+// in the language of msgs.
+//
+// Command palette: write every note's Markdown file into a folder.
+func (msgs Messages) ExportAllNotes() string {
+	return Catalog.Format(msgs.locale, "exportAllNotes", nil)
+}
+
+// ChooseExportFolder says "Export to folder"
+// in the language the app shows.
+//
+// The folder picker's button when exporting notes as files.
+func ChooseExportFolder() string { return In(i18n.Locale()).ChooseExportFolder() }
+
+// ChooseExportFolder says "Export to folder"
+// in the language of msgs.
+//
+// The folder picker's button when exporting notes as files.
+func (msgs Messages) ChooseExportFolder() string {
+	return Catalog.Format(msgs.locale, "chooseExportFolder", nil)
+}
+
+// ExportReport says "Exported {files} files, skipped {skipped}."
+// in the language the app shows.
+//
+// What a Markdown export wrote.
+func ExportReport(files int, skipped int) string {
+	return In(i18n.Locale()).ExportReport(files, skipped)
+}
+
+// ExportReport says "Exported {files} files, skipped {skipped}."
+// in the language of msgs.
+//
+// What a Markdown export wrote.
+func (msgs Messages) ExportReport(files int, skipped int) string {
+	return Catalog.Format(msgs.locale, "exportReport", map[string]any{"files": files, "skipped": skipped})
+}
+
+// ImportMdReport says "Imported {notes} notes, skipped {skipped}."
+// in the language the app shows.
+//
+// What a Markdown import wrote.
+func ImportMdReport(notes int, skipped int) string {
+	return In(i18n.Locale()).ImportMdReport(notes, skipped)
+}
+
+// ImportMdReport says "Imported {notes} notes, skipped {skipped}."
+// in the language of msgs.
+//
+// What a Markdown import wrote.
+func (msgs Messages) ImportMdReport(notes int, skipped int) string {
+	return Catalog.Format(msgs.locale, "importMdReport", map[string]any{"notes": notes, "skipped": skipped})
+}
+
+// ImportMdFailed says "The import failed: {reason}"
+// in the language the app shows.
+//
+// A Markdown import failed.
+func ImportMdFailed(reason string) string { return In(i18n.Locale()).ImportMdFailed(reason) }
+
+// ImportMdFailed says "The import failed: {reason}"
+// in the language of msgs.
+//
+// A Markdown import failed.
+func (msgs Messages) ImportMdFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "importMdFailed", map[string]any{"reason": reason})
+}
+
+// ExportFailed says "The export failed: {reason}"
+// in the language the app shows.
+//
+// A Markdown export failed.
+func ExportFailed(reason string) string { return In(i18n.Locale()).ExportFailed(reason) }
+
+// ExportFailed says "The export failed: {reason}"
+// in the language of msgs.
+//
+// A Markdown export failed.
+func (msgs Messages) ExportFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "exportFailed", map[string]any{"reason": reason})
+}
+
+// ExportNothingOpen says "Open a note first, then export it."
+// in the language the app shows.
+//
+// Exporting a note with no note open.
+func ExportNothingOpen() string { return In(i18n.Locale()).ExportNothingOpen() }
+
+// ExportNothingOpen says "Open a note first, then export it."
+// in the language of msgs.
+//
+// Exporting a note with no note open.
+func (msgs Messages) ExportNothingOpen() string {
+	return Catalog.Format(msgs.locale, "exportNothingOpen", nil)
+}
+
 // ImportReport says "Imported {notes} notes, {cards} cards, {reviews} reviews, skipped {skipped} rows."
 // in the language the app shows.
 //

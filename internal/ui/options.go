@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/transmit-bug/remit/internal/core/importanki"
+	"github.com/transmit-bug/remit/internal/core/importmd"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/settings"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
@@ -44,6 +45,15 @@ type Options struct {
 	// ImportAnki imports the package at path into the open library. It is
 	// importanki.Import unless a test replaces it.
 	ImportAnki func(path string) (importanki.Report, error)
+	// ChooseMarkdown picks the Markdown files the import action reads,
+	// mygo.Dialog's file picker (multi-select) unless a test replaces it.
+	ChooseMarkdown func() ([]string, error)
+	// ImportMarkdown imports the Markdown files at path into the open
+	// library. It is importmd.Import unless a test replaces it.
+	ImportMarkdown func(path string) (importmd.Report, error)
+	// ChooseExportFolder picks the folder an export writes into, mygo.Dialog's
+	// folder picker unless a test replaces it.
+	ChooseExportFolder func(title string) (string, error)
 	// Cards replaces the card plugin the app ships. A test hands in one that
 	// throws, to prove the review goes on without it.
 	Cards *ext.JSRunner

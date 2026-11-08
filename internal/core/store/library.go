@@ -885,6 +885,36 @@ func (l *Library) refreshCards(blockIDs []core.ID) error {
 	return nil
 }
 
+// NoteSource reads the note's file bytes as they lie on disk, markers and
+// all. It is what an exporter takes: the plain text the library stores is the
+// Markdown a user takes away, byte for byte.
+func (l *Library) NoteSource(id core.ID) ([]byte, bool, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, false, ErrClosed
+	}
+	entry, ok := l.index.note(id)
+	if !ok {
+		return nil, false, nil
+	}
+	data, err := os.ReadFile(l.notePath(entry.slug, id))
+	if err != nil {
+		return nil, true, err
+	}
+	l.sources.notes++
+	return data, true, nil
+}
+
+// Slugify is the file-name stem a note's title carries: the same slug
+// slugify gives the note's own file, so an exported name and the library's
+// agree. It never returns an empty or unusable name.
+func (l *Library) Slugify(title string) string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return slugify(title)
+}
+
 // CreateNote makes an empty note with a title.
 func (l *Library) CreateNote(title string) (core.Note, error) {
 	return l.SaveNote(core.Note{ID: core.NewID(noteKind), Title: title})
