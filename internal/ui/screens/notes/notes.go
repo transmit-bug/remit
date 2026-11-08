@@ -321,13 +321,13 @@ func (s *State) rehydrate(deps *Deps) {
 			if !ok {
 				continue
 			}
-			bm, err := ui.DecodeBitmap(data)
+			img, err := decodeAssetImage(item.rel, data)
 			if err != nil {
 				continue
 			}
 			e.Format(item.at, item.at+1, func(a *richtext.Attributes) {
 				if at := a.Attachment; at != nil && at.URL == item.rel {
-					at.Image = bm
+					at.Image = img
 				}
 			})
 		}

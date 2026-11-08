@@ -251,10 +251,7 @@ func (s *State) imageOptions() *markdown.Options {
 		if !ok {
 			return nil, fs.ErrNotExist
 		}
-		if strings.HasSuffix(strings.ToLower(rel), ".svg") {
-			return ui.ParseSVG(data)
-		}
-		return ui.DecodeBitmap(data)
+		return decodeAssetImage(rel, data)
 	}}
 }
 

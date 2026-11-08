@@ -193,8 +193,8 @@ func (s *State) putImage(c *ui.Context, d Deps, data []byte, ext, name string, m
 func (s *State) insertAsset(c *ui.Context, d Deps, rel, name string) {
 	var img ui.ImageSource
 	if data, ok := d.GetAsset(rel); ok {
-		if bm, err := ui.DecodeBitmap(data); err == nil {
-			img = bm
+		if decoded, err := decodeAssetImage(rel, data); err == nil {
+			img = decoded
 		}
 	}
 	if name == "" {
@@ -205,4 +205,13 @@ func (s *State) insertAsset(c *ui.Context, d Deps, rel, name string) {
 		Name:  name,
 		URL:   rel,
 	})
+}
+
+// decodeAssetImage decodes a library asset as the editor draws it: SVG through
+// the vector path, every other format as a bitmap.
+func decodeAssetImage(rel string, data []byte) (ui.ImageSource, error) {
+	if strings.HasSuffix(strings.ToLower(rel), ".svg") {
+		return ui.ParseSVG(data)
+	}
+	return ui.DecodeBitmap(data)
 }
