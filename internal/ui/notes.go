@@ -28,6 +28,10 @@ func (a *App) notesDeps() notes.Deps {
 		Reload:       a.reload,
 		OpenReview:   func() { a.setMode(modeReview) },
 		NewNote:      a.newNote,
+		Templates:    a.noteTemplates,
+		NewFromTemplate: func(c *ui.Context, id core.ID) {
+			a.newNoteFromTemplate(c, id)
+		},
 		SaveNote:     a.saveNote,
 		SaveDocument: a.saveDocument,
 		PutAsset:     a.putAsset,
@@ -46,11 +50,16 @@ func (a *App) showPanel(tab notes.PanelTab) {
 }
 
 // noteRows is the snapshot as the notebook's list reads it: each note with how
-// many cards it feeds and the tags it carries. It is derived after every write,
-// so no frame walks the cards.
+// many cards it feeds and the tags it carries. Note templates are left out —
+// they are starting points, not documents; only the list and the notes search
+// hide them (#154). It is derived after every write, so no frame walks the
+// cards.
 func (a *App) noteRows() []notes.Note {
 	rows := make([]notes.Note, 0, len(a.data.notes))
 	for _, note := range a.data.notes {
+		if core.IsTemplate(note) {
+			continue
+		}
 		rows = append(rows, notes.Note{
 			Note:  note,
 			Cards: a.data.cardsInNote(note),
@@ -133,6 +142,39 @@ func (a *App) newNote(c *ui.Context) {
 	})
 	if err != nil {
 		a.report(c, "new note", err)
+		return
+	}
+	a.reload()
+	a.notes.Selected = string(note.ID)
+	a.notes.FocusTitle()
+	a.setMode(modeNotes)
+}
+
+// noteTemplates lists the library's note templates from the snapshot: the
+// notes the notebook's list leaves out, newest save first. No frame touches the
+// store.
+func (a *App) noteTemplates() []core.Note {
+	var out []core.Note
+	for _, note := range a.data.notes {
+		if core.IsTemplate(note) {
+			out = append(out, note)
+		}
+	}
+	return out
+}
+
+// newNoteFromTemplate starts a note from a template: the store copies the
+// text, field blocks and card-asking paragraphs under fresh IDs, the copy is
+// selected like any new note, and the cards its paragraphs ask for are
+// reconciled on the first save. The template itself is untouched, so one
+// template starts many notes.
+func (a *App) newNoteFromTemplate(c *ui.Context, templateID core.ID) {
+	if a.lib == nil {
+		return
+	}
+	note, err := a.lib.NoteFromTemplate(templateID, locales.UntitledNote())
+	if err != nil {
+		a.report(c, "new note from template", err)
 		return
 	}
 	a.reload()

@@ -5,6 +5,7 @@
   "modeBrowse": "浏览",
   "modeStats": "统计",
   "newNote": "新建笔记",
+  "newFromTemplate": "从模板新建…",
   "notebook": "笔记本",
   "untitledNote": "无标题笔记",
   "toolbar": "{name} 工具栏",

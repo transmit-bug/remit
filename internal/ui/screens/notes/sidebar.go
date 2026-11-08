@@ -80,6 +80,25 @@ func (s *State) notesList(c *ui.Context, tk design.Tokens, d Deps) {
 	ui.Column(c).Grow(1).MinWidth(0).Gap(tk.SpaceS).Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, tk.SpaceM).Children(func() {
 			ui.SearchField(c, &s.Query).Placeholder(msgs.NotesSearch()).Label(msgs.NotesSearch()).Grow(1)
+			// A template only shows its door when there is one to start from:
+			// with no templates in the library the row is the plain new-note
+			// button, exactly as before (#154). Templates is a test-only nil
+			// when the harness supplies no library at all.
+			templates := []core.Note(nil)
+			if d.Templates != nil {
+				templates = d.Templates()
+			}
+			if len(templates) > 0 {
+				ui.MenuButton(c, msgs.NewFromTemplate(), func(menu *ui.Menu) {
+					menu.MaxWidth(360)
+					for _, template := range templates {
+						template := template
+						if menu.Item(template.Title).Chosen() {
+							d.NewFromTemplate(c, template.ID)
+						}
+					}
+				}).Label(msgs.NewFromTemplate()).Tooltip(msgs.NewFromTemplate())
+			}
 			ui.Button(c, "").Label(msgs.NewNote()).Tooltip(msgs.NewNote()).
 				Children(func() { tk.Icon(c, "plus", design.IconSmall) }).
 				OnClick(func() { d.NewNote(c) })
