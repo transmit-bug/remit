@@ -9,7 +9,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 )
 
-const diagramSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+const diagramSVG = `<svg viewBox="0 0 10 10">
   <rect width="10" height="10" fill="red"/>
 </svg>`
 
