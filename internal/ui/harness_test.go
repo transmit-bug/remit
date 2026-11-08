@@ -121,6 +121,17 @@ func newTestApp(t *testing.T) (*App, testLibrary) {
 	return NewApp(Options{LibraryDir: dir}), seed
 }
 
+// openApp is newTestApp with its window drawn: the app at the size it opens at,
+// settled. The ones that need another size, locale or darkness keep building
+// their own tester over newTestApp.
+func openApp(t *testing.T) (*App, testLibrary, *ui.Tester) {
+	t.Helper()
+	a, seed := newTestApp(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	return a, seed, tt
+}
+
 // assertControl checks that s has a box of its own inside the window, which is
 // what makes it visible and clickable rather than only present as text.
 func assertControl(t *testing.T, tt *ui.Tester, w, h int, s string) {
