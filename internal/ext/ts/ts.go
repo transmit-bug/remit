@@ -102,8 +102,19 @@ export interface Contributes {
   menus?: Partial<Record<MenuSlot, MenuItem[]>>;
   pages?: Page[];
   settings?: Setting[];
+  /** The data formats this plugin can bring in; each needs implements: { importFile: 1 }. */
+  importers?: Importer[];
   /** The plugin's own strings, by locale: a %%key%% title resolves here. */
   locales?: Record<string, Record<string, string>>;
+}
+
+export interface Importer {
+  /** Stable across versions; the remit. prefix is the host's. */
+  format: string;
+  /** File extensions without the dot, lower-case. */
+  extensions: string[];
+  /** A %%key%% naming the import entry's name. */
+  label: Message;
 }
 
 export interface Command {
@@ -383,6 +394,36 @@ export interface Hooks {
   summary(session: SummaryInput): Summary;
   /** What a contributed command and a page's data answer. */
   command(input: CommandInput): CommandResult | PageTree;
+  /** One file in, suggestions out; the host checks and writes (#153). */
+  importFile(input: ImportInput): ImportSuggestions;
+}
+
+/** One file handed to an importer: its name, its bytes in base64, and which of the plugin's declared formats matched. */
+export interface ImportInput {
+  name: string;
+  data: string;
+  format: string;
+}
+
+/** A suggested note: the host mints identities and checks every block. */
+export interface SuggestedNote {
+  title: string;
+  blocks: string[];
+}
+
+/** A suggested card, on a block of a suggested note, by index into the same answer. */
+export interface SuggestedCard {
+  note: number;
+  block: number;
+  typeId: string;
+  ordinal: number;
+  fields?: Record<string, string>;
+}
+
+export interface ImportSuggestions {
+  notes: SuggestedNote[];
+  cards?: SuggestedCard[];
+  warnings?: string[];
 }
 `)
 

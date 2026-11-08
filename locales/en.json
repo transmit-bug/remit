@@ -1072,6 +1072,24 @@
       }
     }
   },
+  "pluginImportReport": "Imported {notes} notes, {cards} cards; {dropped} suggestions dropped.",
+  "@pluginImportReport": {
+    "description": "What a plugin's import wrote and what the host dropped.",
+    "placeholders": {
+      "notes": {
+        "type": "int",
+        "example": "3"
+      },
+      "cards": {
+        "type": "int",
+        "example": "5"
+      },
+      "dropped": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
   "importMdFailed": "The import failed: {reason}",
   "@importMdFailed": {
     "description": "A Markdown import failed.",

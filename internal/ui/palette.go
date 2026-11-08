@@ -71,6 +71,15 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 			a.addReading(c, a.openNoteID())
 		}},
 	)
+	// The importers plugins declare, beside the app's own (#153): one entry
+	// per enabled plugin's format, named as its label spells it.
+	for _, ref := range a.importers() {
+		entry := ref
+		actions = append(actions, paletteAction{
+			label: a.pluginText(c, entry.Plugin, string(entry.Entry.Label)),
+			run:   func() { a.importWithPluginEntry(c, entry) },
+		})
+	}
 	// The plugins' commands last, and only the ones their when shows now: the
 	// palette lists what the window can do, not what every plugin can do.
 	return append(actions, a.pluginPaletteActions(c)...)

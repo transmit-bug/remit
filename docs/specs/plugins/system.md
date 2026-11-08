@@ -168,6 +168,19 @@ export function summary(input: {
 
 // 通知，不是否决
 export function on_event(event: { kind: string; id: string }): void
+
+// 导入（#153）：一份文件 → 建议。文件字节以 base64 到达，名称随行；
+// 插件不落库，宿主校验每条建议后写。任何一条失败丢那一条，文件其余照收。
+export function importFile(input: {
+  name: string;              // 文件名，含扩展名
+  data: string;              // 文件字节，base64
+  format: string;            // 命中该插件的哪条 contributes.importers
+}): {
+  notes: Array<{ title: string; blocks: string[] }>;
+  cards: Array<{ note: number; block: number; typeId: string; ordinal: number;
+                 fields: Record<string, string> }>;   // note/block 按本文件建议数组下标
+  warnings?: string[];
+}
 ```
 
 **产出即建议**：宿主校验结构（类型存在；`unknown` 里自报的多余字段记日志；ordinal 照存；
@@ -287,3 +300,4 @@ fixture host 只答读、拒绝写。`remit ext check <dir>` 只看 manifest 与
 | [#144](https://github.com/transmit-bug/remit/issues/144) | 设置 UI：启用批准、角色单选、类型管理 | 已建：插件批准与 capabilities、两个角色单选、类型列表 / 字段 / 模板与实时预览；need→widget 见 [`ui-inventory.md`](../ui-inventory.md) |
 | [#145](https://github.com/transmit-bug/remit/issues/145) | `ext test` / `ext check`、`remit.d.ts`、文档清扫 | 已建：`remit ext test/check/types`、`internal/ext/exttest` 的 fixture harness、`remit.d.ts` 与漂移测试、示例插件 fixtures、GLOSSARY 词条与 ADR 清扫 |
 | [#146](https://github.com/transmit-bug/remit/issues/146) | 插件 UI 贡献（命令 / 菜单 / 页面 / 设置） | 已建：`contributes`、`internal/ext/contrib`、命令面板与菜单槽位、插件页面屏、设置页插件表单；校验走 `remit ext check`（#145） |
+| [#153](https://github.com/transmit-bug/remit/issues/153) | importer 钩子（插件声明可导入格式） | 已定契约：`contributes.importers`（format / extensions / label）+ `importFile` 钩子；纯函数产出建议，宿主校验落库，能力复用六个名字 |

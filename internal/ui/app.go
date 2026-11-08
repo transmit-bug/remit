@@ -170,6 +170,10 @@ type App struct {
 	pickMd     func() ([]string, error)
 	importMd   func(path string) (importmd.Report, error)
 	pickFolder func(title string) (string, error)
+	// pickPlugin is the file picker a plugin importer's entry opens through,
+	// shaped like the app's own: the label names the entry, the extensions
+	// filter the files. nil falls back to the window's dialog.
+	pickPlugin func(label string, extensions []string) ([]string, error)
 
 	// counts is told the queues' lengths whenever they are rebuilt, so the tray
 	// can show them without asking the window.
