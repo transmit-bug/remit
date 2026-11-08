@@ -103,7 +103,8 @@ MyGo arrives through `go.mod`'s tool directive; never install it separately.
 
 A test does not prove the code runs; it turns red when you break it. So a test is
 worth what the bug it can catch is worth: if you cannot name a bug that would
-make it fail, do not write it — and delete the ones you cannot name.
+make it fail, do not write it — and delete the ones you cannot name. The
+judgement, the four shapes that fail it and the cleanup rule: `docs/specs/tests.md`.
 
 - Test behaviour, not implementation — a refactor leaves it green, a broken
   behaviour turns it red.
