@@ -28,6 +28,7 @@ var Hooks = map[string]int{
 	"identity":    1,
 	"summary":     1,
 	"on_event":    1,
+	"importFile":  1,
 }
 
 // Manifest is extension.json: what the extension is, what it runs on, and what

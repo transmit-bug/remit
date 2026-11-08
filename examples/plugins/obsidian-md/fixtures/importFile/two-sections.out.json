@@ -1,0 +1,23 @@
+{
+  "notes": [
+    {
+      "title": "Machine Learning",
+      "blocks": [
+        "Supervised learning",
+        "Unlabeled"
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "note": 0,
+      "block": 0,
+      "typeId": "remit.basic",
+      "ordinal": 0,
+      "fields": { "Front": "Supervised learning", "Back": "Learning from labeled examples." }
+    }
+  ],
+  "warnings": [
+    "section without an A: line kept as prose: Unlabeled"
+  ]
+}

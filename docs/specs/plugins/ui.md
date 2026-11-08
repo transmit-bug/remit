@@ -29,7 +29,6 @@
 图标包或主题；也因此键盘、焦点、读屏角色与 720×520 退化由宿主一次做对。
 
 ## 2. Manifest
-
 ```json
 {
   "id": "acme.leeches",
@@ -68,8 +67,15 @@
     "settings": [
       { "key": "threshold", "type": "number", "title": "%setting.threshold%", "default": 8 }
     ],
+    "importers": [
+      {
+        "format": "acme.obsidian",
+        "extensions": ["md", "canvas"],
+        "label": "%importer.label%"
+      }
+    ],
     "locales": {
-      "zh-Hans": { "command.show": "水蛭报告", "page.leeches": "水蛭", "setting.threshold": "水蛭阈值" }
+      "zh-Hans": { "command.show": "水蛭报告", "page.leeches": "水蛭", "setting.threshold": "水蛭阈值", "importer.label": "Obsidian 导出" }
     }
   }
 }
@@ -83,6 +89,11 @@
   `command:<id>` 回调。插件不能注册新的宿主动作。
 - `nav` 目前只有 `"plugins"`（进入插件页面分组）与 `"hidden"`；具体排序与分组归 #129，
   本契约只保证存在一个插件页面分组。
+- `importers` 声明该插件能导入的数据格式（#153）：`format` 是稳定标识（跨版本不变，
+  与命令 id 同样的命名纪律，`remit.` 前缀保留给宿主）；`extensions` 是文件扩展名
+  （无点、小写），宿主的文件对话框与拖拽按它认文件；`label` 走 `%key%`，是导入入口
+  里这一格的名字。声明 `importers` 的插件必须同时 `implements` `importFile` 钩子；
+  反之 implements 了钩子却不声明的，宿主照常加载但导入入口不出现。
 
 ## 3. 上下文与 `when`
 

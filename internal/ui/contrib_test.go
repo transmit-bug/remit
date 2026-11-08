@@ -154,7 +154,13 @@ func (f *fakeRunner) Call(method string, params, out any) error {
 	if err := f.failed[name]; err != nil {
 		return err
 	}
+	// A contributed command's params name the callback; a hook the app calls
+	// directly (importFile) has no such field, so its reply is keyed by the
+	// method name.
 	raw, ok := f.reply[name]
+	if !ok {
+		raw, ok = f.reply[method]
+	}
 	if !ok || out == nil {
 		return nil
 	}
@@ -181,6 +187,11 @@ func (f *fakeRunner) calls() int {
 	defer f.mu.Unlock()
 	return len(f.names)
 }
+
+// Identity and Revision are what a producer stamp reads off a runner, the
+// same surface ext.JSRunner carries.
+func (f *fakeRunner) Identity() string { return "acme.obsidian" }
+func (f *fakeRunner) Revision() string { return "1" }
 
 // enablePlugin approves a plugin in the library at dir, before the app opens it.
 func enablePlugin(t *testing.T, dir, name string) {

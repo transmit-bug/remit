@@ -147,6 +147,9 @@ type Contributions struct {
 	Menus    map[string][]MenuItem
 	Pages    []Page
 	Settings []Setting
+	// Importers are the data formats the plugin can bring in, sorted by
+	// format; the import entries list them.
+	Importers []Importer
 }
 
 // Text resolves a message the plugin wrote, in locale.
@@ -221,6 +224,21 @@ type Page struct {
 	Data string
 }
 
+// Importer is one data format a plugin can bring into the library: what the
+// import entries show, and which files the host hands it. Declaring one is
+// not an authorization — the host still validates every suggestion the
+// plugin's importFile hook answers before anything is written (#153).
+type Importer struct {
+	// Format is the stable identity of the format ("acme.obsidian"); the
+	// remit. prefix is the host's.
+	Format string
+	// Extensions are the file extensions that identify the format, without
+	// the dot, lower-case.
+	Extensions []string
+	// Label is the name the import entry shows.
+	Label Message
+}
+
 // Setting is one value a plugin asks the host to edit for it. The host keeps it
 // in the plugin's own store and never calls the plugin to write it.
 type Setting struct {
@@ -284,6 +302,8 @@ func Parse(e ext.Extension, opts Options) (Contributions, []error) {
 			out.Pages = p.pages(top[kind])
 		case "settings":
 			out.Settings = p.settings(top[kind])
+		case "importers":
+			out.Importers = p.importers(top[kind])
 		default:
 			p.problem("contributes.%s: no such contribution kind; the host hides it", kind)
 		}
@@ -296,6 +316,7 @@ func Parse(e ext.Extension, opts Options) (Contributions, []error) {
 	sort.Slice(out.Commands, func(i, j int) bool { return out.Commands[i].ID < out.Commands[j].ID })
 	sort.Slice(out.Pages, func(i, j int) bool { return out.Pages[i].ID < out.Pages[j].ID })
 	sort.Slice(out.Settings, func(i, j int) bool { return out.Settings[i].Key < out.Settings[j].Key })
+	sort.Slice(out.Importers, func(i, j int) bool { return out.Importers[i].Format < out.Importers[j].Format })
 	return out, p.problems
 }
 
@@ -624,6 +645,71 @@ func (p *parser) setting(w settingWire) (Setting, error) {
 	}
 	setting.Default = value
 	return setting, nil
+}
+
+// importerWire is the manifest's shape of one importer: a format the host can
+// name, extensions to recognize, and a label the import entry shows.
+type importerWire struct {
+	Format     string   `json:"format"`
+	Extensions []string `json:"extensions"`
+	Label      string   `json:"label"`
+}
+
+func (p *parser) importers(raw json.RawMessage) []Importer {
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil {
+		p.problem("contributes.importers: %v", err)
+		return nil
+	}
+	importers := make([]Importer, 0, len(items))
+	formats := map[string]bool{}
+	for i, item := range items {
+		where := fmt.Sprintf("contributes.importers[%d]", i)
+		var w importerWire
+		if err := decodeStrict(item, &w); err != nil {
+			p.problem("%s: %v", where, err)
+			continue
+		}
+		importer, err := p.importer(w)
+		if err != nil {
+			p.problem("%s: %v", where, err)
+			continue
+		}
+		if formats[importer.Format] {
+			p.problem("%s: format %q is declared twice", where, importer.Format)
+			continue
+		}
+		formats[importer.Format] = true
+		importers = append(importers, importer)
+	}
+	return importers
+}
+
+// importer checks one importer, or says why it does not hold up: a format
+// name the host can carry, at least one extension, a label the catalog
+// translates.
+func (p *parser) importer(w importerWire) (Importer, error) {
+	if !validID(w.Format) {
+		return Importer{}, fmt.Errorf("format %q is not a name", w.Format)
+	}
+	if strings.HasPrefix(w.Format, "remit.") {
+		return Importer{}, fmt.Errorf("format %q: the remit. prefix is the host's", w.Format)
+	}
+	if len(w.Extensions) == 0 {
+		return Importer{}, errors.New("extensions: an importer names at least one file extension")
+	}
+	exts := make([]string, 0, len(w.Extensions))
+	for _, ext := range w.Extensions {
+		ext = strings.ToLower(strings.TrimPrefix(strings.TrimSpace(ext), "."))
+		if ext == "" || strings.ContainsAny(ext, "./\\") {
+			return Importer{}, fmt.Errorf("extension %q is not a file extension", ext)
+		}
+		exts = append(exts, ext)
+	}
+	if err := p.useMessage(w.Label); err != nil {
+		return Importer{}, fmt.Errorf("label: %w", err)
+	}
+	return Importer{Format: w.Format, Extensions: exts, Label: Message(w.Label)}, nil
 }
 
 // settingDefault reads a setting's default as its type says: absent means the

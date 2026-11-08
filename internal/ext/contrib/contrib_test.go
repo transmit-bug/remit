@@ -376,3 +376,47 @@ func TestMenuItemsKeepTheirGroupOrderAndWhen(t *testing.T) {
 		t.Error("the note item's when hides with a note open")
 	}
 }
+
+// An importer declares one data format: a stable name, the extensions the
+// file dialog filters by, and a label the import entry shows (#153).
+func TestParseImporters(t *testing.T) {
+	got, problems := contrib.Parse(extension("acme.obsidian", "obsidian", `{
+		"importers": [
+			{"format": "acme.obsidian", "extensions": [".MD", "canvas"], "label": "%importer.label%"},
+			{"format": "acme.notion", "extensions": ["csv"], "label": "%importer.label%"}
+		],
+		"locales": {"en": {"importer.label": "Obsidian export"}}
+	}`), contrib.Options{Icon: icons})
+	if len(problems) != 0 {
+		t.Fatalf("problems: %v", problems)
+	}
+	if len(got.Importers) != 2 {
+		t.Fatalf("importers = %+v", got.Importers)
+	}
+	if got.Importers[0].Format != "acme.notion" || got.Importers[1].Format != "acme.obsidian" {
+		t.Errorf("formats are not in name order: %+v", got.Importers)
+	}
+	obsidian := got.Importers[1]
+	if len(obsidian.Extensions) != 2 || obsidian.Extensions[0] != "md" || obsidian.Extensions[1] != "canvas" {
+		t.Errorf("extensions = %v, want the dot and case read away", obsidian.Extensions)
+	}
+	if text := obsidian.Label.Text(got.Catalog, "en"); text != "Obsidian export" {
+		t.Errorf("label = %q", text)
+	}
+}
+
+func TestParseRejectsBrokenImporters(t *testing.T) {
+	for _, tt := range []struct{ name, body string }{
+		{"host prefix", `{"importers": [{"format": "remit.markdown", "extensions": ["md"], "label": "%l%"}], "locales": {"en": {"l": "L"}}}`},
+		{"no extensions", `{"importers": [{"format": "acme.x", "extensions": [], "label": "%l%"}], "locales": {"en": {"l": "L"}}}`},
+		{"not an extension", `{"importers": [{"format": "acme.x", "extensions": ["a/b"], "label": "%l%"}], "locales": {"en": {"l": "L"}}}`},
+		{"untranslated label", `{"importers": [{"format": "acme.x", "extensions": ["md"], "label": "%l%"}]}`},
+		{"unknown field", `{"importers": [{"format": "acme.x", "extensions": ["md"], "label": "%l%", "mime": "text/md"}], "locales": {"en": {"l": "L"}}}`},
+		{"declared twice", `{"importers": [{"format": "acme.x", "extensions": ["md"], "label": "%l%"}, {"format": "acme.x", "extensions": ["csv"], "label": "%l%"}], "locales": {"en": {"l": "L"}}}`},
+	} {
+		_, problems := contrib.Parse(extension("acme.x", "x", tt.body), contrib.Options{Icon: icons})
+		if len(problems) == 0 {
+			t.Errorf("%s: no problem reported", tt.name)
+		}
+	}
+}

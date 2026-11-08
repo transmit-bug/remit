@@ -2649,6 +2649,22 @@ func (msgs Messages) ImportMdReport(notes int, skipped int) string {
 	return Catalog.Format(msgs.locale, "importMdReport", map[string]any{"notes": notes, "skipped": skipped})
 }
 
+// PluginImportReport says "Imported {notes} notes, {cards} cards; {dropped} suggestions dropped."
+// in the language the app shows.
+//
+// What a plugin's import wrote and what the host dropped.
+func PluginImportReport(notes int, cards int, dropped int) string {
+	return In(i18n.Locale()).PluginImportReport(notes, cards, dropped)
+}
+
+// PluginImportReport says "Imported {notes} notes, {cards} cards; {dropped} suggestions dropped."
+// in the language of msgs.
+//
+// What a plugin's import wrote and what the host dropped.
+func (msgs Messages) PluginImportReport(notes int, cards int, dropped int) string {
+	return Catalog.Format(msgs.locale, "pluginImportReport", map[string]any{"notes": notes, "cards": cards, "dropped": dropped})
+}
+
 // ImportMdFailed says "The import failed: {reason}"
 // in the language the app shows.
 //

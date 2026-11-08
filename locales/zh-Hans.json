@@ -184,6 +184,7 @@
   "pasteImageFailed": "无法读取剪贴板中的图片。",
   "dropImageFailed": "无法读取 {file}。",
   "importMdReport": "已导入 {notes} 条笔记，跳过 {skipped} 个。",
+  "pluginImportReport": "已导入 {notes} 条笔记、{cards} 张卡片；{dropped} 条建议被舍弃。",
   "importMdFailed": "导入失败：{reason}",
   "exportFailed": "导出失败：{reason}",
   "exportNothingOpen": "请先打开一篇笔记，再导出。",
