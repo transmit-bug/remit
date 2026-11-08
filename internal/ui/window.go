@@ -28,6 +28,7 @@ func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 		toolbarRule(c, tk)
 		ui.Spacer(c)
 		a.modeTabs(c, tk, msgs)
+		a.pluginPagesMenu(c, msgs)
 
 		ui.Spacer(c)
 		if a.mode == modeNotes {
@@ -35,7 +36,6 @@ func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 			toolbarRule(c, tk)
 			iconButton(c, tk, msgs.PanelTitle(), "panel-right", false, func() { a.notes.TogglePanel(c) })
 		}
-		a.pluginPagesMenu(c, msgs)
 		iconButton(c, tk, msgs.More(), "ellipsis", false, nil).
 			Menu(func(menu *ui.Menu) {
 				if menu.Item(msgs.ImportAnki()).Chosen() {
@@ -84,10 +84,12 @@ func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 func (a *App) brand(c *ui.Context, tk design.Tokens) {
 	ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Padding(0, tk.SpaceS).Children(func() {
 		ui.Box(c).Size(tk.SpaceXL+2, tk.SpaceXL+2).Radius(tk.RadiusControl).
-			Background(tk.Accent).Center().Children(func() {
+			Background(tk.Accent).Center().Label(Name).Children(func() {
 			tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.AccentText)
 		})
-		ui.Text(c, Name).FontSize(tk.TypeBody).FontWeight(650).LetterSpacing(-0.15)
+		if w, _ := c.Size(); w >= 800 {
+			ui.Text(c, Name).FontSize(tk.TypeBody).FontWeight(650).LetterSpacing(-0.15)
+		}
 	})
 }
 
