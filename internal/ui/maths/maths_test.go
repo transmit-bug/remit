@@ -17,7 +17,7 @@ func TestRenderFoldsImagesIntoTheirAltText(t *testing.T) {
 		t.Errorf("Render = %q, want %q", got, "before  after")
 	}
 	// Links keep their text and destination.
-	if got := maths.Render("[notes](https://example.com)"); got != "[notes](https://example.com)" {
+	if got := maths.Render("[notes](notes.md)"); got != "[notes](notes.md)" {
 		t.Errorf("Render = %q, want the link kept", got)
 	}
 }

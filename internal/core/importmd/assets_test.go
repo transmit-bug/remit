@@ -146,7 +146,7 @@ func TestExportNoteCarriesItsOwnAssets(t *testing.T) {
 func TestImportIgnoresForeignImageReferences(t *testing.T) {
 	lib := newLib(t)
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "web.md"), []byte("# Web\n\n![](https://example.com/x.png) and ![](assets/../../etc.png)\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "web.md"), []byte("# Web\n\n![](//example.com/x.png) and ![](assets/../../etc.png)\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	report, err := Import(dir, lib)

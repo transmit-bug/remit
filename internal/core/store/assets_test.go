@@ -67,7 +67,7 @@ func TestAssetRefusesPathsOutsideTheAssetsDirectory(t *testing.T) {
 		"assets/.hidden.png",
 		"assets/",
 		"/etc/passwd",
-		"https://example.com/x.png",
+		"//example.com/x.png",
 		"",
 	} {
 		data, ok, err := lib.Asset(rel)
