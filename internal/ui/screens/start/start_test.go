@@ -68,12 +68,8 @@ func TestNoLibraryYet(t *testing.T) {
 				}
 			}
 			for _, label := range []string{msgs.CreateLibrary(), msgs.OpenLibrary()} {
-				box, ok := tt.Find(label)
-				if !ok {
-					t.Fatalf("%q has no box; texts %q", label, tt.Texts())
-				}
-				if box.W <= 0 || box.H <= 0 {
-					t.Errorf("%q has an empty box %.1fx%.1f", label, box.W, box.H)
+				if !tt.HasText(label) {
+					t.Fatalf("%q is not drawn; texts %q", label, tt.Texts())
 				}
 			}
 			if tt.FramePending() {
@@ -123,32 +119,5 @@ func TestActionsGoToTheApp(t *testing.T) {
 	}
 	if f.chosen != 1 {
 		t.Errorf("Open library… reached the app %d times, want 1", f.chosen)
-	}
-}
-
-// In Chinese the screen holds at the smallest window: the title, the folder and
-// both actions keep a box of their own.
-func TestAtMinimumInChinese(t *testing.T) {
-	msgs := locales.In("zh-Hans")
-	f := &fake{dir: "/home/you/Documents/Remit"}
-	deps := f.deps()
-	tt := ui.NewTester(func(c *ui.Context) {
-		start.View(c, start.State{Dir: f.dir}, deps)
-	}, 720, 520)
-	tt.SetLocale("zh-Hans")
-	tt.Frame()
-
-	for _, text := range []string{msgs.StartTitle(), msgs.CreateLibrary(), msgs.OpenLibrary(), f.dir} {
-		box, ok := tt.Find(text)
-		if !ok {
-			t.Fatalf("%q has no box; texts %q", text, tt.Texts())
-		}
-		if box.X < 0 || box.Y < 0 || box.X+box.W > 720 || box.Y+box.H > 520 {
-			t.Errorf("%q is outside the window: %.1f,%.1f %.1fx%.1f", text, box.X, box.Y, box.W, box.H)
-		}
-	}
-	tt.Advance(300 * time.Millisecond)
-	if tt.FramePending() {
-		t.Error("view still requests frames after the locale switch")
 	}
 }

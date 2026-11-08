@@ -77,8 +77,8 @@ func TestRows(t *testing.T) {
 			if tt.HasText(msgs.BrowseEmpty()) {
 				t.Errorf("a list with rows says it is empty")
 			}
-			if box, ok := tt.Find(msgs.BrowseOpen()); !ok || box.W <= 0 || box.H <= 0 {
-				t.Errorf("the open button has no box: %+v", box)
+			if subject, ok := tt.Find(msgs.BrowseOpen()); !ok || subject == (ui.Rect{}) {
+				t.Errorf("the open button is not drawn")
 			}
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")

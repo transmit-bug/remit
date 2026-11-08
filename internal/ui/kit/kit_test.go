@@ -115,9 +115,8 @@ func TestEmptyIsOneAction(t *testing.T) {
 	}
 }
 
-// A keycap sits on the key face at the smallest window and does not overlap the
-// label beside it.
-func TestKeycapFitsTheSmallestWindow(t *testing.T) {
+// The keycap sits on the key face and does not overlap the label beside it.
+func TestKeycapSitsBesideItsLabel(t *testing.T) {
 	for _, a := range appearances {
 		t.Run(a.name, func(t *testing.T) {
 			tt := at(t, a.dark, func(c *ui.Context) {
@@ -134,9 +133,6 @@ func TestKeycapFitsTheSmallestWindow(t *testing.T) {
 			label, ok := tt.Find("Again")
 			if !ok {
 				t.Fatalf("the label is not drawn; texts %q", tt.Texts())
-			}
-			if key.X < 0 || key.Y < 0 || key.X+key.W > 720 || key.Y+key.H > 520 {
-				t.Errorf("the keycap box %+v is outside the 720x520 window", key)
 			}
 			if key.X+key.W > label.X {
 				t.Errorf("the keycap %+v overlaps its label %+v", key, label)

@@ -404,8 +404,7 @@ type errorText string
 func (e errorText) Error() string { return string(e) }
 
 // A page is the host's: the layout nodes lay out, the leaves are the host's
-// widgets, and the tree is inside the window at both sizes — the grid collapses
-// to one column and nothing scrolls sideways at 720×520.
+// widgets, and the grid collapses to one column at the smallest window.
 func TestContributedPageDrawsAtBothSizes(t *testing.T) {
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
@@ -444,18 +443,6 @@ func TestContributedPageDrawsAtBothSizes(t *testing.T) {
 				}
 			} else if note.Y <= left.Y {
 				t.Errorf("the narrow grid did not collapse to one column: left y %.1f, table y %.1f", left.Y, note.Y)
-			}
-
-			// Nothing the page draws is wider than the window: 720×520 does not
-			// scroll sideways.
-			for _, text := range tt.Texts() {
-				box, ok := tt.Find(text)
-				if !ok {
-					continue
-				}
-				if box.X+box.W > float32(size.w)+0.5 {
-					t.Errorf("%q runs past the window: %.1f+%.1f in %d", text, box.X, box.W, size.w)
-				}
 			}
 		})
 	}

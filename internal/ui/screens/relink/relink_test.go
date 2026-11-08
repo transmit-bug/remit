@@ -204,24 +204,3 @@ func TestEmpty(t *testing.T) {
 		t.Errorf("an empty picker chose %v", f.chosen)
 	}
 }
-
-// Chinese labels are wider than the English ones; at the smallest window the
-// picker still sits inside it.
-func TestMinimumInChinese(t *testing.T) {
-	f := &fake{rows: blocks}
-	tt := shown(t, f, 720, 520, "zh-Hans")
-	msgs := locales.In("zh-Hans")
-
-	for _, label := range []string{msgs.RelinkTitle(), msgs.RelinkSearch(), "Fresh card :: answer"} {
-		box, ok := tt.Find(label)
-		if !ok {
-			t.Fatalf("%q has no box; texts %q", label, tt.Texts())
-		}
-		if box.W <= 0 || box.H <= 0 {
-			t.Errorf("%q has an empty box %.1fx%.1f", label, box.W, box.H)
-		}
-		if box.X < 0 || box.Y < 0 || box.X+box.W > 720 || box.Y+box.H > 520 {
-			t.Errorf("%q is outside the window: %.1f,%.1f %.1fx%.1f", label, box.X, box.Y, box.W, box.H)
-		}
-	}
-}

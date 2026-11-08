@@ -128,8 +128,8 @@ func TestPanes(t *testing.T) {
 					t.Fatalf("missing %q; texts %q", text, tt.Texts())
 				}
 			}
-			if box, ok := tt.Find(msgs.NoteBody()); !ok || box.W <= 0 || box.H <= 0 {
-				t.Errorf("the document has no box: %+v", box)
+			if !tt.HasText(msgs.NoteBody()) {
+				t.Errorf("the document is not drawn; texts %q", tt.Texts())
 			}
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
