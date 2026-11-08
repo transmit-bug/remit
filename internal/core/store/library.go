@@ -68,6 +68,9 @@ var (
 	ErrNoReview = errors.New("store: no review to undo")
 	// ErrEmptyExcerpt is returned by Excerpt when there is nothing to quote.
 	ErrEmptyExcerpt = errors.New("store: the excerpt is empty")
+	// ErrNotATemplate is returned by NoteFromTemplate when the named note is
+	// not a note template.
+	ErrNotATemplate = errors.New("store: the note is not a template")
 	// ErrExists is returned by Create when the directory already holds a library.
 	ErrExists = errors.New("store: directory already holds a library")
 )
@@ -943,6 +946,34 @@ func (l *Library) Excerpt(noteID, blockID core.ID, text, title string) (core.Not
 		Title:  title,
 		Blocks: []core.Block{core.Excerpt(source, block, text)},
 	})
+}
+
+// NoteFromTemplate writes a new note copied from a note template: the
+// template's text, field blocks and card-asking paragraphs, under a new title,
+// with every block ID minted again — the template's blocks stay the template's,
+// identity is minted once, and the copy stands on its own. The cards the copy's
+// paragraphs ask for are the derive pass's to make, as for any note. The
+// template itself is left untouched, so one template can start many notes.
+func (l *Library) NoteFromTemplate(templateID core.ID, title string) (core.Note, error) {
+	source, ok := l.Note(templateID)
+	if !ok {
+		return core.Note{}, fmt.Errorf("store: no note %q", templateID)
+	}
+	if !core.IsTemplate(source) {
+		return core.Note{}, fmt.Errorf("%w: note %q", ErrNotATemplate, templateID)
+	}
+	blocks := make([]core.Block, 0, len(source.Blocks))
+	for _, block := range source.Blocks {
+		// The #template tag is the template's role, not content: the copy is a
+		// document, so it does not carry it. A block that held nothing but the
+		// tag was the marker itself and has nothing to copy.
+		text := core.WithoutTemplateTag(block.Text)
+		if strings.TrimSpace(text) == "" {
+			continue
+		}
+		blocks = append(blocks, core.Block{ID: core.NewID(core.BlockKind), Text: text})
+	}
+	return l.SaveNote(core.Note{ID: core.NewID(noteKind), Title: title, Blocks: blocks})
 }
 
 // Block returns a referencable block, so a card can render itself from the

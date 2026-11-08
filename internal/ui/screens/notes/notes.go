@@ -171,6 +171,12 @@ type Deps struct {
 	OpenReview func()
 	// NewNote writes an empty note and opens it.
 	NewNote func(*ui.Context)
+	// Templates are the library's note templates, newest first; the list
+	// hides them, and a new note can start from one. Empty when the library
+	// holds none, which is when the entry is not shown.
+	Templates func() []core.Note
+	// NewFromTemplate starts a note from the template named.
+	NewFromTemplate func(*ui.Context, core.ID)
 	// SaveNote stores the note and returns it as the store holds it.
 	SaveNote func(*ui.Context, core.Note) (core.Note, bool)
 	// SaveDocument stores the note and reconciles the cards its paragraphs ask

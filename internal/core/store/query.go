@@ -82,7 +82,14 @@ func (l *Library) SearchNotes(text string) ([]core.Note, error) {
 		if err != nil {
 			return nil, err
 		}
-		notes = append(notes, core.Note{ID: id, Title: row.title, Blocks: blocks, Updated: row.updated})
+		note := core.Note{ID: id, Title: row.title, Blocks: blocks, Updated: row.updated}
+		// A note template answers searches for the text it holds — it is a
+		// note — but the notebook's search leaves it out, as the list does: a
+		// template is a starting point, not a document to find (#154).
+		if core.IsTemplate(note) {
+			continue
+		}
+		notes = append(notes, note)
 	}
 	return notes, nil
 }

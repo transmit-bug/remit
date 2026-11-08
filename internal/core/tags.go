@@ -2,6 +2,69 @@ package core
 
 import "strings"
 
+// TemplateTag marks a note as a note template: a note whose blocks carry it is
+// the plain-text starting point a new note can be copied from (#154). It is an
+// ordinary tag everywhere else — the template keeps its place in the editor,
+// the index, search-anything-but-the-notebook, and the reading queue; only the
+// notebook's list and the notes search leave it out.
+const TemplateTag = "template"
+
+// IsTemplate reports whether the note is a note template: any of its blocks
+// carries the #template tag.
+func IsTemplate(note Note) bool {
+	for _, block := range note.Blocks {
+		for _, tag := range Tags(block.Text) {
+			if tag == TemplateTag {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// WithoutTemplateTag returns the text with the #template tag taken out: the
+// tag is the note's role, not its content, so a note started from a template
+// does not itself become one (#154). Everything else — spacing between the
+// tag's neighbours included — is left as it was, and a text without the tag
+// comes back unchanged.
+func WithoutTemplateTag(text string) string {
+	if !tagList(Tags(text)).hasTemplate() {
+		return text
+	}
+	var out strings.Builder
+	for _, line := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		out.WriteString(stripTag(line, TemplateTag))
+		out.WriteString("\n")
+	}
+	return strings.TrimSuffix(out.String(), "\n")
+}
+
+// hasTemplate reports whether any of the tags is the template tag.
+type tagList []string
+
+func (tags tagList) hasTemplate() bool {
+	for _, tag := range tags {
+		if tag == TemplateTag {
+			return true
+		}
+	}
+	return false
+}
+
+// stripTag removes one standalone #tag token from a line, joining its
+// neighbours with a single space.
+func stripTag(line, tag string) string {
+	words := strings.Fields(line)
+	kept := words[:0]
+	for _, word := range words {
+		if strings.HasPrefix(word, "#") && word[1:] == tag {
+			continue
+		}
+		kept = append(kept, word)
+	}
+	return strings.Join(kept, " ")
+}
+
 // Tags returns the tags a block's text carries: a # followed by at least one
 // letter, digit, hyphen, underscore or non-ASCII character, at the start of the
 // text or after a space. A # inside a fenced code block or an inline code span is

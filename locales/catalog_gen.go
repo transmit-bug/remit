@@ -105,6 +105,22 @@ func (msgs Messages) NewNote() string {
 	return Catalog.Format(msgs.locale, "newNote", nil)
 }
 
+// NewFromTemplate says "New from template…"
+// in the language the app shows.
+//
+// The notebook's menu of note templates: picking one starts a new note
+// copied from it. See the Note Template glossary entry.
+func NewFromTemplate() string { return In(i18n.Locale()).NewFromTemplate() }
+
+// NewFromTemplate says "New from template…"
+// in the language of msgs.
+//
+// The notebook's menu of note templates: picking one starts a new note
+// copied from it. See the Note Template glossary entry.
+func (msgs Messages) NewFromTemplate() string {
+	return Catalog.Format(msgs.locale, "newFromTemplate", nil)
+}
+
 // Notebook says "Notebook"
 // in the language the app shows.
 //

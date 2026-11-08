@@ -514,3 +514,26 @@ func TestReadingQueueLeavesWhatIsNotDue(t *testing.T) {
 		t.Errorf("position = %q, want the block it stopped at", got[0].Position)
 	}
 }
+
+// A note template is a note: it joins the reading queue like any other note,
+// which is what makes incremental reading able to walk it (#154).
+func TestTemplateJoinsTheReadingQueue(t *testing.T) {
+	lib := library(t)
+	template, err := lib.SaveNote(core.Note{Title: "Reading excerpt", Blocks: []core.Block{
+		{Text: "#template"},
+		{Text: "Source :: answer"},
+	}})
+	if err != nil {
+		t.Fatalf("save template: %v", err)
+	}
+	if err := lib.AddToReading(template.ID, now); err != nil {
+		t.Fatalf("add to reading: %v", err)
+	}
+	due, err := Reading(lib, now.Add(time.Minute), Options{})
+	if err != nil {
+		t.Fatalf("reading queue: %v", err)
+	}
+	if len(due) != 1 || due[0].Note != template.ID {
+		t.Fatalf("reading queue = %v, want the template", due)
+	}
+}
