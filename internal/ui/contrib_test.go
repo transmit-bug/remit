@@ -214,6 +214,12 @@ func reportApp(t *testing.T, runner *fakeRunner) (*App, testLibrary) {
 	return contribApp(t, "report", reportContributes, runner)
 }
 
+// openReport is reportApp with its window drawn at the default size and settled.
+func openReport(t *testing.T, runner *fakeRunner) (*App, *ui.Tester) {
+	t.Helper()
+	return openContrib(t, "report", reportContributes, runner)
+}
+
 // contribApp opens the window on a library with one plugin enabled that declares
 // contributes, and hands the app a runner the test controls. The background is
 // the test's own: a job and its answer run inline, where there is one thread.
@@ -254,6 +260,15 @@ func contribApp(t *testing.T, name, contributes string, runner *fakeRunner) (*Ap
 	return a, seed
 }
 
+// openContrib is contribApp with its window drawn at the default size and settled.
+func openContrib(t *testing.T, name, contributes string, runner *fakeRunner) (*App, *ui.Tester) {
+	t.Helper()
+	a, _ := contribApp(t, name, contributes, runner)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	return a, tt
+}
+
 // openReportPage shows the notes, then opens the page from the navigation: the
 // way a reader reaches a contributed page, in the language the window speaks.
 func openReportPage(t *testing.T, tt *ui.Tester) {
@@ -278,9 +293,7 @@ func openPage(t *testing.T, tt *ui.Tester, nav, page string) {
 // withdrawing the plugin takes it out of both: the declarations are the only
 // door, and disabling removes them from every receiver.
 func TestContributedCommandLivesInThePaletteAndItsSlot(t *testing.T) {
-	a, _ := reportApp(t, &fakeRunner{})
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, tt := openReport(t, &fakeRunner{})
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
@@ -335,9 +348,7 @@ func TestContributedCommandLivesInThePaletteAndItsSlot(t *testing.T) {
 // the host applies what it answers: a toast here, a page there.
 func TestContributedCommandAppliesItsAnswer(t *testing.T) {
 	runner := &fakeRunner{reply: map[string]string{"show": `{"result":"toast","message":"%toast.done%"}`}}
-	a, _ := reportApp(t, runner)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, tt := openReport(t, runner)
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
@@ -362,9 +373,7 @@ func TestContributedCommandAppliesItsAnswer(t *testing.T) {
 // failure hides that command, and only that command.
 func TestAFailingCommandToastsThenHidesItself(t *testing.T) {
 	runner := &fakeRunner{failed: map[string]error{"show": errThrown}}
-	a, _ := reportApp(t, runner)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, tt := openReport(t, runner)
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
@@ -471,9 +480,7 @@ func TestContributedPageDrawsAtBothSizes(t *testing.T) {
 // leaves it for the next focusable thing in document order, with the focus
 // where the reader can see it.
 func TestContributedPageKeepsAKeyboardPath(t *testing.T) {
-	a, _ := reportApp(t, &fakeRunner{})
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, tt := openReport(t, &fakeRunner{})
 	openReportPage(t, tt)
 
 	if !tt.HasText("first tab") {
@@ -522,9 +529,7 @@ func TestContributedPageFollowsTheLocale(t *testing.T) {
 // and the third failure takes its navigation entry, and only its own.
 func TestContributedPageFailsWithARetry(t *testing.T) {
 	runner := &fakeRunner{failed: map[string]error{"data": errThrown}}
-	a, _ := reportApp(t, runner)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, tt := openReport(t, runner)
 	openReportPage(t, tt)
 
 	if !tt.HasText("This page could not be loaded: the plugin threw") {
@@ -565,9 +570,7 @@ func TestContributedPageFailsWithARetry(t *testing.T) {
 // The settings a plugin declares are the host form's fields, and the value the
 // reader changes is written into the plugin's own store, not through the plugin.
 func TestContributedSettingsWriteThroughTheHostForm(t *testing.T) {
-	a, _ := reportApp(t, &fakeRunner{})
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, tt := openReport(t, &fakeRunner{})
 
 	tt.Key(ui.Cmd, ui.KeyComma)
 	tt.Advance(320 * time.Millisecond)
@@ -618,9 +621,7 @@ func TestContributedSettingsWriteThroughTheHostForm(t *testing.T) {
 // the palette, no page in navigation, and nothing the window ever asks it.
 func TestUndeclaredContributionsGrantNothing(t *testing.T) {
 	runner := &fakeRunner{}
-	a, _ := contribApp(t, "report", `{}`, runner)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, tt := openContrib(t, "report", `{}`, runner)
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
@@ -650,9 +651,7 @@ func TestOneBrokenContributionHidesOnlyItself(t *testing.T) {
 	  "locales": {"en": {"good": "Good command", "bad": "Bad command"}}
 	}`
 	runner := &fakeRunner{}
-	a, _ := contribApp(t, "report", contributes, runner)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, tt := openContrib(t, "report", contributes, runner)
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)

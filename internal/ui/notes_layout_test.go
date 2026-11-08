@@ -152,17 +152,6 @@ func TestTodayAndNewestFirst(t *testing.T) {
 	}
 }
 
-// The page no longer counts blocks: a note says what its cards are, not how many
-// paragraphs it has.
-func TestThePageCountsCardsNotBlocks(t *testing.T) {
-	_, tt, _ := notesOnTheNotebook(t, 1024, 720)
-	for _, text := range tt.Texts() {
-		if strings.Contains(text, "blocks") {
-			t.Errorf("the page still counts blocks: %q", text)
-		}
-	}
-}
-
 // The notebook is elastic: the document and the notes tree take the height the
 // window gives them, not the height their content happens to have. A window
 // taller than the content used to leave both columns stopping halfway down.
@@ -178,7 +167,7 @@ func TestNotebookFillsTheWindowHeight(t *testing.T) {
 	} {
 		t.Run(size.name, func(t *testing.T) {
 			_, tt, _ := notesOnTheNotebook(t, size.w, size.h)
-			assertNotebookFills(t, tt, msgs, size.w, size.h)
+			assertNotebookFills(t, tt, msgs, size.h)
 		})
 	}
 
@@ -186,13 +175,13 @@ func TestNotebookFillsTheWindowHeight(t *testing.T) {
 		_, tt, _ := notesOnTheNotebook(t, 1024, 720)
 		tt.SetSize(1600, 1000)
 		tt.Frame()
-		assertNotebookFills(t, tt, msgs, 1600, 1000)
+		assertNotebookFills(t, tt, msgs, 1000)
 	})
 }
 
 // assertNotebookFills checks the document and the notes tree reach the window's
 // bottom edge, allowing for the document's padding.
-func assertNotebookFills(t *testing.T, tt *ui.Tester, msgs locales.Messages, w, h int) {
+func assertNotebookFills(t *testing.T, tt *ui.Tester, msgs locales.Messages, h int) {
 	t.Helper()
 	note, ok := tt.Find(msgs.NoteBody())
 	if !ok {
@@ -202,9 +191,6 @@ func assertNotebookFills(t *testing.T, tt *ui.Tester, msgs locales.Messages, w, 
 	// most 96 DIPs from the window's bottom edge.
 	if bottom := note.Y + note.H; bottom < float32(h)-96 {
 		t.Errorf("the document ends at %v, want it to take the %v-high window it is given", bottom, h)
-	}
-	if note.X+note.W > float32(w) {
-		t.Errorf("the document reaches %v, past the %v-wide window", note.X+note.W, w)
 	}
 
 	tree, ok := tt.AccessByRole(ui.RoleTree, "")

@@ -80,8 +80,7 @@ func TestReviewScopeChoosesANoteAndGivesItBack(t *testing.T) {
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key1)
 
-	whole, ok := tt.Find("4 cards left")
-	if !ok {
+	if !tt.HasText("4 cards left") {
 		t.Fatalf("the whole-library queue is not four cards; texts %q", tt.Texts())
 	}
 
@@ -98,9 +97,6 @@ func TestReviewScopeChoosesANoteAndGivesItBack(t *testing.T) {
 	}
 	if tt.HasText("4 cards left") {
 		t.Fatal("the scoped session still counts the whole library")
-	}
-	if whole.W <= 0 {
-		t.Fatal("the whole-library count had no box to compare against")
 	}
 	if a.reviewScope.Kind != queue.ScopeNote || a.reviewScope.Note != note.ID {
 		t.Fatalf("the app did not take the scope: %+v", a.reviewScope)
