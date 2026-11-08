@@ -122,6 +122,217 @@ func TestOrderIsStable(t *testing.T) {
 	}
 }
 
+// scopedFixture is two notes whose paragraphs carry cards: alpha's blocks are
+// tagged, beta's are not, so a note scope and a tag scope each have a distinct
+// answer, and the untagged note is the complement of the tag scope.
+func scopedFixture(t *testing.T, lib *store.Library) (alpha, beta core.Note, all []core.Card) {
+	t.Helper()
+	alpha, err := lib.SaveNote(core.Note{Title: "alpha", Blocks: []core.Block{
+		{Text: "one :: 1 #ch1"},
+		{Text: "two :: 2 #ch1"},
+	}})
+	if err != nil {
+		t.Fatalf("save alpha: %v", err)
+	}
+	beta, err = lib.SaveNote(core.Note{Title: "beta", Blocks: []core.Block{
+		{Text: "three :: 3"},
+		{Text: "four :: 4"},
+	}})
+	if err != nil {
+		t.Fatalf("save beta: %v", err)
+	}
+	for _, block := range append(append([]core.Block{}, alpha.Blocks...), beta.Blocks...) {
+		card, err := firstCard(lib, block.ID)
+		if err != nil {
+			t.Fatalf("card: %v", err)
+		}
+		all = append(all, card)
+	}
+	return alpha, beta, all
+}
+
+func ids(cards []core.Card) []core.ID {
+	out := make([]core.ID, len(cards))
+	for i, card := range cards {
+		out[i] = card.ID
+	}
+	return out
+}
+
+func sameIDs(got, want []core.ID) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	set := map[core.ID]int{}
+	for _, id := range got {
+		set[id]++
+	}
+	for _, id := range want {
+		set[id]--
+		if set[id] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// The zero scope is the whole library: today's answer is exactly what it was
+// before scopes existed.
+func TestZeroScopeIsTheWholeLibrary(t *testing.T) {
+	lib := library(t)
+	_, _, all := scopedFixture(t, lib)
+
+	got, err := Today(lib, now, Options{})
+	if err != nil {
+		t.Fatalf("Today: %v", err)
+	}
+	if !sameIDs(ids(got), ids(all)) {
+		t.Fatalf("zero scope = %v, want the whole library %v", ids(got), ids(all))
+	}
+}
+
+// A note scope keeps only the cards whose blocks live in that note; a tag scope
+// keeps only the cards whose source block carries the tag, whatever note holds
+// them.
+func TestNoteAndTagScopesFilterTheQueue(t *testing.T) {
+	lib := library(t)
+	alpha, beta, all := scopedFixture(t, lib)
+
+	byNote, err := Today(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
+	if err != nil {
+		t.Fatalf("Today by note: %v", err)
+	}
+	wantNote := ids(all)[:2]
+	if !sameIDs(ids(byNote), wantNote) {
+		t.Fatalf("note scope = %v, want alpha's cards %v", ids(byNote), wantNote)
+	}
+
+	byTag, err := Today(lib, now, Options{Scope: Scope{Kind: ScopeTag, Tag: "ch1"}})
+	if err != nil {
+		t.Fatalf("Today by tag: %v", err)
+	}
+	if !sameIDs(ids(byTag), wantNote) {
+		t.Fatalf("tag scope = %v, want the tagged cards %v", ids(byTag), wantNote)
+	}
+
+	// beta's cards are the complement: reachable under no scope here, so the
+	// filters genuinely exclude rather than return everything.
+	byBeta, err := Today(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: beta.ID}})
+	if err != nil {
+		t.Fatalf("Today by beta: %v", err)
+	}
+	if sameIDs(ids(byBeta), ids(byNote)) {
+		t.Fatal("beta's scope returned alpha's cards")
+	}
+	if len(byBeta) == len(all) {
+		t.Fatal("a scoped queue returned the whole library")
+	}
+}
+
+// CountsOf answers under the same scope Today filters by, so a screen can show
+// how much a scope holds without building its queue.
+func TestCountsOfFollowsTheScope(t *testing.T) {
+	lib := library(t)
+	alpha, _, all := scopedFixture(t, lib)
+
+	counts, err := CountsOf(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
+	if err != nil {
+		t.Fatalf("CountsOf: %v", err)
+	}
+	if counts.Remaining != 2 || counts.New != 2 {
+		t.Fatalf("scoped counts = %+v, want two new cards", counts)
+	}
+	allCounts, err := CountsOf(lib, now, Options{})
+	if err != nil {
+		t.Fatalf("CountsOf all: %v", err)
+	}
+	if allCounts.Remaining != len(all) {
+		t.Fatalf("whole-library counts = %d, want %d", allCounts.Remaining, len(all))
+	}
+}
+
+// The allowance and the limit act on the scoped set: a scope of two cards with
+// a one-card limit hands back one card from the scope, and the scoped queue
+// never grows to reach the library's answer.
+func TestAllowanceAndLimitActAfterTheScope(t *testing.T) {
+	lib := library(t)
+	alpha, beta, all := scopedFixture(t, lib)
+
+	got, err := Today(lib, now, Options{Limit: 1, Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
+	if err != nil {
+		t.Fatalf("Today scoped and limited: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("scoped queue with limit = %v, want one of alpha's cards", ids(got))
+	}
+	if got[0].ID != ids(all)[0] && got[0].ID != ids(all)[1] {
+		t.Fatalf("limit pulled a card outside the scope: %v", ids(got))
+	}
+
+	// The scope comes first: with a limit of one, a scoped queue is one card,
+	// while the whole library under the same limit is one card too — but of a
+	// different, larger set. The scoped answer can never hold beta's cards.
+	for _, card := range got {
+		if card.ID == beta.Blocks[0].ID || card.ID == beta.Blocks[1].ID {
+			t.Errorf("beta's block leaked into alpha's scope: %v", card.ID)
+		}
+	}
+
+	// A new-card allowance cuts the scoped set, not the library: alpha holds
+	// two new cards, an allowance of one admits one of them, and beta's review
+	// yesterday spent none of today's allowance.
+	if err := lib.Review(all[2].ID, schedule.Again, now.Add(-24*time.Hour)); err != nil {
+		t.Fatalf("review: %v", err)
+	}
+	scoped, err := Today(lib, now, Options{NewPerDay: 1, Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
+	if err != nil {
+		t.Fatalf("Today scoped: %v", err)
+	}
+	if len(scoped) != 1 {
+		t.Fatalf("scoped queue = %v, want one new card within the day's allowance", ids(scoped))
+	}
+	if scoped[0].ID != ids(all)[0] && scoped[0].ID != ids(all)[1] {
+		t.Fatalf("the allowance pulled a card outside the scope: %v", ids(scoped))
+	}
+}
+
+// A scope nothing answers — a note with no cards, a tag no block carries —
+// leaves the queue empty rather than falling back to the library.
+func TestEmptyScopeStaysEmpty(t *testing.T) {
+	lib := library(t)
+	alpha, _, _ := scopedFixture(t, lib)
+
+	empty, err := lib.SaveNote(core.Note{Title: "prose", Blocks: []core.Block{{Text: "no cards here"}}})
+	if err != nil {
+		t.Fatalf("save prose: %v", err)
+	}
+
+	got, err := Today(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: empty.ID}})
+	if err != nil {
+		t.Fatalf("Today: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("cardless note scope = %v, want an empty queue", ids(got))
+	}
+
+	got, err = Today(lib, now, Options{Scope: Scope{Kind: ScopeTag, Tag: "nothing-has-this"}})
+	if err != nil {
+		t.Fatalf("Today by missing tag: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("missing tag scope = %v, want an empty queue", ids(got))
+	}
+
+	counts, err := CountsOf(lib, now, Options{Scope: Scope{Kind: ScopeTag, Tag: "nothing-has-this"}})
+	if err != nil {
+		t.Fatalf("CountsOf: %v", err)
+	}
+	if counts.Remaining != 0 {
+		t.Fatalf("missing tag count = %d, want 0", counts.Remaining)
+	}
+	_ = alpha
+}
+
 func TestCountsMatchTheQueue(t *testing.T) {
 	lib := library(t)
 	all := cards(t, lib, 3)
@@ -129,7 +340,7 @@ func TestCountsMatchTheQueue(t *testing.T) {
 		t.Fatalf("review: %v", err)
 	}
 
-	counts, err := CountsOf(lib, now)
+	counts, err := CountsOf(lib, now, Options{})
 	if err != nil {
 		t.Fatalf("CountsOf: %v", err)
 	}

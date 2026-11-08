@@ -100,6 +100,9 @@ func (a *App) queueView(c *ui.Context, tk design.Tokens) {
 					a.setMode(modeReview)
 				}
 			}
+			if a.mode == modeReview && a.lib != nil {
+				a.reviewScopeMenu(c, msgs)
+			}
 			ui.Spacer(c)
 			ui.Text(c, msgs.ReadingWaiting(a.readingCount)).
 				FontSize(tk.TypeSmall).TextColor(tk.TextMuted)

@@ -245,6 +245,80 @@ func (msgs Messages) Remaining(count int) string {
 	return Catalog.Format(msgs.locale, "remaining", map[string]any{"count": count})
 }
 
+// ReviewScope says "All notes"
+// in the language the app shows.
+//
+// The review-scope menu button when no narrowing is on: the whole library.
+// See the Review Scope glossary entry.
+func ReviewScope() string { return In(i18n.Locale()).ReviewScope() }
+
+// ReviewScope says "All notes"
+// in the language of msgs.
+//
+// The review-scope menu button when no narrowing is on: the whole library.
+// See the Review Scope glossary entry.
+func (msgs Messages) ReviewScope() string {
+	return Catalog.Format(msgs.locale, "reviewScope", nil)
+}
+
+// ReviewScopeMenu says "Scope"
+// in the language the app shows.
+//
+// The menu that picks what a review session draws from: the whole library,
+// one note, or one tag.
+func ReviewScopeMenu() string { return In(i18n.Locale()).ReviewScopeMenu() }
+
+// ReviewScopeMenu says "Scope"
+// in the language of msgs.
+//
+// The menu that picks what a review session draws from: the whole library,
+// one note, or one tag.
+func (msgs Messages) ReviewScopeMenu() string {
+	return Catalog.Format(msgs.locale, "reviewScopeMenu", nil)
+}
+
+// ReviewScopeNotes says "Note…"
+// in the language the app shows.
+//
+// Submenu in the review-scope menu: pick one note to review.
+func ReviewScopeNotes() string { return In(i18n.Locale()).ReviewScopeNotes() }
+
+// ReviewScopeNotes says "Note…"
+// in the language of msgs.
+//
+// Submenu in the review-scope menu: pick one note to review.
+func (msgs Messages) ReviewScopeNotes() string {
+	return Catalog.Format(msgs.locale, "reviewScopeNotes", nil)
+}
+
+// ReviewScopeTags says "Tag…"
+// in the language the app shows.
+//
+// Submenu in the review-scope menu: pick one tag to review.
+func ReviewScopeTags() string { return In(i18n.Locale()).ReviewScopeTags() }
+
+// ReviewScopeTags says "Tag…"
+// in the language of msgs.
+//
+// Submenu in the review-scope menu: pick one tag to review.
+func (msgs Messages) ReviewScopeTags() string {
+	return Catalog.Format(msgs.locale, "reviewScopeTags", nil)
+}
+
+// ReviewScopeEmpty says "No cards in this scope."
+// in the language the app shows.
+//
+// Shown when the chosen note or tag has no cards to review.
+func ReviewScopeEmpty() string { return In(i18n.Locale()).ReviewScopeEmpty() }
+
+// ReviewScopeEmpty says "No cards in this scope."
+// in the language of msgs.
+//
+// Shown when the chosen note or tag has no cards to review.
+func (msgs Messages) ReviewScopeEmpty() string {
+	return Catalog.Format(msgs.locale, "reviewScopeEmpty", nil)
+}
+
 // Lost says "Lost"
 // in the language the app shows.
 //

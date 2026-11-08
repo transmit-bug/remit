@@ -13,10 +13,34 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 )
 
-// Options limits a queue. Zero means no limit.
+// Scope narrows a review session to part of the library. The zero scope is the
+// whole library; a named note keeps the cards whose block lives in it, a named
+// tag keeps the cards whose source block carries the tag. A scope never widens
+// what a queue holds: a card the library already left out — suspended, reading,
+// lost — stays out.
+type Scope struct {
+	Kind ScopeKind
+	Note core.ID // KindScopeNote only
+	Tag  string  // KindScopeTag only
+}
+
+// ScopeKind says which part of the library a Scope names.
+type ScopeKind int
+
+const (
+	// ScopeAll is the whole library: every card a queue can hold.
+	ScopeAll ScopeKind = iota
+	// ScopeNote is one note's cards.
+	ScopeNote
+	// ScopeTag is every card whose source block carries the tag.
+	ScopeTag
+)
+
+// Options limits a queue. Zero means no limit and no narrowing.
 type Options struct {
 	Limit     int
 	NewPerDay int
+	Scope     Scope
 }
 
 // Counts is what the tray and the first screen show.
@@ -28,13 +52,15 @@ type Counts struct {
 }
 
 // Today returns the cards to review now, ordered learning, then due, then new,
-// each by due time and then by ID so the order is stable.
+// each by due time and then by ID so the order is stable. A scope in opts
+// narrows the answer to that part of the library before the new-card allowance
+// and the limit act.
 func Today(lib *store.Library, now time.Time, opts Options) ([]core.Card, error) {
 	scheduled, err := lib.Scheduled()
 	if err != nil {
 		return nil, err
 	}
-	learning, due, fresh := partition(scheduled, now)
+	learning, due, fresh := partition(narrow(lib, scheduled, opts.Scope), now)
 	fresh = introduce(lib, fresh, now, opts.NewPerDay)
 
 	out := append(append(learning, due...), fresh...)
@@ -44,19 +70,62 @@ func Today(lib *store.Library, now time.Time, opts Options) ([]core.Card, error)
 	return out, nil
 }
 
-// CountsOf reports what Today would return, without building it.
-func CountsOf(lib *store.Library, now time.Time) (Counts, error) {
+// CountsOf reports what Today would return, without building it, under the
+// same scope. The new-card allowance is not applied: a count is how much is
+// waiting, not how much one sitting would take.
+func CountsOf(lib *store.Library, now time.Time, opts Options) (Counts, error) {
 	scheduled, err := lib.Scheduled()
 	if err != nil {
 		return Counts{}, err
 	}
-	learning, due, fresh := partition(scheduled, now)
+	learning, due, fresh := partition(narrow(lib, scheduled, opts.Scope), now)
 	return Counts{
 		Due:       len(due),
 		Learning:  len(learning),
 		New:       len(fresh),
 		Remaining: len(learning) + len(due) + len(fresh),
 	}, nil
+}
+
+// narrow keeps the scheduled cards a scope names, in the order they came. The
+// note a card belongs to and the tags its block carries are read from the
+// library's notes listing — one index read, no card file opened and no store
+// query of its own. The whole-library scope changes nothing, which is what
+// keeps today's answer what it has always been.
+func narrow(lib *store.Library, scheduled []store.Scheduled, scope Scope) []store.Scheduled {
+	switch scope.Kind {
+	case ScopeNote, ScopeTag:
+	default:
+		return scheduled
+	}
+	in := map[core.ID]bool{}
+	for _, note := range lib.Notes() {
+		if scope.Kind == ScopeNote && note.ID != scope.Note {
+			continue
+		}
+		for _, block := range note.Blocks {
+			if scope.Kind == ScopeTag {
+				for _, tag := range core.Tags(block.Text) {
+					if tag == scope.Tag {
+						in[block.ID] = true
+						break
+					}
+				}
+				continue
+			}
+			in[block.ID] = true
+		}
+		if scope.Kind == ScopeNote && len(in) > 0 {
+			break
+		}
+	}
+	out := make([]store.Scheduled, 0, len(scheduled))
+	for _, entry := range scheduled {
+		if in[entry.Card.Ref.Block] {
+			out = append(out, entry)
+		}
+	}
+	return out
 }
 
 // partition splits the queue into learning, due and new, each already ordered.

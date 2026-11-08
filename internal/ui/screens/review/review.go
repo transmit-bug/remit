@@ -136,6 +136,9 @@ type Deps struct {
 	Relink   func(core.ID)         // point a lost card at another block
 	EditNote func(core.ID)         // open the note behind the card
 	Home     func()                // leave for the notebook
+	// EmptyLabel is what the empty state says when the app has no summary to
+	// give; nil leaves the plain "no cards" line.
+	EmptyLabel func() string
 }
 
 // State is the queue and where the user is in it. What belongs in it is the
@@ -526,8 +529,12 @@ func empty(c *ui.Context, d Deps) {
 	face.Children(func() {
 		t := c.Theme()
 		if !hasSummary {
+			line := msgs.NoCards()
+			if d.EmptyLabel != nil {
+				line = d.EmptyLabel()
+			}
 			kit.Card(c, func() {
-				kit.Empty(c, "coffee", msgs.NoCards(), func() {
+				kit.Empty(c, "coffee", line, func() {
 					ui.Button(c, msgs.BackToNotes()).MinHeight(design.ControlHeight).
 						OnClick(d.Home)
 				})

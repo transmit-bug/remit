@@ -2,19 +2,114 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // reviewView draws review mode: the screen itself lives in its own package, and
 // this only hands it the library and the app's own actions (ADR 0004).
 func (a *App) reviewView(c *ui.Context, tk design.Tokens) {
 	review.View(c, &a.review, a.reviewDeps(c))
+}
+
+// reviewScopeMenu is the scope picker beside the mode switch: the whole
+// library, one note, or one tag. The choice lives in the session only — it is
+// app state, never written to the library — and switching re-derives the queue,
+// which is what Sync then hands the screen. Widgets checked against the
+// inventory (mygo-components, v0.8.1): MenuButton + Submenu + Radio, the same
+// shape pluginPagesMenu uses; Select would be a second control style beside
+// the mode switch it sits with.
+func (a *App) reviewScopeMenu(c *ui.Context, msgs locales.Messages) {
+	ui.MenuButton(c, a.scopeLabel(msgs), func(menu *ui.Menu) {
+		menu.MaxWidth(360)
+		if menu.Item(msgs.ReviewScope()).Radio(a.reviewScope.Kind == queue.ScopeAll).Chosen() {
+			a.setReviewScope(c, queue.Scope{})
+		}
+		notes := a.scopeNotes()
+		if len(notes) > 0 {
+			menu.Submenu(msgs.ReviewScopeNotes(), func(sub *ui.Menu) {
+				sub.MaxWidth(360)
+				for _, note := range notes {
+					note := note
+					if sub.Item(note.Title).Radio(a.reviewScope.Kind == queue.ScopeNote && a.reviewScope.Note == note.ID).Chosen() {
+						a.setReviewScope(c, queue.Scope{Kind: queue.ScopeNote, Note: note.ID})
+					}
+				}
+			})
+		}
+		tags := a.scopeTags()
+		if len(tags) > 0 {
+			menu.Submenu(msgs.ReviewScopeTags(), func(sub *ui.Menu) {
+				sub.MaxWidth(360)
+				for _, tag := range tags {
+					tag := tag
+					if sub.Item(tag).Radio(a.reviewScope.Kind == queue.ScopeTag && a.reviewScope.Tag == tag).Chosen() {
+						a.setReviewScope(c, queue.Scope{Kind: queue.ScopeTag, Tag: tag})
+					}
+				}
+			})
+		}
+	}).Label(msgs.ReviewScopeMenu())
+}
+
+// scopeLabel names the scope the session is under: the whole library, or the
+// note or tag it draws from.
+func (a *App) scopeLabel(msgs locales.Messages) string {
+	switch a.reviewScope.Kind {
+	case queue.ScopeNote:
+		if _, ok := a.data.note(a.reviewScope.Note); ok {
+			return a.data.titleOf(a.reviewScope.Note)
+		}
+	case queue.ScopeTag:
+		return "#" + a.reviewScope.Tag
+	}
+	return msgs.ReviewScope()
+}
+
+// scopeNotes lists the notes a scope can name: the snapshot's rows, in the
+// notebook's order, without touching the store in the frame.
+func (a *App) scopeNotes() []notes.Note {
+	if a.lib == nil {
+		return nil
+	}
+	return a.notesRows
+}
+
+// scopeTags lists the tags a scope can name, most notes first, from the
+// snapshot the last reload derived.
+func (a *App) scopeTags() []string {
+	counts := make([]string, 0, len(a.data.tags))
+	for tag := range a.data.tags {
+		counts = append(counts, tag)
+	}
+	sort.Slice(counts, func(i, j int) bool {
+		if a.data.tags[counts[i]] != a.data.tags[counts[j]] {
+			return a.data.tags[counts[i]] > a.data.tags[counts[j]]
+		}
+		return counts[i] < counts[j]
+	})
+	return counts
+}
+
+// setReviewScope puts the session under a scope and re-derives the queue: the
+// store's answer is the scope's, and Sync keeps the cards the new scope still
+// holds. A scope with no cards shows the screen's empty state, which says so.
+func (a *App) setReviewScope(c *ui.Context, scope queue.Scope) {
+	if scope == a.reviewScope {
+		return
+	}
+	a.reviewScope = scope
+	a.reload()
+	c.Announce(a.scopeLabel(m(c)))
 }
 
 // reviewDeps is what the screen asks of the app: the card to show, and what the
@@ -67,6 +162,12 @@ func (a *App) reviewDeps(c *ui.Context) review.Deps {
 			}
 		},
 		Home: func() { a.setMode(modeNotes) },
+		EmptyLabel: func() string {
+			if a.reviewScope.Kind != queue.ScopeAll && a.reviewScopeEmpty() {
+				return m(c).ReviewScopeEmpty()
+			}
+			return m(c).NoCards()
+		},
 	}
 }
 

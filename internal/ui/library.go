@@ -289,9 +289,11 @@ func (a *App) OnLibraryOpen(fn func(*store.Library)) {
 	}
 }
 
-// dueToday is the store's answer to what is due now.
+// dueToday is the store's answer to what is due now, narrowed to the review
+// session's scope: the whole library, one note, or one tag. Browse's Due filter
+// shows the same answer, so a scoped session narrows both.
 func (a *App) dueToday() []core.ID {
-	cards, err := queue.Today(a.lib, time.Now(), queue.Options{})
+	cards, err := queue.Today(a.lib, time.Now(), queue.Options{Scope: a.reviewScope})
 	if err != nil {
 		slog.Error("remit: today's queue", "err", err)
 		return nil
@@ -339,10 +341,23 @@ func (a *App) reload() {
 	a.loadCurrent()
 }
 
+// reviewScopeEmpty reports whether the scoped session has neither cards to
+// grade nor cards graded: nothing came from the scope, so the screen should say
+// the scope is empty rather than celebrate a day it did not have.
+func (a *App) reviewScopeEmpty() bool {
+	done, _ := a.review.Progress()
+	return a.review.Remaining() == 0 && done == 0
+}
+
 // summaryFor is the finished session's summary as the store reads it: today's
-// answers, what tomorrow holds, how many were right.
+// answers, what tomorrow holds, how many were right. A scoped session with no
+// cards in scope gets no summary: the empty state says the scope is empty, not
+// that the day was.
 func (a *App) summaryFor() (stats.Summary, bool) {
 	if a.lib == nil {
+		return stats.Summary{}, false
+	}
+	if a.reviewScope.Kind != queue.ScopeAll && a.reviewScopeEmpty() {
 		return stats.Summary{}, false
 	}
 	return stats.Summarize(a.lib, time.Now()), true
