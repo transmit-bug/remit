@@ -6,6 +6,9 @@
   queued, read or dropped), so one replay answers cards and the reading queue
   (#156, `docs/specs/incremental-reading.md`); the file name and the format
   version stand
+- **Amended:** 2026-11-08 — a library also holds `assets/<sha256>.<ext>`, the
+  images notes reference (#151, #152); they are truth like the text files and
+  travel in the archive
 - **Related:** #23, #7, ADR 0002
 
 ## Context
@@ -25,13 +28,15 @@ A library is one directory:
   remit.json              format version, FSRS weights, desired retention
   notes/<slug>-<id>.md    plaintext note; referencable blocks end with ^block_<hex>
   cards/<card-id>.json    card definition: block reference, overrides, status
+  assets/<sha256>.<ext>   a note's image, named by its own content
   reviews.jsonl           append-only review events — the only scheduling source
   .remit/index.sqlite     derived index: blocks, cards, FSRS state, due, stats
 ```
 
-**Sources of truth are all text:** notes, card files, `reviews.jsonl`,
-`remit.json`. Everything in `.remit/` is derived and may be deleted; it holds
-nothing that cannot be rebuilt.
+**Sources of truth are the files outside `.remit/`:** notes, card files,
+`reviews.jsonl`, `remit.json`, and the assets they reference. Everything in
+`.remit/` is derived and may be deleted; it holds nothing that cannot be
+rebuilt.
 
 **Per-card FSRS state is not persisted separately.** It is replayed from
 `reviews.jsonl` in `seq` order, and the index caches the result. One authority
@@ -80,6 +85,15 @@ are sources of truth in the same text files:
   field map only when the user edited it.
 - `plugins-data/<id>.json` is a plugin's own value, keyed by its manifest id,
   and it travels in the `.remitlib` archive with the rest (#147).
+
+A third is not text, and it is the one exception to "sources of truth are all
+text":
+
+- `assets/<sha256>.<ext>` holds the images a note carries, named by their own
+  content and referenced from the note by relative path
+  (`![](assets/<sha>.png)`), so dropping the same picture twice stores one file
+  and a copied library still resolves its images (#151, #152). Assets are
+  truth, not cache: they are never rebuilt, and they travel with the note.
 
 `.remit/index.sqlite` is still derived and still disposable: a copied library's
 index is discarded and rebuilt from the notes, the card files and the log.
