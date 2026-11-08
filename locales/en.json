@@ -1000,6 +1000,78 @@
   "@ankiPackage": {
     "description": "File dialog filter for Anki packages."
   },
+  "markdownFiles": "Markdown files",
+  "@markdownFiles": {
+    "description": "File dialog filter for Markdown files."
+  },
+  "importMarkdown": "Import Markdown files…",
+  "@importMarkdown": {
+    "description": "Command palette: import whole Markdown files as notes."
+  },
+  "exportNote": "Export note as Markdown…",
+  "@exportNote": {
+    "description": "Command palette: write the open note's Markdown file."
+  },
+  "exportAllNotes": "Export all notes as Markdown…",
+  "@exportAllNotes": {
+    "description": "Command palette: write every note's Markdown file into a folder."
+  },
+  "chooseExportFolder": "Export to folder",
+  "@chooseExportFolder": {
+    "description": "The folder picker's button when exporting notes as files."
+  },
+  "exportReport": "Exported {files} files, skipped {skipped}.",
+  "@exportReport": {
+    "description": "What a Markdown export wrote.",
+    "placeholders": {
+      "files": {
+        "type": "int",
+        "example": "12"
+      },
+      "skipped": {
+        "type": "int",
+        "example": "0"
+      }
+    }
+  },
+  "importMdReport": "Imported {notes} notes, skipped {skipped}.",
+  "@importMdReport": {
+    "description": "What a Markdown import wrote.",
+    "placeholders": {
+      "notes": {
+        "type": "int",
+        "example": "3"
+      },
+      "skipped": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "importMdFailed": "The import failed: {reason}",
+  "@importMdFailed": {
+    "description": "A Markdown import failed.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "not a Markdown file"
+      }
+    }
+  },
+  "exportFailed": "The export failed: {reason}",
+  "@exportFailed": {
+    "description": "A Markdown export failed.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "exportNothingOpen": "Open a note first, then export it.",
+  "@exportNothingOpen": {
+    "description": "Exporting a note with no note open."
+  },
   "importReport": "Imported {notes} notes, {cards} cards, {reviews} reviews, skipped {skipped} rows.",
   "@importReport": {
     "description": "What an Anki import wrote.",

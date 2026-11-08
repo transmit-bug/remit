@@ -12,6 +12,7 @@ import (
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importanki"
+	"github.com/transmit-bug/remit/internal/core/importmd"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
@@ -164,6 +165,11 @@ type App struct {
 	checkUpdate func(context.Context, settings.Settings) (update.Result, error)
 	pickAnki    func() (string, error)
 	importAnki  func(path string) (importanki.Report, error)
+	// The Markdown import's seams, shaped like the Anki ones: a test replaces
+	// the picker and the importer; a nil importer leaves the actions quiet.
+	pickMd     func() ([]string, error)
+	importMd   func(path string) (importmd.Report, error)
+	pickFolder func(title string) (string, error)
 
 	// counts is told the queues' lengths whenever they are rebuilt, so the tray
 	// can show them without asking the window.
@@ -190,11 +196,14 @@ func NewApp(opts ...Options) *App {
 		notes:       notes.New(),
 		pickLibrary: pickLibraryDir,
 		pickAnki:    pickAnkiPackage,
+		pickMd:      pickMarkdown,
+		pickFolder:  pickExportFolder,
 		checkUpdate: screensettings.CheckForUpdate,
 	}
 	// The importer reads the library open now, which a dropped archive can
 	// replace, so it takes it at call time rather than at construction.
 	a.importAnki = func(path string) (importanki.Report, error) { return importanki.Import(path, a.lib) }
+	a.importMd = func(path string) (importmd.Report, error) { return importmd.Import(path, a.lib) }
 	var chosenCards *ext.JSRunner
 	var chosenScheduler *ext.JSRunner
 	withoutCards, withoutScheduler := false, false
@@ -210,6 +219,15 @@ func NewApp(opts ...Options) *App {
 		}
 		if o.ImportAnki != nil {
 			a.importAnki = o.ImportAnki
+		}
+		if o.ChooseMarkdown != nil {
+			a.pickMd = o.ChooseMarkdown
+		}
+		if o.ImportMarkdown != nil {
+			a.importMd = o.ImportMarkdown
+		}
+		if o.ChooseExportFolder != nil {
+			a.pickFolder = o.ChooseExportFolder
 		}
 		if o.CheckUpdate != nil {
 			a.checkUpdate = o.CheckUpdate

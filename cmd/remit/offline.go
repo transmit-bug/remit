@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/transmit-bug/remit/internal/core/importanki"
+	"github.com/transmit-bug/remit/internal/core/importmd"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/core/transfer"
 )
@@ -76,6 +77,39 @@ func runImportAnki(dir, path string) bool {
 	for _, warning := range report.Warnings {
 		fmt.Printf("  warning: %s\n", warning)
 	}
+	return true
+}
+
+// runMarkdown performs the two Markdown commands that need no window, and
+// reports whether it did one: importing files as notes, exporting the
+// library's notes as files.
+func runMarkdown(dir, importPath, exportDir string) bool {
+	if importPath == "" && exportDir == "" {
+		return false
+	}
+	lib, err := openOrCreate(dir)
+	if err != nil {
+		log.Fatalf("library %s: %v", dir, err)
+	}
+	defer lib.Close()
+
+	if importPath != "" {
+		report, err := importmd.Import(importPath, lib)
+		if err != nil {
+			log.Fatalf("import %s: %v", importPath, err)
+		}
+		fmt.Printf("imported %s: %d notes, %d skipped\n", importPath, report.Notes, report.Skipped)
+		for _, warning := range report.Warnings {
+			fmt.Printf("  warning: %s\n", warning)
+		}
+		return true
+	}
+
+	report, err := importmd.Export(exportDir, lib)
+	if err != nil {
+		log.Fatalf("export %s: %v", exportDir, err)
+	}
+	fmt.Printf("exported notes to %s: %d files, %d skipped\n", exportDir, report.Files, report.Skipped)
 	return true
 }
 

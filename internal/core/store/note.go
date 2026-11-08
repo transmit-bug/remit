@@ -173,6 +173,24 @@ func renderNote(note core.Note) []byte {
 	return []byte(out.String())
 }
 
+// ParseNoteSource reads a note file's bytes back into title and blocks: the
+// same parse an open library does, so an importer and a library agree on what
+// a note file says. Blocks carrying no marker keep ID "" and SaveNote mints
+// them one.
+func ParseNoteSource(src []byte) (title string, blocks []core.Block) {
+	name, parsed := parseNote(src)
+	for _, block := range parsed {
+		blocks = append(blocks, block.Block)
+	}
+	return name, blocks
+}
+
+// RenderNoteSource writes a note in the file format: the same render a
+// library's note files carry, so an exported file and a stored file agree.
+func RenderNoteSource(note core.Note) []byte {
+	return renderNote(note)
+}
+
 // withMarker returns src with id appended to the block whose text is text, and
 // every other byte of the file untouched. A block that already carries the
 // marker is left alone. The block is found by position when the text at that
