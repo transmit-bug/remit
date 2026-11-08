@@ -92,10 +92,25 @@ MyGo arrives through `go.mod`'s tool directive; never install it separately.
 - **i18n from day one:** every user-facing string goes through the catalog.
 - **Privacy:** zero telemetry; a new outbound URL is a deliberate decision.
 - **Licensing:** dependencies stay AGPL-3.0-compatible.
-- **Tests earn their place:** a test names the behaviour it guards, and only
-  needed behaviour gets one. An assertion that turns on font metrics or a
-  platform's layout quirks is noise — delete it rather than bend the UI to it.
-  A red job on `master` is a bug, not a known limitation.
+- **Tests earn their place:** see Preference → Tests catch regressions. A red
+  job on `master` is a bug, not a known limitation.
+
+## Preference
+
+### Prefer MyGo's own mature widgets
+
+### Tests catch regressions
+
+A test does not prove the code runs; it turns red when you break it. So a test is
+worth what the bug it can catch is worth: if you cannot name a bug that would
+make it fail, do not write it — and delete the ones you cannot name.
+
+- Test behaviour, not implementation — a refactor leaves it green, a broken
+  behaviour turns it red.
+- A useless test is not harmless surplus: it buys false confidence and drowns a
+  real regression in noise.
+- One test guards one thing, and its name is that thing.
+- A test is documentation: whoever reads it learns how the system should behave.
 
 ## Agent skills
 
@@ -110,9 +125,3 @@ Default vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, 
 ### Domain docs
 
 Single-context: `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
-
-
-
-## Perference
-
-### 优先使用官方的成熟控件
