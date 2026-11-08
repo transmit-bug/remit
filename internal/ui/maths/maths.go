@@ -52,13 +52,49 @@ func appendProse(out []Segment, text string) []Segment {
 	return append(out, Segment{Text: text})
 }
 
-// Render is a note's text as it reads with its formulas set: the prose as it was
-// written, each formula transcribed. It is what the reading and review surfaces
-// show; the editor keeps the source.
+// Render is a note's text as it reads with its formulas set: the prose as it
+// was written, each formula transcribed. It is what the reading and review surfaces
+// show; the editor keeps the source. An image reference folds into its alt
+// text — these surfaces are text, and the picture itself is the editor's and
+// the note's reading view to show (#152).
 func Render(text string) string {
 	var out strings.Builder
-	for _, seg := range Segments(text) {
+	for _, seg := range Segments(FoldImages(text)) {
 		out.WriteString(seg.Text)
+	}
+	return out.String()
+}
+
+// FoldImages rewrites every Markdown image into its alt text: a picture
+// reference is prose "as the picture is named". Links keep their text.
+func FoldImages(text string) string {
+	if !strings.Contains(text, "![") {
+		return text
+	}
+	var out strings.Builder
+	for i := 0; i < len(text); {
+		start := strings.Index(text[i:], "![")
+		if start < 0 {
+			out.WriteString(text[i:])
+			break
+		}
+		start += i
+		mid := strings.Index(text[start:], "](")
+		if mid < 0 {
+			out.WriteString(text[i:])
+			break
+		}
+		mid += start + 2
+		end := strings.Index(text[mid:], ")")
+		if end < 0 {
+			out.WriteString(text[i:])
+			break
+		}
+		end += mid
+		alt := text[start+2 : mid-2]
+		out.WriteString(text[i:start])
+		out.WriteString(alt)
+		i = end + 1
 	}
 	return out.String()
 }

@@ -34,6 +34,9 @@ func Import(path string, lib *store.Library) (Report, error) {
 	if err != nil {
 		return report, err
 	}
+	if info, statErr := os.Stat(path); statErr == nil && info.IsDir() {
+		importAssets(path, lib, &report)
+	}
 
 	// Title -> note, for the unnamed files: it is the only provenance a plain
 	// Markdown file carries.

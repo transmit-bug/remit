@@ -5,6 +5,7 @@
 //	remit.json            format version and FSRS parameters
 //	notes/<slug>-<id>.md  plaintext note; a referencable block ends with ^block_…
 //	cards/<card-id>.json  card definition: the block it renders, overrides, status
+//	assets/<sha>.<ext>    an asset: a note's image, named by its own content
 //	reviews.jsonl         append-only review events, the only scheduling source
 //	.remit/index.sqlite   derived index: delete it and it comes back
 //
@@ -268,7 +269,7 @@ func (l *Library) Rebuild() error {
 // load opens the index and reads it. A first attempt that fails is retried once
 // from an empty index: the index is a cache, never a reason to refuse a library.
 func (l *Library) load() error {
-	for _, dir := range []string{notesDir, cardsDir, typesDir, indexDir} {
+	for _, dir := range []string{notesDir, cardsDir, assetsDir, typesDir, indexDir} {
 		if err := os.MkdirAll(filepath.Join(l.dir, dir), dirPerms); err != nil {
 			return err
 		}

@@ -2589,6 +2589,50 @@ func (msgs Messages) ExportReport(files int, skipped int) string {
 	return Catalog.Format(msgs.locale, "exportReport", map[string]any{"files": files, "skipped": skipped})
 }
 
+// ImageStoreFailed says "Could not store the picture: {err}"
+// in the language the app shows.
+//
+// A picture dropped or pasted into a note could not be written to the
+// library's assets.
+func ImageStoreFailed(err string) string { return In(i18n.Locale()).ImageStoreFailed(err) }
+
+// ImageStoreFailed says "Could not store the picture: {err}"
+// in the language of msgs.
+//
+// A picture dropped or pasted into a note could not be written to the
+// library's assets.
+func (msgs Messages) ImageStoreFailed(err string) string {
+	return Catalog.Format(msgs.locale, "imageStoreFailed", map[string]any{"err": err})
+}
+
+// PasteImageFailed says "Could not read the picture on the clipboard."
+// in the language the app shows.
+//
+// A pasted picture could not be read from the clipboard.
+func PasteImageFailed() string { return In(i18n.Locale()).PasteImageFailed() }
+
+// PasteImageFailed says "Could not read the picture on the clipboard."
+// in the language of msgs.
+//
+// A pasted picture could not be read from the clipboard.
+func (msgs Messages) PasteImageFailed() string {
+	return Catalog.Format(msgs.locale, "pasteImageFailed", nil)
+}
+
+// DropImageFailed says "Could not read {file}."
+// in the language the app shows.
+//
+// A picture dragged into a note could not be read from disk.
+func DropImageFailed(file string) string { return In(i18n.Locale()).DropImageFailed(file) }
+
+// DropImageFailed says "Could not read {file}."
+// in the language of msgs.
+//
+// A picture dragged into a note could not be read from disk.
+func (msgs Messages) DropImageFailed(file string) string {
+	return Catalog.Format(msgs.locale, "dropImageFailed", map[string]any{"file": file})
+}
+
 // ImportMdReport says "Imported {notes} notes, skipped {skipped}."
 // in the language the app shows.
 //

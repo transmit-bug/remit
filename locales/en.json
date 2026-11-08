@@ -1034,6 +1034,30 @@
       }
     }
   },
+  "imageStoreFailed": "Could not store the picture: {err}",
+  "@imageStoreFailed": {
+    "description": "A picture dropped or pasted into a note could not be written to the library's assets.",
+    "placeholders": {
+      "err": {
+        "type": "String",
+        "example": "read-only file system"
+      }
+    }
+  },
+  "pasteImageFailed": "Could not read the picture on the clipboard.",
+  "@pasteImageFailed": {
+    "description": "A pasted picture could not be read from the clipboard."
+  },
+  "dropImageFailed": "Could not read {file}.",
+  "@dropImageFailed": {
+    "description": "A picture dragged into a note could not be read from disk.",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "diagram.png"
+      }
+    }
+  },
   "importMdReport": "Imported {notes} notes, skipped {skipped}.",
   "@importMdReport": {
     "description": "What a Markdown import wrote.",
