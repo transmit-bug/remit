@@ -147,24 +147,7 @@ func (s *State) takeImages(c *ui.Context, d Deps, files []string) {
 		}
 	}
 	for _, path := range files {
-		ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
-		if ext == "jpg" {
-			ext = "jpeg"
-		}
-		switch ext {
-		case "png", "jpeg", "gif", "webp", "bmp", "svg":
-		default:
-			slog.Info("remit: dropped file is not a picture", "file", filepath.Base(path))
-			continue
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			slog.Warn("remit: dropped picture", "path", path, "err", err)
-			c.Toast(msgs.DropImageFailed(filepath.Base(path)))
-			continue
-		}
-		if rel, ok := s.putImage(c, d, data, ext, filepath.Base(path), msgs); ok {
-			s.insertAsset(c, d, rel, filepath.Base(path))
+		if s.insertImageFile(c, d, path) {
 			stored++
 		}
 	}
@@ -173,9 +156,49 @@ func (s *State) takeImages(c *ui.Context, d Deps, files []string) {
 	}
 }
 
+// insertImageFile stores one picture file and puts it at the caret. It is the
+// one road for a drop, a paste and the slash menu's file picker: the bytes
+// become a content-addressed asset, and the note keeps only its relative path.
+func (s *State) insertImageFile(c *ui.Context, d Deps, path string) bool {
+	msgs := locales.In(c.Locale())
+	ext, ok := imageExt(path)
+	if !ok {
+		slog.Info("remit: file is not a picture", "file", filepath.Base(path))
+		return false
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		slog.Warn("remit: read picture", "path", path, "err", err)
+		c.Toast(msgs.DropImageFailed(filepath.Base(path)))
+		return false
+	}
+	rel, ok := s.putImage(c, d, data, ext, filepath.Base(path), msgs)
+	if !ok {
+		return false
+	}
+	s.insertAsset(c, d, rel, filepath.Base(path))
+	return true
+}
+
+// imageExt names the storage extension of a picture file the editor accepts.
+func imageExt(path string) (string, bool) {
+	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+	if ext == "jpg" {
+		ext = "jpeg"
+	}
+	switch ext {
+	case "png", "jpeg", "gif", "webp", "bmp", "svg":
+		return ext, true
+	}
+	return "", false
+}
+
 // putImage stores one picture in the library and answers the relative path a
 // note references it by.
 func (s *State) putImage(c *ui.Context, d Deps, data []byte, ext, name string, msgs locales.Messages) (string, bool) {
+	if d.PutAsset == nil {
+		return "", false
+	}
 	rel, err := d.PutAsset(data, ext)
 	if err != nil {
 		slog.Error("remit: store picture", "err", err)
@@ -192,9 +215,12 @@ func (s *State) putImage(c *ui.Context, d Deps, data []byte, ext, name string, m
 // the truth, the pixels are recoverable.
 func (s *State) insertAsset(c *ui.Context, d Deps, rel, name string) {
 	var img ui.ImageSource
-	if data, ok := d.GetAsset(rel); ok {
-		if decoded, err := decodeAssetImage(rel, data); err == nil {
-			img = decoded
+	if d.GetAsset != nil {
+		data, ok := d.GetAsset(rel)
+		if ok {
+			if decoded, err := decodeAssetImage(rel, data); err == nil {
+				img = decoded
+			}
 		}
 	}
 	if name == "" {

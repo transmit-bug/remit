@@ -2,6 +2,7 @@ package notes
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/transmit-bug/remit/internal/core"
 )
@@ -157,7 +158,7 @@ func ParagraphOffset(text string, paragraph int) int {
 		if i+1 == paragraph {
 			return at
 		}
-		at += len(part) + 2
+		at += utf8.RuneCountInString(part) + 2
 	}
 	return -1
 }

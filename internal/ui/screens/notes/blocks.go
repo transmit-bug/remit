@@ -6,6 +6,7 @@ import (
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/richtext"
 
+	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
@@ -23,6 +24,8 @@ const (
 type blockAction struct {
 	kind  blockActionKind
 	start int
+	from  int
+	to    int
 	style richtext.ParagraphStyle
 }
 
@@ -33,7 +36,14 @@ const (
 	blockActionInsert
 	blockActionDuplicate
 	blockActionStyle
+	blockActionMove
+	blockActionDelete
 )
+
+// blockDrag is the block a gutter grip carries while the pointer drags it.
+type blockDrag struct {
+	From int
+}
 
 // activeBlock is the paragraph the page marks as current: the one under the
 // pointer, or else the one holding the caret. A page draws its highlight from
@@ -83,7 +93,7 @@ func (s *State) blockHighlight(c *ui.Context, tk design.Tokens, boxes []richtext
 // the pointer from the last frame, or the caret's. The menu button stays while
 // its menu is open, so moving the pointer into the menu does not make its
 // anchor disappear.
-func (s *State) blockHandles(c *ui.Context, tk design.Tokens, msgs locales.Messages, action *blockAction) {
+func (s *State) blockHandles(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps, action *blockAction) {
 	boxes := s.Doc.VisibleParagraphs()
 	active := activeBlock(boxes, s.caret(), s.blockHover)
 	hovered := -1
@@ -97,46 +107,27 @@ func (s *State) blockHandles(c *ui.Context, tk design.Tokens, msgs locales.Messa
 			hovered = box.Index
 		}
 		open := s.blockMenus[box.Index]
-		if box.Index != active && !open {
-			continue
-		}
+		shown := box.Index == active || open
 		row.Children(func() {
-			style := s.Doc.Text().ParagraphStyleAt(box.Start)
-
-			plus := blockButton(c, tk, fmt.Sprintf("block-add-%d", box.Index), "plus", msgs.AddBlockBelow()).
-				Tooltip(msgs.AddBlockBelow())
-			if plus.Clicked() {
-				*action = blockAction{kind: blockActionInsert, start: box.Start}
-			}
-
-			more := blockButton(c, tk, fmt.Sprintf("block-menu-%d", box.Index), "ellipsis", msgs.BlockActionsFor(box.Index+1)).
-				Tooltip(msgs.BlockActions())
-			more.PopoverMenuButton(func(menu *ui.Menu) {
-				if menu.Item(msgs.AddBlockBelow()).Chosen() {
+			if shown {
+				plus := blockButton(c, tk, fmt.Sprintf("block-add-%d", box.Index), "plus", msgs.AddBlockBelow()).
+					Tooltip(msgs.AddBlockBelow())
+				if plus.Clicked() {
 					*action = blockAction{kind: blockActionInsert, start: box.Start}
 				}
-				if menu.Item(msgs.DuplicateBlock()).Chosen() {
-					*action = blockAction{kind: blockActionDuplicate, start: box.Start}
-				}
-				menu.Separator()
-				for _, choice := range []struct {
-					name  string
-					style richtext.ParagraphStyle
-				}{
-					{msgs.StyleBody(), richtext.ParagraphStyle{}},
-					{msgs.StyleTitle(), richtext.ParagraphStyle{Heading: 1}},
-					{msgs.StyleHeading(), richtext.ParagraphStyle{Heading: 2}},
-					{msgs.StyleSubheading(), richtext.ParagraphStyle{Heading: 3}},
-					{msgs.FmtBullets(), richtext.ParagraphStyle{List: richtext.Bullets}},
-					{msgs.FmtNumbers(), richtext.ParagraphStyle{List: richtext.Numbers}},
-					{msgs.FmtQuote(), richtext.ParagraphStyle{Quote: true}},
-					{msgs.FmtCodeBlock(), richtext.ParagraphStyle{CodeBlock: true}},
-				} {
-					if menu.Item(choice.name).Checked(sameBlockStyle(style, choice.style)).Chosen() {
-						*action = blockAction{kind: blockActionStyle, start: box.Start, style: choice.style}
-					}
-				}
-			}, ui.PopoverMenuButtonOptions{Open: &open})
+			}
+
+			grip := blockButton(c, tk, fmt.Sprintf("block-menu-%d", box.Index), "grip-vertical", msgs.BlockActionsFor(box.Index+1)).
+				Tooltip(msgs.DragBlockFor(box.Index + 1)).Cursor(ui.CursorGrab)
+			if !shown {
+				grip.Opacity(0)
+			}
+			if grip.Clicked() {
+				open = !open
+			}
+			if shown {
+				s.blockMenu(c, tk, msgs, d, box, grip, &open, action)
+			}
 			if open {
 				if s.blockMenus == nil {
 					s.blockMenus = map[int]bool{}
@@ -146,8 +137,110 @@ func (s *State) blockHandles(c *ui.Context, tk design.Tokens, msgs locales.Messa
 				delete(s.blockMenus, box.Index)
 			}
 		})
+		row.Drag(blockDrag{From: box.Index})
+		s.dropGutter(row, box.Index, tk, action)
 	}
 	s.blockHover = hovered
+}
+
+// blockMenu is one block's menu in a popover. It is not a PopoverMenuButton
+// because the grip is also the drag handle, and a menu button takes the
+// pointer away from the drag. Its rows are ordinary buttons, so click, Enter
+// and Tab work; the popover adds Escape and press-outside dismissal.
+func (s *State) blockMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps, box richtext.ParagraphBox, anchor ui.Element, open *bool, action *blockAction) {
+	style := s.Doc.Text().ParagraphStyleAt(box.Start)
+	row := func(key, label string, selected, disabled, danger bool) ui.Element {
+		return blockMenuRow(c, tk, fmt.Sprintf("block-menu-%d-%s", box.Index, key), label, selected, disabled, danger)
+	}
+	ui.Popover(c, anchor, open, func() {
+		ui.Scroll(c).MaxHeight(360).Children(func() {
+			ui.Column(c).Role(ui.RoleMenu).MinWidth(220).Padding(tk.SpaceXS).Gap(1).Children(func() {
+				if row("add", msgs.AddBlockBelow(), false, false, false).Clicked() {
+					*action = blockAction{kind: blockActionInsert, start: box.Start}
+					*open = false
+				}
+				if row("duplicate", msgs.DuplicateBlock(), false, false, false).Clicked() {
+					*action = blockAction{kind: blockActionDuplicate, start: box.Start}
+					*open = false
+				}
+				if row("move-up", msgs.MoveBlockUp(), false, box.Index == 0, false).Clicked() {
+					*action = blockAction{kind: blockActionMove, from: box.Index, to: box.Index - 1}
+					*open = false
+				}
+				if row("move-down", msgs.MoveBlockDown(), false, box.Index+1 >= len(s.Draft.Blocks), false).Clicked() {
+					*action = blockAction{kind: blockActionMove, from: box.Index, to: box.Index + 1}
+					*open = false
+				}
+				cards := blockCards(d, s.Draft, box.Index)
+				if row("delete", msgs.DeleteBlock(), false, len(s.Draft.Blocks) <= 1, true).Clicked() {
+					if cards > 0 {
+						s.blockDelete, s.blockLost = box.Index, cards
+					} else {
+						*action = blockAction{kind: blockActionDelete, from: box.Index}
+					}
+					*open = false
+				}
+				ui.Divider(c)
+				for _, choice := range []struct {
+					key   string
+					name  string
+					style richtext.ParagraphStyle
+				}{
+					{"body", msgs.StyleBody(), richtext.ParagraphStyle{}},
+					{"title", msgs.StyleTitle(), richtext.ParagraphStyle{Heading: 1}},
+					{"heading", msgs.StyleHeading(), richtext.ParagraphStyle{Heading: 2}},
+					{"subheading", msgs.StyleSubheading(), richtext.ParagraphStyle{Heading: 3}},
+					{"bullets", msgs.FmtBullets(), richtext.ParagraphStyle{List: richtext.Bullets}},
+					{"numbers", msgs.FmtNumbers(), richtext.ParagraphStyle{List: richtext.Numbers}},
+					{"quote", msgs.FmtQuote(), richtext.ParagraphStyle{Quote: true}},
+					{"code", msgs.FmtCodeBlock(), richtext.ParagraphStyle{CodeBlock: true}},
+				} {
+					if row("style-"+choice.key, choice.name, sameBlockStyle(style, choice.style), false, false).Clicked() {
+						*action = blockAction{kind: blockActionStyle, start: box.Start, style: choice.style}
+						*open = false
+					}
+				}
+			})
+		})
+	})
+}
+
+// blockMenuRow is one line of a block menu. The selected style is tinted, and
+// a destructive action is the theme's danger colour.
+func blockMenuRow(c *ui.Context, tk design.Tokens, key, label string, selected, disabled, danger bool) ui.Element {
+	colour := tk.Text
+	if danger {
+		colour = tk.Danger
+	}
+	if selected {
+		colour = tk.Accent
+	}
+	row := ui.ButtonBase(c.Key("block-menu-"+key)).
+		Label(label).Justify(ui.Start).FillWidth().
+		Padding(tk.SpaceXS, tk.SpaceS).Radius(tk.RadiusControl).
+		TextColor(colour).Disabled(disabled).Role(ui.RoleMenuItem)
+	if selected {
+		row.Background(tk.Accent.Alpha(0.1))
+	} else if row.Hovered() && !disabled {
+		row.Background(tk.SurfaceHover)
+	}
+	row.Children(func() {
+		ui.Text(c, label).FontSize(tk.TypeBody).TextColor(colour)
+	})
+	return row
+}
+
+// dropGutter makes one block's gutter take another block dragged onto it.
+// Dropping below the dragged block puts it after the target; dropping above
+// puts it before, which is what the highlighted target says.
+func (s *State) dropGutter(row ui.Element, at int, tk design.Tokens, action *blockAction) {
+	drag, over := ui.DragOver[blockDrag](row)
+	if over && drag.From != at {
+		row.Background(tk.Accent.Alpha(0.08))
+	}
+	if drag, ok := ui.Drop[blockDrag](row); ok && drag.From != at {
+		*action = blockAction{kind: blockActionMove, from: drag.From, to: at}
+	}
 }
 
 // blockButton is a quiet 21-DIP control in the gutter, named for assistive
@@ -170,10 +263,52 @@ func sameBlockStyle(a, b richtext.ParagraphStyle) bool {
 	return a == b
 }
 
+// blockCards is how many live cards read the block at index. A suspended card
+// is out of the queue, so deleting its block costs it nothing it had not
+// already lost.
+func blockCards(d Deps, note core.Note, index int) int {
+	if d.Cards == nil || index < 0 {
+		return 0
+	}
+	for _, group := range d.Cards(note) {
+		if group.Paragraph == index+1 {
+			cards := 0
+			for _, card := range group.Cards {
+				if card.Ref.Frozen == nil {
+					cards++
+				}
+			}
+			return cards
+		}
+	}
+	return 0
+}
+
+// confirmBlockDelete asks before a deletion that would cost cards their
+// source. The alert is built after the page so the modal sits over it, and the
+// chosen delete joins the pass's one block action.
+func (s *State) confirmBlockDelete(c *ui.Context, msgs locales.Messages, action *blockAction) {
+	if s.blockDelete < 0 {
+		return
+	}
+	open := true
+	switch ui.AlertDialog(c, &open, msgs.DeleteBlockTitle(), msgs.DeleteBlockWarning(s.blockLost),
+		msgs.Cancel(), msgs.DeleteBlock()) {
+	case 0, ui.AlertDismissed:
+		s.blockDelete, s.blockLost = -1, 0
+	case 1:
+		at := s.blockDelete
+		s.blockDelete, s.blockLost = -1, 0
+		*action = blockAction{kind: blockActionDelete, from: at}
+	}
+}
+
 // applyBlockAction changes the document as one undo step and leaves the caret
-// in the paragraph that changed. The caller saves the document at the end of
-// the frame.
-func (s *State) applyBlockAction(c *ui.Context, action blockAction) bool {
+// in the paragraph that changed. Actions that reorder or remove a whole block
+// rebuild the document so the draft's block identities, not the paragraphs'
+// old positions, survive; those actions save here and report false. The caller
+// saves the document at the end of the frame for the actions that return true.
+func (s *State) applyBlockAction(c *ui.Context, d Deps, action blockAction) bool {
 	if s.Doc == nil || action.kind == blockActionNone {
 		return false
 	}
@@ -208,12 +343,97 @@ func (s *State) applyBlockAction(c *ui.Context, action blockAction) bool {
 				p.ID = id
 			})
 		})
+	case blockActionMove:
+		if action.from == action.to {
+			return false
+		}
+		s.blocksNow()
+		if action.from < 0 || action.from >= len(s.Draft.Blocks) || action.to < 0 || action.to >= len(s.Draft.Blocks) {
+			return false
+		}
+		s.moveBlock(c, d, action.from, action.to)
+		return false
+	case blockActionDelete:
+		s.blocksNow()
+		if len(s.Draft.Blocks) <= 1 || action.from < 0 || action.from >= len(s.Draft.Blocks) {
+			return false
+		}
+		s.deleteBlock(c, d, action.from, blockCards(d, s.Draft, action.from))
+		return false
 	default:
 		return false
 	}
 	s.blockHover, s.blockMenus = -1, nil
 	s.body.Focus(c)
 	return true
+}
+
+// blocksNow reads the live document back into the draft before a structural
+// action. Ordinary typing saved on earlier passes, but a block menu can be
+// chosen in the same pass as an edit, so the draft is brought up to date here.
+func (s *State) blocksNow() {
+	live := s.Doc.Text().Markdown()
+	s.Draft.Blocks = s.blocksFromLive(live)
+	s.docText = live
+}
+
+// moveBlock puts one block at another block's place, keeping every identity:
+// the cards that point at the moved block follow it rather than the position.
+func (s *State) moveBlock(c *ui.Context, d Deps, from, to int) {
+	blocks := s.Draft.Blocks
+	block := blocks[from]
+	if from < to {
+		copy(blocks[from:to], blocks[from+1:to+1])
+	} else {
+		copy(blocks[to+1:from+1], blocks[to:from])
+	}
+	blocks[to] = block
+	s.blockHover, s.blockMenus = -1, nil
+	s.blockDelete, s.blockLost = -1, 0
+	s.rebuildDocument(c, to)
+	if saved, ok := d.SaveDocument(c, s.Draft); ok {
+		s.Keep(saved)
+	}
+	c.Announce(locales.In(c.Locale()).BlockMoved(to + 1))
+}
+
+// deleteBlock removes one block and says how many cards lost their source.
+// The cards themselves are kept by the store: they become lost, with their
+// schedule and review history intact, and can be re-linked.
+func (s *State) deleteBlock(c *ui.Context, d Deps, at, cards int) {
+	msgs := locales.In(c.Locale())
+	blocks := append(s.Draft.Blocks[:at], s.Draft.Blocks[at+1:]...)
+	s.Draft.Blocks = blocks
+	s.blockHover, s.blockMenus = -1, nil
+	s.blockDelete, s.blockLost = -1, 0
+	next := min(at, len(blocks)-1)
+	s.rebuildDocument(c, next)
+	if saved, ok := d.SaveDocument(c, s.Draft); ok {
+		s.Keep(saved)
+		notice := msgs.BlockDeleted(cards)
+		c.Toast(notice)
+		c.Announce(notice)
+	}
+}
+
+// rebuildDocument replaces the editor's text from the draft after a structural
+// change. The document is new because a move is a reorder, not one edit of the
+// text; the caret goes to the block the user acted on, so the next keystroke
+// lands where the block now is.
+func (s *State) rebuildDocument(c *ui.Context, focus int) {
+	text := DocumentText(s.Draft)
+	if s.Doc == nil {
+		s.Doc = richtext.NewDocument(s.noteDocument())
+	} else {
+		s.Doc.SetText(s.noteDocument())
+	}
+	s.docText = text
+	s.rehydrate(s.deps)
+	if focus >= 0 {
+		at := ParagraphOffset(text, focus+1)
+		s.Doc.SetSelection(at, at)
+	}
+	s.body.Focus(c)
 }
 
 // paragraphStartingAt returns the paragraph starting at start.

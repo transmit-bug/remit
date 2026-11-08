@@ -10,8 +10,8 @@ import (
 // drew it.
 func TestEveryIconParses(t *testing.T) {
 	names := design.IconNames()
-	if len(names) != 36 {
-		t.Fatalf("vendored %d icons, want the 36 the app uses: %v", len(names), names)
+	if len(names) != 37 {
+		t.Fatalf("vendored %d icons, want the 37 the app uses: %v", len(names), names)
 	}
 	for _, name := range names {
 		t.Run(name, func(t *testing.T) {

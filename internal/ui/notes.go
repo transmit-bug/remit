@@ -20,15 +20,15 @@ func (a *App) notesView(c *ui.Context) {
 // and one function per thing the user can do, each run here on the UI thread.
 func (a *App) notesDeps() notes.Deps {
 	return notes.Deps{
-		Notes:        func() []notes.Note { return a.notesRows },
-		Tags:         func() map[string]int { return a.data.tags },
-		Backlinks:    func() []notes.Backlink { return a.backlinks },
-		Cards:        a.cardGroups,
-		Due:          func() int { return a.review.Remaining() },
-		Reload:       a.reload,
-		OpenReview:   func() { a.setMode(modeReview) },
-		NewNote:      a.newNote,
-		Templates:    a.noteTemplates,
+		Notes:      func() []notes.Note { return a.notesRows },
+		Tags:       func() map[string]int { return a.data.tags },
+		Backlinks:  func() []notes.Backlink { return a.backlinks },
+		Cards:      a.cardGroups,
+		Due:        func() int { return a.review.Remaining() },
+		Reload:     a.reload,
+		OpenReview: func() { a.setMode(modeReview) },
+		NewNote:    a.newNote,
+		Templates:  a.noteTemplates,
 		NewFromTemplate: func(c *ui.Context, id core.ID) {
 			a.newNoteFromTemplate(c, id)
 		},
@@ -36,6 +36,7 @@ func (a *App) notesDeps() notes.Deps {
 		SaveDocument: a.saveDocument,
 		PutAsset:     a.putAsset,
 		GetAsset:     a.getAsset,
+		ChooseImage:  a.pickImage,
 		OpenCardEdit: a.openCardEdit,
 	}
 }

@@ -34,10 +34,14 @@ type fake struct {
 	saved     []core.Note
 	documents []core.Note
 	edits     []core.ID
+
+	chooseImage func() (string, error)
+	putAsset    func([]byte, string) (string, error)
+	getAsset    func(string) ([]byte, bool)
 }
 
 func (f *fake) deps() notes.Deps {
-	return notes.Deps{
+	d := notes.Deps{
 		Notes:      func() []notes.Note { return f.library },
 		Tags:       func() map[string]int { return f.tags },
 		Backlinks:  func() []notes.Backlink { return f.backlinks },
@@ -53,6 +57,16 @@ func (f *fake) deps() notes.Deps {
 		},
 		OpenCardEdit: func(_ *ui.Context, id core.ID) { f.edits = append(f.edits, id) },
 	}
+	if f.chooseImage != nil {
+		d.ChooseImage = f.chooseImage
+	}
+	if f.putAsset != nil {
+		d.PutAsset = f.putAsset
+	}
+	if f.getAsset != nil {
+		d.GetAsset = f.getAsset
+	}
+	return d
 }
 
 // notebook is the library the screen is handed: a note with headings and cards,

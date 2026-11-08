@@ -28,7 +28,9 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 		})
 		return
 	}
+	s.tableWord = msgs.SlashTable()
 	s.ensureDocument()
+	s.syncSlash(msgs, d)
 	if s.FindOpen {
 		s.findBar(c)
 	}
@@ -94,8 +96,10 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 					}).Grow(1).MinHeight(tk.Control * 12).Bind(&s.body).Changed() {
 						edited = true
 					}
-					s.blockHandles(c, tk, msgs, &blockChange)
+					s.blockHandles(c, tk, msgs, d, &blockChange)
+					s.slashMenu(c, tk, msgs, boxes)
 				})
+				s.slashShortcuts(c, editor)
 				s.pasteShortcut(editor, c, d)
 				if len(drops) > 0 || pasted != nil {
 					s.takeImages(c, d, drops)
@@ -104,7 +108,11 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 		})
 		s.statusLine(c, tk, cardCount(s.Draft, library))
 	})
-	if s.applyBlockAction(c, blockChange) {
+	if s.applySlash(c, d) {
+		edited = true
+	}
+	s.confirmBlockDelete(c, msgs, &blockChange)
+	if s.applyBlockAction(c, d, blockChange) {
 		edited = true
 	}
 	switch {
@@ -400,7 +408,7 @@ func (s *State) saveDocument(c *ui.Context, d Deps) {
 	if live == s.docText {
 		return
 	}
-	s.Draft.Blocks = blocksOfDocument(live, s.Draft.Blocks)
+	s.Draft.Blocks = s.blocksFromLive(live)
 	s.docText = live
 	if saved, ok := d.SaveDocument(c, s.Draft); ok {
 		s.Keep(saved)

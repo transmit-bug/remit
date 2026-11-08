@@ -54,6 +54,9 @@ type Options struct {
 	// ChooseExportFolder picks the folder an export writes into, mygo.Dialog's
 	// folder picker unless a test replaces it.
 	ChooseExportFolder func(title string) (string, error)
+	// ChooseImage picks one picture for a note, mygo.Dialog's file picker
+	// unless a test replaces it.
+	ChooseImage func() (string, error)
 	// Cards replaces the card plugin the app ships. A test hands in one that
 	// throws, to prove the review goes on without it.
 	Cards *ext.JSRunner
