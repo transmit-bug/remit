@@ -79,40 +79,42 @@ func View(c *ui.Context, s *State, d Deps) {
 	rows := d.Rows()
 	reload, open := false, -1
 
-	ui.Column(c).Grow(1).Padding(tk.SpaceXL).Gap(tk.SpaceL).Children(func() {
-		ui.Row(c).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, msgs.BrowseTitle()).FontSize(tk.TypeTitle).Bold()
-			ui.Spacer(c)
-			ui.Badge(c, msgs.CardCount(len(rows)))
-		})
+	ui.Column(c).Grow(1).AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
+		ui.Column(c).FillWidth().MaxWidth(design.BrowseWidth).Gap(tk.SpaceL).Children(func() {
+			ui.Row(c).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, msgs.BrowseTitle()).FontSize(tk.TypeTitle).Bold()
+				ui.Spacer(c)
+				ui.Badge(c, msgs.CardCount(len(rows)))
+			})
 
-		ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Children(func() {
-			field := ui.SearchField(c, &s.Query).
-				Placeholder(msgs.BrowseSearch()).Label(msgs.BrowseSearch()).
-				MinHeight(tk.Control).Grow(1).Bind(&s.field)
-			if field.Changed() {
-				reload, open = true, -1
-			}
+			ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Children(func() {
+				field := ui.SearchField(c, &s.Query).
+					Placeholder(msgs.BrowseSearch()).Label(msgs.BrowseSearch()).
+					MinHeight(tk.Control).Grow(1).Bind(&s.field)
+				if field.Changed() {
+					reload, open = true, -1
+				}
 
-			filter := int(s.Filter)
-			if ui.Segmented(c, &filter,
-				msgs.BrowseAll(), msgs.BrowseDue(), msgs.BrowseNew(), msgs.BrowseSuspended(), msgs.Lost(),
-			).Label(msgs.BrowseFilters()).Changed() {
-				s.Filter = Filter(filter)
-				reload, open = true, -1
-			}
-		})
+				filter := int(s.Filter)
+				if ui.Segmented(c, &filter,
+					msgs.BrowseAll(), msgs.BrowseDue(), msgs.BrowseNew(), msgs.BrowseSuspended(), msgs.Lost(),
+				).Label(msgs.BrowseFilters()).Changed() {
+					s.Filter = Filter(filter)
+					reload, open = true, -1
+				}
+			})
 
-		listView(c, s, tk, msgs, rows, d, &open)
+			listView(c, s, tk, msgs, rows, d, &open)
 
-		ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
-			if ui.Button(c, msgs.BrowseOpen()).MinHeight(tk.Control).
-				Disabled(s.Selected < 0 || s.Selected >= len(rows)).Clicked() {
-				open = s.Selected
-			}
-			if len(rows) == 0 {
-				ui.Text(c, msgs.BrowseEmpty()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
-			}
+			ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
+				if ui.Button(c, msgs.BrowseOpen()).MinHeight(tk.Control).
+					Disabled(s.Selected < 0 || s.Selected >= len(rows)).Clicked() {
+					open = s.Selected
+				}
+				if len(rows) == 0 {
+					ui.Text(c, msgs.BrowseEmpty()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+				}
+			})
 		})
 	})
 

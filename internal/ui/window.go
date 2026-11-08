@@ -12,38 +12,31 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// toolbar is the window's one row of controls, the same in every mode so that
-// switching never moves what the user is aiming at. Before a library is open
-// there is nothing to switch between, so the row holds the app's name alone.
+// toolbar is the window's app bar: a brand, one stable mode rail, and the
+// controls that belong to the mode on screen. The rail never moves between
+// modes; only the contextual group at its end changes. Before a library opens,
+// the bar keeps the brand and says nothing about pages there are none of.
 func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 	msgs := m(c)
 	toolbar := ui.Toolbar(c, func() {
-		ui.Text(c, Name).FontSize(tk.TypeHeading).Bold()
+		a.brand(c, tk)
 		if a.lib == nil {
 			ui.Spacer(c)
 			return
 		}
 
-		chosen := int(a.mode)
-		if ui.Segmented(c, &chosen, msgs.ModeNotes(), msgs.ModeReview(), msgs.ModeBrowse(), msgs.ModeStats(), msgs.ModeSettings()).
-			Label(msgs.ModeLabel()).Changed() {
-			a.setMode(mode(chosen))
-		}
-		a.pluginPagesMenu(c, msgs)
+		toolbarRule(c, tk)
+		ui.Spacer(c)
+		a.modeTabs(c, tk, msgs)
 
 		ui.Spacer(c)
 		if a.mode == modeNotes {
-			view := int(a.notes.View)
-			if ui.Segmented(c, &view, msgs.ViewEdit(), msgs.ViewSplit(), msgs.ViewRead()).
-				Label(msgs.ViewMode()).Changed() {
-				a.notes.View = notes.ViewMode(view)
-			}
-			ui.Button(c, "").Label(msgs.PanelTitle()).Tooltip(msgs.PanelTitle()).
-				Children(func() { tk.Icon(c, "notebook-pen", design.IconSmall) }).
-				OnClick(func() { a.notes.TogglePanel(c) })
+			a.viewSwitch(c, tk, msgs)
+			toolbarRule(c, tk)
+			iconButton(c, tk, msgs.PanelTitle(), "panel-right", false, func() { a.notes.TogglePanel(c) })
 		}
-		ui.Button(c, "").Label(msgs.More()).Tooltip(msgs.More()).
-			Children(func() { tk.Icon(c, "ellipsis", design.IconSmall) }).
+		a.pluginPagesMenu(c, msgs)
+		iconButton(c, tk, msgs.More(), "ellipsis", false, nil).
 			Menu(func(menu *ui.Menu) {
 				if menu.Item(msgs.ImportAnki()).Chosen() {
 					a.importAnkiPackage(c)
@@ -77,9 +70,133 @@ func (a *App) toolbar(c *ui.Context, tk design.Tokens) ui.Element {
 				}
 			})
 	}).Label(msgs.Toolbar(Name)).
-		Padding(tk.SpaceS, tk.SpaceL).
-		Background(tk.Surface)
+		Height(tk.FrameHeight).
+		Padding(0, tk.SpaceL).
+		Background(tk.Surface).
+		BorderWidth(0, 0, tk.Hairline, 0).
+		BorderColor(tk.Border)
 	return toolbar
+}
+
+// brand is the quiet identity at the head of the app bar: a mark whose colour
+// is the product's accent, then the wordmark. It is not a button; the pages
+// it names are in the rail beside it.
+func (a *App) brand(c *ui.Context, tk design.Tokens) {
+	ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Padding(0, tk.SpaceS).Children(func() {
+		ui.Box(c).Size(tk.SpaceXL+2, tk.SpaceXL+2).Radius(tk.RadiusControl).
+			Background(tk.Accent).Center().Children(func() {
+			tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.AccentText)
+		})
+		ui.Text(c, Name).FontSize(tk.TypeBody).FontWeight(650).LetterSpacing(-0.15)
+	})
+}
+
+// modeTabs is the app's primary navigation: text tabs with a mark-coloured
+// underline, not another boxed segmented control. TabsBase keeps the arrow
+// keys, the tab list role and the chosen page's state.
+func (a *App) modeTabs(c *ui.Context, tk design.Tokens, msgs locales.Messages) {
+	modes := []mode{modeNotes, modeReview, modeBrowse, modeStats, modeSettings}
+	chosen := 0
+	for i, candidate := range modes {
+		if candidate == a.mode {
+			chosen = i
+			break
+		}
+	}
+	tabs := ui.TabsBase(c, &chosen, 5)
+	names := []string{msgs.ModeNotes(), msgs.ModeReview(), msgs.ModeBrowse(), msgs.ModeStats(), msgs.ModeSettings()}
+	tabs.List.Label(msgs.ModeLabel()).Height(tk.FrameHeight - tk.Hairline).
+		AlignItems(ui.Stretch).Gap(0).Children(func() {
+		for i, name := range names {
+			selected := i == chosen
+			tab := tabs.Tab(i).Padding(0, tk.SpaceS).Justify(ui.Center).Radius(0).Label(name)
+			colour := tk.TextMuted
+			if selected {
+				colour = tk.Text
+			}
+			if tab.Hovered() && !selected {
+				tab.Background(tk.SurfaceHover)
+			}
+			tab.Children(func() {
+				ui.Text(c, name).FontSize(tk.TypeChrome).FontWeight(weight(selected, 600, 400)).
+					TextColor(colour).SingleLine()
+			})
+			if selected {
+				tab.DrawOver(func(p *ui.Painter, r ui.Rect) {
+					p.Fill(ui.Rect{X: r.X + tk.SpaceS, Y: r.Y + r.H - 2, W: max(1, r.W-2*tk.SpaceS), H: 2},
+						tk.Accent, 1)
+				})
+			}
+		}
+	})
+	if tabs.List.Changed() {
+		a.setMode(modes[chosen])
+	}
+}
+
+// viewSwitch is the note page's three ways of looking at the same document:
+// quiet, compact and grouped as one control. It is a SegmentedBase because its
+// face is the note's, not the window theme's default field.
+func (a *App) viewSwitch(c *ui.Context, tk design.Tokens, msgs locales.Messages) {
+	view := int(a.notes.View)
+	names := []string{msgs.ViewEdit(), msgs.ViewSplit(), msgs.ViewRead()}
+	if segmentedChoice(c, tk, &view, names, msgs.ViewMode()) {
+		a.notes.View = notes.ViewMode(view)
+	}
+}
+
+// segmentedChoice draws the compact, quiet switch used for a view or a queue.
+// It reports a new choice and writes it through the pointer, as Segmented does.
+func segmentedChoice(c *ui.Context, tk design.Tokens, selected *int, names []string, label string) bool {
+	seg := ui.SegmentedBase(c, selected, len(names))
+	seg.Track.Height(tk.Control - 2).Padding(2).Gap(1).AlignItems(ui.Stretch).
+		Radius(tk.RadiusControl).Background(tk.Sunken).Label(label).Children(func() {
+		for i, name := range names {
+			chosen := i == *selected
+			segment := seg.Segment(i).Padding(0, tk.SpaceS).Radius(tk.RadiusControl - 2).Label(name)
+			colour := tk.TextMuted
+			if chosen {
+				segment.Background(tk.Surface).TextColor(tk.Text)
+				colour = tk.Text
+			} else if segment.Hovered() {
+				segment.Background(tk.SurfaceHover)
+			}
+			segment.Children(func() {
+				ui.Text(c, name).FontSize(tk.TypeSmall).FontWeight(weight(chosen, 600, 400)).
+					TextColor(colour).SingleLine()
+			})
+		}
+	})
+	return seg.Track.Changed()
+}
+
+// toolbarRule is a hairline between groups of the app bar.
+func toolbarRule(c *ui.Context, tk design.Tokens) {
+	ui.Divider(c).Height(tk.SpaceXL).AlignSelf(ui.Center)
+}
+
+// iconButton is the app bar's icon-only action: a named hit area, a quiet face,
+// and no border until it is hovered or turned on.
+func iconButton(c *ui.Context, tk design.Tokens, label, icon string, on bool, click func()) ui.Element {
+	button := ui.Button(c, "").Label(label).Tooltip(label).
+		MinWidth(tk.Control + 2).MinHeight(tk.Control + 2).Justify(ui.Center).
+		Radius(tk.RadiusControl).TextColor(tk.TextMuted)
+	if on {
+		button.Background(tk.Accent.Alpha(0.12)).TextColor(tk.Accent)
+	}
+	button.Children(func() { tk.Icon(c, icon, design.IconSmall) })
+	if click != nil {
+		button.OnClick(click)
+	}
+	return button
+}
+
+// weight chooses a font weight by whether the item is the chosen one.
+func weight(chosen bool, on, off int) int {
+	if chosen {
+		return on
+	}
+	return off
 }
 
 // pluginPagesMenu offers the pages plugins contributed, when the library has
@@ -90,13 +207,17 @@ func (a *App) pluginPagesMenu(c *ui.Context, msgs locales.Messages) {
 	if len(pages) == 0 {
 		return
 	}
-	ui.MenuButton(c, msgs.PluginPages(), func(menu *ui.Menu) {
+	button := ui.Button(c, "").Label(msgs.PluginPages()).Tooltip(msgs.PluginPages()).
+		MinWidth(design.ControlHeight + 2).MinHeight(design.ControlHeight + 2).
+		Justify(ui.Center).Radius(design.RadiusControl).TextColor(c.Theme().TextMuted)
+	button.Children(func() { ui.Icon(c, design.Icon("layers")).Width(design.IconSmall).Height(design.IconSmall) })
+	button.Menu(func(menu *ui.Menu) {
 		for _, page := range pages {
 			if menu.Item(a.pluginText(c, page.Plugin, string(page.Page.Title))).Chosen() {
 				a.openPage(c, page)
 			}
 		}
-	}).Label(msgs.PluginPages())
+	})
 }
 
 // shortcuts declares the app's keys. They are window shortcuts, so they wait

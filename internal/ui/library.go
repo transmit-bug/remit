@@ -25,10 +25,6 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// messageWidth caps a message that is about the library rather than a card:
-// the error state's one line, centred in the window.
-const messageWidth float32 = 520
-
 // open opens the library the app was given or a previous run remembered, and
 // reads it into the app. No library at that place is the start view, not a
 // library created silently: creating or opening one is the user's choice. A
@@ -436,7 +432,7 @@ func (a *App) report(c *ui.Context, what string, err error) {
 func (a *App) libraryErrorView(c *ui.Context, tk design.Tokens) {
 	ui.Column(c).Grow(1).Center().Gap(tk.SpaceM).Padding(tk.SpaceXXL).Children(func() {
 		ui.Text(c, m(c).LibraryError(a.openErr.Error())).
-			FontSize(tk.TypeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)
+			FontSize(tk.TypeBody).TextColor(tk.TextMuted).MaxWidth(design.MessageWidth)
 		ui.Button(c, m(c).RetryLibrary()).MinHeight(tk.Control).
 			OnClick(func() { a.open() })
 	})

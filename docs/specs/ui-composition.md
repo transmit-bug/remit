@@ -40,6 +40,7 @@
 
 | 界面 | 今天的实现 | 官方组件 | 状态 |
 |---|---|---|---|
+| 窗口应用栏 | 64px：brand + 主页面 tab + 当前模式动作 + overflow | `ui.Toolbar` + `TabsBase` + `SegmentedBase` | 已建（`docs/ui-layout-rules.md`） |
 | 三栏布局（笔记/文档/面板） | `ui.Split` / `SplitPercent`，用户拖过的宽度被记住 | — | 已迁 |
 | 文档大纲 + 当前节 | `ui.Outline`，光标所在的标题以强调色标出 | — | 已迁 |
 | 反向链接 | `ButtonBase` 循环 | `ui.List`（`FollowEnd`/`Key`） | 待迁 |

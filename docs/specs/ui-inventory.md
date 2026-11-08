@@ -11,8 +11,8 @@ Update a row in the same change that touches its surface.
 
 | Surface | Need | Widget | State |
 |---|---|---|---|
-| Window toolbar | a row of window controls | `ui.Toolbar` | ok (sparse: see Notebook) |
-| Mode switch (笔记/复习/浏览/统计) | one of a few adjacent views | `ui.Segmented` | ok |
+| Window toolbar | an app bar with brand, primary pages and mode actions | `ui.Toolbar` + `ui.TabsBase` + `ui.SegmentedBase` | ok (see `docs/ui-layout-rules.md`) |
+| Mode switch (笔记/复习/浏览/统计/设置) | primary pages, not a local view choice | `ui.TabsBase` | ok (reading is a queue mode, not a primary tab) |
 | Notebook panes | two panes the user resizes | `ui.Split` / `SplitPercent` + `SplitReset` | ok |
 | Paper | one centred measure, no box | `Row(Justify Center)` + `Column(MaxWidth 760)` + `Padding` | ok |
 | Document typography | body 18 / 1.85, headings 1.9em down | `richtext.Theme` + `ui.Font{Size, LineHeight}` | ok |

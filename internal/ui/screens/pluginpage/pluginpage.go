@@ -20,8 +20,6 @@ import (
 )
 
 const (
-	// width caps the page's measure, as the app's other full-window pages do.
-	width float32 = 760
 	// narrowWidth is the content width below which the page lays itself out for
 	// a narrow window: a grid collapses to one column and a split stacks, so
 	// that 720×520 never scrolls sideways.
@@ -72,7 +70,7 @@ func View(c *ui.Context, s *State, d Deps) {
 
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
-			ui.Column(c).FillWidth().MaxWidth(width).Gap(tk.SpaceL).Label(d.message(c, s.Title)).Children(func() {
+			ui.Column(c).FillWidth().MaxWidth(tk.PaperWidth).Gap(tk.SpaceL).Label(d.message(c, s.Title)).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
 					ui.Text(c, d.message(c, s.Title)).FontSize(tk.TypeTitle).Bold()
 					ui.Spacer(c)

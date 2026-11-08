@@ -14,10 +14,6 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// width caps the page's measure, the same comfortable column the other
-// full-window pages use.
-const width float32 = 560
-
 // Deps is what the page asks of the app: one function per thing the user can
 // do. Each runs on the UI thread; the app writes the settings and tells the
 // services that read them.
@@ -79,7 +75,7 @@ func View(c *ui.Context, s *State, d Deps) {
 
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
-			ui.Column(c).FillWidth().MaxWidth(width).Gap(tk.SpaceL).Children(func() {
+			ui.Column(c).FillWidth().MaxWidth(design.SettingsWidth).Gap(tk.SpaceL).Children(func() {
 				ui.Text(c, msgs.SettingsTitle()).FontSize(tk.TypeTitle).Bold()
 				ui.Form(c, func() {
 					agentFieldset(c, s, d, msgs, tk)

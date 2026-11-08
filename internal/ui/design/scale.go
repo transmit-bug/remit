@@ -32,6 +32,17 @@ const (
 	// two together set how many characters a line holds.
 	PaperWidth float32 = 760
 	Gutter     float32 = 48
+	// ReadingWidth, ReviewWidth, SettingsWidth and BrowseWidth are the page
+	// measures the full-window screens use. They live here so a screen never
+	// invents its own column and the review summary shares the card's axis.
+	ReadingWidth  float32 = 760
+	ReviewWidth   float32 = 680
+	SettingsWidth float32 = 640
+	BrowseWidth   float32 = 1040
+	// SummaryWidth is the completed review card inside ReviewWidth, and
+	// MessageWidth is a short page's sentence and action.
+	SummaryWidth float32 = 520
+	MessageWidth float32 = 520
 	// FrameHeight is the window's top bar, BarHeight the format bar.
 	FrameHeight float32 = 64
 	BarHeight   float32 = 44

@@ -86,27 +86,30 @@ func (a *App) setMode(m mode) {
 func (a *App) queueView(c *ui.Context, tk design.Tokens) {
 	msgs := m(c)
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(tk.SpaceXS, tk.SpaceL).AlignItems(ui.Center).
-			Gap(tk.SpaceS).Children(func() {
-			chosen := 0
-			if a.mode == modeReading {
-				chosen = 1
-			}
-			if ui.Segmented(c, &chosen, msgs.ModeReview(), msgs.ModeReading()).
-				Label(msgs.ModeLabel()).Changed() {
-				if chosen == 1 {
-					a.setMode(modeReading)
-				} else {
-					a.setMode(modeReview)
-				}
-			}
-			if a.mode == modeReview && a.lib != nil {
-				a.reviewScopeMenu(c, msgs)
-			}
-			ui.Spacer(c)
-			ui.Text(c, msgs.ReadingWaiting(a.readingCount)).
-				FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
-		})
+		ui.Row(c).Justify(ui.Center).Padding(tk.SpaceXS, tk.SpaceL).
+			Background(tk.Surface).BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).
+			Children(func() {
+				ui.Row(c).Grow(1).MaxWidth(design.ReviewWidth).AlignItems(ui.Center).
+					Gap(tk.SpaceS).Children(func() {
+					chosen := 0
+					if a.mode == modeReading {
+						chosen = 1
+					}
+					if segmentedChoice(c, tk, &chosen, []string{msgs.ModeReview(), msgs.ModeReading()}, msgs.ModeLabel()) {
+						if chosen == 1 {
+							a.setMode(modeReading)
+						} else {
+							a.setMode(modeReview)
+						}
+					}
+					if a.mode == modeReview && a.lib != nil {
+						a.reviewScopeMenu(c, msgs)
+					}
+					ui.Spacer(c)
+					ui.Text(c, msgs.ReadingWaiting(a.readingCount)).
+						FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+				})
+			})
 		ui.Column(c).Grow(1).Children(func() {
 			if a.mode == modeReading {
 				a.readingView(c)

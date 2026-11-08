@@ -22,10 +22,6 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// width caps the column: a comfortable measure, centred in the window with the
-// notes list out of the way.
-const width float32 = 680
-
 // advance is how a graded card leaves and the next arrives: a short slide and
 // fade, no celebration. The transition honours the desktop's reduce-motion
 // setting by fading in place.
@@ -315,7 +311,7 @@ func View(c *ui.Context, s *State, d Deps) {
 			pad = design.SpaceXL
 		}
 		ui.Column(c).Grow(1).Center().Padding(pad).Children(func() {
-			ui.Column(c).FillWidth().MaxWidth(width).Gap(design.SpaceL).Children(func() {
+			ui.Column(c).FillWidth().MaxWidth(design.ReviewWidth).Gap(design.SpaceL).Children(func() {
 				if !hasCard {
 					empty(c, d)
 					return
@@ -337,31 +333,34 @@ func statusBar(c *ui.Context, s *State, card Card) {
 	msgs := locales.In(c.Locale())
 	t := c.Theme()
 	done, total := s.Progress()
-	ui.Row(c).Height(statusHeight).Padding(design.SpaceXS, design.SpaceL).
-		AlignItems(ui.Center).Gap(design.SpaceS).Children(func() {
-		ui.Text(c, msgs.Remaining(s.Remaining())).
-			FontSize(design.TypeSmall).TextColor(t.TextMuted)
-		if total > 0 {
-			ui.Progress(c, float64(done)/float64(total)).Grow(1)
-		}
-		ui.Spacer(c)
-		ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Children(func() {
-			// A card that takes a typed answer is checked from its input, so the
-			// key the status bar names is Enter, not the reveal only flips.
-			revealKey, revealLabel := "Space", msgs.ShowAnswer()
-			if s.Typing(card) {
-				revealKey, revealLabel = "Enter", msgs.CheckAnswer()
+	ui.Row(c).Justify(ui.Center).Children(func() {
+		ui.Row(c).Grow(1).MaxWidth(design.ReviewWidth).Height(statusHeight).
+			Padding(design.SpaceXS, design.SpaceL).AlignItems(ui.Center).
+			Gap(design.SpaceS).Children(func() {
+			ui.Text(c, msgs.Remaining(s.Remaining())).
+				FontSize(design.TypeSmall).TextColor(t.TextMuted)
+			if total > 0 {
+				ui.Progress(c, float64(done)/float64(total)).Grow(1)
 			}
-			keys := []struct{ key, label string }{
-				{revealKey, revealLabel},
-				{"U", msgs.Undo()},
-				{"S", msgs.Suspend()},
-				{"E", msgs.EditNote()},
-				{"Esc", msgs.ModeNotes()},
-			}
-			for _, k := range keys {
-				kit.Keycap(c, k.key).Tooltip(k.label)
-			}
+			ui.Spacer(c)
+			ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Children(func() {
+				// A card that takes a typed answer is checked from its input, so the
+				// key the status bar names is Enter, not the reveal only flips.
+				revealKey, revealLabel := "Space", msgs.ShowAnswer()
+				if s.Typing(card) {
+					revealKey, revealLabel = "Enter", msgs.CheckAnswer()
+				}
+				keys := []struct{ key, label string }{
+					{revealKey, revealLabel},
+					{"U", msgs.Undo()},
+					{"S", msgs.Suspend()},
+					{"E", msgs.EditNote()},
+					{"Esc", msgs.ModeNotes()},
+				}
+				for _, k := range keys {
+					kit.Keycap(c, k.key).Tooltip(k.label)
+				}
+			})
 		})
 	})
 }
@@ -571,6 +570,7 @@ func empty(c *ui.Context, d Deps) {
 					MinHeight(design.ControlHeight).OnClick(d.Home)
 			})
 		})
-		card.Width(520).MaxWidth(520).Padding(design.SpaceXXL)
+		card.FillWidth().MaxWidth(design.SummaryWidth).AlignSelf(ui.Center).Padding(design.SpaceXXL).
+			Label(msgs.SummaryTitle()).Role(ui.RoleGroup)
 	})
 }

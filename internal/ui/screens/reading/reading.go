@@ -19,9 +19,6 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// width caps the column: a comfortable measure, centred in the window.
-const width float32 = 720
-
 // Note is what the screen shows of a note: its title, its blocks in file order,
 // and the block the last session stopped at.
 type Note struct {
@@ -138,7 +135,7 @@ func View(c *ui.Context, s *State, d Deps) {
 				pad = design.SpaceXL
 			}
 			ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(pad).Children(func() {
-				ui.Column(c).FillWidth().MaxWidth(width).Gap(design.SpaceL).Children(func() {
+				ui.Column(c).FillWidth().MaxWidth(design.ReadingWidth).Gap(design.SpaceL).Children(func() {
 					if !hasNote {
 						empty(c, d)
 						return
