@@ -115,6 +115,7 @@ type State struct {
 
 	docNote       core.ID // the note the document holds
 	docText       string  // the text the document was last built from
+	deps          *Deps   // the screen's seams, for work a build pass hands to the next
 	title         ui.Handle
 	body          ui.Handle
 	linkOpen      bool    // the popover a link's address is typed in is up
@@ -175,6 +176,12 @@ type Deps struct {
 	// SaveDocument stores the note and reconciles the cards its paragraphs ask
 	// for.
 	SaveDocument func(*ui.Context, core.Note) (core.Note, bool)
+	// PutAsset stores a picture in the library and answers the relative
+	// path a note references it by.
+	PutAsset func(data []byte, ext string) (string, error)
+	// GetAsset reads a stored asset's bytes, false when the library holds
+	// no such file.
+	GetAsset func(rel string) ([]byte, bool)
 	// OpenCardEdit opens the field editor on a card.
 	OpenCardEdit func(*ui.Context, core.ID)
 }
@@ -185,6 +192,7 @@ type Deps struct {
 // drops the note's panel so that the document keeps room to be typed.
 func View(c *ui.Context, s *State, d Deps) {
 	tk := design.NewTokens(c.Theme())
+	s.deps = &d
 	w, _ := c.Size()
 	ui.Split(c, &s.Width, func() {
 		s.notesList(c, tk, d)
@@ -268,6 +276,72 @@ func (s *State) ensureDocument() {
 	text := DocumentText(s.Draft)
 	s.Doc = richtext.NewDocument(richtext.ParseMarkdown(text))
 	s.docNote, s.docText = s.Draft.ID, text
+	s.rehydrate(s.deps)
+}
+
+// rehydrate decodes the pictures a stored note carries: ParseMarkdown keeps
+// an image as its reference — the text is the truth, and the pixels are a
+// note's to show — so a document is built with name boxes where the pictures
+// go, and this puts the bytes of the library's assets behind them. A picture
+// that cannot be read or decoded stays its reference: the note file still
+// says exactly what it is. deps carries the reader; nil leaves the boxes.
+func (s *State) rehydrate(deps *Deps) {
+	if s.Doc == nil || deps == nil || deps.GetAsset == nil {
+		return
+	}
+	text := s.Doc.Text()
+	// Each attachment is one object-replacement character; its offset is
+	// where the picture's attributes live.
+	type pending struct {
+		at  int
+		rel string
+	}
+	var todo []pending
+	for start, p := range text.Paragraphs() {
+		off := start
+		for _, run := range p.Runs {
+			if at := run.Attributes.Attachment; at != nil && isAssetRef(at.URL) && at.Image == nil {
+				todo = append(todo, pending{at: off, rel: at.URL})
+			}
+			off += len([]rune(run.Text))
+		}
+	}
+	if len(todo) == 0 {
+		return
+	}
+	s.Doc.Edit(func(e *richtext.Edit) {
+		for _, item := range todo {
+			data, ok := deps.GetAsset(item.rel)
+			if !ok {
+				continue
+			}
+			bm, err := ui.DecodeBitmap(data)
+			if err != nil {
+				continue
+			}
+			e.Format(item.at, item.at+1, func(a *richtext.Attributes) {
+				if at := a.Attachment; at != nil && at.URL == item.rel {
+					at.Image = bm
+				}
+			})
+		}
+	})
+}
+
+// isAssetRef says whether a reference is the library's own assets form.
+func isAssetRef(url string) bool {
+	return strings.HasPrefix(url, "assets/") && !strings.Contains(url, "..")
+}
+
+// compact drops adjacent duplicates of a sorted list.
+func compact(refs []string) []string {
+	out := refs[:0]
+	for i, ref := range refs {
+		if i == 0 || ref != refs[i-1] {
+			out = append(out, ref)
+		}
+	}
+	return out
 }
 
 // ParagraphAtCaret is the paragraph the caret is in, counted from zero as the

@@ -8,9 +8,12 @@
 //
 // Markdown files that are not in the library's shape are ordinary Markdown:
 // the parser reads title and paragraphs the same way it reads a note file, so
-// lists, fences and tables survive as the text they were. Media is not
-// carried (#152 owns a library assets directory); image references are left
-// as written and counted as unreachable when the file they name is missing.
+// lists, fences and tables survive as the text they were. Images a note
+// references by the library's relative form — ![](assets/<sha>.<ext>) — move
+// with the notes (#152): an import stores the directory's assets/ subtree in
+// the library, an export writes the stored assets an export's notes name next
+// to the files. References left as written are counted as unreachable when
+// the file they name is missing.
 package importmd
 
 // Report is what one import or export did. An import's counts are what was
@@ -27,6 +30,10 @@ type Report struct {
 	// already held this exact content, an export counts notes with no title
 	// and no text.
 	Skipped int
+	// Assets is how many asset files the run stored or wrote: an import
+	// stores the files of the directory's assets/ subtree in the library,
+	// an export writes the assets the notes reference next to the files.
+	Assets int
 	// Warnings name what read oddly, one per file at most; a run that has
 	// more than maxWarnings adds nothing and says so at the end.
 	Warnings []string

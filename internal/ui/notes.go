@@ -30,6 +30,8 @@ func (a *App) notesDeps() notes.Deps {
 		NewNote:      a.newNote,
 		SaveNote:     a.saveNote,
 		SaveDocument: a.saveDocument,
+		PutAsset:     a.putAsset,
+		GetAsset:     a.getAsset,
 		OpenCardEdit: a.openCardEdit,
 	}
 }
@@ -80,6 +82,24 @@ func (a *App) saveDocument(c *ui.Context, note core.Note) (core.Note, bool) {
 	a.reload()
 	a.reconcileCards(c, saved)
 	return saved, true
+}
+
+// putAsset stores a picture in the library open now, which a dropped archive
+// can replace, so the library is taken at call time.
+func (a *App) putAsset(data []byte, ext string) (string, error) {
+	return a.lib.PutAsset(data, ext)
+}
+
+// getAsset reads a stored asset's bytes; a closed library holds nothing.
+func (a *App) getAsset(rel string) ([]byte, bool) {
+	if a.lib == nil {
+		return nil, false
+	}
+	data, ok, err := a.lib.Asset(rel)
+	if err != nil {
+		return nil, false
+	}
+	return data, ok
 }
 
 // writeNote saves a note without reloading, for an action that writes more than

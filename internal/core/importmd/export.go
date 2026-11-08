@@ -36,6 +36,7 @@ func Export(dir string, lib *store.Library) (Report, error) {
 			report.Skipped++
 		}
 	}
+	exportAssets(dir, lib, &report)
 	return report, nil
 }
 
@@ -43,6 +44,7 @@ func Export(dir string, lib *store.Library) (Report, error) {
 // empty title and no text is skipped rather than written: a file of nothing
 // is not a note anyone takes away.
 func ExportNote(dir string, id core.ID, lib *store.Library) (string, bool, error) {
+	var report Report
 	if lib == nil {
 		return "", false, ErrNoLibrary
 	}
@@ -52,6 +54,13 @@ func ExportNote(dir string, id core.ID, lib *store.Library) (string, bool, error
 	path, wrote, err := writeNote(dir, id, lib)
 	if err != nil {
 		return "", false, err
+	}
+	if wrote {
+		src, _, srcErr := lib.NoteSource(id)
+		if srcErr != nil {
+			return "", false, srcErr
+		}
+		exportNoteAssets(dir, src, lib, &report)
 	}
 	return path, wrote, nil
 }

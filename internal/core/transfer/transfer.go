@@ -13,9 +13,10 @@ import (
 	"strings"
 )
 
-// SourceFiles are the parts of a library that are its own data. The derived
-// index under .remit is deliberately absent.
-var SourceFiles = []string{"remit.json", "notes", "cards", "reviews.jsonl", "types", "plugins-data"}
+// SourceFiles are the parts of a library that are its own data — the assets
+// directory included, so a note's images travel in the archive (ADR 0003).
+// The derived index under .remit is deliberately absent.
+var SourceFiles = []string{"remit.json", "notes", "cards", "assets", "reviews.jsonl", "types", "plugins-data"}
 
 // Write packages the library at dir into w.
 func Write(dir string, w io.Writer) error {
