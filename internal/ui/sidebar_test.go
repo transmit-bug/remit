@@ -10,9 +10,7 @@ import (
 
 // Choosing a note in the list shows that note's blocks.
 func TestNotesList(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, _, tt := openApp(t)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 

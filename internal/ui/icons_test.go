@@ -11,9 +11,7 @@ import (
 // with the Lost filter shown — the state whose repair is the re-link dialog.
 func lostCardWindow(t *testing.T) (*ui.Tester, testLibrary) {
 	t.Helper()
-	a, seed := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, seed, tt := openApp(t)
 
 	// Deleting a paragraph is an edit of the document now: save the note
 	// without the block its card points at, and the card loses its source.

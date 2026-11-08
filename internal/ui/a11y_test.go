@@ -9,9 +9,7 @@ import (
 // A grade changes the screen; it also has to be said, or a screen reader user
 // never learns that the card left the queue.
 func TestGradingAnnouncesWhatIsLeft(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, _, tt := openApp(t)
 
 	tt.Key(ui.Cmd, ui.Key1)
 	tt.Key(0, ui.KeySpace)

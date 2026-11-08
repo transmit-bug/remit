@@ -114,9 +114,7 @@ func TestNewNoteFromTemplate(t *testing.T) {
 // nothing about the search or the list changes.
 func TestNoTemplatesNoMenu(t *testing.T) {
 	msgs := locales.In("en")
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, _, tt := openApp(t)
 	tt.Key(ui.Cmd, ui.Key2)
 
 	if _, ok := tt.Find(msgs.NewFromTemplate()); ok {

@@ -191,9 +191,7 @@ func TestReviewStatusBarCarriesTheKeys(t *testing.T) {
 // The whole review flow runs on keys: reveal, grade, undo, suspend, edit and
 // leave — with no pointer and nothing else on screen.
 func TestReviewIsKeyboardOnly(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, _, tt := openApp(t)
 
 	// Reveal, grade, and take the grade back.
 	tt.Key(0, ui.KeySpace)
@@ -261,9 +259,7 @@ func TestReviewAtTheSmallestWindow(t *testing.T) {
 // The interval on each grade key is the scheduler's own answer: what the store
 // says the answer would schedule, said on the key.
 func TestGradeKeysShowTheSchedulesIntervals(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, _, tt := openApp(t)
 	tt.Key(0, ui.KeySpace)
 	tt.Advance(320 * time.Millisecond) // the answer unfolding
 
@@ -296,9 +292,7 @@ func TestGradeKeysShowTheSchedulesIntervals(t *testing.T) {
 // Review runs on keys: reveal, grade, the next card, undo, suspend and the
 // remaining count, on the real view over the real store.
 func TestReviewKeys(t *testing.T) {
-	a, seed := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, seed, tt := openApp(t)
 	tt.Key(ui.Cmd, ui.Key1)
 
 	answer := "reviewing just before you forget strengthens recall."

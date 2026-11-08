@@ -10,9 +10,7 @@ import (
 // The palette opens on Cmd+K, filters as the user types, runs what is chosen
 // and returns the focus where it was.
 func TestPalette(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, _, tt := openApp(t)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 

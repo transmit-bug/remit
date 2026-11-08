@@ -45,9 +45,7 @@ func TestBrowseEnter(t *testing.T) {
 // Cmd+F opens browse on its search field from anywhere, and what is typed
 // narrows the rows by the cards' text: a prompt comes and goes.
 func TestBrowseSearch(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, _, tt := openApp(t)
 	tt.Advance(320 * time.Millisecond) // the opening card's entry
 
 	tt.Key(ui.Cmd, ui.KeyF)
@@ -200,9 +198,7 @@ func TestBrowseFilters(t *testing.T) {
 // Choosing a card opens the note it came from, or the card in review when it
 // has no note to open.
 func TestBrowseOpens(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, _, tt := openApp(t)
 	tt.Advance(320 * time.Millisecond) // the opening card's entry
 	tt.Key(ui.Cmd, ui.Key3)
 	tt.Advance(320 * time.Millisecond) // the review card's exit

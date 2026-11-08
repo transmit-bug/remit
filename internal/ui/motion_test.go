@@ -12,9 +12,7 @@ import (
 // Every moment the window plays stops: after its preset has run, the view asks
 // for no more frames.
 func TestMotionSettles(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, _, tt := openApp(t)
 
 	// A screen change: the entrance of the screen it switches to.
 	tt.Key(ui.Cmd, ui.Key2)
@@ -72,9 +70,7 @@ func TestReducedMotionSwitchesAtOnce(t *testing.T) {
 // A control's hover and press move it on the face, not in the layout: the box is
 // the same size before, under the pointer, and pressed.
 func TestHoverAndPressKeepTheLayout(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, _, tt := openApp(t)
 
 	// The grades are up only once the answer is.
 	tt.Key(0, ui.KeySpace)

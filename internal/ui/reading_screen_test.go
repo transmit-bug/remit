@@ -280,9 +280,7 @@ func TestReadingCountsReachAService(t *testing.T) {
 // notebook with no pointer and no second entry.
 func TestPaletteCommandsForReading(t *testing.T) {
 	msgs := locales.In("en")
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, _, tt := openApp(t)
 	// The command acts on the note open in the notebook, so the notebook shows
 	// it first.
 	tt.Key(ui.Cmd, ui.Key2)
