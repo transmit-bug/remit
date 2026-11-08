@@ -206,6 +206,14 @@ func enablePlugin(t *testing.T, dir, name string) {
 	}
 }
 
+// reportApp is contribApp with the fixture every command/page test shares: the
+// plugin named report declaring reportContributes, its data answer preset. A
+// test that needs a different runner passes its own; nil gets the default.
+func reportApp(t *testing.T, runner *fakeRunner) (*App, testLibrary) {
+	t.Helper()
+	return contribApp(t, "report", reportContributes, runner)
+}
+
 // contribApp opens the window on a library with one plugin enabled that declares
 // contributes, and hands the app a runner the test controls. The background is
 // the test's own: a job and its answer run inline, where there is one thread.
@@ -270,7 +278,7 @@ func openPage(t *testing.T, tt *ui.Tester, nav, page string) {
 // withdrawing the plugin takes it out of both: the declarations are the only
 // door, and disabling removes them from every receiver.
 func TestContributedCommandLivesInThePaletteAndItsSlot(t *testing.T) {
-	a, _ := contribApp(t, "report", reportContributes, &fakeRunner{})
+	a, _ := reportApp(t, &fakeRunner{})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 
@@ -327,7 +335,7 @@ func TestContributedCommandLivesInThePaletteAndItsSlot(t *testing.T) {
 // the host applies what it answers: a toast here, a page there.
 func TestContributedCommandAppliesItsAnswer(t *testing.T) {
 	runner := &fakeRunner{reply: map[string]string{"show": `{"result":"toast","message":"%toast.done%"}`}}
-	a, _ := contribApp(t, "report", reportContributes, runner)
+	a, _ := reportApp(t, runner)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 
@@ -354,7 +362,7 @@ func TestContributedCommandAppliesItsAnswer(t *testing.T) {
 // failure hides that command, and only that command.
 func TestAFailingCommandToastsThenHidesItself(t *testing.T) {
 	runner := &fakeRunner{failed: map[string]error{"show": errThrown}}
-	a, _ := contribApp(t, "report", reportContributes, runner)
+	a, _ := reportApp(t, runner)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 
@@ -419,7 +427,7 @@ func (e errorText) Error() string { return string(e) }
 func TestContributedPageDrawsAtBothSizes(t *testing.T) {
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
-			a, _ := contribApp(t, "report", reportContributes, &fakeRunner{})
+			a, _ := reportApp(t, &fakeRunner{})
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
 			openReportPage(t, tt)
@@ -463,7 +471,7 @@ func TestContributedPageDrawsAtBothSizes(t *testing.T) {
 // leaves it for the next focusable thing in document order, with the focus
 // where the reader can see it.
 func TestContributedPageKeepsAKeyboardPath(t *testing.T) {
-	a, _ := contribApp(t, "report", reportContributes, &fakeRunner{})
+	a, _ := reportApp(t, &fakeRunner{})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	openReportPage(t, tt)
@@ -493,7 +501,7 @@ func TestContributedPageKeepsAKeyboardPath(t *testing.T) {
 // A page follows the window's language: its own catalog answers in Chinese, and
 // the host's chrome does too.
 func TestContributedPageFollowsTheLocale(t *testing.T) {
-	a, _ := contribApp(t, "report", reportContributes, &fakeRunner{})
+	a, _ := reportApp(t, &fakeRunner{})
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.SetLocale("zh-Hans")
 	settle(tt)
@@ -514,7 +522,7 @@ func TestContributedPageFollowsTheLocale(t *testing.T) {
 // and the third failure takes its navigation entry, and only its own.
 func TestContributedPageFailsWithARetry(t *testing.T) {
 	runner := &fakeRunner{failed: map[string]error{"data": errThrown}}
-	a, _ := contribApp(t, "report", reportContributes, runner)
+	a, _ := reportApp(t, runner)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	openReportPage(t, tt)
@@ -557,7 +565,7 @@ func TestContributedPageFailsWithARetry(t *testing.T) {
 // The settings a plugin declares are the host form's fields, and the value the
 // reader changes is written into the plugin's own store, not through the plugin.
 func TestContributedSettingsWriteThroughTheHostForm(t *testing.T) {
-	a, _ := contribApp(t, "report", reportContributes, &fakeRunner{})
+	a, _ := reportApp(t, &fakeRunner{})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 
@@ -669,7 +677,7 @@ func TestOneBrokenContributionHidesOnlyItself(t *testing.T) {
 // frame after the answer does.
 func TestFrameNeverCallsAPlugin(t *testing.T) {
 	runner := &fakeRunner{gate: make(chan struct{})}
-	a, _ := contribApp(t, "report", reportContributes, runner)
+	a, _ := reportApp(t, runner)
 	a.runBackground = nil // the app's own: a goroutine, applied on a later frame
 
 	tt := ui.NewTester(a.View, 1024, 720)
