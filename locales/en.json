@@ -540,6 +540,10 @@
   "@addBlockBelow": {
     "description": "Block menu: add an empty block after this one."
   },
+  "duplicateBlock": "Duplicate block",
+  "@duplicateBlock": {
+    "description": "Block menu: copy this block after itself."
+  },
   "splitAtCursor": "Split at cursor",
   "@splitAtCursor": {
     "description": "Block menu: divide the block where the caret is."

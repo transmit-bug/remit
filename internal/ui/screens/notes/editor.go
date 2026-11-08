@@ -43,6 +43,7 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 	}
 
 	edited, retitled := false, false
+	var blockChange blockAction
 	// The band under the frame: the format bar, then the paper itself, then the
 	// status line. The paper is one centred measure; nothing else is boxed.
 	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
@@ -79,11 +80,13 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 				editor := ui.Row(c)
 				drops := editor.DroppedFiles()
 				over := editor.FileDragOver()
-				editor.AlignItems(ui.Stretch).Grow(1).MinWidth(0)
+				boxes := s.Doc.VisibleParagraphs()
+				editor.AlignItems(ui.Stretch).Grow(1).MinWidth(0).ClipY()
 				if over {
 					editor.Border(1, tk.Accent).Radius(tk.RadiusControl)
 				}
 				editor.Children(func() {
+					s.blockHighlight(c, tk, boxes)
 					if richtext.EditorBase(c, s.Doc, richtext.EditorOptions{
 						Label: msgs.NoteBody(),
 						Font:  noteFont(tk),
@@ -91,6 +94,7 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 					}).Grow(1).MinHeight(tk.Control * 12).Bind(&s.body).Changed() {
 						edited = true
 					}
+					s.blockHandles(c, tk, msgs, &blockChange)
 				})
 				s.pasteShortcut(editor, c, d)
 				if len(drops) > 0 || pasted != nil {
@@ -100,6 +104,9 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 		})
 		s.statusLine(c, tk, cardCount(s.Draft, library))
 	})
+	if s.applyBlockAction(c, blockChange) {
+		edited = true
+	}
 	switch {
 	case edited:
 		s.saveDocument(c, d)

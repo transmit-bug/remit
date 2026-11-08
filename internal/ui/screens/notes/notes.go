@@ -138,6 +138,8 @@ type State struct {
 	outlineFor    core.ID              // the note the outline was opened for
 	outlineShape  int                  // how many headings that note had
 	pendingJump   int                  // where a panel row asks the caret to go, -1 for none
+	blockHover    int                  // the visible paragraph under the pointer, -1 for none
+	blockMenus    map[int]bool         // the visible paragraphs whose block menu is open
 }
 
 // New returns the notebook's state with the widths and rows the window opens
@@ -150,6 +152,7 @@ func New() State {
 		outlineChosen:  -1,
 		OutlineCurrent: -1,
 		pendingJump:    -1,
+		blockHover:     -1,
 	}
 }
 
@@ -270,6 +273,7 @@ func (s *State) hold(note core.Note) {
 	s.Loaded = string(note.ID)
 	s.Selected = string(note.ID)
 	s.Doc, s.docNote, s.docText = nil, "", ""
+	s.blockHover, s.blockMenus = -1, nil
 }
 
 // Keep takes the note the store returned as the draft: the ids it minted are
@@ -286,6 +290,7 @@ func (s *State) ensureDocument() {
 	text := DocumentText(s.Draft)
 	s.Doc = richtext.NewDocument(richtext.ParseMarkdown(text))
 	s.docNote, s.docText = s.Draft.ID, text
+	s.blockHover, s.blockMenus = -1, nil
 	s.rehydrate(s.deps)
 }
 

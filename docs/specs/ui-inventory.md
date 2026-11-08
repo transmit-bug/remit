@@ -43,7 +43,7 @@ Update a row in the same change that touches its surface.
 | Overflow | a menu of rare commands | icon `Button` + `Element.Menu` | ok (import, make card, settings) |
 | Format bar | toggles that report the selection's formats | `ui.Toolbar` + `ui.MenuButton` + `Document.Formatting()` + `Document.Toggle*` | ok (the pressed look is a `Button` in the accent tint, as MyGo's notes example does) |
 | Find in note | find inside a document | `ui.FindBar` | ok |
-| Paragraph handles | a menu per visible paragraph | `Document.VisibleParagraphs()` + `ui.MenuButton` | gap (not built) |
+| Paragraph handles | a menu per visible paragraph | `Document.VisibleParagraphs()` + `ui.ButtonBase` + `PopoverMenuButton` | ok (first slice: insert, duplicate, convert) |
 | Card badges | action per paragraph | `ui.ButtonBase` in a `ScrollHorizontal` row | ok (composition, no widget carries "a row of badges") |
 
 ## Review
@@ -85,4 +85,5 @@ Update a row in the same change that touches its surface.
 - **Heatmap** — `ui/chart` (v0.8.1) has no calendar heatmap; `stats.go` builds a grid of tinted boxes.
 - **Split editing** — `richtext` keeps one view per `Document` (v0.8.1), so the 分栏 right side is `ui/markdown.View`, read-only.
 - **`::` card derivation** — product design (ADR 0002), not a rendering gap.
-- **Block handles, insert menu, export** — not built yet; `docs/specs/ui-redesign.md` P1.
+- **Slash insert menu, export, moving and deleting blocks** — not built yet;
+  `docs/specs/block-tools.md` and `docs/specs/ui-redesign.md` P1.

@@ -52,7 +52,8 @@ func noteTheme(tk design.Tokens) *richtext.Theme {
 }
 
 // noteFont is the body the note is written in: the document's size at the
-// paper's line height, so a CJK paragraph has the leading it needs.
+// desktop's text scale and the paper's line height, so a CJK paragraph has the
+// leading it needs.
 func noteFont(tk design.Tokens) ui.Font {
-	return ui.Font{Size: design.TypeBody * 1.2, LineHeight: design.TextLineHeight}
+	return ui.Font{Size: tk.TypeBody * 1.2, LineHeight: design.TextLineHeight}
 }

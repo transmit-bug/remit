@@ -97,6 +97,7 @@
   "blockActions": "块操作",
   "blockActionsFor": "第 {number} 块的操作",
   "addBlockBelow": "在下方新增块",
+  "duplicateBlock": "复制块",
   "splitAtCursor": "在光标处拆分",
   "moveBlockUp": "上移",
   "moveBlockDown": "下移",

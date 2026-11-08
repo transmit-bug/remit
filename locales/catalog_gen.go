@@ -1411,6 +1411,20 @@ func (msgs Messages) AddBlockBelow() string {
 	return Catalog.Format(msgs.locale, "addBlockBelow", nil)
 }
 
+// DuplicateBlock says "Duplicate block"
+// in the language the app shows.
+//
+// Block menu: copy this block after itself.
+func DuplicateBlock() string { return In(i18n.Locale()).DuplicateBlock() }
+
+// DuplicateBlock says "Duplicate block"
+// in the language of msgs.
+//
+// Block menu: copy this block after itself.
+func (msgs Messages) DuplicateBlock() string {
+	return Catalog.Format(msgs.locale, "duplicateBlock", nil)
+}
+
 // SplitAtCursor says "Split at cursor"
 // in the language the app shows.
 //
