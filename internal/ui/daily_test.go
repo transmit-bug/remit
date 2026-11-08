@@ -15,9 +15,7 @@ import (
 // ⌘D opens today's note and writes it the first time; the second time finds the
 // note it wrote.
 func TestDailyNoteOpensToday(t *testing.T) {
-	a, seed := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, seed, tt := openApp(t)
 
 	today := dailyTitle(time.Now())
 	tt.Key(ui.Cmd, ui.KeyD)

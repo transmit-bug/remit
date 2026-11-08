@@ -93,9 +93,7 @@ func TestSettingsKeepPreferences(t *testing.T) {
 // A note written with a heading, a list, code and an image keeps its shape and
 // every marker across a save and a reopen.
 func TestDocumentRoundTripsRichText(t *testing.T) {
-	a, seed := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, seed, tt := openApp(t)
 	notesMode(t, a, tt)
 	openNote(t, tt, "Writing cards")
 
@@ -140,9 +138,7 @@ func TestDocumentRoundTripsRichText(t *testing.T) {
 // Editing a block's text is a note save, so the card that follows the block
 // shows the new sides and the note file holds them.
 func TestEditDocument(t *testing.T) {
-	a, seed := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, seed, tt := openApp(t)
 	notesMode(t, a, tt)
 	openNote(t, tt, "Memory and recall")
 

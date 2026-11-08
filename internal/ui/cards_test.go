@@ -33,9 +33,7 @@ func newNoteTyped(t *testing.T, a *App, tt *ui.Tester, body string) {
 // never the paragraph's faces.
 func TestSeparatorMakesACard(t *testing.T) {
 	msgs := locales.In("en")
-	a, seed := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, seed, tt := openApp(t)
 	newNoteTyped(t, a, tt, "What is spacing? :: Practice spread over days.")
 
 	badge := msgs.CardOnParagraph(1, 1)
@@ -70,9 +68,7 @@ func TestSeparatorMakesACard(t *testing.T) {
 // Taking the separator out again takes the card out of the queue: it is
 // suspended, its history kept, and its badge is gone.
 func TestRemovingTheSeparatorSuspendsTheCard(t *testing.T) {
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, _, tt := openApp(t)
 	newNoteTyped(t, a, tt, "What is spacing? :: Practice spread over days.")
 
 	cards := a.Library().Cards()
@@ -106,9 +102,7 @@ func TestRemovingTheSeparatorSuspendsTheCard(t *testing.T) {
 // the store holds.
 func TestCardBadgeEditsOverrides(t *testing.T) {
 	msgs := locales.In("en")
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, _, tt := openApp(t)
 	newNoteTyped(t, a, tt, "What is spacing? :: Practice spread over days.")
 
 	cards := a.Library().Cards()
@@ -161,9 +155,7 @@ func noteFile(a *App, id core.ID) string {
 // can be graded.
 func TestClozeMakesOneCardPerBlank(t *testing.T) {
 	msgs := locales.In("en")
-	a, _ := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	a, _, tt := openApp(t)
 	newNoteTyped(t, a, tt, "The {{first}} blank asks {{second}}.")
 
 	if !tt.HasText(msgs.CardOnParagraph(1, 2)) {
@@ -208,9 +200,7 @@ func TestClozeMakesOneCardPerBlank(t *testing.T) {
 // A note's block becomes a card in the library, split at its first ::, and
 // joins the queue.
 func TestMakeCard(t *testing.T) {
-	a, seed := newTestApp(t)
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
+	_, seed, tt := openApp(t)
 	tt.Key(ui.Cmd, ui.Key2)
 
 	tt.Key(ui.Cmd, ui.KeyK)
