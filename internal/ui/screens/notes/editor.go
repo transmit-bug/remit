@@ -1,6 +1,8 @@
 package notes
 
 import (
+	"fmt"
+	"io/fs"
 	"strings"
 
 	"github.com/egoist/mygo/ui"
@@ -71,13 +73,28 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 				})
 
 				// EditorBase, not Editor: the paper is the surface, so the editor
-				// brings no box of its own.
-				if richtext.EditorBase(c, s.Doc, richtext.EditorOptions{
-					Label: msgs.NoteBody(),
-					Font:  noteFont(tk),
-					Theme: noteTheme(tk),
-				}).Grow(1).MinHeight(tk.Control * 12).Bind(&s.body).Changed() {
-					edited = true
+				// brings no box of its own. The wrapping row takes the paste
+				// shortcut and dropped files: a picture pasted or dragged in
+				// is stored in the library and inserted at the caret (#152).
+				editor := ui.Row(c)
+				drops := editor.DroppedFiles()
+				over := editor.FileDragOver()
+				editor.AlignItems(ui.Stretch).Grow(1).MinWidth(0)
+				if over {
+					editor.Border(1, tk.Accent).Radius(tk.RadiusControl)
+				}
+				editor.Children(func() {
+					if richtext.EditorBase(c, s.Doc, richtext.EditorOptions{
+						Label: msgs.NoteBody(),
+						Font:  noteFont(tk),
+						Theme: noteTheme(tk),
+					}).Grow(1).MinHeight(tk.Control * 12).Bind(&s.body).Changed() {
+						edited = true
+					}
+				})
+				s.pasteShortcut(editor, c, d)
+				if len(drops) > 0 || pasted != nil {
+					s.takeImages(c, d, drops)
 				}
 			})
 		})
@@ -185,7 +202,7 @@ func (s *State) secondPane(c *ui.Context, tk design.Tokens, d Deps) {
 		return
 	}
 	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL).Children(func() {
-		markdown.View(c, DocumentText(s.Draft), nil)
+		markdown.View(c, DocumentText(s.Draft), s.imageOptions())
 	})
 }
 
@@ -203,7 +220,7 @@ func (s *State) readView(c *ui.Context, tk design.Tokens, d Deps) {
 	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL).Children(func() {
 		ui.Column(c).MaxWidth(readWidth).Gap(tk.SpaceM).Children(func() {
 			ui.Text(c, s.Draft.Title).FontSize(tk.TypeTitle).Bold()
-			markdown.View(c, DocumentText(s.Draft), nil)
+			markdown.View(c, DocumentText(s.Draft), s.imageOptions())
 		})
 	})
 }
@@ -211,6 +228,47 @@ func (s *State) readView(c *ui.Context, tk design.Tokens, d Deps) {
 // readWidth caps the measure of a note read whole, as the stats page caps its
 // own: a paragraph wider than this is hard to follow.
 const readWidth float32 = 760
+
+// imageOptions is the reading views' Markdown options: the pictures the
+// library stores are loaded from it, by the relative reference a note
+// carries. A reference that is not the library's own assets form — a web
+// URL, a path outside the library — shows as its alt text, never fetched:
+// the library reads its own files and nothing else.
+func (s *State) imageOptions() *markdown.Options {
+	var read func(string) ([]byte, bool)
+	if s.deps != nil && s.deps.GetAsset != nil {
+		read = s.deps.GetAsset
+	}
+	return &markdown.Options{LoadImage: func(url string) (ui.ImageSource, error) {
+		rel, ok := assetRefOf(url)
+		if !ok {
+			return nil, fmt.Errorf("not a library asset: %s", url)
+		}
+		if read == nil {
+			return nil, fs.ErrNotExist
+		}
+		data, ok := read(rel)
+		if !ok {
+			return nil, fs.ErrNotExist
+		}
+		if strings.HasSuffix(strings.ToLower(rel), ".svg") {
+			return ui.ParseSVG(data)
+		}
+		return ui.DecodeBitmap(data)
+	}}
+}
+
+// assetRefOf says whether an image destination is the library's own assets
+// form and answers the path inside the library.
+func assetRefOf(url string) (string, bool) {
+	if url == "" || strings.Contains(url, "..") || strings.HasPrefix(url, "assets/.") {
+		return "", false
+	}
+	if !strings.HasPrefix(url, "assets/") {
+		return "", false
+	}
+	return url, true
+}
 
 // formatBar is the row of formatting controls above the document: what the
 // selection holds, and the one click that changes it. The document is the

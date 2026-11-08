@@ -7,6 +7,21 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/maths"
 )
 
+func TestRenderFoldsImagesIntoTheirAltText(t *testing.T) {
+	got := maths.Render("look: ![a diagram](assets/abc.png) and $x^2$")
+	if want := "look: a diagram and x²"; got != want {
+		t.Errorf("Render = %q, want %q", got, want)
+	}
+	// A picture with no alt text folds to nothing, not to its path.
+	if got := maths.Render("before ![](assets/abc.png) after"); got != "before  after" {
+		t.Errorf("Render = %q, want %q", got, "before  after")
+	}
+	// Links keep their text and destination.
+	if got := maths.Render("[notes](https://example.com)"); got != "[notes](https://example.com)" {
+		t.Errorf("Render = %q, want the link kept", got)
+	}
+}
+
 func TestTranscribe(t *testing.T) {
 	cases := []struct{ name, tex, want string }{
 		{"plain", "x + y", "x + y"},
