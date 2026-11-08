@@ -13,6 +13,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/importmd"
+	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
@@ -85,6 +86,7 @@ type App struct {
 	mode             mode
 	page             contrib.PageRef // the contributed page on screen, when mode is modePlugin
 	review           review.State
+	reviewScope      queue.Scope // what the review session draws from; within the session only, never stored
 	reading          reading.State // the reading session: the queue's order and where the reader is
 	readingPositions map[core.ID]core.ID
 	readingCount     int

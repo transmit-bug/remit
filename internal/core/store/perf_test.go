@@ -135,7 +135,7 @@ func TestPerformanceBudget(t *testing.T) {
 	}
 	todayFor := time.Since(today)
 	counts := time.Now()
-	if _, err := queue.CountsOf(lib, now); err != nil {
+	if _, err := queue.CountsOf(lib, now, queue.Options{}); err != nil {
 		t.Fatalf("counts: %v", err)
 	}
 	countsFor := time.Since(counts)

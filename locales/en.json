@@ -63,6 +63,26 @@
     "description": "Heading of the review column."
   },
   "remaining": "{count, plural, =0 {Nothing due} one {# card left} other {# cards left}}",
+  "reviewScope": "All notes",
+  "@reviewScope": {
+    "description": "The review-scope menu button when no narrowing is on: the whole library. See the Review Scope glossary entry."
+  },
+  "reviewScopeMenu": "Scope",
+  "@reviewScopeMenu": {
+    "description": "The menu that picks what a review session draws from: the whole library, one note, or one tag."
+  },
+  "reviewScopeNotes": "Note…",
+  "@reviewScopeNotes": {
+    "description": "Submenu in the review-scope menu: pick one note to review."
+  },
+  "reviewScopeTags": "Tag…",
+  "@reviewScopeTags": {
+    "description": "Submenu in the review-scope menu: pick one tag to review."
+  },
+  "reviewScopeEmpty": "No cards in this scope.",
+  "@reviewScopeEmpty": {
+    "description": "Shown when the chosen note or tag has no cards to review."
+  },
   "@remaining": {
     "description": "How many cards are left in the queue.",
     "placeholders": {
