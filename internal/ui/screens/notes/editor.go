@@ -235,17 +235,21 @@ const readWidth float32 = 760
 // URL, a path outside the library — shows as its alt text, never fetched:
 // the library reads its own files and nothing else.
 func (s *State) imageOptions() *markdown.Options {
+	if s.readOptions != nil {
+		return s.readOptions
+	}
 	var read func(string) ([]byte, bool)
 	if s.deps != nil && s.deps.GetAsset != nil {
 		read = s.deps.GetAsset
 	}
-	return &markdown.Options{LoadImage: func(url string) (ui.ImageSource, error) {
+	if read == nil {
+		s.readOptions = nil
+		return &markdown.Options{}
+	}
+	s.readOptions = &markdown.Options{LoadImage: func(url string) (ui.ImageSource, error) {
 		rel, ok := assetRefOf(url)
 		if !ok {
 			return nil, fmt.Errorf("not a library asset: %s", url)
-		}
-		if read == nil {
-			return nil, fs.ErrNotExist
 		}
 		data, ok := read(rel)
 		if !ok {
@@ -253,6 +257,7 @@ func (s *State) imageOptions() *markdown.Options {
 		}
 		return decodeAssetImage(rel, data)
 	}}
+	return s.readOptions
 }
 
 // assetRefOf says whether an image destination is the library's own assets
