@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/egoist/mygo/ui/markdown"
 	"github.com/egoist/mygo/ui/richtext"
 
 	"github.com/transmit-bug/remit/internal/core"
@@ -110,6 +111,9 @@ type State struct {
 	Query string
 	// Doc is the note as one document, markers and all.
 	Doc *richtext.Document
+	// readOptions is the reading views' Markdown options. Keeping one lets
+	// their image cache survive a frame; the asset URLs are content-addressed.
+	readOptions *markdown.Options
 	// OutlineCurrent is the heading the caret is under, -1 for none.
 	OutlineCurrent int
 
