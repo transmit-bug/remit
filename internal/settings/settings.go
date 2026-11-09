@@ -66,6 +66,10 @@ type Settings struct {
 	// PaperWidth is the document paper's measure in DIPs; zero means
 	// DefaultPaperWidth.
 	PaperWidth int `json:"paper_width,omitempty"`
+	// SavedFilters are the recall queue's filters the user kept, by their stable
+	// id: a chip on the queue page, and no card data, so it belongs to the app
+	// rather than to a library.
+	SavedFilters []string `json:"saved_filters,omitempty"`
 }
 
 // AppearanceName is the look the window draws: the one chosen, or the

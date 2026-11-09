@@ -3,6 +3,7 @@ package settings
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -56,6 +57,7 @@ func TestRoundTrip(t *testing.T) {
 		UpdateCheck: true, LibraryDir: "/home/ada/Remit", AgentServer: true,
 		Notifications: true, Hotkey: "CmdOrCtrl+Shift+J", RemindedOn: "2026-11-06",
 		Appearance: AppearanceInk, PaperWidth: 700,
+		SavedFilters: []string{"new", "hard"},
 	}
 	if err := Save(dir, want); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -64,7 +66,7 @@ func TestRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %+v, want %+v", got, want)
 	}
 

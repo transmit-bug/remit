@@ -29,13 +29,17 @@ type fake struct {
 		id core.ID
 		r  review.Rating
 	}
-	undone    int
-	suspended []core.ID
-	relinked  []core.ID
-	edited    []core.ID
-	home      int
-	preview   func() ([4]review.Interval, bool)
-	summary   func() (review.Summary, bool)
+	undone     int
+	suspended  []core.ID
+	relinked   []core.ID
+	edited     []core.ID
+	home       int
+	preview    func() ([4]review.Interval, bool)
+	summary    func() (review.Summary, bool)
+	source     func(core.ID) (review.Source, bool)
+	items      []review.PluginItem
+	opened     []core.ID
+	editedCard []core.ID
 }
 
 func (f *fake) deps() review.Deps {
@@ -50,13 +54,17 @@ func (f *fake) deps() review.Deps {
 				r  review.Rating
 			}{id, r})
 		},
-		Undo:     func() { f.undone++ },
-		Suspend:  func(id core.ID) { f.suspended = append(f.suspended, id) },
-		Relink:   func(id core.ID) { f.relinked = append(f.relinked, id) },
-		EditNote: func(id core.ID) { f.edited = append(f.edited, id) },
-		Home:     func() { f.home++ },
-		Preview:  f.preview,
-		Summary:  f.summary,
+		Undo:       func() { f.undone++ },
+		Suspend:    func(id core.ID) { f.suspended = append(f.suspended, id) },
+		Relink:     func(id core.ID) { f.relinked = append(f.relinked, id) },
+		EditNote:   func(id core.ID) { f.edited = append(f.edited, id) },
+		Home:       func() { f.home++ },
+		Preview:    f.preview,
+		Summary:    f.summary,
+		Source:     f.source,
+		OpenSource: func(note core.ID) { f.opened = append(f.opened, note) },
+		Items:      func() []review.PluginItem { return f.items },
+		EditCard:   func(id core.ID) { f.editedCard = append(f.editedCard, id) },
 	}
 }
 
@@ -641,5 +649,210 @@ func TestSummaryLinesAreShown(t *testing.T) {
 		if !tt.HasText(want) {
 			t.Errorf("the summary is missing %q; texts %q", want, tt.Texts())
 		}
+	}
+}
+
+// source is where the card came from, as the app derives it: the second of three
+// paragraphs, the first of two cards the paragraph asks, and the paragraphs
+// around it.
+func source(card core.ID) (review.Source, bool) {
+	return review.Source{
+		Note: "note_a", Title: "Memory and recall",
+		Paragraph: 2, Blocks: 3, Siblings: 2, Index: 1,
+		Prev: "Spacing beats cramming", Here: "The testing effect", Next: "Interleaving",
+	}, true
+}
+
+// A card says where it came from under its question — the note, the paragraph and
+// the other cards on it — and the line's two actions reach the app: the way back
+// to the material, and the fold that shows the card in its place.
+func TestReviewShowsTheSourceOfTheCard(t *testing.T) {
+	msgs := locales.In("en")
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			f := &fake{cards: map[core.ID]review.Card{
+				"c1": {ID: "c1", Prompt: "Prompt c1", Answer: "Answer c1"},
+			}, state: &review.State{}}
+			f.source = source
+			f.state.Sync([]core.ID{"c1"})
+			state, deps := f.state, f.deps()
+			tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, size.w, size.h)
+
+			line := msgs.ReviewSourceLine("Memory and recall", 2, 3, 2)
+			for _, want := range []string{line, msgs.ReviewBackToSource(), msgs.ReviewShowContext()} {
+				if !tt.HasText(want) {
+					t.Fatalf("the source line is missing %q; texts %q", want, tt.Texts())
+				}
+			}
+			// The answer stays where it was: the source is a line, not a screen.
+			if tt.HasText("Answer c1") {
+				t.Error("the source line revealed the answer")
+			}
+			if err := tt.Click(msgs.ReviewBackToSource()); err != nil {
+				t.Fatal(err)
+			}
+			if len(f.opened) != 1 || f.opened[0] != "note_a" {
+				t.Errorf("the way back reached the app as %v, want note_a", f.opened)
+			}
+		})
+	}
+}
+
+// Expanding the context shows the paragraphs around the card's and the badges of
+// the cards the same paragraph asks; it closes again, and it belongs to the card
+// it was opened on.
+func TestReviewExpandsTheContext(t *testing.T) {
+	msgs := locales.In("en")
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			f := &fake{cards: map[core.ID]review.Card{
+				"c1": {ID: "c1", Prompt: "Prompt c1", Answer: "Answer c1"},
+				"c2": {ID: "c2", Prompt: "Prompt c2", Answer: "Answer c2"},
+			}, state: &review.State{}}
+			f.source = source
+			f.state.Sync([]core.ID{"c1", "c2"})
+			state, deps := f.state, f.deps()
+			tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, size.w, size.h)
+
+			for _, gone := range []string{"Spacing beats cramming", "Interleaving", msgs.ReviewSibling(1, 2)} {
+				if tt.HasText(gone) {
+					t.Fatalf("the context is open before it is asked for: %q; texts %q", gone, tt.Texts())
+				}
+			}
+			if err := tt.Click(msgs.ReviewShowContext()); err != nil {
+				t.Fatal(err)
+			}
+			tt.Frame()
+			for _, want := range []string{
+				msgs.ReviewContext(), msgs.ReviewContextBefore(), msgs.ReviewContextHere(),
+				msgs.ReviewContextAfter(), "Spacing beats cramming", "The testing effect",
+				"Interleaving", msgs.ReviewSiblings(), msgs.ReviewSibling(1, 2), msgs.ReviewSibling(2, 2),
+			} {
+				if !tt.HasText(want) {
+					t.Fatalf("the expanded context is missing %q; texts %q", want, tt.Texts())
+				}
+			}
+			if tt.HasText("Answer c1") {
+				t.Error("expanding the context revealed the answer")
+			}
+			if err := tt.Click(msgs.ReviewHideContext()); err != nil {
+				t.Fatal(err)
+			}
+			tt.Frame()
+			if tt.HasText("Interleaving") {
+				t.Errorf("the context did not close; texts %q", tt.Texts())
+			}
+
+			// The next card starts folded: the fold belongs to the card it was
+			// opened on.
+			state.Reveal()
+			state.Advance(true)
+			tt.Frame()
+			if tt.HasText("Spacing beats cramming") {
+				t.Errorf("the next card kept the fold open; texts %q", tt.Texts())
+			}
+		})
+	}
+}
+
+// The missing cards a session ends with are gathered by the note they came from:
+// one row per note, each a click back into the material, and a session that
+// remembered everything draws no such section at all.
+func TestSummaryGroupsFailedCardsByNote(t *testing.T) {
+	msgs := locales.In("en")
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			f := &fake{cards: map[core.ID]review.Card{}, state: &review.State{}}
+			f.summary = func() (review.Summary, bool) {
+				return review.Summary{Reviewed: 5, DueTomorrow: 2, Accuracy: 0.6, Failed: []review.FailedCard{
+					{Card: "c1", Note: "note_a", Title: "Memory and recall"},
+					{Card: "c2", Note: "note_b", Title: "Writing cards"},
+					{Card: "c3", Note: "note_a", Title: "Memory and recall"},
+				}}, true
+			}
+			state, deps := f.state, f.deps()
+			tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, size.w, size.h)
+
+			for _, want := range []string{
+				msgs.SummaryFailed(), msgs.SummaryFailedHint(),
+				msgs.SummaryFailedRow(2), msgs.SummaryFailedRow(1),
+				"Memory and recall", "Writing cards",
+			} {
+				if !tt.HasText(want) {
+					t.Fatalf("the summary is missing %q; texts %q", want, tt.Texts())
+				}
+			}
+			// One row per note, not one per card.
+			if n := countTexts(tt.Texts(), msgs.SummaryFailedRow(2)); n != 1 {
+				t.Errorf("the note's two misses draw %d rows, want one", n)
+			}
+			// A row opens the note the misses came from.
+			if err := tt.Click(msgs.SummaryFailedOpen("Memory and recall")); err != nil {
+				t.Fatal(err)
+			}
+			if len(f.opened) != 1 || f.opened[0] != "note_a" {
+				t.Errorf("the row reached the app as %v, want note_a", f.opened)
+			}
+		})
+	}
+}
+
+// A session that remembered everything has no misses to group, so the summary
+// draws its three numbers and no heading.
+func TestSummaryWithoutMissesDrawsNoGroups(t *testing.T) {
+	msgs := locales.In("en")
+	f := &fake{cards: map[core.ID]review.Card{}, state: &review.State{}}
+	f.summary = func() (review.Summary, bool) {
+		return review.Summary{Reviewed: 4, DueTomorrow: 1, Accuracy: 1}, true
+	}
+	state, deps := f.state, f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 1024, 720)
+
+	if tt.HasText(msgs.SummaryFailed()) {
+		t.Errorf("a session that missed nothing draws the missed section; texts %q", tt.Texts())
+	}
+}
+
+// countTexts is how many of the drawn texts are exactly s, which is how a test
+// says one row per note rather than one per card.
+func countTexts(texts []string, s string) int {
+	n := 0
+	for _, text := range texts {
+		if text == s {
+			n++
+		}
+	}
+	return n
+}
+
+// A session that missed many cards keeps its one action on the screen at the
+// smallest window: the missed rows scroll inside the summary rather than
+// pushing the way out under the fold.
+func TestSummaryKeepsItsActionAtTheSmallestWindow(t *testing.T) {
+	msgs := locales.In("en")
+	f := &fake{cards: map[core.ID]review.Card{}, state: &review.State{}}
+	f.summary = func() (review.Summary, bool) {
+		failed := make([]review.FailedCard, 0, 6)
+		for _, title := range []string{"Memory and recall", "Writing cards", "A daily habit"} {
+			for j := range 2 {
+				failed = append(failed, review.FailedCard{
+					Card: core.ID(title + string(rune('a'+j))), Note: core.ID(title), Title: title,
+				})
+			}
+		}
+		return review.Summary{Reviewed: 6, Accuracy: 0, Failed: failed}, true
+	}
+	state, deps := f.state, f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 720, 520)
+
+	box, ok := tt.Find(msgs.BackToNotes())
+	if !ok {
+		t.Fatalf("the summary has no way out at 720x520; texts %q", tt.Texts())
+	}
+	if box.Y < 0 || box.Y+box.H > 520 {
+		t.Errorf("the way out is outside the smallest window: %+v", box)
+	}
+	if !tt.HasText(msgs.SummaryFailed()) || !tt.HasText(msgs.SummaryFailedRow(2)) {
+		t.Fatalf("the missed section is missing; texts %q", tt.Texts())
 	}
 }

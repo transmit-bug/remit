@@ -151,10 +151,12 @@ func TestFirstRun(t *testing.T) {
 	if !tt.HasText(locales.In("en").TodayBudget()) {
 		t.Fatalf("a new library did not open on today; texts %q", tt.Texts())
 	}
-	// Its queue is empty, and the queue page says so.
+	// Its queue is empty, and the queue page says so, with what tomorrow holds.
 	recallQueue(tt)
-	if !tt.HasText("Back to notes") {
-		t.Fatalf("a new library's queue is not empty and quiet; texts %q", tt.Texts())
+	for _, want := range []string{locales.In("en").RecallEmpty(), locales.In("en").RecallStartEmpty()} {
+		if !tt.HasText(want) {
+			t.Fatalf("a new library's queue is not empty and quiet: missing %q; texts %q", want, tt.Texts())
+		}
 	}
 
 	// The choice is in the settings for the next start.
@@ -177,11 +179,9 @@ func TestFirstRun(t *testing.T) {
 		t.Fatalf("the remembered library did not open on today; texts %q", tt.Texts())
 	}
 
-	// The empty queue offers the notebook, and the notebook says it is empty.
-	recallQueue(tt)
-	if err := tt.Click("Back to notes"); err != nil {
-		t.Fatal(err)
-	}
+	// The notebook says it is empty.
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Frame()
 	if !tt.HasText("No notes yet.") {
 		t.Fatalf("the empty library does not say it is empty; texts %q", tt.Texts())
 	}

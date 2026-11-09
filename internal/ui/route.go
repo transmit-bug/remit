@@ -22,9 +22,7 @@ func (a *App) ShowCard(id core.ID) {
 	if _, ok := a.data.byID[id]; !ok {
 		return
 	}
-	a.review.Reset()
-	a.review.Only(id)
-	a.setArea(areaRecall, subRecallQueue)
+	a.showCard(id)
 }
 
 // ShowToday opens the window on today.

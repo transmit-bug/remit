@@ -168,16 +168,32 @@ func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
 	return cards[0], nil
 }
 
-// recallQueue puts the window on the recall area's queue, where the review
-// screen lives: the digit keys name the areas in rail order, so it is Cmd+4.
-func recallQueue(tt *ui.Tester) { tt.Key(ui.Cmd, ui.Key4) }
+// recallQueue puts the window on the recall area's queue and enters the session
+// when the queue has cards to review: the digit keys name the areas in rail
+// order, so it is Cmd+4, and Start is the page's one way into a card. An empty
+// queue leaves the page up, with its empty state.
+func recallQueue(tt *ui.Tester) {
+	recallPage(tt)
+	for _, loc := range []string{"en", "zh-Hans"} {
+		if err := tt.Click(locales.In(loc).RecallStart()); err == nil {
+			tt.Frame()
+			return
+		}
+	}
+}
+
+// recallPage puts the window on the recall area's queue page alone, without
+// entering the session.
+func recallPage(tt *ui.Tester) {
+	tt.Key(ui.Cmd, ui.Key4)
+	tt.Frame()
+}
 
 // cardsPage puts the window on the recall area's card table, where the browse
 // screen lives, in the language the window is showing.
 func cardsPage(t *testing.T, tt *ui.Tester, loc string) {
 	t.Helper()
-	recallQueue(tt)
-	tt.Frame()
+	recallPage(tt)
 	if err := tt.Click(locales.In(loc).CardsPage()); err != nil {
 		t.Fatalf("the recall area has no card page: %v", err)
 	}

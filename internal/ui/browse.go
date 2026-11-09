@@ -136,7 +136,5 @@ func (a *App) openBrowseRow(id core.ID) {
 		a.setMode(modeNotes)
 		return
 	}
-	a.review.Reset()
-	a.review.Only(card.ID)
-	a.setMode(modeReview)
+	a.showCard(card.ID)
 }

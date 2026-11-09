@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -257,7 +258,7 @@ func TestSettingsReviewWritesThePresets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if saved != (settings.Settings{LibraryDir: saved.LibraryDir}) {
+	if want := (settings.Settings{LibraryDir: saved.LibraryDir}); !reflect.DeepEqual(saved, want) {
 		t.Errorf("settings.json gained %+v, want the library path alone", saved)
 	}
 }
@@ -333,7 +334,7 @@ func TestSettingsSurviveRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("settings.Load: %v", err)
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("settings on disk = %+v, want %+v", got, want)
 	}
 	if !agent.on {

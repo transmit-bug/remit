@@ -108,6 +108,7 @@ func TestRailCountsMatchTheQueues(t *testing.T) {
 	recallQueue(tt)
 	tt.Key(0, ui.KeySpace)
 	tt.Key(0, ui.Key3)
+	tt.Key(0, ui.KeyEscape) // out of the session, back to the queue page
 	tt.Frame()
 	if got := railCount(t, tt, msgs.AreaRecall()); got != "3" {
 		t.Errorf("after one grade the rail says %q cards due, want 3", got)
@@ -214,7 +215,7 @@ func TestNoHorizontalScrollAt720(t *testing.T) {
 		{ui.Key1, msgs.TodayBudget()},
 		{ui.Key2, msgs.Notebook()},
 		{ui.Key3, msgs.ReadQueueEmpty()},
-		{ui.Key4, "Show answer"},
+		{ui.Key4, msgs.RecallStart()},
 		{ui.Key5, msgs.StatsTitle()},
 		{ui.Key6, msgs.SettingsAppearanceLead()},
 	} {

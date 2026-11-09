@@ -120,7 +120,7 @@ func NewTokens(base *ui.Theme) Tokens {
 		SummaryWidth:     SummaryWidth,
 		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
 		MeterWidth: MeterWidth,
-		HeatCell: HeatCell, HeatCellLarge: HeatCellLarge,
+		HeatCell:   HeatCell, HeatCellLarge: HeatCellLarge,
 		HeatGap: HeatGap, HeatWeekday: HeatWeekday,
 	}
 }

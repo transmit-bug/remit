@@ -3829,5 +3829,395 @@
   "writePlainText": "plain text",
   "@writePlainText": {
     "description": "The notes page's subtitle names the library as plain text: the notes are files the user owns."
+  },
+  "recallTitle": "Recall",
+  "@recallTitle": {
+    "description": "The recall area's queue: what is due today and how much of it."
+  },
+  "recallSubtitle": "What is due today, and where it comes from.",
+  "@recallSubtitle": {
+    "description": "The line under the recall queue's title."
+  },
+  "recallStart": "Start review",
+  "@recallStart": {
+    "description": "The recall queue's one action: enter the review session."
+  },
+  "recallStartEmpty": "Nothing is due in this scope today.",
+  "@recallStartEmpty": {
+    "description": "Why Start is disabled: the scope has no cards due. A disabled control shows no tooltip, so the reason is on screen."
+  },
+  "recallLoad": "Today's review load",
+  "@recallLoad": {
+    "description": "What the sitting costs, under its minutes."
+  },
+  "recallRatioLabel": "New {new}, learning {learning}, review {review}",
+  "@recallRatioLabel": {
+    "description": "The queue's three kinds of card, as one bar is read by a screen reader.",
+    "placeholders": {
+      "new": {
+        "type": "int",
+        "example": "4"
+      },
+      "learning": {
+        "type": "int",
+        "example": "3"
+      },
+      "review": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "recallRatioNew": "New {count}",
+  "@recallRatioNew": {
+    "description": "The bar's legend: the cards no review has touched.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "recallRatioLearning": "Learning {count}",
+  "@recallRatioLearning": {
+    "description": "The bar's legend: the cards last answered Again.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "recallRatioReview": "Review {count}",
+  "@recallRatioReview": {
+    "description": "The bar's legend: the cards that are due again.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "recallFilters": "Filter the queue",
+  "@recallFilters": {
+    "description": "The name of the queue page's filter row, for a screen reader."
+  },
+  "recallFilterAll": "All",
+  "@recallFilterAll": {
+    "description": "The queue filter that keeps every due card."
+  },
+  "recallFilterDue": "Due today",
+  "@recallFilterDue": {
+    "description": "The queue filter that keeps the cards a schedule brought back."
+  },
+  "recallFilterNew": "New",
+  "@recallFilterNew": {
+    "description": "The queue filter that keeps the cards never reviewed."
+  },
+  "recallFilterLearning": "Learning",
+  "@recallFilterLearning": {
+    "description": "The queue filter that keeps the cards last answered Again."
+  },
+  "recallFilterLost": "Lost",
+  "@recallFilterLost": {
+    "description": "The queue filter that keeps the cards whose paragraph is gone."
+  },
+  "recallFilterHard": "Hard",
+  "@recallFilterHard": {
+    "description": "The queue filter that keeps the cards that keep coming back wrong."
+  },
+  "recallSaveFilter": "Save this filter",
+  "@recallSaveFilter": {
+    "description": "Keeps the chosen filter as a chip on the queue page."
+  },
+  "recallFilterSaved": "Filter saved.",
+  "@recallFilterSaved": {
+    "description": "The toast of a filter kept."
+  },
+  "recallFilterRemoved": "Saved filter removed.",
+  "@recallFilterRemoved": {
+    "description": "The toast of a filter taken out of settings.json."
+  },
+  "recallSaved": "Saved",
+  "@recallSaved": {
+    "description": "The label before the kept filters' chips."
+  },
+  "recallRemoveFilter": "Remove the saved filter {name}",
+  "@recallRemoveFilter": {
+    "description": "The accessible name of a chip's remove button.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "New"
+      }
+    }
+  },
+  "recallByNote": "By note",
+  "@recallByNote": {
+    "description": "The heading of the queue's rows: one row per note."
+  },
+  "recallByNoteHint": "One row per note: how much of it is waiting.",
+  "@recallByNoteHint": {
+    "description": "The line beside the rows' heading."
+  },
+  "recallRowMeta": "{blocks, plural, one {# paragraph} other {# paragraphs}} · {cards, plural, one {# card} other {# cards}} · {hard, plural, =0 {none missed yet} one {# missed} other {# missed}}",
+  "@recallRowMeta": {
+    "description": "What a queue row says about its note: its length, its cards, and how many of them keep coming back wrong.",
+    "placeholders": {
+      "blocks": {
+        "type": "int",
+        "example": "14"
+      },
+      "cards": {
+        "type": "int",
+        "example": "7"
+      },
+      "hard": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "recallRowDue": "{count, plural, =0 {none due} one {# due} other {# due}}",
+  "@recallRowDue": {
+    "description": "How many of a note's cards the page's filter keeps.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "recallRowOpen": "Review {title}",
+  "@recallRowOpen": {
+    "description": "The accessible name of a queue row: reviewing that note.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Memory and recall"
+      }
+    }
+  },
+  "recallNoMatch": "Nothing matches this filter.",
+  "@recallNoMatch": {
+    "description": "The line a queue draws when the filter keeps no note; the queue itself is not empty."
+  },
+  "recallEmpty": "No cards due today.",
+  "@recallEmpty": {
+    "description": "The queue's empty state: nothing is due."
+  },
+  "recallTomorrow": "{count, plural, =0 {Nothing comes due tomorrow} one {# card comes due tomorrow} other {# cards come due tomorrow}}",
+  "@recallTomorrow": {
+    "description": "What the empty queue promises about the next day.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "8"
+      }
+    }
+  },
+  "recallHeat": "The last 26 weeks",
+  "@recallHeat": {
+    "description": "The heading of the queue page's review heat strip."
+  },
+  "recallHeatLabel": "Reviews of the last 26 weeks",
+  "@recallHeatLabel": {
+    "description": "The heat strip's name for a screen reader."
+  },
+  "recallHeatDay": "{date, date, ::MMMd} · {count, plural, =0 {no reviews} one {# review} other {# reviews}}",
+  "@recallHeatDay": {
+    "description": "One square of the queue's heat strip: its day and how many reviews it holds.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-05-11"
+      },
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "recallLoading": "Loading the recall queue…",
+  "@recallLoading": {
+    "description": "The queue page before its first answer."
+  },
+  "recallLoadFailed": "The recall queue could not be loaded: {reason}",
+  "@recallLoadFailed": {
+    "description": "The queue page when its rows could not be derived.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "the library is closed"
+      }
+    }
+  },
+  "recallRetry": "Try again",
+  "@recallRetry": {
+    "description": "The action of a failed queue load."
+  },
+  "recallScopeTitle": "Review scope",
+  "@recallScopeTitle": {
+    "description": "The title of the dialog that narrows a review session."
+  },
+  "recallScopeAll": "The whole library",
+  "@recallScopeAll": {
+    "description": "The scope choice that keeps every card due."
+  },
+  "recallScopeNote": "One note",
+  "@recallScopeNote": {
+    "description": "The scope choice that keeps one note's cards."
+  },
+  "recallScopeTag": "One tag",
+  "@recallScopeTag": {
+    "description": "The scope choice that keeps the cards of one tag."
+  },
+  "recallScopeAllBody": "Every card due today, whatever note it came from.",
+  "@recallScopeAllBody": {
+    "description": "What the whole-library scope means."
+  },
+  "recallScopeNotes": "Pick a note",
+  "@recallScopeNotes": {
+    "description": "The label of the scope dialog's note list."
+  },
+  "recallScopeTags": "Pick a tag",
+  "@recallScopeTags": {
+    "description": "The label of the scope dialog's tag list."
+  },
+  "recallScopeNoNotes": "The library holds no note.",
+  "@recallScopeNoNotes": {
+    "description": "The scope dialog when there is no note to name."
+  },
+  "recallScopeNoTags": "The library carries no tag.",
+  "@recallScopeNoTags": {
+    "description": "The scope dialog when there is no tag to name."
+  },
+  "recallScopeTake": "{count, plural, =0 {This session would take no card} one {This session takes # card} other {This session takes # cards}}",
+  "@recallScopeTake": {
+    "description": "How many cards the dialog's scope would put on the session.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "reviewSourceLine": "“{title}” · paragraph {paragraph} of {blocks} · {siblings, plural, =0 {this block's only card} one {# more card on this block} other {# more cards on this block}}",
+  "@reviewSourceLine": {
+    "description": "Where the card on screen came from: its note, its paragraph, and the other cards the paragraph asks.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Memory and recall"
+      },
+      "paragraph": {
+        "type": "int",
+        "example": "2"
+      },
+      "blocks": {
+        "type": "int",
+        "example": "14"
+      },
+      "siblings": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "reviewBackToSource": "Back to the note",
+  "@reviewBackToSource": {
+    "description": "The way back from a card to the note it came from."
+  },
+  "reviewShowContext": "Show the context",
+  "@reviewShowContext": {
+    "description": "Opens the paragraphs around the card's own."
+  },
+  "reviewHideContext": "Hide the context",
+  "@reviewHideContext": {
+    "description": "Closes the paragraphs around the card's own."
+  },
+  "reviewContext": "Around this paragraph",
+  "@reviewContext": {
+    "description": "The quiet block holding the paragraphs around the card's."
+  },
+  "reviewContextBefore": "Before",
+  "@reviewContextBefore": {
+    "description": "The paragraph before the card's, in the context block."
+  },
+  "reviewContextHere": "This one",
+  "@reviewContextHere": {
+    "description": "The card's own paragraph, in the context block."
+  },
+  "reviewContextAfter": "After",
+  "@reviewContextAfter": {
+    "description": "The paragraph after the card's, in the context block."
+  },
+  "reviewSiblings": "On this block",
+  "@reviewSiblings": {
+    "description": "The label before the badges of the cards the same paragraph asks."
+  },
+  "reviewSibling": "{index} of {total}",
+  "@reviewSibling": {
+    "description": "One card of a paragraph: its place among the cards the paragraph asks.",
+    "placeholders": {
+      "index": {
+        "type": "int",
+        "example": "1"
+      },
+      "total": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "reviewEditCard": "Edit card",
+  "@reviewEditCard": {
+    "description": "Opens the card's own fields for editing."
+  },
+  "summaryFailed": "Not remembered",
+  "@summaryFailed": {
+    "description": "The heading of the summary's missed cards, grouped by note."
+  },
+  "summaryFailedHint": "Grouped by the note they came from.",
+  "@summaryFailedHint": {
+    "description": "The line under the missed cards' heading."
+  },
+  "summaryFailedRow": "{count, plural, one {# card missed} other {# cards missed}}",
+  "@summaryFailedRow": {
+    "description": "How many of one note's cards the session did not remember.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "summaryFailedOpen": "Back to “{title}”",
+  "@summaryFailedOpen": {
+    "description": "The accessible name of a missed note's row: opening the note.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Memory and recall"
+      }
+    }
+  },
+  "recallScopeStart": "Start this sitting",
+  "@recallScopeStart": {
+    "description": "The scope dialog's one action: start the session with the scope it shows."
+  },
+  "recallLost": "{count, plural, one {# card lost the paragraph it followed} other {# cards lost the paragraph they followed}}",
+  "@recallLost": {
+    "description": "How many cards whose paragraph is gone the Lost filter counts: they are outside the queue.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "recallRelink": "Open the lost cards",
+  "@recallRelink": {
+    "description": "The Lost filter's one action: show the cards whose paragraph is gone, where each is pointed at another paragraph."
   }
 }

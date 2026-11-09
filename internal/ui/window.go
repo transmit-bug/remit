@@ -47,14 +47,10 @@ func (a *App) overflowMenu(c *ui.Context, menu *ui.Menu) {
 // does not have.
 func (a *App) contextActions(c *ui.Context, tk design.Tokens) {
 	msgs := m(c)
-	switch {
-	case a.area == areaRecall && a.sub == subRecallQueue:
-		// The queue draws from the whole library, a note or a tag; which one is
-		// the page's own action, so it sits in the bar above it.
-		toolbarRule(c, tk)
-		a.reviewScopeMenu(c, msgs)
-		return
-	case a.area != areaWrite || a.sub != subNotes:
+	if a.area != areaWrite || a.sub != subNotes {
+		// The recall queue's scope is the page's own action beside its rows, not
+		// a control in the bar: it changes what the session takes, so it sits
+		// where Start is.
 		return
 	}
 	toolbarRule(c, tk)
@@ -170,8 +166,9 @@ func (a *App) shortcuts(c *ui.Context) {
 	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyO, func() { a.showPanel(notes.PanelOutline) })
 	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyB, func() { a.showPanel(notes.PanelBacklinks) })
 
-	switch a.mode {
-	case modeReview:
+	// The card's keys belong to the session, not to the recall area: the queue
+	// page has its own actions, and a digit there is not a grade.
+	if a.session == sessionReview {
 		// A card that takes a typed answer owns the keyboard until it is
 		// checked: Space is a space there, and the grades only come back once
 		// the answer is on screen, so a digit typed into the input is not a grade.
@@ -189,7 +186,12 @@ func (a *App) shortcuts(c *ui.Context) {
 		c.OnShortcut(0, ui.KeyU, func() { a.undo(c) })
 		c.OnShortcut(0, ui.KeyS, func() { a.suspendCurrent(c) })
 		c.OnShortcut(0, ui.KeyE, a.editCurrent)
-		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
+		// Escape leaves the session for the queue it was entered from.
+		c.OnShortcut(0, ui.KeyEscape, func() { a.setArea(areaRecall, subRecallQueue) })
+		return
+	}
+
+	switch a.mode {
 	case modeReading:
 		// The reading screen is read with the keyboard: J and K move the reading
 		// position, the digits record how the note digested, and E excerpts the
