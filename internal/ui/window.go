@@ -5,6 +5,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/internal/ui/screens/about"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/reading"
@@ -83,7 +84,8 @@ func segmentedChoice(c *ui.Context, tk design.Tokens, selected *int, names []str
 		Radius(tk.RadiusControl).Background(tk.Sunken).Label(label).Children(func() {
 		for i, name := range names {
 			chosen := i == *selected
-			segment := seg.Segment(i).Padding(0, tk.SpaceS).Radius(tk.RadiusControl - 2).Label(name)
+			segment := kit.HoverFace(c, seg.Segment(i).Padding(0, tk.SpaceS).
+				Radius(tk.RadiusControl-2).Label(name))
 			colour := tk.TextMuted
 			if chosen {
 				segment.Background(tk.Surface).TextColor(tk.Text)

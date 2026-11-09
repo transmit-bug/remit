@@ -202,8 +202,14 @@ func sessionBar(c *ui.Context, s *State, note Note, hasNote bool, d Deps) {
 		if at, of := s.At(note); hasNote && of > 0 {
 			ui.Text(c, msgs.ReadingWhere(at, of)).NoWrap().
 				FontSize(design.TypeUI).TextColor(t.TextMuted)
-			ui.Meter(c, float64(at)/float64(of), 0, 1, nil).
-				Width(design.MeterWidth).Label(msgs.ReadingWhere(at, of))
+			// The note's progress fills as the bar mounts, once: the reader
+			// sees how far in they are without the bar travelling on every
+			// paragraph they choose.
+			kit.Progress(c, kit.ProgressOptions{
+				Value: float64(at) / float64(of),
+				Width: design.MeterWidth,
+				Label: msgs.ReadingWhere(at, of),
+			})
 		}
 		if d.Home != nil {
 			ui.Button(c, msgs.BackToNotes()).MinHeight(design.ControlHeight).OnClick(d.Home)
@@ -318,7 +324,7 @@ func difficulty(c *ui.Context, r Rating, choose func()) {
 	msgs := locales.In(c.Locale())
 	face := r.colour(t)
 	label := r.label(msgs)
-	key := ui.ButtonBase(c).Grow(1).MinHeight(design.ControlHeight).
+	key := kit.HoverFace(c, ui.ButtonBase(c).Grow(1).MinHeight(design.ControlHeight).
 		Gap(design.SpaceS).Padding(design.SpaceXS, design.SpaceS).
 		Background(t.Surface.Mix(face, 0.16)).Border(design.Hairline, t.Border.Mix(face, 0.5)).
 		Radius(design.RadiusControl).Label(label).
@@ -326,11 +332,12 @@ func difficulty(c *ui.Context, r Rating, choose func()) {
 		Children(func() {
 			kit.Keycap(c, r.Key())
 			ui.Text(c, label).FontSize(design.TypeUI).TextColor(t.Text)
-		})
+		}))
 	if key.Hovered() {
-		key.Background(t.Surface.Mix(face, 0.24)).
-			Transition(ui.ElementTransition{Colors: true, Animation: &design.Hover})
+		key.Background(t.Surface.Mix(face, 0.24))
 	}
+	// The press shrinks the key on the face, without changing the room it takes.
+	kit.Press(key, key.Pressed())
 }
 
 // reference is the way back to where an excerpt came from: a block that carries

@@ -255,10 +255,8 @@ func (a *App) paletteView(c *ui.Context, tk design.Tokens) {
 		panel = kit.StylePanel(c, panel.Width(tk.SummaryWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
 		panel.Label(msgs.CommandPalette())
 		// The palette arrives a little small over a scrim that fades in.
-		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.palette})
-		scale := design.PanelScale + (1-design.PanelScale)*arriving
-		panel.Opacity(arriving).Scale(scale, scale)
-		backdrop.Opacity(arriving)
+		panel = kit.ArrivePanel(panel, a.anim.palette)
+		kit.ArriveScrim(backdrop, a.anim.palette)
 
 		panel.Children(func() {
 			// The choice is resolved against this pass's rows before anything

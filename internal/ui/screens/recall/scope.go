@@ -26,8 +26,9 @@ func ScopeDialog(c *ui.Context, s *State, d Deps) {
 	tk := design.NewTokens(c.Theme())
 	ui.DialogBase(c, &s.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.Scrim)
-		panel = kit.StylePanel(c, panel.FillWidth().MaxWidth(tk.SettingsWidth).
-			Padding(tk.SpaceL).Gap(tk.SpaceM)).Label(msgs.RecallScopeTitle())
+		panel = kit.ArrivePanel(kit.StylePanel(c, panel.FillWidth().MaxWidth(tk.SettingsWidth).
+			Padding(tk.SpaceL).Gap(tk.SpaceM)).Label(msgs.RecallScopeTitle()), 0)
+		kit.ArriveScrim(backdrop, 0)
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
 				ui.Text(c, msgs.RecallScopeTitle()).FontSize(tk.TypeH2).Bold().Grow(1)

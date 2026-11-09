@@ -4,6 +4,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -22,7 +23,8 @@ func (s *State) notePanel(c *ui.Context, tk design.Tokens, d Deps) {
 func (s *State) panelBody(c *ui.Context, tk design.Tokens, d Deps) {
 	msgs := locales.In(c.Locale())
 	links := d.Backlinks()
-	ui.Column(c).Grow(1).MinWidth(0).Padding(tk.SpaceM).Gap(tk.SpaceM).Children(func() {
+	body := ui.Column(c).Grow(1).MinWidth(0).Padding(tk.SpaceM).Gap(tk.SpaceM)
+	body.Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
 			chosen := int(s.panelTab)
 			// The tabs take the focus as the panel opens, so the keyboard works
@@ -46,7 +48,7 @@ func (s *State) panelBody(c *ui.Context, tk design.Tokens, d Deps) {
 			s.backlinkList(c, tk, msgs, links, d)
 			return
 		}
-		s.outlineList(c, tk)
+		s.outlineList(c, tk, body)
 	})
 }
 
@@ -80,8 +82,8 @@ func (s *State) backlinkList(c *ui.Context, tk design.Tokens, msgs locales.Messa
 // what its paragraph carries — the cards it feeds, and whether it can still be
 // excerpted.
 func backlinkRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, link Backlink) {
-	face := ui.Row(c).FillWidth().AlignItems(ui.Start).Gap(tk.SpaceS).
-		Padding(tk.SpaceXS, tk.SpaceS).Radius(tk.RadiusControl)
+	face := kit.HoverFace(c, ui.Row(c).FillWidth().AlignItems(ui.Start).Gap(tk.SpaceS).
+		Padding(tk.SpaceXS, tk.SpaceS).Radius(tk.RadiusControl))
 	if face.Hovered() {
 		face.Background(tk.SurfaceHover)
 	}

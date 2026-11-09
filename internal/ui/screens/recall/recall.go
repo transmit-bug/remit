@@ -257,9 +257,15 @@ func body(c *ui.Context, s *State, tk design.Tokens, msgs locales.Messages, d De
 	s.list.Key = func(row int) any { return rows[row].Note }
 	s.list.Label = func(row int) string { return rows[row].Title }
 	ui.Divider(c)
-	ui.List(c, &s.list, len(rows), func(i int) {
-		rowView(c, tk, msgs, rows[i], d)
-	}).Grow(1).Label(msgs.RecallByNote())
+	// The queue arrives as a list: each note behind the one above it, once, when
+	// the page appears.
+	holder := ui.Column(c).Grow(1)
+	arrive := kit.Stagger(holder, "recall-queue")
+	holder.Children(func() {
+		ui.List(c, &s.list, len(rows), func(i int) {
+			rowView(c, tk, msgs, rows[i], arrive(i), d)
+		}).Grow(1).Label(msgs.RecallByNote())
+	})
 	heat(c, tk, msgs, s, d)
 }
 
@@ -386,12 +392,12 @@ func lost(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps) {
 // rowView is one note's share of the queue: its title, what it holds, and how
 // much of it is waiting now. The whole row opens the session narrowed to it, so
 // a note is reviewed without leaving the page for a dialog.
-func rowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, row NoteRow, d Deps) {
+func rowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, row NoteRow, shown float32, d Deps) {
 	rowButton := ui.Button(c, "").FillWidth().MinHeight(tk.Control*2).
 		Padding(tk.SpaceM, tk.SpaceS).Radius(0).
 		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).
 		Label(msgs.RecallRowOpen(row.Title))
-	rowButton.Children(func() {
+	kit.Arrive(rowButton, shown).Children(func() {
 		ui.Row(c).Grow(1).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
 			tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.TextMuted)
 			ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {

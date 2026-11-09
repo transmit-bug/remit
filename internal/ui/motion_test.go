@@ -106,3 +106,94 @@ func TestHoverAndPressKeepTheLayout(t *testing.T) {
 	}
 	tt.Release(x, y)
 }
+
+// A screen change plays once per navigation: the stage moves when the screen
+// changes, comes to rest, and a rebuild does not play it again.
+func TestModeSwitchPlaysOncePerNavigation(t *testing.T) {
+	_, _, tt := openApp(t)
+	nav := func(key ui.Key) {
+		t.Helper()
+		tt.Key(ui.Cmd, key)
+		tt.Frame()
+	}
+	rest := func() {
+		t.Helper()
+		tt.Advance(design.ModeSwitch.Duration + design.Row.Spring.Duration +
+			design.MaxStaggerRows*design.RowStagger + design.Progress.Duration)
+	}
+	// Today to the recall queue: the page rises and fades in once.
+	nav(ui.Key4)
+	if !tt.FramePending() {
+		t.Fatal("the screen changed without moving")
+	}
+	rest()
+	if tt.FramePending() {
+		t.Fatal("the screen's change never settled")
+	}
+	// A rebuild is not a navigation.
+	tt.Frame()
+	if tt.FramePending() {
+		t.Error("a rebuild played the screen's change again")
+	}
+	// The next navigation plays it again.
+	nav(ui.Key1)
+	if !tt.FramePending() {
+		t.Error("the next navigation played nothing")
+	}
+}
+
+// A list's arrival belongs to the list appearing: it is still running after the
+// screen's own change has played, and once it has, a rebuild plays nothing.
+func TestListsArriveOnce(t *testing.T) {
+	_, _, tt := openApp(t)
+	tt.Key(ui.Cmd, ui.Key4) // the recall queue: a list of notes, and the heat
+	tt.Frame()
+	// The heat strip has washed in at 260 ms; the rows' 300 ms has not run out.
+	tt.Advance(design.Progress.Duration + 20*time.Millisecond)
+	if !tt.FramePending() {
+		t.Fatal("the rows are in place before their stagger could run")
+	}
+	tt.Advance(design.Row.Spring.Duration + design.MaxStaggerRows*design.RowStagger +
+		design.Progress.Duration)
+	if tt.FramePending() {
+		t.Fatal("the rows never came to rest")
+	}
+	tt.Frame()
+	if tt.FramePending() {
+		t.Error("a rebuild played the rows' arrival again")
+	}
+}
+
+// The answer unfolds where it appears, once: the press that reveals it starts
+// the reveal, and the frames after it rest.
+func TestAnswerUnfoldsOnce(t *testing.T) {
+	_, _, tt := openApp(t)
+	recallQueue(tt)
+	tt.Advance(320 * time.Millisecond) // the card's arrival
+	tt.Key(0, ui.KeySpace)             // the answer
+	tt.Frame()
+	if !tt.FramePending() {
+		t.Fatal("the answer appeared without unfolding")
+	}
+	tt.Advance(design.Reveal.Spring.Duration + 20*time.Millisecond)
+	if tt.FramePending() {
+		t.Fatal("the answer never came to rest")
+	}
+	tt.Frame()
+	if tt.FramePending() {
+		t.Error("a rebuild unfolded the answer again")
+	}
+}
+
+// With the desktop asking for no motion, a navigation is in place at once: the
+// screen, its rows and its bars are at their values in the frame they appear in.
+func TestReducedMotionPutsEverythingInPlace(t *testing.T) {
+	_, _, tt := openApp(t)
+	tt.SetPreferences(ui.Preferences{ReduceMotion: true})
+	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key4) // the recall queue: rows, a split bar and a heat strip
+	tt.Frame()
+	if tt.FramePending() {
+		t.Error("the screen still travels with reduced motion asked for")
+	}
+}

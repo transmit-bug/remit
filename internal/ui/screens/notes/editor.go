@@ -135,7 +135,7 @@ func (s *State) findBar(c *ui.Context) {
 		s.findCurrent = 0
 	}
 	before := s.findCurrent
-	ui.FindBar(c, &s.FindOpen, &s.findQuery, matches, &s.findCurrent)
+	kit.Reveal(c, ui.FindBar(c, &s.FindOpen, &s.findQuery, matches, &s.findCurrent))
 	if (s.findCurrent != before || s.findQuery != s.findJumped) && matches > 0 {
 		// The bar keeps the focus: Escape and Enter are its keys while it is
 		// open, and the selection is enough to scroll the match into view.
@@ -289,7 +289,7 @@ func (s *State) formatBar(c *ui.Context, tk design.Tokens) {
 		if link.Clicked() {
 			s.linkURL, s.linkOpen = f.Link, true
 		}
-		ui.Popover(c, link, &s.linkOpen, func() {
+		popover := ui.Popover(c, link, &s.linkOpen, func() {
 			ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Padding(tk.SpaceS).Children(func() {
 				field := ui.TextInput(c, &s.linkURL).
 					Placeholder(msgs.LinkURL()).Width(220).AutoFocus().Label(msgs.LinkURL())
@@ -309,6 +309,9 @@ func (s *State) formatBar(c *ui.Context, tk design.Tokens) {
 				}
 			})
 		})
+		if popover.Valid() {
+			kit.ArrivePanel(popover, 0)
+		}
 	}).Label(msgs.FormatBar()).
 		MinHeight(tk.BarHeight).
 		Padding(tk.SpaceXS, tk.SpaceL).

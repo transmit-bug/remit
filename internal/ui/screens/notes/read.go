@@ -60,10 +60,10 @@ func (s *State) readBlockRow(c *ui.Context, tk design.Tokens, msgs locales.Messa
 	current := index == s.readBlock
 	// The paragraph is one control: a press anywhere on it chooses it, and the
 	// keyboard reaches it as a row.
-	row := ui.ButtonBase(c.Key(fmt.Sprintf("read-block-%d", index))).FillWidth().
+	row := kit.HoverFace(c, ui.ButtonBase(c.Key(fmt.Sprintf("read-block-%d", index))).FillWidth().
 		AlignItems(ui.Start).Gap(tk.SpaceM).Padding(tk.SpaceS, tk.SpaceS).
 		Radius(tk.RadiusControl).Justify(ui.Start).Cursor(ui.CursorPointer).
-		Role(ui.RoleListItem)
+		Role(ui.RoleListItem))
 	if current {
 		row.Background(tk.Accent.Alpha(0.10)).
 			Draw(func(p *ui.Painter, r ui.Rect) {

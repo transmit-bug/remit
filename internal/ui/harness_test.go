@@ -108,10 +108,11 @@ func seedLibrary(t *testing.T, dir string) testLibrary {
 }
 
 // settle draws the window's first frame and lets its entrance finish, so that a
-// test asserting the view is at rest starts from a window that is.
+// test asserting the view is at rest starts from a window that is: the
+// entrance's two beats, and the lists on the page arriving behind each other.
 func settle(tt *ui.Tester) {
 	tt.Frame()
-	tt.Advance(300 * time.Millisecond) // the entrance: two beats, on a spring
+	tt.Advance(400 * time.Millisecond)
 }
 
 // settingsPage opens the settings area at one of its pages, the way the

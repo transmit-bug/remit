@@ -7,6 +7,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -25,12 +26,12 @@ func (s *State) gutterBadge(c *ui.Context, tk design.Tokens, msgs locales.Messag
 	// The badge says how many cards with its number, and what state they are in
 	// with its shape; the words for both are its description and its tip, so the
 	// shape is never the only thing that carries the meaning.
-	button := ui.ButtonBase(c.Key(fmt.Sprintf("block-badge-%d", badge.Paragraph))).
+	button := kit.HoverFace(c, ui.ButtonBase(c.Key(fmt.Sprintf("block-badge-%d", badge.Paragraph))).
 		Size(blockHandle-3, blockHandle-3).Radius(tk.RadiusControl).Justify(ui.Center).
 		Background(tk.Surface).Border(tk.Hairline, edge).BorderStyle(badgeBorder(badge.State)).
 		Description(badgeStateWord(msgs, badge.State)).
-		Tooltip(label + " · " + badgeStateWord(msgs, badge.State)).
-		Label(label).Cursor(ui.CursorPointer)
+		Tooltip(label+" · "+badgeStateWord(msgs, badge.State)).
+		Label(label).Cursor(ui.CursorPointer))
 	if button.Hovered() {
 		button.Background(tk.SurfaceHover)
 	}

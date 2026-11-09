@@ -77,7 +77,7 @@ func at(t *testing.T, s today.State, d today.Deps, w, h int) *ui.Tester {
 	t.Helper()
 	tt := ui.NewTester(func(c *ui.Context) { today.View(c, &s, d) }, w, h)
 	tt.Frame()
-	tt.Advance(300 * time.Millisecond)
+	tt.Advance(320 * time.Millisecond) // the rows' arrival: 180 ms plus five 24 ms steps
 	return tt
 }
 

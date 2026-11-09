@@ -6,7 +6,7 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// The nine moments the app moves in, each a named preset so that a screen
+// The ten moments the app moves in, each a named preset so that a screen
 // names a cause rather than a duration, and the whole vocabulary is tuned in one
 // place. Motion encodes cause only — where something came from, that it was
 // clicked, that the screen changed — never decoration.
@@ -57,14 +57,16 @@ var (
 	// ModeSwitch is one screen replacing another: the root fades in and rises
 	// Rise DIPs, easing out.
 	ModeSwitch = ui.Animation{Duration: modeDuration, Ease: ui.EaseOut}
-	// Reveal unfolds the answer to its height: a smooth spring, no bounce, so
-	// the eye does not lose the line it was on.
+	// Reveal unfolds what appears after the page was there — the answer, the
+	// summary, the find bar — rising Rise DIPs as it fades in: a smooth spring,
+	// no bounce, so the eye does not lose the line it was on.
 	Reveal = ui.Animation{Spring: ui.SpringOptions{Duration: revealDuration}}
 	// Grade sends the graded card up and fades it, and brings the next one up
 	// from below.
 	Grade = ui.Animation{Duration: gradeDuration, Ease: ui.EaseOut}
-	// Row folds or unfolds a row's height in a list, and brings one in as the
-	// list arrives; RowStagger spaces the rows behind each other.
+	// Row brings a row in as its list arrives; RowStagger spaces the rows behind
+	// each other, for the first MaxStaggerRows of them. The room a row takes is
+	// the list's from the first frame, so an arrival moves nothing under it.
 	Row = ui.Animation{Spring: ui.SpringOptions{Duration: rowDuration}}
 	// Progress fills a bar to its value once, when it is mounted.
 	Progress = ui.Animation{Duration: progressDuration, Ease: ui.EaseOut}
@@ -86,6 +88,21 @@ var EnterFrames = []ui.Keyframe{
 	{Value: 0},
 	{At: enterDuration - 40*time.Millisecond, Value: 1.01, Ease: ui.EaseOut},
 	{At: enterDuration, Value: 1},
+}
+
+// RowTween is one row of a list arriving: from nothing to its place over the
+// row's own 180 ms, easing out. A list places each row's tween RowStagger
+// behind the one above it, for at most MaxStaggerRows rows.
+func RowTween() ui.Tween {
+	return ui.Tween{From: 0, To: 1, Duration: rowDuration, Ease: ui.EaseOut}
+}
+
+// ProgressFrames is a value loading in as a progress from 0 to 1: a bar
+// filling to its width, or a page's own content arriving as what it draws loads.
+// It plays once, when it is mounted, and rests there.
+var ProgressFrames = []ui.Keyframe{
+	{Value: 0},
+	{At: progressDuration, Value: 1, Ease: ui.EaseOut},
 }
 
 // ModeFrames is a mode switch as a progress from 0 to 1, easing out.

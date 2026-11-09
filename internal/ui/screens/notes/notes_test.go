@@ -3,6 +3,7 @@ package notes_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 
@@ -145,6 +146,7 @@ func at(t *testing.T, f *fake, w, h int) (*notes.State, *ui.Tester) {
 	d := f.deps()
 	tt := ui.NewTester(func(c *ui.Context) { notes.View(c, &s, d) }, w, h)
 	tt.Frame()
+	tt.Advance(320 * time.Millisecond) // the outline's arrival: 180 ms plus five 24 ms steps
 	return &s, tt
 }
 

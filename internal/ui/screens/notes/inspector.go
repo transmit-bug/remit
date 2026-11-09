@@ -48,7 +48,9 @@ func (s *State) inspectorView(c *ui.Context, tk design.Tokens, d Deps) {
 	open := true
 	ui.DialogBase(c, &open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.Scrim)
-		panel = kit.StylePanel(c, panel.Width(tk.SummaryWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
+		panel = kit.ArrivePanel(kit.StylePanel(c, panel.Width(tk.SummaryWidth).
+			Padding(tk.SpaceL).Gap(tk.SpaceM)), 0)
+		kit.ArriveScrim(backdrop, 0)
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
@@ -155,9 +157,9 @@ func (s *State) inspectorView(c *ui.Context, tk design.Tokens, d Deps) {
 // inspectorCardRow is one card that reads the paragraph: what it asks, where its
 // text comes from now, and the way to its own detail.
 func (s *State) inspectorCardRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps, card InspectorCard) {
-	row := ui.ButtonBase(c.Key("card-"+string(card.Card.ID))).FillWidth().
+	row := kit.HoverFace(c, ui.ButtonBase(c.Key("card-"+string(card.Card.ID))).FillWidth().
 		Justify(ui.Start).Padding(tk.SpaceS, tk.SpaceS).MinHeight(tk.Control).
-		Radius(tk.RadiusControl).Label(card.Title)
+		Radius(tk.RadiusControl).Label(card.Title))
 	if row.Hovered() {
 		row.Background(tk.SurfaceHover)
 	}
@@ -177,9 +179,9 @@ func (s *State) inspectorCardRow(c *ui.Context, tk design.Tokens, msgs locales.M
 // excerptRow is one note taken out of the paragraph: what it is called, the line
 // that opens, and the way back to it.
 func excerptRow(c *ui.Context, tk design.Tokens, excerpt InspectorExcerpt, d Deps) {
-	row := ui.ButtonBase(c.Key("excerpt-"+string(excerpt.Note))).FillWidth().
+	row := kit.HoverFace(c, ui.ButtonBase(c.Key("excerpt-"+string(excerpt.Note))).FillWidth().
 		Justify(ui.Start).Padding(tk.SpaceS, tk.SpaceS).MinHeight(tk.Control).
-		Radius(tk.RadiusControl).Label(excerpt.Title)
+		Radius(tk.RadiusControl).Label(excerpt.Title))
 	if row.Hovered() {
 		row.Background(tk.SurfaceHover)
 	}

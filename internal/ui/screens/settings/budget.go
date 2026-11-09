@@ -91,8 +91,11 @@ func previewCard(c *ui.Context, s *State, msgs locales.Messages, tk design.Token
 			ui.Text(c, msgs.SettingsBudgetPreviewBody(
 				s.Budget.Read, s.Budget.Review, s.Budget.Budget, s.Budget.Lines)).
 				FontSize(tk.TypeUI).TextColor(tk.Text)
-			ui.Meter(c, float64(s.Budget.Total), 0, float64(max(s.Budget.Budget, 1)), nil).
-				Height(tk.SpaceS).Label(msgs.SettingsBudgetPreview())
+			kit.Progress(c, kit.ProgressOptions{
+				Value:  float64(s.Budget.Total) / float64(max(s.Budget.Budget, 1)),
+				Height: tk.SpaceS,
+				Label:  msgs.SettingsBudgetPreview(),
+			})
 		})
 	}).Padding(tk.SpaceM)
 }

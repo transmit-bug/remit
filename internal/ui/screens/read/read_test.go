@@ -68,7 +68,7 @@ func draw(t *testing.T, page read.Page, f *fake, w, h int) *ui.Tester {
 	state.Show(page)
 	tt := ui.NewTester(func(c *ui.Context) { read.View(c, state, f.deps()) }, w, h)
 	tt.Frame()
-	tt.Advance(300 * time.Millisecond)
+	tt.Advance(320 * time.Millisecond) // the rows' arrival: 180 ms plus five 24 ms steps
 	return tt
 }
 

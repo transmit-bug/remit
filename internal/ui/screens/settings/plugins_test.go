@@ -315,6 +315,7 @@ func TestPluginDetailShowsCapabilitiesAndFailures(t *testing.T) {
 			}
 			tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
 			tt.Frame()
+			tt.Advance(200 * time.Millisecond) // the sheet's arrival
 
 			for _, want := range []string{
 				msgs.SettingsPluginTrust(), msgs.SettingsPluginTrustThirdParty(),

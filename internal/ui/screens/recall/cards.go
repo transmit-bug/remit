@@ -475,9 +475,9 @@ func facetRow(c *ui.Context, s *CardsState, tk design.Tokens, item Facet, label 
 	name := label(item.Key)
 	on := s.toggle(item.Key)
 	*on = item.Chosen
-	row := ui.ToggleBase(c, on).Label(name).
+	row := kit.HoverFace(c, ui.ToggleBase(c, on).Label(name).
 		MinHeight(tk.Hit).Padding(tk.SpaceXS, tk.SpaceS).Radius(tk.RadiusControl).
-		Justify(ui.Start)
+		Justify(ui.Start))
 	if item.Chosen {
 		row.Background(tk.Accent.Alpha(0.10))
 	} else if row.Hovered() {

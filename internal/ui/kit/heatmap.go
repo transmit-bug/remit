@@ -46,13 +46,18 @@ type HeatmapOptions struct {
 // Heatmap draws calendar weeks as columns and weekdays as rows: one square per
 // day, tinted by how many reviews it holds, the days ahead left empty.
 //
+// The calendar washes in once, when it is first drawn: what it shows is the log
+// the page loaded, so loading is the one thing it has to say.
+//
 // Composed rather than taken from a widget. ui/chart has no calendar heatmap at
 // MyGo v0.8.1, and ui.GridView lays items out by a minimum width without the
 // equal columns and week alignment a calendar needs. Checked against v0.8.1.
 func Heatmap(c *ui.Context, weeks [][]HeatDay, most int, o HeatmapOptions) ui.Element {
 	t := c.Theme()
 	tk := design.NewTokens(t)
-	return ui.Column(c).Gap(design.SpaceS).Children(func() {
+	cal := ui.Column(c).Gap(design.SpaceS)
+	loaded := cal.Keyframes("load", design.ProgressFrames)
+	cal.Opacity(loaded).Children(func() {
 		ui.Row(c).Gap(o.Gap).AlignItems(ui.Start).Label(o.Label).Children(func() {
 			if o.Weekdays && o.Weekday != nil && len(weeks) > 0 && len(weeks[0]) == 7 {
 				weekdayColumn(c, weeks[0], o)
@@ -81,6 +86,7 @@ func Heatmap(c *ui.Context, weeks [][]HeatDay, most int, o HeatmapOptions) ui.El
 			heatLegend(c, tk, o)
 		}
 	})
+	return cal
 }
 
 // weekdayColumn is the names beside the rows: enough of them to read the

@@ -107,10 +107,8 @@ func (a *App) keysView(c *ui.Context, tk design.Tokens) {
 		panel = kit.StylePanel(c, panel.Width(tk.SettingsWidth).
 			Padding(tk.SpaceL).Gap(tk.SpaceM))
 		panel.Label(msgs.KeysTitle())
-		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.keys})
-		scale := design.PanelScale + (1-design.PanelScale)*arriving
-		panel.Opacity(arriving).Scale(scale, scale)
-		backdrop.Opacity(arriving)
+		panel = kit.ArrivePanel(panel, a.anim.keys)
+		kit.ArriveScrim(backdrop, a.anim.keys)
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {

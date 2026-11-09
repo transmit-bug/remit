@@ -105,9 +105,11 @@ func budgetCard(c *ui.Context, tk design.Tokens, msgs locales.Messages, day queu
 			// A library with no budget shows what the day costs and no meter:
 			// a bar needs a width to be measured against.
 			if day.Budget > 0 {
-				ui.Meter(c, float64(day.TotalMinutes)/float64(day.Budget), 0, 1,
-					&ui.MeterLevels{Warning: budgetWarning, Critical: budgetDanger},
-				).Label(msgs.TodayBudget())
+				kit.Progress(c, kit.ProgressOptions{
+					Value:  float64(day.TotalMinutes) / float64(day.Budget),
+					Levels: &ui.MeterLevels{Warning: budgetWarning, Critical: budgetDanger},
+					Label:  msgs.TodayBudget(),
+				})
 			}
 		})
 	}).FillWidth()
@@ -168,14 +170,18 @@ func stat(c *ui.Context, tk design.Tokens, label string, n int) {
 // meant to be worked: reading before recall. Its Start button is the first line.
 func queueSection(c *ui.Context, s *State, tk design.Tokens, msgs locales.Messages, entries []queue.Entry, d Deps) {
 	s.list.Key = entryKey(entries)
-	ui.Column(c).Gap(tk.SpaceS).Children(func() {
+	// The day arrives as a list: each line behind the one above it, once, when
+	// the page appears.
+	col := ui.Column(c).Gap(tk.SpaceS)
+	arrive := kit.Stagger(col, "today-queue")
+	col.Children(func() {
 		kit.SectionHead(c, tk, msgs.TodayQueue(), msgs.TodayQueueHint(), func() {
 			ui.Button(c, msgs.TodayStart()).MinHeight(tk.Control).
 				OnClick(func() { open(entries[0], d) })
 		})
 		ui.Divider(c)
 		ui.List(c, &s.list, len(entries), func(row int) {
-			rowView(c, tk, msgs, entries[row], d)
+			rowView(c, tk, msgs, entries[row], arrive(row), d)
 		}).Label(msgs.TodayQueue())
 	})
 }
@@ -183,12 +189,13 @@ func queueSection(c *ui.Context, s *State, tk design.Tokens, msgs locales.Messag
 // rowView is one line of the queue: what kind of sitting it is, what it is
 // called, how far into it the reader is, what it costs, and — past the day's
 // budget — that it is being postponed rather than dropped.
-func rowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, entry queue.Entry, d Deps) {
+func rowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, entry queue.Entry, shown float32, d Deps) {
 	title := entryTitle(msgs, entry)
-	ui.Button(c, "").FillWidth().MinHeight(rowHeight).
+	face := ui.Button(c, "").FillWidth().MinHeight(rowHeight).
 		Padding(tk.SpaceM-tk.SpaceXS, tk.SpaceS).Radius(0).
 		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).
-		Label(title).Children(func() {
+		Label(title)
+	kit.Arrive(face, shown).Children(func() {
 		ui.Row(c).Grow(1).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
 			kindMark(c, tk, entry.Kind)
 			ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {

@@ -315,7 +315,9 @@ func (a *App) cardEditView(c *ui.Context, tk design.Tokens) {
 
 	ui.DialogBase(c, &edit.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.Scrim)
-		panel = kit.StylePanel(c, panel.Width(tk.SummaryWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
+		panel = kit.ArrivePanel(kit.StylePanel(c, panel.Width(tk.SummaryWidth).
+			Padding(tk.SpaceL).Gap(tk.SpaceM)), 0)
+		kit.ArriveScrim(backdrop, 0)
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
@@ -558,7 +560,9 @@ func (a *App) cardDetailView(c *ui.Context, tk design.Tokens) {
 
 	ui.DialogBase(c, &detail.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.Scrim)
-		panel = kit.StylePanel(c, panel.Width(tk.SummaryWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
+		panel = kit.ArrivePanel(kit.StylePanel(c, panel.Width(tk.SummaryWidth).
+			Padding(tk.SpaceL).Gap(tk.SpaceM)), 0)
+		kit.ArriveScrim(backdrop, 0)
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {

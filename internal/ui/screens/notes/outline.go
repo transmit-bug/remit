@@ -7,6 +7,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -67,8 +68,9 @@ func heading(body string) (level int, label string) {
 // outlineList shows the note's headings as an outline, the one under the caret
 // marked; choosing one puts the caret on its paragraph, which is what scrolls it
 // into view. A heading is the arrow's to open and close, and the keys are the
-// outline's once a row has the focus.
-func (s *State) outlineList(c *ui.Context, tk design.Tokens) {
+// outline's once a row has the focus. The rows arrive as a list, once, when the
+// panel shows.
+func (s *State) outlineList(c *ui.Context, tk design.Tokens, holder ui.Element) {
 	msgs := locales.In(c.Locale())
 	entries := outlineEntries(s.Draft.Blocks)
 	if s.Doc == nil || len(entries) == 0 {
@@ -96,8 +98,9 @@ func (s *State) outlineList(c *ui.Context, tk design.Tokens) {
 	s.OutlineCurrent = headingAt(entries, s.caretParagraph())
 	s.outline.List.Selected = &s.outlineChosen
 	s.outline.List.Label = func(row int) string { return entries[s.outline.Item(row)].label }
+	arrive := kit.Stagger(holder, "outline")
 	list := ui.Outline(c, &s.outline, roots, func(i int) []int { return children[i] }, func(i int) {
-		text := ui.Text(c, entries[i].label).FontSize(tk.TypeUI).SingleLine()
+		text := kit.Arrive(ui.Text(c, entries[i].label).FontSize(tk.TypeUI).SingleLine(), arrive(i))
 		if i == s.OutlineCurrent {
 			text.TextColor(tk.Accent)
 			return

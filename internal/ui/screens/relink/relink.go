@@ -89,10 +89,8 @@ func View(c *ui.Context, s *State, d Deps) {
 		panel = kit.StylePanel(c, panel.Width(panelWidth).MaxHeight(panelHeight).Padding(tk.SpaceL).Gap(tk.SpaceM))
 		panel.Label(msgs.RelinkTitle())
 		// The picker arrives the way the palette does.
-		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: d.Run})
-		scale := design.PanelScale + (1-design.PanelScale)*arriving
-		panel.Opacity(arriving).Scale(scale, scale)
-		backdrop.Opacity(arriving)
+		panel = kit.ArrivePanel(panel, d.Run)
+		kit.ArriveScrim(backdrop, d.Run)
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
