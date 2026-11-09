@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 )
 
 // The query layer answers what a list shows: which rows, in which order, one
@@ -289,6 +290,111 @@ func (x *index) count(query string, args ...any) (int, error) {
 		return 0, fmt.Errorf("store: count query: %w", err)
 	}
 	return n, nil
+}
+
+// UnExcerptedNotes returns the notes that were read and have no excerpt yet:
+// notes a reading session touched, with no child note pointing at one of their
+// blocks. Most recently read first, then by ID so two calls agree, at most limit
+// of them — zero or less is no limit.
+//
+// A child is a note whose block carries an anchored link to the source — the
+// reference core.Excerpt writes, and the edge the excerpt tree is built from. A
+// passing mention of a note by title is not an excerpt of it. A note the reading
+// queue no longer holds is not a candidate either: an entry the user dropped is
+// not a note to be reminded of, and the terminal states a note can be archived
+// or dismissed into leave the queue the same way.
+//
+// The answer comes from the derived index — one query over the reading rows, one
+// over the link edges — so it opens no note file and replays no log line.
+func (l *Library) UnExcerptedNotes(limit int) ([]Reading, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, ErrClosed
+	}
+	children, err := l.index.excerptChildren()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := l.index.db.Query(`
+		SELECT r.note, r.stability, r.difficulty, r.due, r.last_review, r.reviews,
+		       r.last_rating, r.position, r.queued, n.title
+		  FROM reading r JOIN notes n ON n.id = r.note
+		 WHERE r.reviews > 0 AND r.queued = 1
+		 ORDER BY r.last_review DESC, r.note`)
+	if err != nil {
+		return nil, fmt.Errorf("store: unexcerpted query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Reading
+	for rows.Next() {
+		var (
+			reading                        Reading
+			note, lastRating, place, title string
+			due, lastReview                int64
+			queued                         int
+		)
+		if err := rows.Scan(&note, &reading.State.Memory.Stability, &reading.State.Memory.Difficulty,
+			&due, &lastReview, &reading.State.Reviews, &lastRating, &place, &queued, &title); err != nil {
+			return nil, err
+		}
+		// Every row here was read, so the schedule it carries is its own.
+		reading.Note = core.ID(note)
+		reading.Position = core.ID(place)
+		reading.Queued = queued == 1
+		reading.State.Due = time.Unix(0, due).UTC()
+		reading.State.LastReview = time.Unix(0, lastReview).UTC()
+		reading.State.LastRating, _ = schedule.ParseRating(lastRating)
+		if hasExcerpt(children, reading.Note, title) {
+			continue
+		}
+		out = append(out, reading)
+		if limit > 0 && len(out) == limit {
+			break
+		}
+	}
+	return out, rows.Err()
+}
+
+// excerptChildren answers which notes name a title through an excerpt: a link
+// carrying a block anchor, written in another note. The index keeps the block a
+// link is written in and not the block it names, so the carrying block's text is
+// where the anchor is read. A mention without an anchor names the note as a
+// whole and is not an excerpt of one of its blocks.
+func (x *index) excerptChildren() (map[string][]core.ID, error) {
+	rows, err := x.db.Query(`SELECT l.note_id, b.text FROM links l JOIN blocks b ON b.id = l.block_id`)
+	if err != nil {
+		return nil, fmt.Errorf("store: excerpts query: %w", err)
+	}
+	defer rows.Close()
+	out := map[string][]core.ID{}
+	for rows.Next() {
+		var note, text string
+		if err := rows.Scan(&note, &text); err != nil {
+			return nil, err
+		}
+		for _, link := range core.Links(text) {
+			if link.Block == "" {
+				continue
+			}
+			title := core.NormalizeTitle(link.Title)
+			out[title] = append(out[title], core.ID(note))
+		}
+	}
+	return out, rows.Err()
+}
+
+// hasExcerpt reports whether a note of that title has a child: another note
+// naming one of its blocks, which is what an excerpt writes. A note naming its
+// own block is not its own child, as Backlinks agrees.
+func hasExcerpt(children map[string][]core.ID, note core.ID, title string) bool {
+	for _, child := range children[core.NormalizeTitle(title)] {
+		if child != note {
+			return true
+		}
+	}
+	return false
 }
 
 // CardsWithStatus returns the cards whose stored status is s, oldest first.
