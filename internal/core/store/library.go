@@ -534,6 +534,11 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 			}
 		}
 		for note, entry := range readings {
+			// A note that is not in the library has no place in a queue: its
+			// reading row is what the log said about a note that is gone.
+			if _, ok := notes[note]; !ok {
+				continue
+			}
 			row := readingRowFrom(note, entry)
 			row.lastSeq = lastSeq[note]
 			if err := putReading(e, row); err != nil {
@@ -823,6 +828,11 @@ func SplitCardName(name string) (core.ID, bool) {
 func (l *Library) Note(id core.ID) (core.Note, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	return l.note(id)
+}
+
+// note is Note with the lock held.
+func (l *Library) note(id core.ID) (core.Note, bool) {
 	if l.index == nil {
 		return core.Note{}, false
 	}
@@ -877,6 +887,26 @@ func (l *Library) Notes() []core.Note {
 func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	return l.saveNote(note, l.now())
+}
+
+// RenameNote gives a note a new title and stamps the save with at. Nothing
+// moves on disk: the slug was minted with the note and stays, so a rename never
+// breaks a link, a card or the note's place in the reading queue.
+func (l *Library) RenameNote(id core.ID, title string, at time.Time) (core.Note, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	note, ok := l.note(id)
+	if !ok {
+		return core.Note{}, fmt.Errorf("store: no note %q", id)
+	}
+	note.Title = title
+	return l.saveNote(note, at)
+}
+
+// saveNote is SaveNote with the lock held and the moment the save happened
+// given, which is what a rename writes its title at.
+func (l *Library) saveNote(note core.Note, at time.Time) (core.Note, error) {
 	if l.index == nil {
 		return core.Note{}, ErrClosed
 	}
@@ -895,7 +925,7 @@ func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 		slug, path = entry.slug, l.notePath(entry.slug, note.ID)
 	}
 	note = normalizeNote(note)
-	note.Updated = l.now().UTC()
+	note.Updated = l.instant(at).UTC()
 
 	before, err := l.index.blocksOfNote(note.ID)
 	if err != nil {
@@ -1229,6 +1259,86 @@ func (l *Library) saveCard(card core.Card) error {
 		lastSeq: lastSeq,
 	})
 	return nil
+}
+
+// Cascade is what deleting a note does with the cards its paragraphs feed. It
+// is a parameter rather than a default because deleting a note is the one
+// action that can strand a schedule, so the caller has to say which one it
+// means.
+type Cascade uint8
+
+const (
+	// CascadeLose leaves the cards where they are: their block is gone, so they
+	// are lost, the re-link page can point them at a live paragraph, and every
+	// review they were given stays in the log. Deleting a note never deletes
+	// review history.
+	CascadeLose Cascade = iota
+)
+
+// DeleteNote removes a note from the library: its file, and everything the
+// index derived from it — its blocks, the links and tags its text made, its
+// search row and its place in the reading queue. What its paragraphs fed stays:
+// the cards become lost, which is the state the re-link page repairs, and the
+// append-only log keeps every review they were given. A note that is not there
+// is an error, so a caller that meant another id hears about it.
+func (l *Library) DeleteNote(id core.ID, at time.Time, cascade Cascade) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return ErrClosed
+	}
+	if cascade != CascadeLose {
+		return fmt.Errorf("store: unknown cascade %d for note %q", cascade, id)
+	}
+	entry, ok := l.index.note(id)
+	if !ok {
+		return fmt.Errorf("store: no note %q", id)
+	}
+	blocks, err := l.index.blocksOfNote(id)
+	if err != nil {
+		return err
+	}
+	blockIDs := make([]core.ID, 0, len(blocks))
+	for _, block := range blocks {
+		if block.ID != "" {
+			blockIDs = append(blockIDs, block.ID)
+		}
+	}
+	// A note leaving the library leaves the reading queue too, and the log is
+	// where its place is derived from: the drop is an event like any other, so a
+	// rebuild reads the same queue this delete left.
+	if _, ok := l.readings[id]; ok {
+		dropped := schedule.Event{Seq: l.nextSeq + 1, Note: id, Kind: schedule.Dropped, At: l.instant(at)}
+		if err := l.recordReading(dropped); err != nil {
+			return err
+		}
+	}
+	if err := os.Remove(l.notePath(entry.slug, id)); err != nil {
+		return err
+	}
+	marks, err := l.sourceMarks()
+	if err != nil {
+		return err
+	}
+	err = l.index.write(func(e execer) error {
+		if err := deleteNote(e, id); err != nil {
+			return err
+		}
+		// The cards the note fed have lost their source; their search rows say
+		// so too, which is what a re-link reads.
+		if err := resolveBlocks(e, blockIDs); err != nil {
+			return err
+		}
+		if err := refreshCardSearchOfBlocks(e, blockIDs); err != nil {
+			return err
+		}
+		return l.putMarks(e, marks)
+	})
+	if err != nil {
+		return err
+	}
+	delete(l.readings, id)
+	return l.refreshCards(blockIDs)
 }
 
 // DeleteCard removes a card's definition and its schedule from the index. The

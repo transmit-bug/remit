@@ -247,6 +247,11 @@ type State struct {
 	blockMenus    map[int]bool         // the visible paragraphs whose block menu is open
 	blockDelete   int                  // the paragraph a delete awaits confirmation for, -1 for none
 	blockLost     int                  // the cards that delete would leave without a source
+	renameNote    core.ID              // the note a rename is typed for, "" for none
+	renameText    string               // the title the rename holds
+	renameField   ui.Handle            // the field the rename types in
+	deleteNote    core.ID              // the note a delete awaits confirmation for, "" for none
+	deleteCards   int                  // the cards that delete would leave without a source
 	slashOpen     bool                 // the block insertion menu is up
 	slashSeen     bool                 // the current slash query already opened its menu
 	slashQuery    string               // what filters the slash menu
@@ -363,6 +368,12 @@ type Deps struct {
 	SlashItems func(*ui.Context) []BlockItem
 	// RowItems are the actions plugins contributed to a note row's menu.
 	RowItems func(*ui.Context) []BlockItem
+	// RenameNote writes a note's new title from its row, and answers whether it
+	// was written.
+	RenameNote func(*ui.Context, core.ID, string) bool
+	// DeleteNote removes a note from the library, leaving the cards its
+	// paragraphs fed lost, and answers whether it was removed.
+	DeleteNote func(*ui.Context, core.ID) bool
 
 	// Rows is the notes page's rows — the query, tag, filters and order the
 	// state holds, answered by the store — and how many notes match in all.
@@ -522,6 +533,11 @@ func (s *State) hold(note core.Note) {
 	s.inspect = nil
 	s.resetSlash()
 }
+
+// Forget drops the note the notebook holds open, which deleting it from the
+// list leaves behind: the next frame that draws the editor must not save a note
+// that is gone back into the library.
+func (s *State) Forget() { s.hold(core.Note{}) }
 
 // Keep takes the note the store returned as the draft: the ids it minted are
 // what the next save names. The document is kept, so the caret stays where it

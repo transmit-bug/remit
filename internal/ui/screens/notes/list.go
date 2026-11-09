@@ -2,6 +2,7 @@ package notes
 
 import (
 	"math"
+	"strings"
 	"time"
 
 	"github.com/egoist/mygo/i18n"
@@ -98,6 +99,12 @@ func ListView(c *ui.Context, s *State, d Deps) {
 			}
 		})
 	})
+	// The row menu's two writes: a rename typed in, and a delete that says what
+	// it costs before it does it. Both are drawn over the page, so a row's menu
+	// closes and its decision is asked here.
+	s.renameDialog(c, tk, msgs, d)
+	s.deleteDialog(c, msgs, d)
+
 	// The query, a filter or an order changed: the rows are the store's answer,
 	// so the app derives them again after the fields have taken the input.
 	if reload && d.Reload != nil {
@@ -203,7 +210,7 @@ func (s *State) listRows(c *ui.Context, tk design.Tokens, msgs locales.Messages,
 	s.list.Label = func(row int) string { return rows[row].Title }
 	ui.Divider(c)
 	ui.List(c, &s.list, len(rows), func(row int) {
-		listRow(c, tk, msgs, rows[row], arrive(row), d)
+		listRow(c, s, tk, msgs, rows[row], arrive(row), d)
 	}).Grow(1).Label(msgs.ModeNotes())
 }
 
@@ -214,7 +221,7 @@ func (s *State) listRows(c *ui.Context, tk design.Tokens, msgs locales.Messages,
 //
 // The two actions stay drawn, quiet until the row is under the pointer: a
 // control that exists only under the pointer is out of the keyboard's reach.
-func listRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, shown float32, d Deps) {
+func listRow(c *ui.Context, s *State, tk design.Tokens, msgs locales.Messages, row Row, shown float32, d Deps) {
 	func() {
 		// A row is a line of the list, not a card: the hairline is what
 		// separates it from its neighbours, and the hover only tints the line.
@@ -270,6 +277,13 @@ func listRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, sh
 				}
 				if m.Item(msgs.WriteRowQueue()).Chosen() && d.QueueReading != nil {
 					d.QueueReading(c, row.ID)
+				}
+				m.Separator()
+				if m.Item(msgs.WriteRowRename()).Chosen() {
+					s.beginRename(c, row)
+				}
+				if m.Item(msgs.WriteRowDelete()).Danger().Chosen() {
+					s.deleteNote, s.deleteCards = row.ID, row.Cards
 				}
 				// A plugin's actions for a note close the menu, under the host's,
 				// which is where the sidebar.note slot puts them (ui.md §4).
@@ -336,4 +350,84 @@ func when(c *ui.Context, at, now time.Time) string {
 	}
 	return i18n.FormatRelativeTime(c.Locale(), float64(-days), i18n.RelativeDay,
 		i18n.RelativeTimeOptions{Auto: true})
+}
+
+// beginRename asks for the note's title to be typed again, and points the
+// dialog's field at the next frame. The title lives in the note rather than in
+// its row — the row's name is drawn from it — so the edit is a dialog over the
+// list, not a field in the row. ui.EditableText renames a row's own label, and
+// a note's title is not one: it is the note's first line.
+func (s *State) beginRename(c *ui.Context, row Row) {
+	s.renameNote, s.renameText = row.ID, row.Title
+	s.renameField.Focus(c)
+}
+
+// renameDialog is the note's new title, asked for over the list. Enter keeps it,
+// Escape and the backdrop leave the note as it was.
+func (s *State) renameDialog(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps) {
+	if s.renameNote == "" {
+		return
+	}
+	open := true
+	renamed := false
+	ui.DialogBase(c, &open, func(backdrop, panel ui.Element) {
+		backdrop.Background(tk.Scrim)
+		panel = kit.StylePanel(c, panel.Width(tk.SummaryWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
+		panel.Label(msgs.RenameNoteTitle())
+		panel.Children(func() {
+			ui.Text(c, msgs.RenameNoteTitle()).FontSize(tk.TypeH2).Bold()
+			field := ui.TextInput(c, &s.renameText).Label(msgs.RenameNoteField()).
+				Bind(&s.renameField)
+			// A note with no title is not a name: the action waits, and the line
+			// beside it says what it waits for.
+			empty := strings.TrimSpace(s.renameText) == ""
+			ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
+				if empty {
+					ui.Text(c, msgs.RenameNoteEmpty()).FontSize(tk.TypeLabel).
+						TextColor(tk.TextMuted).Grow(1)
+				} else {
+					ui.Spacer(c)
+				}
+				ui.Button(c, msgs.Cancel()).MinHeight(tk.Control).
+					OnClick(func() { open = false })
+				ui.PrimaryButton(c, msgs.RenameNoteSave()).MinHeight(tk.Control).
+					Disabled(empty).
+					OnClick(func() {
+						renamed = true
+						open = false
+					})
+			})
+			if field.Submitted() && !empty {
+				renamed = true
+				open = false
+			}
+		})
+	})
+	if renamed && d.RenameNote != nil {
+		d.RenameNote(c, s.renameNote, s.renameText)
+	}
+	if !open || renamed {
+		s.renameNote, s.renameText = "", ""
+	}
+}
+
+// deleteDialog asks before a note goes, and names what it costs: the cards the
+// note fed become lost, and their reviews stay in the log. The count is the
+// row's own, so the question is about the note the user chose.
+func (s *State) deleteDialog(c *ui.Context, msgs locales.Messages, d Deps) {
+	if s.deleteNote == "" {
+		return
+	}
+	open := true
+	switch ui.AlertDialog(c, &open, msgs.DeleteNoteTitle(), msgs.DeleteNoteWarning(s.deleteCards),
+		msgs.Cancel(), msgs.WriteRowDelete()) {
+	case 0, ui.AlertDismissed:
+		s.deleteNote, s.deleteCards = "", 0
+	case 1:
+		id := s.deleteNote
+		s.deleteNote, s.deleteCards = "", 0
+		if d.DeleteNote != nil {
+			d.DeleteNote(c, id)
+		}
+	}
 }

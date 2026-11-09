@@ -110,6 +110,9 @@ const (
 	IconLarge  float32 = 24
 
 	ControlHeight float32 = 32
+	// DoorHeight is one of the welcome screen's three ways in: a control's
+	// height plus the line that says where it goes.
+	DoorHeight float32 = 56
 	// Hit is the smallest thing a pointer may be asked for, taller than a
 	// control so that an icon-only button still has room around it.
 	Hit      float32 = ControlHeight + 2

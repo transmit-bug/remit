@@ -710,6 +710,70 @@
   "@openLibrary": {
     "description": "Start view action, and the native folder picker it opens: choose a library already on disk."
   },
+  "startBrand": "Remit",
+  "@startBrand": {
+    "description": "The app's name in the welcome card's brand block."
+  },
+  "startTagline": "Local-first · plaintext library · no account",
+  "@startTagline": {
+    "description": "What a Remit library is, under the name on the welcome screen."
+  },
+  "startCreateHint": "A new folder in Documents",
+  "@startCreateHint": {
+    "description": "The line under the welcome screen's Create library door."
+  },
+  "startOpenHint": "A folder that already holds one",
+  "@startOpenHint": {
+    "description": "The line under the welcome screen's Open library door."
+  },
+  "startImport": "Import a library",
+  "@startImport": {
+    "description": "Welcome screen door: bring a .remitlib archive or a folder of Markdown in."
+  },
+  "startImportHint": "A .remitlib archive or a folder of Markdown",
+  "@startImportHint": {
+    "description": "The line under the welcome screen's Import door."
+  },
+  "startRecent": "Recent",
+  "@startRecent": {
+    "description": "Heading of the welcome screen's list of libraries opened before."
+  },
+  "startRecentOpen": "Open {path}",
+  "@startRecentOpen": {
+    "description": "Accessible name of a recent library's row, which opens it.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "/Users/you/Documents/Remit"
+      }
+    }
+  },
+  "startRecentMissing": "Folder is gone",
+  "@startRecentMissing": {
+    "description": "Badge on a recent library whose folder is no longer on disk."
+  },
+  "startFailed": "Remit could not open {path}: {reason}",
+  "@startFailed": {
+    "description": "Callout in the welcome card when a library the user picked will not open.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "/Users/you/Documents/Remit"
+      },
+      "reason": {
+        "type": "String",
+        "example": "no such file or directory"
+      }
+    }
+  },
+  "startChooseAnother": "Choose another",
+  "@startChooseAnother": {
+    "description": "The welcome card's callout action: open the folder picker instead."
+  },
+  "startTelemetry": "Zero telemetry · zero network requests",
+  "@startTelemetry": {
+    "description": "The welcome card's footer: what the app sends, which is nothing."
+  },
   "noLibraryPlace": "Remit could not find a place for its library.",
   "@noLibraryPlace": {
     "description": "The start view could not resolve a default library folder."
@@ -3579,6 +3643,48 @@
   "writeRowQueue": "Add to reading queue",
   "@writeRowQueue": {
     "description": "A note row's action that puts the note in the reading queue."
+  },
+  "writeRowRename": "Rename",
+  "@writeRowRename": {
+    "description": "A note row's menu action that renames the note."
+  },
+  "writeRowDelete": "Delete note",
+  "@writeRowDelete": {
+    "description": "A note row's menu action that deletes the note, after a confirmation."
+  },
+  "renameNoteTitle": "Rename note",
+  "@renameNoteTitle": {
+    "description": "Title of the dialog that renames a note from its row."
+  },
+  "renameNoteField": "Note title",
+  "@renameNoteField": {
+    "description": "Label of the field the note's new title is typed in."
+  },
+  "renameNoteSave": "Rename",
+  "@renameNoteSave": {
+    "description": "The rename dialog's action that writes the new title."
+  },
+  "renameNoteEmpty": "A note needs a title.",
+  "@renameNoteEmpty": {
+    "description": "Why the rename dialog's action waits: the field is empty."
+  },
+  "deleteNoteTitle": "Delete this note?",
+  "@deleteNoteTitle": {
+    "description": "Title of the alert shown before deleting a note."
+  },
+  "deleteNoteWarning": "{cards, plural, =0 {The note and its text go. It feeds no cards.} one {The note and its text go. # card points at it and becomes lost; its review history is kept.} other {The note and its text go. # cards point at it and become lost; their review history is kept.}}",
+  "@deleteNoteWarning": {
+    "description": "What deleting a note does to the cards its paragraphs feed; their history is kept.",
+    "placeholders": {
+      "cards": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "noteDeleted": "Note deleted.",
+  "@noteDeleted": {
+    "description": "The toast after a note and its file are gone."
   },
   "writeRowProgress": "{at} of {blocks}",
   "@writeRowProgress": {

@@ -354,7 +354,7 @@ const searchCardInsert = `INSERT INTO search (kind, doc, note, block, updated, c
 // putSearchNote writes a note's search row: its title, and its block text in
 // file order, so the snippet reads the way the note does.
 func putSearchNote(e execer, row noteRow, blocks []core.Block) error {
-	if _, err := e.Exec(`DELETE FROM search WHERE kind = ? AND doc = ?`, noteKind, string(row.id)); err != nil {
+	if err := deleteSearchNote(e, row.id); err != nil {
 		return err
 	}
 	texts := make([]string, 0, len(blocks))
@@ -414,6 +414,12 @@ func refreshCardSearchWhere(e execer, ids []core.ID, cardColumn, searchColumn st
 // deleteSearchCard drops a card's search row with the card.
 func deleteSearchCard(e execer, card core.ID) error {
 	_, err := e.Exec(`DELETE FROM search WHERE kind = ? AND doc = ?`, cardKind, string(card))
+	return err
+}
+
+// deleteSearchNote drops a note's search row with the note.
+func deleteSearchNote(e execer, note core.ID) error {
+	_, err := e.Exec(`DELETE FROM search WHERE kind = ? AND doc = ?`, noteKind, string(note))
 	return err
 }
 

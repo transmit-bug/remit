@@ -29,6 +29,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/screens/relink"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
+	"github.com/transmit-bug/remit/internal/ui/screens/start"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	screenToday "github.com/transmit-bug/remit/internal/ui/screens/today"
 	"github.com/transmit-bug/remit/internal/ui/shell"
@@ -85,6 +86,7 @@ type App struct {
 	dir     string         // where the library lives, once resolved
 	openErr error          // why the library did not open, or nil
 	start   bool           // no library yet: the start view asks where to put one
+	welcome start.State    // the start view: the libraries opened before, and the one that failed
 	data    libraryData    // the library as the view reads it
 	due     []core.ID      // today's queue, as the last reload derived it
 

@@ -367,6 +367,28 @@ func deleteBlocksOfNote(e execer, note core.ID) error {
 	return err
 }
 
+// deleteNote removes every row the index keeps about a note: its own row and the
+// blocks, links, tags, search text and reading place derived from it. The cards
+// its blocks fed are not rows of the note's: they stay, and resolveBlocks marks
+// them lost.
+func deleteNote(e execer, note core.ID) error {
+	steps := []func(execer, core.ID) error{
+		deleteNoteRow, deleteBlocksOfNote, deleteLinksOfNote, deleteTagsOfNote,
+		deleteSearchNote, deleteReading,
+	}
+	for _, step := range steps {
+		if err := step(e, note); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteNoteRow(e execer, note core.ID) error {
+	_, err := e.Exec(`DELETE FROM notes WHERE id = ?`, string(note))
+	return err
+}
+
 func putBlock(e execer, note core.ID, position int, block core.Block) error {
 	_, err := e.Exec(`INSERT INTO blocks (note_id, position, id, text) VALUES (?, ?, ?, ?)`,
 		string(note), position, string(block.ID), block.Text)

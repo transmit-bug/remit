@@ -9,6 +9,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/ext/contrib"
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -457,6 +458,62 @@ func TestNoteRowMenuDrawsTheSidebarNoteSlot(t *testing.T) {
 	}
 	if !runner.called("side") {
 		t.Errorf("the item drew but ran nothing; the plugin saw %v", runner.calls())
+	}
+}
+
+// A note row's menu offers what the host does with a note — read it, add it to
+// the reading queue, rename it, delete it — with the sidebar.note slot under
+// them, and every one of them runs: an item that only draws is a dead control.
+func TestNoteRowMenuOffersReadingAndThePluginSlot(t *testing.T) {
+	runner := &fakeRunner{}
+	a, tt := openContrib(t, "report", everyWhere, runner)
+	msgs := locales.In("en")
+
+	notesMode(t, a, tt)
+	noteListPage(t, tt, "en")
+	tt.Advance(320 * time.Millisecond)
+	openRowMenu := func() {
+		t.Helper()
+		if err := tt.Click(msgs.WriteRowActions() + " Memory and recall"); err != nil {
+			t.Fatalf("the note row has no menu: %v", err)
+		}
+	}
+	openRowMenu()
+	menu := tt.Menu()
+	for _, want := range []string{
+		msgs.WriteRowRead(), msgs.WriteRowQueue(), msgs.WriteRowRename(),
+		msgs.WriteRowDelete(), "Sidebar action",
+	} {
+		if !slices.Contains(menu, want) {
+			t.Fatalf("the note row's menu has no %q: %q", want, menu)
+		}
+	}
+
+	// Adding it to the reading queue is the menu's second row, and it reaches
+	// the store: the queue the read area lists holds the note.
+	if err := tt.ChooseMenuItem(msgs.WriteRowQueue()); err != nil {
+		t.Fatalf("the queue item: %v", err)
+	}
+	tt.Frame()
+	queued, err := a.Library().ReadingQueue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(queued) != 1 {
+		t.Fatalf("the row's queue action added %d notes", len(queued))
+	}
+	if note, ok := a.Library().Note(queued[0].Note); !ok || note.Title != "Memory and recall" {
+		t.Fatalf("the row's queue action added %q", note.Title)
+	}
+
+	// Reading opens the note read whole, not for editing.
+	openRowMenu()
+	if err := tt.ChooseMenuItem(msgs.WriteRowRead()); err != nil {
+		t.Fatalf("the read item: %v", err)
+	}
+	tt.Advance(320 * time.Millisecond)
+	if a.notes.View != notes.Read {
+		t.Errorf("the row's read action left the note in view %v", a.notes.View)
 	}
 }
 

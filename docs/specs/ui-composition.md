@@ -84,8 +84,8 @@
 | `TestPalette` | 输入收窄候选、键盘选中并执行 | 自绘行缺键盘/选择 | 有 |
 | `TestNotebookFillsTheWindowHeight` | 纸面填满工作区，而不是停在内容高度 | 内容高的纸面留下死白 | 有 |
 | `TestThePageCountsCardsNotBlocks` | 页面只报卡数，不出现“blocks” | 数块会多报，且说的是实现 | 有 |
-| `TestBrowseSortsByColumn` | 点表头 → 行序变化 | 手拼行没有排序 | 待建（S3） |
-| `TestRelinkNarrowsAsYouType` | 输入收窄候选、Enter 选中、Esc 取消 | 自绘行缺焦点/键盘 | 待建（S3） |
+| `TestBrowseSortsByColumn` | 点表头 → 行序变化 | 手拼行没有排序 | 有 |
+| `TestRelinkNarrowsAsYouType` | 输入收窄候选、Enter 选中、Esc 取消 | 自绘行缺焦点/键盘 | 有 |
 
 配套文件 `docs/specs/ui-inventory.md`：一屏一块，每行写「需求 → 组件 → 核对的 MyGo 版本」。
 评审看这张表，不看注释。
@@ -107,7 +107,7 @@
 
 **S3 · 列表**（剩余：browse、relink、标签；palette 已随 S2 完成）
 `browse` → `ui.Table`；`relink` → `ui.Autocomplete`；标签 → `ToggleGroup`。
-验收：`TestBrowseSortsByColumn`、`TestRelinkNarrowsAsYouType`（两个都待建）；palette 的门
+验收：`TestBrowseSortsByColumn`、`TestRelinkNarrowsAsYouType`（两条闸门都已存在）；palette 的门
 是已存在的 `TestPalette`。
 
 每片各自一个 PR，squash 合并；PR 正文写清「用了哪个组件、删了哪段手写、哪些测试证明它真的是组件在干活」。

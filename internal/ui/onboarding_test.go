@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -203,5 +204,84 @@ func TestFirstRun(t *testing.T) {
 	tt.Advance(320 * time.Millisecond) // the screen's entrance
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
+	}
+}
+
+// Opening a library remembers it: the welcome screen offers it again, and one
+// whose folder is gone is dropped from that list with the reason inside the
+// card rather than a click that appears to do nothing.
+func TestRecentLibraryThatIsGoneSaysWhy(t *testing.T) {
+	msgs := locales.In("en")
+	dir := t.TempDir()
+	seedLibrary(t, dir)
+	data := t.TempDir()
+	empty := filepath.Join(t.TempDir(), "Remit")
+
+	first := NewApp(Options{
+		LibraryDir:    empty,
+		DataDir:       data,
+		ChooseLibrary: func() (string, error) { return dir, nil },
+	})
+	tt := ui.NewTester(first.View, 1024, 720)
+	settle(tt)
+	if err := tt.Click("Open library…"); err != nil {
+		t.Fatal(err)
+	}
+	s, err := settings.Load(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.RecentLibraries) != 1 || s.RecentLibraries[0] != dir {
+		t.Fatalf("opening a library remembered %q, want %q", s.RecentLibraries, dir)
+	}
+
+	// The folder goes away between runs: the next start has no library, and the
+	// list it offers says the one it remembers is not there.
+	if err := os.RemoveAll(dir); err != nil {
+		t.Fatal(err)
+	}
+	second := NewApp(Options{DataDir: data})
+	tt = ui.NewTester(second.View, 1024, 720)
+	settle(tt)
+	if !tt.HasText(msgs.StartRecent()) {
+		t.Fatalf("the welcome screen does not offer the library it opened; texts %q", tt.Texts())
+	}
+	if !tt.HasText(dir) || !tt.HasText(msgs.StartRecentMissing()) {
+		t.Fatalf("a gone library is not marked as gone; texts %q", tt.Texts())
+	}
+
+	// Opening it fails, and the card says why: the path, the reason and the way
+	// out. The path is dropped from the list it was offered in.
+	if err := tt.Click(msgs.StartRecentOpen(dir)); err != nil {
+		t.Fatalf("the recent row is not a control: %v", err)
+	}
+	tt.Frame()
+	said := false
+	for _, text := range tt.Texts() {
+		said = said || strings.HasPrefix(text, "Remit could not open "+dir)
+	}
+	if !said {
+		t.Fatalf("the card does not say why %q will not open; texts %q", dir, tt.Texts())
+	}
+	if !tt.HasText(msgs.StartChooseAnother()) {
+		t.Errorf("the failure offers no way out; texts %q", tt.Texts())
+	}
+	if tt.HasText(msgs.StartRecentMissing()) {
+		t.Errorf("the path that will not open is still offered; texts %q", tt.Texts())
+	}
+	s, err = settings.Load(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.RecentLibraries) != 0 {
+		t.Errorf("a library that is gone stayed in the list: %q", s.RecentLibraries)
+	}
+
+	// The next start offers no recent section at all.
+	third := NewApp(Options{DataDir: data})
+	tt = ui.NewTester(third.View, 1024, 720)
+	settle(tt)
+	if _, ok := tt.Find(msgs.StartRecent()); ok {
+		t.Errorf("an empty list still has a heading; texts %q", tt.Texts())
 	}
 }

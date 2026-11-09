@@ -380,8 +380,10 @@ func recallSubPage(t *testing.T, tt *ui.Tester, loc, page string) {
 }
 
 // The card table sorts by the column clicked: the lapses column puts the card
-// answered Again most often first, and its second click reverses the order.
-func TestCardTableSortsByColumn(t *testing.T) {
+// answered Again most often first, and its second click reverses the order. It
+// is the ui-composition gate TestBrowseSortsByColumn: a table built row by row
+// has no order to change.
+func TestBrowseSortsByColumn(t *testing.T) {
 	msgs := locales.In("en")
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {

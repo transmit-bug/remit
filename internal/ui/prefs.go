@@ -21,6 +21,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/about"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
+	"github.com/transmit-bug/remit/internal/ui/screens/start"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -90,10 +91,27 @@ func (a *App) OnSettings(fn func(settings.Settings)) {
 	}
 }
 
-// remember writes the library the user chose into the settings, keeping every
-// other preference, so the next start opens it without asking again.
+// remember writes the library the user chose into the settings — where the next
+// start opens, and the head of the list the welcome screen offers — keeping
+// every other preference.
 func (a *App) remember(dir string) error {
-	return a.UpdateSettings(func(s *settings.Settings) { s.LibraryDir = dir })
+	return a.UpdateSettings(func(s *settings.Settings) {
+		s.LibraryDir = dir
+		*s = s.WithRecent(dir)
+	})
+}
+
+// syncRecent derives the welcome screen's list of libraries opened before: the
+// paths the settings remember, each with whether its folder is still there. The
+// disk is read here, on a load path, so no frame stats a path.
+func (a *App) syncRecent() {
+	recent := make([]start.Recent, 0, len(a.settings.RecentLibraries))
+	for _, dir := range a.settings.RecentLibraries {
+		info, err := os.Stat(dir)
+		missing := err != nil || !info.IsDir()
+		recent = append(recent, start.Recent{Dir: dir, Missing: missing})
+	}
+	a.welcome.Recent = recent
 }
 
 // openSettings shows the settings area, remembering where the user was so that
@@ -125,6 +143,7 @@ func (a *App) closeSettings() {
 // leaves a page showing what the file holds rather than what the user clicked.
 func (a *App) syncPrefs() {
 	a.prefs.Page = screensettings.Page(subName(a.sub))
+	a.syncRecent()
 	if a.area == areaSettings {
 		a.settingsSub = a.sub
 	}

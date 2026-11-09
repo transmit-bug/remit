@@ -36,6 +36,10 @@ const (
 	DefaultPaperWidth = 760
 )
 
+// RecentLimit is how many libraries the start view remembers: the ones a user
+// moves between, without the list growing into a second library of its own.
+const RecentLimit = 5
+
 // Settings are the user's preferences. The zero value is the shipped default:
 // no update check, no agent server, no reminders, the default shortcut, and no
 // library path chosen yet.
@@ -70,6 +74,46 @@ type Settings struct {
 	// id: a chip on the queue page, and no card data, so it belongs to the app
 	// rather than to a library.
 	SavedFilters []string `json:"saved_filters,omitempty"`
+	// RecentLibraries are the libraries the app opened before, newest first and
+	// at most RecentLimit of them. The start view lists them so a second library
+	// is one click away; only the path is kept, never anything it holds.
+	RecentLibraries []string `json:"recent_libraries,omitempty"`
+}
+
+// WithRecent puts dir at the front of the libraries the app remembers, once
+// each and at most RecentLimit of them: opening a library twice moves it to the
+// front rather than listing it twice.
+func (s Settings) WithRecent(dir string) Settings {
+	if dir == "" {
+		return s
+	}
+	recent := make([]string, 0, len(s.RecentLibraries)+1)
+	recent = append(recent, dir)
+	for _, path := range s.RecentLibraries {
+		if path == dir || path == "" {
+			continue
+		}
+		recent = append(recent, path)
+		if len(recent) == RecentLimit {
+			break
+		}
+	}
+	s.RecentLibraries = recent
+	return s
+}
+
+// ForgetRecent takes dir out of the libraries the app remembers: a place that
+// will not open is dropped from the list it was offered in.
+func (s Settings) ForgetRecent(dir string) Settings {
+	recent := make([]string, 0, len(s.RecentLibraries))
+	for _, path := range s.RecentLibraries {
+		if path == dir {
+			continue
+		}
+		recent = append(recent, path)
+	}
+	s.RecentLibraries = recent
+	return s
 }
 
 // AppearanceName is the look the window draws: the one chosen, or the

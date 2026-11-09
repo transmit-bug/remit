@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -624,5 +625,182 @@ func TestSearchLink(t *testing.T) {
 	}
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
+	}
+}
+
+// A row's menu renames the note: the dialog opens on the note's title, the field
+// takes the new one, and the store holds it. Nothing moves on disk — the file
+// was minted with the note — so the row that names it is the same note.
+func TestNoteRowMenuRenamesTheNote(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed, tt := openApp(t)
+
+	writePage(t, tt, msgs.ModeNotes())
+	if err := tt.Click(msgs.WriteRowActions() + " " + seed.memory.Title); err != nil {
+		t.Fatalf("the note row has no menu: %v", err)
+	}
+	if err := tt.ChooseMenuItem(msgs.WriteRowRename()); err != nil {
+		t.Fatalf("the row's menu does not rename: %v", err)
+	}
+	tt.Frame()
+	if !tt.HasText(msgs.RenameNoteTitle()) {
+		t.Fatalf("no dialog asked for the new title; texts %q", tt.Texts())
+	}
+	if !tt.Focused(msgs.RenameNoteField()) {
+		t.Fatalf("the rename field did not take the caret; texts %q", tt.Texts())
+	}
+
+	tt.Command("selectAll")
+	tt.Type("Spacing, renamed")
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+
+	note, ok := a.Library().Note(seed.memory.ID)
+	if !ok {
+		t.Fatal("the note went missing over a rename")
+	}
+	if note.Title != "Spacing, renamed" {
+		t.Fatalf("the note is called %q", note.Title)
+	}
+	if len(note.Blocks) != len(seed.memory.Blocks) {
+		t.Errorf("the rename changed the note's blocks: %d", len(note.Blocks))
+	}
+	if !tt.HasText("Spacing, renamed") {
+		t.Errorf("the list still shows the old title; texts %q", tt.Texts())
+	}
+	if tt.HasText(msgs.RenameNoteTitle()) {
+		t.Errorf("the rename dialog stayed open; texts %q", tt.Texts())
+	}
+}
+
+// Deleting a note from its row asks first, and the question names the cost: the
+// cards the note fed become lost, and their review history stays. Canceling
+// keeps the note; confirming removes it and leaves its cards lost.
+func TestNoteRowMenuDeletesTheNote(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed, tt := openApp(t)
+	cards := a.data.cardsInNote(seed.memory)
+	if cards == 0 {
+		t.Fatal("the seeded note feeds no cards")
+	}
+
+	writePage(t, tt, msgs.ModeNotes())
+	chooseDelete := func() {
+		t.Helper()
+		if err := tt.Click(msgs.WriteRowActions() + " " + seed.memory.Title); err != nil {
+			t.Fatalf("the note row has no menu: %v", err)
+		}
+		if err := tt.ChooseMenuItem(msgs.WriteRowDelete()); err != nil {
+			t.Fatalf("the row's menu does not delete: %v", err)
+		}
+		tt.Frame()
+	}
+	chooseDelete()
+	if !tt.HasText(msgs.DeleteNoteTitle()) {
+		t.Fatalf("no question before deleting a note; texts %q", tt.Texts())
+	}
+	if !tt.HasText(msgs.DeleteNoteWarning(cards)) {
+		t.Fatalf("the question does not count the cards; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.Cancel()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if _, ok := a.Library().Note(seed.memory.ID); !ok {
+		t.Fatal("canceling deleted the note anyway")
+	}
+
+	chooseDelete()
+	if err := tt.Click(msgs.WriteRowDelete()); err != nil {
+		t.Fatalf("the question has no delete button: %v", err)
+	}
+	tt.Frame()
+	if _, ok := a.Library().Note(seed.memory.ID); ok {
+		t.Fatal("confirming kept the note")
+	}
+	if tt.HasText(seed.memory.Title) {
+		t.Errorf("the list still shows the deleted note; texts %q", tt.Texts())
+	}
+	lost, err := a.Library().LostCards()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lost) != cards {
+		t.Errorf("%d cards are lost, want the note's %d", len(lost), cards)
+	}
+	if !tt.HasText(msgs.NoteDeleted()) {
+		t.Errorf("the delete said nothing; texts %q", tt.Texts())
+	}
+}
+
+// The page's numbers are the user's: notes and cards. A block is how the store
+// keeps a paragraph, so counting blocks would report a number the reader never
+// asked for, in a word the interface never uses — the ui-composition gate
+// TestThePageCountsCardsNotBlocks.
+func TestThePageCountsCardsNotBlocks(t *testing.T) {
+	msgs := locales.In("en")
+	_, seed, tt := openApp(t)
+
+	writePage(t, tt, msgs.ModeNotes())
+	// Three notes feed four cards between them, over more paragraphs than that:
+	// the header says the cards, not the blocks they were written in.
+	if !tt.HasText(msgs.WriteListCount(3, 4)) {
+		t.Fatalf("the list does not count the cards; texts %q", tt.Texts())
+	}
+	if tt.HasText(msgs.WriteListCount(3, 8)) {
+		t.Errorf("the list counts blocks; texts %q", tt.Texts())
+	}
+
+	// The document's status line counts the note's cards too, beside the
+	// paragraphs they were written in: the reader's word for what a block is.
+	openNote(t, tt, seed.memory.Title)
+	tt.Advance(320 * time.Millisecond)
+	for _, part := range []string{msgs.CardCount(2), msgs.ParagraphCount(3)} {
+		if !tt.HasText(part) {
+			t.Errorf("the status line is missing %q; texts %q", part, tt.Texts())
+		}
+	}
+	// Nothing the page counts says "block": the word the store keeps a
+	// paragraph under is not a number the reader was offered.
+	for _, text := range tt.Texts() {
+		if !strings.Contains(text, " card") && !strings.Contains(text, " paragraph") {
+			continue
+		}
+		if strings.Contains(strings.ToLower(text), "block") {
+			t.Errorf("the page counts in an implementation word: %q", text)
+		}
+	}
+}
+
+// A rename with nothing in the field is not a write: the action waits and the
+// line beside it says why, rather than closing on a title the note never got.
+func TestRenameRefusesAnEmptyTitle(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed, tt := openApp(t)
+
+	writePage(t, tt, msgs.ModeNotes())
+	if err := tt.Click(msgs.WriteRowActions() + " " + seed.memory.Title); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.ChooseMenuItem(msgs.WriteRowRename()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	tt.Command("selectAll")
+	tt.Key(0, ui.KeyBackspace)
+	tt.Frame()
+	if !tt.HasText(msgs.RenameNoteEmpty()) {
+		t.Fatalf("an empty field says nothing; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.RenameNoteSave()); err != nil {
+		t.Fatalf("the waiting action is not drawn: %v", err)
+	}
+	tt.Frame()
+	note, ok := a.Library().Note(seed.memory.ID)
+	if !ok || note.Title != seed.memory.Title {
+		t.Fatalf("an empty title renamed the note to %q", note.Title)
+	}
+	if !tt.HasText(msgs.RenameNoteTitle()) {
+		t.Errorf("the dialog closed on a title the note never got; texts %q", tt.Texts())
 	}
 }
