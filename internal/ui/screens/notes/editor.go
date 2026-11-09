@@ -233,16 +233,12 @@ func (s *State) readView(c *ui.Context, tk design.Tokens, d Deps) {
 		return
 	}
 	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL).Children(func() {
-		ui.Column(c).MaxWidth(readWidth).Gap(tk.SpaceM).Children(func() {
+		ui.Column(c).MaxWidth(design.ReadingWidth).Gap(tk.SpaceM).Children(func() {
 			ui.Text(c, s.Draft.Title).FontSize(tk.TypeTitle).Bold()
 			markdown.View(c, DocumentText(s.Draft), s.imageOptions())
 		})
 	})
 }
-
-// readWidth caps the measure of a note read whole, as the stats page caps its
-// own: a paragraph wider than this is hard to follow.
-const readWidth float32 = 760
 
 // imageOptions is the reading views' Markdown options: the pictures the
 // library stores are loaded from it, by the relative reference a note

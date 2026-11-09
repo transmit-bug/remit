@@ -11,10 +11,6 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// messageWidth caps the sentence about the library, so that the paragraph keeps
-// a readable measure on a wide window.
-const messageWidth float32 = 520
-
 // State is what the screen shows: the folder a library would go in, when the
 // app has one to name.
 type State struct {
@@ -50,10 +46,10 @@ func View(c *ui.Context, s State, d Deps) {
 		tk.Icon(c, "book-open", design.IconLarge).TextColor(tk.TextMuted)
 		ui.Text(c, msgs.StartTitle()).FontSize(tk.TypeTitle).Bold()
 		ui.Text(c, msgs.StartBody()).
-			FontSize(tk.TypeBody).TextColor(tk.TextMuted).MaxWidth(messageWidth)
+			FontSize(tk.TypeBody).TextColor(tk.TextMuted).MaxWidth(design.MessageWidth)
 		if dir != "" {
 			ui.Text(c, dir).FontSize(tk.TypeSmall).TextColor(tk.TextFaint).
-				MaxWidth(messageWidth).SingleLine()
+				MaxWidth(design.MessageWidth).SingleLine()
 		}
 		ui.Row(c).Gap(tk.SpaceM).Children(func() {
 			ui.PrimaryButton(c, msgs.CreateLibrary()).MinHeight(tk.Control).

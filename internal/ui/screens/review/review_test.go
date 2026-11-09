@@ -1,6 +1,7 @@
 package review_test
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -534,6 +535,32 @@ func TestSummaryWords(t *testing.T) {
 	}
 	if f.home != 1 {
 		t.Errorf("leaving reached the app %d times, want 1", f.home)
+	}
+}
+
+// The completed review card sits on the window's centre line at both sizes,
+// inside the shared page measure rather than at the measure's left edge.
+func TestSummaryCardIsCentered(t *testing.T) {
+	msgs := locales.In("en")
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			f := &fake{cards: map[core.ID]review.Card{}, state: &review.State{}}
+			f.summary = func() (review.Summary, bool) {
+				return review.Summary{Reviewed: 4, Accuracy: 1}, true
+			}
+			state, deps := f.state, f.deps()
+			tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, size.w, size.h)
+
+			card, ok := tt.AccessByRole(ui.RoleGroup, msgs.SummaryTitle())
+			if !ok {
+				t.Fatalf("the summary card is not a group; texts %q", tt.Texts())
+			}
+			got := card.Bounds.X + card.Bounds.W/2
+			want := float32(size.w) / 2
+			if math.Abs(float64(got-want)) > 1 {
+				t.Errorf("summary centre is %.1f, want %.1f", got, want)
+			}
+		})
 	}
 }
 

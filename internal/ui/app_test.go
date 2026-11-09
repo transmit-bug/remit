@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+
+	"github.com/transmit-bug/remit/locales"
 )
 
 // A library opens on today's review queue, and the notes are one key away:
@@ -120,6 +122,50 @@ func TestMinimumSizeControls(t *testing.T) {
 
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
+	}
+}
+
+// The app bar's brand, primary rail and note view switch all fit the smallest
+// window, and the rail still switches pages by pointer there.
+func TestAppBarAtMinimumSize(t *testing.T) {
+	a, _ := newTestApp(t)
+	tt := ui.NewTester(a.View, 720, 520)
+	settle(tt)
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(320 * time.Millisecond)
+
+	msgs := locales.In("en")
+	for _, label := range []string{
+		Name,
+		msgs.ModeNotes(), msgs.ModeReview(), msgs.ModeBrowse(), msgs.ModeStats(), msgs.ModeSettings(),
+		msgs.ViewEdit(), msgs.ViewSplit(), msgs.ViewRead(), msgs.PanelTitle(), msgs.More(),
+	} {
+		assertControl(t, tt, 720, 520, label)
+	}
+
+	if err := tt.Click(msgs.ModeBrowse()); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText(msgs.BrowseTitle()) {
+		t.Fatalf("the rail did not switch to browse; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.ModeStats()); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText(msgs.StatsTitle()) {
+		t.Fatalf("the rail did not switch to statistics; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.ModeSettings()); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText(msgs.SettingsTitle()) {
+		t.Fatalf("the rail did not switch to settings; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.ModeNotes()); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText(msgs.Notebook()) {
+		t.Fatalf("the rail did not return to notes; texts %q", tt.Texts())
 	}
 }
 

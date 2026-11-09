@@ -20,9 +20,6 @@ const (
 	// chartHeight is one plot's height; three of them scroll at the smallest
 	// window rather than squeeze the rows.
 	chartHeight float32 = 150
-	// width caps the page's measure, as review's does review's.
-	width float32 = 760
-
 	// heatCell is one day's box and heatGap what separates two of them. ui/chart
 	// has no heatmap at v0.8.1, so the calendar is a grid of tinted ui.Boxes;
 	// the two sizes are the cell grid's, named here rather than in the view.
@@ -48,7 +45,7 @@ func View(c *ui.Context, s State, _ Deps) {
 
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
-			ui.Column(c).FillWidth().MaxWidth(width).Gap(tk.SpaceXL).Children(func() {
+			ui.Column(c).FillWidth().MaxWidth(tk.PaperWidth).Gap(tk.SpaceXL).Children(func() {
 				ui.Text(c, msgs.StatsTitle()).FontSize(tk.TypeTitle).Bold()
 				heatmapSection(c, s, msgs, tk)
 				retentionSection(c, s, msgs, tk)
