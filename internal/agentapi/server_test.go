@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/transmit-bug/remit/internal/agentapi"
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
@@ -46,7 +48,13 @@ func newServer(t *testing.T, lib *store.Library) *httptest.Server {
 	srv := httptest.NewServer(agentapi.New(source, agentapi.Options{
 		Token: token,
 		Stats: source,
-		Now:   func() time.Time { return now },
+		// The day's queue as the app builds it: the API reports the number of
+		// lines internal/core/queue gives for the injected clock's moment.
+		Today: func(at time.Time) (int, error) {
+			today, err := queue.Entries(lib, at, queue.TodayOptions{})
+			return len(today.Entries), err
+		},
+		Now: func() time.Time { return now },
 	}).Handler())
 	t.Cleanup(srv.Close)
 	return srv
@@ -394,6 +402,14 @@ func TestReadingIsReadableAndJoiningNeedsAToken(t *testing.T) {
 	if len(entries) != 1 || entries[0]["note"] != string(note.ID) || entries[0]["title"] != "Biology" {
 		t.Fatalf("reading queue = %v, want the note that joined", entries)
 	}
+	// Every item says when it comes up and that it is in no terminal state: the
+	// three fields are there whether or not the answer is the interesting one.
+	if due, ok := entries[0]["due"].(string); !ok || !dueAt(t, due).Equal(now) {
+		t.Errorf("due = %v, want the moment it joined the queue", entries[0]["due"])
+	}
+	if entries[0]["archived"] != false || entries[0]["dismissed"] != false {
+		t.Errorf("item = %v, want neither terminal state", entries[0])
+	}
 
 	// A session the window recorded shows in the entry: the difficulty and the
 	// block the reading stopped at.
@@ -439,5 +455,170 @@ func TestReadingIsReadableAndJoiningNeedsAToken(t *testing.T) {
 	}
 	if reading := object(t, raw)["reading"]; reading != float64(0) {
 		t.Errorf("reading count = %v, want none due after the session", reading)
+	}
+}
+
+// readingNote saves a note of paragraphs paragraphs, so a session can stop at
+// any one of them.
+func readingNote(t *testing.T, lib *store.Library, title string, paragraphs int) core.Note {
+	t.Helper()
+	blocks := make([]core.Block, paragraphs)
+	for i := range blocks {
+		blocks[i] = core.Block{Text: "paragraph " + strconv.Itoa(i+1)}
+	}
+	note, err := lib.SaveNote(core.Note{Title: title, Blocks: blocks})
+	if err != nil {
+		t.Fatalf("save note: %v", err)
+	}
+	return note
+}
+
+// dueAt is a reading item's due time, which the API writes as RFC 3339.
+func dueAt(t *testing.T, raw string) time.Time {
+	t.Helper()
+	at, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		t.Fatalf("due = %q, want RFC 3339: %v", raw, err)
+	}
+	return at
+}
+
+// The library's counts say what the first screen says: how many lines today
+// holds, how many notes are in the archive, and how many were read with no
+// excerpt taken from them yet.
+func TestLibraryCountsTheDayTheArchiveAndTheExcerptsOwed(t *testing.T) {
+	// read is a session that stopped at the first paragraph.
+	read := func(t *testing.T, lib *store.Library, note core.Note) {
+		t.Helper()
+		if err := lib.ReadNote(note.ID, schedule.Good, note.Blocks[0].ID, now); err != nil {
+			t.Fatalf("ReadNote: %v", err)
+		}
+	}
+	queued := func(t *testing.T, lib *store.Library, note core.Note) {
+		t.Helper()
+		if err := lib.AddToReading(note.ID, now); err != nil {
+			t.Fatalf("AddToReading: %v", err)
+		}
+	}
+
+	for _, tt := range []struct {
+		name string
+		// setup is the library the counts are asked about.
+		setup func(t *testing.T, lib *store.Library)
+		want  struct{ today, archived, unexcerpted int }
+	}{
+		{name: "an empty library"},
+		{name: "a note waiting to read", setup: func(t *testing.T, lib *store.Library) {
+			queued(t, lib, readingNote(t, lib, "Waiting", 2))
+		}, want: struct{ today, archived, unexcerpted int }{today: 1}},
+		{name: "a note read today", setup: func(t *testing.T, lib *store.Library) {
+			note := readingNote(t, lib, "Read today", 2)
+			queued(t, lib, note)
+			read(t, lib, note)
+		}, want: struct{ today, archived, unexcerpted int }{today: 1, unexcerpted: 1}},
+		{name: "a note read and excerpted", setup: func(t *testing.T, lib *store.Library) {
+			note := readingNote(t, lib, "Kept", 2)
+			queued(t, lib, note)
+			read(t, lib, note)
+			if _, err := lib.Excerpt(note.ID, note.Blocks[0].ID, note.Blocks[0].Text, "Excerpt of Kept"); err != nil {
+				t.Fatalf("Excerpt: %v", err)
+			}
+		}},
+		{name: "a note archived", setup: func(t *testing.T, lib *store.Library) {
+			note := readingNote(t, lib, "Archived", 2)
+			queued(t, lib, note)
+			read(t, lib, note)
+			if err := lib.ArchiveReading(note.ID, now); err != nil {
+				t.Fatalf("ArchiveReading: %v", err)
+			}
+		}, want: struct{ today, archived, unexcerpted int }{archived: 1}},
+		{name: "a note dismissed", setup: func(t *testing.T, lib *store.Library) {
+			note := readingNote(t, lib, "Dismissed", 2)
+			queued(t, lib, note)
+			read(t, lib, note)
+			if err := lib.DismissReading(note.ID, now); err != nil {
+				t.Fatalf("DismissReading: %v", err)
+			}
+		}, want: struct{ today, archived, unexcerpted int }{archived: 1}},
+		{name: "a card due today", setup: func(t *testing.T, lib *store.Library) {
+			note := readingNote(t, lib, "Cards", 1)
+			if _, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Type: core.TypeBasic}}); err != nil {
+				t.Fatalf("CreateCards: %v", err)
+			}
+		}, want: struct{ today, archived, unexcerpted int }{today: 1}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			lib := newLibrary(t)
+			if tt.setup != nil {
+				tt.setup(t, lib)
+			}
+			code, raw := do(t, http.MethodGet, newServer(t, lib).URL+"/v1/library", "", nil)
+			if code != http.StatusOK {
+				t.Fatalf("GET library = %d (%s)", code, raw)
+			}
+			got := object(t, raw)
+			for _, field := range []struct {
+				name string
+				want int
+			}{{"today", tt.want.today}, {"archived", tt.want.archived}, {"unexcerpted", tt.want.unexcerpted}} {
+				if got[field.name] != float64(field.want) {
+					t.Errorf("%s = %v, want %d", field.name, got[field.name], field.want)
+				}
+			}
+		})
+	}
+}
+
+// An item says when it comes up and whether it is in a terminal state, so a
+// client can read a note that left the queue without guessing why it did.
+func TestReadingItemsReportTheirDueAndTerminalState(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		// then is what became of the note after the session.
+		then      func(t *testing.T, lib *store.Library, note core.Note)
+		archived  bool
+		dismissed bool
+	}{
+		{name: "left in the queue", then: func(*testing.T, *store.Library, core.Note) {}},
+		{name: "archived", then: func(t *testing.T, lib *store.Library, note core.Note) {
+			if err := lib.ArchiveReading(note.ID, now); err != nil {
+				t.Fatalf("ArchiveReading: %v", err)
+			}
+		}, archived: true},
+		{name: "dismissed", then: func(t *testing.T, lib *store.Library, note core.Note) {
+			if err := lib.DismissReading(note.ID, now); err != nil {
+				t.Fatalf("DismissReading: %v", err)
+			}
+		}, dismissed: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			lib := newLibrary(t)
+			note := readingNote(t, lib, "Long read", 2)
+			if err := lib.AddToReading(note.ID, now); err != nil {
+				t.Fatalf("AddToReading: %v", err)
+			}
+			if err := lib.ReadNote(note.ID, schedule.Good, note.Blocks[0].ID, now); err != nil {
+				t.Fatalf("ReadNote: %v", err)
+			}
+			tt.then(t, lib, note)
+
+			code, raw := do(t, http.MethodGet, newServer(t, lib).URL+"/v1/reading/"+string(note.ID), "", nil)
+			if code != http.StatusOK {
+				t.Fatalf("GET reading entry = %d (%s)", code, raw)
+			}
+			entry := object(t, raw)
+			if entry["archived"] != tt.archived || entry["dismissed"] != tt.dismissed {
+				t.Errorf("archived/dismissed = %v/%v, want %v/%v", entry["archived"], entry["dismissed"], tt.archived, tt.dismissed)
+			}
+			// The archive keeps the schedule the note had: its due date is still
+			// the one the session gave it.
+			due, ok := entry["due"].(string)
+			if !ok {
+				t.Fatalf("due = %v, want an RFC 3339 string", entry["due"])
+			}
+			if at := dueAt(t, due); !at.After(now) {
+				t.Errorf("due = %s, want the date the good session set, after %s", at, now)
+			}
+		})
 	}
 }

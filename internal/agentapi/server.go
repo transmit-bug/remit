@@ -72,6 +72,11 @@ type Library interface {
 	ReadingFor(core.ID) (store.Reading, bool)
 	ReadingEvents(core.ID) ([]schedule.Event, error)
 	AddToReading(core.ID, time.Time) error
+	// The two places a reading note can be besides the queue, which the
+	// library's own counts report: the archive the terminal states sit in, and
+	// the notes read with no excerpt taken from them yet.
+	ReadingArchive() ([]store.Reading, error)
+	UnExcerptedNotes(limit int) ([]store.Reading, error)
 	// Faces is what a card asks, as the type's templates render it — this
 	// package has no splitting rules of its own.
 	Faces(core.Card) (front, back string, link string)
@@ -161,6 +166,13 @@ type Options struct {
 	// Stats answers the statistics routes, from the same library the rest of
 	// the API serves. Without one they answer 501.
 	Stats Stats
+	// Today counts the lines today's queue holds — the notes due to read, the
+	// excerpts owed and the review line — as internal/core/queue builds them for
+	// that moment. It arrives as a function rather than as a Library method
+	// because the queue is built over the concrete library, which that interface
+	// does not name. A server built without one reports today as zero, like a
+	// count whose library refused the question.
+	Today func(time.Time) (int, error)
 	// Now is the clock; nil means time.Now.
 	Now func() time.Time
 }
@@ -226,23 +238,38 @@ func (s *Server) requireToken(next http.HandlerFunc) http.HandlerFunc {
 
 func (s *Server) getLibrary(w http.ResponseWriter, r *http.Request) {
 	notes := s.lib.Notes()
-	var due, reading int
-	if n, err := s.lib.Remaining(s.opts.Now()); err == nil {
+	now := s.opts.Now()
+	var due, reading, today, archived, unexcerpted int
+	if n, err := s.lib.Remaining(now); err == nil {
 		due = n
 	}
 	if queue, err := s.lib.ReadingQueue(); err == nil {
 		for _, entry := range queue {
-			if entry.State.Reviews == 0 || !entry.State.Due.After(s.opts.Now()) {
+			if entry.State.Reviews == 0 || !entry.State.Due.After(now) {
 				reading++
 			}
 		}
 	}
+	if s.opts.Today != nil {
+		if n, err := s.opts.Today(now); err == nil {
+			today = n
+		}
+	}
+	if rows, err := s.lib.ReadingArchive(); err == nil {
+		archived = len(rows)
+	}
+	if rows, err := s.lib.UnExcerptedNotes(0); err == nil {
+		unexcerpted = len(rows)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"format":  store.FormatVersion,
-		"notes":   len(notes),
-		"cards":   len(s.lib.Cards()),
-		"due":     due,
-		"reading": reading,
+		"format":      store.FormatVersion,
+		"notes":       len(notes),
+		"cards":       len(s.lib.Cards()),
+		"due":         due,
+		"reading":     reading,
+		"today":       today,
+		"archived":    archived,
+		"unexcerpted": unexcerpted,
 	})
 }
 
@@ -790,25 +817,33 @@ func (s *Server) postReading(w http.ResponseWriter, r *http.Request) {
 }
 
 // readingJSON is one note's place in the reading queue as the API shows it.
+// Due is when it comes up, RFC 3339 and always present — empty for a row no
+// schedule has given a date, so a client reads the key without asking whether
+// it exists. Archived and Dismissed say the note is in a terminal state: the
+// single-entry route reports them for a note that left the queue.
 type readingJSON struct {
-	Note     string             `json:"note"`
-	Title    string             `json:"title"`
-	Position string             `json:"position,omitempty"`
-	Status   string             `json:"status"`
-	Due      *time.Time         `json:"due,omitempty"`
-	LastSeen *time.Time         `json:"last_review,omitempty"`
-	Rating   string             `json:"last_rating,omitempty"`
-	Reviews  int                `json:"reviews"`
-	Events   []readingEventJSON `json:"events,omitempty"`
+	Note      string             `json:"note"`
+	Title     string             `json:"title"`
+	Position  string             `json:"position,omitempty"`
+	Status    string             `json:"status"`
+	Due       string             `json:"due"`
+	LastSeen  *time.Time         `json:"last_review,omitempty"`
+	Rating    string             `json:"last_rating,omitempty"`
+	Reviews   int                `json:"reviews"`
+	Archived  bool               `json:"archived"`
+	Dismissed bool               `json:"dismissed"`
+	Events    []readingEventJSON `json:"events,omitempty"`
 }
 
 func (s *Server) newReadingJSON(entry store.Reading, events []readingEventJSON) readingJSON {
 	out := readingJSON{
-		Note:     string(entry.Note),
-		Position: string(entry.Position),
-		Status:   "reading",
-		Reviews:  entry.State.Reviews,
-		Events:   events,
+		Note:      string(entry.Note),
+		Position:  string(entry.Position),
+		Status:    "reading",
+		Reviews:   entry.State.Reviews,
+		Archived:  entry.Archived,
+		Dismissed: entry.Dismissed,
+		Events:    events,
 	}
 	if entry.Queued {
 		out.Status = "queued"
@@ -816,9 +851,8 @@ func (s *Server) newReadingJSON(entry store.Reading, events []readingEventJSON) 
 	if note, ok := s.lib.Note(entry.Note); ok {
 		out.Title = note.Title
 	}
-	if !entry.State.Due.IsZero() {
-		due := entry.State.Due
-		out.Due = &due
+	if due := entry.Due(); !due.IsZero() {
+		out.Due = due.UTC().Format(time.RFC3339)
 	}
 	if entry.State.Reviews > 0 {
 		last := entry.State.LastReview

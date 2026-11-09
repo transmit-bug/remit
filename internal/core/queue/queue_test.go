@@ -586,6 +586,48 @@ func TestReadingIntroducesSoManyNewNotesPerDay(t *testing.T) {
 	}
 }
 
+// The day's allowance is spent by the reading and not by the queue's
+// membership: a note read today and then dropped, archived or dismissed still
+// holds the day's next note back, so leaving the queue cannot buy a second one.
+func TestReadingAllowanceCountsANoteThatLeftTheQueue(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		leave func(t *testing.T, lib *store.Library, note core.Note, at time.Time)
+	}{
+		{"dropped", func(t *testing.T, lib *store.Library, note core.Note, at time.Time) {
+			if err := lib.RemoveFromReading(note.ID, at); err != nil {
+				t.Fatalf("RemoveFromReading: %v", err)
+			}
+		}},
+		{"archived", func(t *testing.T, lib *store.Library, note core.Note, at time.Time) {
+			if err := lib.ArchiveReading(note.ID, at); err != nil {
+				t.Fatalf("ArchiveReading: %v", err)
+			}
+		}},
+		{"dismissed", func(t *testing.T, lib *store.Library, note core.Note, at time.Time) {
+			if err := lib.DismissReading(note.ID, at); err != nil {
+				t.Fatalf("DismissReading: %v", err)
+			}
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			lib := library(t)
+			read := todayNote(t, lib, "read today", 1)
+			stopReading(t, lib, read, 1, schedule.Easy, now.Add(-time.Hour))
+			tt.leave(t, lib, read, now.Add(-30*time.Minute))
+			queueNote(t, lib, todayNote(t, lib, "unread", 1), now.AddDate(0, 0, -3))
+
+			due, err := Reading(lib, now, Options{ReadingNewPerDay: 1})
+			if err != nil {
+				t.Fatalf("Reading: %v", err)
+			}
+			if len(due) != 0 {
+				t.Fatalf("reading queue = %+v, want the unread note held back by the day's spent allowance", due)
+			}
+		})
+	}
+}
+
 // A note coming back for a second reading is not new material: the allowance is
 // spent, and the cadence the schedule set still brings it back. The unread note
 // it outranks in the queue is the one held back.
