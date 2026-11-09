@@ -1,9 +1,6 @@
 package ui
 
-import (
-	"github.com/transmit-bug/remit/internal/core"
-	"github.com/transmit-bug/remit/internal/ui/screens/browse"
-)
+import "github.com/transmit-bug/remit/internal/core"
 
 // ShowNote opens the notebook at a note the library holds, and does nothing when
 // it does not: a link from outside is a request, not a command.
@@ -60,14 +57,14 @@ func (a *App) ShowReading() {
 	a.setArea(areaRead, subReadQueue)
 }
 
-// Search shows the search page on a query from outside the window and puts the
-// caret in its field. A query that finds nothing leaves its empty state up,
-// which says the search ran.
+// Search shows the write area's search page on a query from outside the window
+// and puts the caret in its field. A query that finds nothing leaves its empty
+// state up, which says the search ran.
 func (a *App) Search(query string) {
-	a.browse.Query, a.browse.Filter, a.browse.Selected = query, browse.All, -1
+	a.notes.SearchQuery = query
 	a.setArea(areaWrite, subSearch)
 	a.reload()
-	a.browse.Focus()
+	a.notes.FocusSearch()
 }
 
 // Counts is what a service outside the window reports of the queues: the cards

@@ -9280,3 +9280,895 @@ func PluginReenableOf(name string) string { return In(i18n.Locale()).PluginReena
 func (msgs Messages) PluginReenableOf(name string) string {
 	return Catalog.Format(msgs.locale, "pluginReenableOf", map[string]any{"name": name})
 }
+
+// WriteListCount says "{notes, plural, one {# note} other {# notes}} · {cards, plural, one {# card} other {# cards}}"
+// in the language the app shows.
+//
+// The notes page's subtitle: how many notes the list holds, and how many
+// cards they feed.
+func WriteListCount(notes int, cards int) string {
+	return In(i18n.Locale()).WriteListCount(notes, cards)
+}
+
+// WriteListCount says "{notes, plural, one {# note} other {# notes}} · {cards, plural, one {# card} other {# cards}}"
+// in the language of msgs.
+//
+// The notes page's subtitle: how many notes the list holds, and how many
+// cards they feed.
+func (msgs Messages) WriteListCount(notes int, cards int) string {
+	return Catalog.Format(msgs.locale, "writeListCount", map[string]any{"notes": notes, "cards": cards})
+}
+
+// WriteFilterAll says "All"
+// in the language the app shows.
+//
+// The notes list's filter that keeps every note.
+func WriteFilterAll() string { return In(i18n.Locale()).WriteFilterAll() }
+
+// WriteFilterAll says "All"
+// in the language of msgs.
+//
+// The notes list's filter that keeps every note.
+func (msgs Messages) WriteFilterAll() string {
+	return Catalog.Format(msgs.locale, "writeFilterAll", nil)
+}
+
+// WriteFilterReading says "Reading"
+// in the language the app shows.
+//
+// The notes list's filter that keeps the notes the reading queue holds now.
+func WriteFilterReading() string { return In(i18n.Locale()).WriteFilterReading() }
+
+// WriteFilterReading says "Reading"
+// in the language of msgs.
+//
+// The notes list's filter that keeps the notes the reading queue holds now.
+func (msgs Messages) WriteFilterReading() string {
+	return Catalog.Format(msgs.locale, "writeFilterReading", nil)
+}
+
+// WriteFilterCards says "With cards"
+// in the language the app shows.
+//
+// The notes list's filter that keeps the notes at least one card renders
+// from.
+func WriteFilterCards() string { return In(i18n.Locale()).WriteFilterCards() }
+
+// WriteFilterCards says "With cards"
+// in the language of msgs.
+//
+// The notes list's filter that keeps the notes at least one card renders
+// from.
+func (msgs Messages) WriteFilterCards() string {
+	return Catalog.Format(msgs.locale, "writeFilterCards", nil)
+}
+
+// WriteFilterExcerpt says "Excerpts"
+// in the language the app shows.
+//
+// The notes list's filter that keeps the notes that are excerpts.
+func WriteFilterExcerpt() string { return In(i18n.Locale()).WriteFilterExcerpt() }
+
+// WriteFilterExcerpt says "Excerpts"
+// in the language of msgs.
+//
+// The notes list's filter that keeps the notes that are excerpts.
+func (msgs Messages) WriteFilterExcerpt() string {
+	return Catalog.Format(msgs.locale, "writeFilterExcerpt", nil)
+}
+
+// WriteFilterLabel says "Filter notes"
+// in the language the app shows.
+//
+// Accessible label of the notes list's group of filters.
+func WriteFilterLabel() string { return In(i18n.Locale()).WriteFilterLabel() }
+
+// WriteFilterLabel says "Filter notes"
+// in the language of msgs.
+//
+// Accessible label of the notes list's group of filters.
+func (msgs Messages) WriteFilterLabel() string {
+	return Catalog.Format(msgs.locale, "writeFilterLabel", nil)
+}
+
+// WriteSort says "Sort"
+// in the language the app shows.
+//
+// The notes list's sort menu button.
+func WriteSort() string { return In(i18n.Locale()).WriteSort() }
+
+// WriteSort says "Sort"
+// in the language of msgs.
+//
+// The notes list's sort menu button.
+func (msgs Messages) WriteSort() string {
+	return Catalog.Format(msgs.locale, "writeSort", nil)
+}
+
+// WriteSortUpdated says "Recently edited"
+// in the language the app shows.
+//
+// The notes list's order: newest save first.
+func WriteSortUpdated() string { return In(i18n.Locale()).WriteSortUpdated() }
+
+// WriteSortUpdated says "Recently edited"
+// in the language of msgs.
+//
+// The notes list's order: newest save first.
+func (msgs Messages) WriteSortUpdated() string {
+	return Catalog.Format(msgs.locale, "writeSortUpdated", nil)
+}
+
+// WriteSortTitle says "Title"
+// in the language the app shows.
+//
+// The notes list's order: by title.
+func WriteSortTitle() string { return In(i18n.Locale()).WriteSortTitle() }
+
+// WriteSortTitle says "Title"
+// in the language of msgs.
+//
+// The notes list's order: by title.
+func (msgs Messages) WriteSortTitle() string {
+	return Catalog.Format(msgs.locale, "writeSortTitle", nil)
+}
+
+// WriteSortCards says "Most cards"
+// in the language the app shows.
+//
+// The notes list's order: by how many cards a note feeds.
+func WriteSortCards() string { return In(i18n.Locale()).WriteSortCards() }
+
+// WriteSortCards says "Most cards"
+// in the language of msgs.
+//
+// The notes list's order: by how many cards a note feeds.
+func (msgs Messages) WriteSortCards() string {
+	return Catalog.Format(msgs.locale, "writeSortCards", nil)
+}
+
+// WriteRowRead says "Read"
+// in the language the app shows.
+//
+// A note row's action that opens the note read whole.
+func WriteRowRead() string { return In(i18n.Locale()).WriteRowRead() }
+
+// WriteRowRead says "Read"
+// in the language of msgs.
+//
+// A note row's action that opens the note read whole.
+func (msgs Messages) WriteRowRead() string {
+	return Catalog.Format(msgs.locale, "writeRowRead", nil)
+}
+
+// WriteRowActions says "Note actions"
+// in the language the app shows.
+//
+// Accessible label of a note row's menu button.
+func WriteRowActions() string { return In(i18n.Locale()).WriteRowActions() }
+
+// WriteRowActions says "Note actions"
+// in the language of msgs.
+//
+// Accessible label of a note row's menu button.
+func (msgs Messages) WriteRowActions() string {
+	return Catalog.Format(msgs.locale, "writeRowActions", nil)
+}
+
+// WriteRowQueue says "Add to reading queue"
+// in the language the app shows.
+//
+// A note row's action that puts the note in the reading queue.
+func WriteRowQueue() string { return In(i18n.Locale()).WriteRowQueue() }
+
+// WriteRowQueue says "Add to reading queue"
+// in the language of msgs.
+//
+// A note row's action that puts the note in the reading queue.
+func (msgs Messages) WriteRowQueue() string {
+	return Catalog.Format(msgs.locale, "writeRowQueue", nil)
+}
+
+// WriteRowProgress says "{at} of {blocks}"
+// in the language the app shows.
+//
+// A note row's reading badge: the paragraph the reader reached, and how
+// many the note holds.
+func WriteRowProgress(at int, blocks int) string {
+	return In(i18n.Locale()).WriteRowProgress(at, blocks)
+}
+
+// WriteRowProgress says "{at} of {blocks}"
+// in the language of msgs.
+//
+// A note row's reading badge: the paragraph the reader reached, and how
+// many the note holds.
+func (msgs Messages) WriteRowProgress(at int, blocks int) string {
+	return Catalog.Format(msgs.locale, "writeRowProgress", map[string]any{"at": at, "blocks": blocks})
+}
+
+// WriteRowNoSummary says "No text yet"
+// in the language the app shows.
+//
+// A note row's summary line when the note's first paragraph is empty.
+func WriteRowNoSummary() string { return In(i18n.Locale()).WriteRowNoSummary() }
+
+// WriteRowNoSummary says "No text yet"
+// in the language of msgs.
+//
+// A note row's summary line when the note's first paragraph is empty.
+func (msgs Messages) WriteRowNoSummary() string {
+	return Catalog.Format(msgs.locale, "writeRowNoSummary", nil)
+}
+
+// WriteExcerpt says "Excerpt"
+// in the language the app shows.
+//
+// The badge a note row shows when the note is an excerpt.
+func WriteExcerpt() string { return In(i18n.Locale()).WriteExcerpt() }
+
+// WriteExcerpt says "Excerpt"
+// in the language of msgs.
+//
+// The badge a note row shows when the note is an excerpt.
+func (msgs Messages) WriteExcerpt() string {
+	return Catalog.Format(msgs.locale, "writeExcerpt", nil)
+}
+
+// WriteNoMatch says "No note matches these filters."
+// in the language the app shows.
+//
+// The notes list's empty state when a search, a filter or a tag keeps every
+// note out.
+func WriteNoMatch() string { return In(i18n.Locale()).WriteNoMatch() }
+
+// WriteNoMatch says "No note matches these filters."
+// in the language of msgs.
+//
+// The notes list's empty state when a search, a filter or a tag keeps every
+// note out.
+func (msgs Messages) WriteNoMatch() string {
+	return Catalog.Format(msgs.locale, "writeNoMatch", nil)
+}
+
+// WriteClearFilters says "Clear filters"
+// in the language the app shows.
+//
+// The notes list's action that puts the whole notebook back.
+func WriteClearFilters() string { return In(i18n.Locale()).WriteClearFilters() }
+
+// WriteClearFilters says "Clear filters"
+// in the language of msgs.
+//
+// The notes list's action that puts the whole notebook back.
+func (msgs Messages) WriteClearFilters() string {
+	return Catalog.Format(msgs.locale, "writeClearFilters", nil)
+}
+
+// WriteSearch says "Search"
+// in the language the app shows.
+//
+// The search page's title.
+func WriteSearch() string { return In(i18n.Locale()).WriteSearch() }
+
+// WriteSearch says "Search"
+// in the language of msgs.
+//
+// The search page's title.
+func (msgs Messages) WriteSearch() string {
+	return Catalog.Format(msgs.locale, "writeSearch", nil)
+}
+
+// WriteSearchPlaceholder says "Search notes and cards"
+// in the language the app shows.
+//
+// The search page's field, and its accessible label.
+func WriteSearchPlaceholder() string { return In(i18n.Locale()).WriteSearchPlaceholder() }
+
+// WriteSearchPlaceholder says "Search notes and cards"
+// in the language of msgs.
+//
+// The search page's field, and its accessible label.
+func (msgs Messages) WriteSearchPlaceholder() string {
+	return Catalog.Format(msgs.locale, "writeSearchPlaceholder", nil)
+}
+
+// WriteSearchCount says "{total, plural, one {# result} other {# results}} for “{query}”"
+// in the language the app shows.
+//
+// The search page's subtitle: how many notes and cards matched, and what
+// for.
+func WriteSearchCount(total int, query string) string {
+	return In(i18n.Locale()).WriteSearchCount(total, query)
+}
+
+// WriteSearchCount says "{total, plural, one {# result} other {# results}} for “{query}”"
+// in the language of msgs.
+//
+// The search page's subtitle: how many notes and cards matched, and what
+// for.
+func (msgs Messages) WriteSearchCount(total int, query string) string {
+	return Catalog.Format(msgs.locale, "writeSearchCount", map[string]any{"total": total, "query": query})
+}
+
+// WriteSearchScope says "Searches note titles, paragraphs and cards."
+// in the language the app shows.
+//
+// The search page's empty state before anything is typed: what it looks at.
+func WriteSearchScope() string { return In(i18n.Locale()).WriteSearchScope() }
+
+// WriteSearchScope says "Searches note titles, paragraphs and cards."
+// in the language of msgs.
+//
+// The search page's empty state before anything is typed: what it looks at.
+func (msgs Messages) WriteSearchScope() string {
+	return Catalog.Format(msgs.locale, "writeSearchScope", nil)
+}
+
+// WriteSearchNotes says "Notes"
+// in the language the app shows.
+//
+// The search page's group of note hits.
+func WriteSearchNotes() string { return In(i18n.Locale()).WriteSearchNotes() }
+
+// WriteSearchNotes says "Notes"
+// in the language of msgs.
+//
+// The search page's group of note hits.
+func (msgs Messages) WriteSearchNotes() string {
+	return Catalog.Format(msgs.locale, "writeSearchNotes", nil)
+}
+
+// WriteSearchCards says "Cards"
+// in the language the app shows.
+//
+// The search page's group of card hits.
+func WriteSearchCards() string { return In(i18n.Locale()).WriteSearchCards() }
+
+// WriteSearchCards says "Cards"
+// in the language of msgs.
+//
+// The search page's group of card hits.
+func (msgs Messages) WriteSearchCards() string {
+	return Catalog.Format(msgs.locale, "writeSearchCards", nil)
+}
+
+// WriteSearchNone says "No note or card matches."
+// in the language the app shows.
+//
+// The search page's empty state when the query found nothing.
+func WriteSearchNone() string { return In(i18n.Locale()).WriteSearchNone() }
+
+// WriteSearchNone says "No note or card matches."
+// in the language of msgs.
+//
+// The search page's empty state when the query found nothing.
+func (msgs Messages) WriteSearchNone() string {
+	return Catalog.Format(msgs.locale, "writeSearchNone", nil)
+}
+
+// WriteTagsTitle says "Tags"
+// in the language the app shows.
+//
+// The tags page's title.
+func WriteTagsTitle() string { return In(i18n.Locale()).WriteTagsTitle() }
+
+// WriteTagsTitle says "Tags"
+// in the language of msgs.
+//
+// The tags page's title.
+func (msgs Messages) WriteTagsTitle() string {
+	return Catalog.Format(msgs.locale, "writeTagsTitle", nil)
+}
+
+// WriteTagsHint says "A tag is a note's property: write {tag} in a note and it appears here."
+// in the language the app shows.
+//
+// The tags page's subtitle, and the one thing to know about tags.
+func WriteTagsHint(tag string) string { return In(i18n.Locale()).WriteTagsHint(tag) }
+
+// WriteTagsHint says "A tag is a note's property: write {tag} in a note and it appears here."
+// in the language of msgs.
+//
+// The tags page's subtitle, and the one thing to know about tags.
+func (msgs Messages) WriteTagsHint(tag string) string {
+	return Catalog.Format(msgs.locale, "writeTagsHint", map[string]any{"tag": tag})
+}
+
+// WriteTagNotes says "{n, plural, one {# note} other {# notes}}"
+// in the language the app shows.
+//
+// A tag row's count: how many notes carry the tag.
+func WriteTagNotes(n int) string { return In(i18n.Locale()).WriteTagNotes(n) }
+
+// WriteTagNotes says "{n, plural, one {# note} other {# notes}}"
+// in the language of msgs.
+//
+// A tag row's count: how many notes carry the tag.
+func (msgs Messages) WriteTagNotes(n int) string {
+	return Catalog.Format(msgs.locale, "writeTagNotes", map[string]any{"n": n})
+}
+
+// WriteTagsEmpty says "No tags yet."
+// in the language the app shows.
+//
+// The tags page's empty state.
+func WriteTagsEmpty() string { return In(i18n.Locale()).WriteTagsEmpty() }
+
+// WriteTagsEmpty says "No tags yet."
+// in the language of msgs.
+//
+// The tags page's empty state.
+func (msgs Messages) WriteTagsEmpty() string {
+	return Catalog.Format(msgs.locale, "writeTagsEmpty", nil)
+}
+
+// WriteAssetsTitle says "Assets"
+// in the language the app shows.
+//
+// The assets page's title.
+func WriteAssetsTitle() string { return In(i18n.Locale()).WriteAssetsTitle() }
+
+// WriteAssetsTitle says "Assets"
+// in the language of msgs.
+//
+// The assets page's title.
+func (msgs Messages) WriteAssetsTitle() string {
+	return Catalog.Format(msgs.locale, "writeAssetsTitle", nil)
+}
+
+// WriteAssetsHint says "Files travel with the library, named by their content."
+// in the language the app shows.
+//
+// The assets page's subtitle.
+func WriteAssetsHint() string { return In(i18n.Locale()).WriteAssetsHint() }
+
+// WriteAssetsHint says "Files travel with the library, named by their content."
+// in the language of msgs.
+//
+// The assets page's subtitle.
+func (msgs Messages) WriteAssetsHint() string {
+	return Catalog.Format(msgs.locale, "writeAssetsHint", nil)
+}
+
+// WriteAssetsEmpty says "No assets yet."
+// in the language the app shows.
+//
+// The assets page's empty state.
+func WriteAssetsEmpty() string { return In(i18n.Locale()).WriteAssetsEmpty() }
+
+// WriteAssetsEmpty says "No assets yet."
+// in the language of msgs.
+//
+// The assets page's empty state.
+func (msgs Messages) WriteAssetsEmpty() string {
+	return Catalog.Format(msgs.locale, "writeAssetsEmpty", nil)
+}
+
+// WriteAssetsImport says "Import files"
+// in the language the app shows.
+//
+// The assets page's action that adds files to the library.
+func WriteAssetsImport() string { return In(i18n.Locale()).WriteAssetsImport() }
+
+// WriteAssetsImport says "Import files"
+// in the language of msgs.
+//
+// The assets page's action that adds files to the library.
+func (msgs Messages) WriteAssetsImport() string {
+	return Catalog.Format(msgs.locale, "writeAssetsImport", nil)
+}
+
+// WriteAssetsFile says "File"
+// in the language the app shows.
+//
+// The assets table's column of file names.
+func WriteAssetsFile() string { return In(i18n.Locale()).WriteAssetsFile() }
+
+// WriteAssetsFile says "File"
+// in the language of msgs.
+//
+// The assets table's column of file names.
+func (msgs Messages) WriteAssetsFile() string {
+	return Catalog.Format(msgs.locale, "writeAssetsFile", nil)
+}
+
+// WriteAssetsKind says "Kind"
+// in the language the app shows.
+//
+// The assets table's column of file kinds.
+func WriteAssetsKind() string { return In(i18n.Locale()).WriteAssetsKind() }
+
+// WriteAssetsKind says "Kind"
+// in the language of msgs.
+//
+// The assets table's column of file kinds.
+func (msgs Messages) WriteAssetsKind() string {
+	return Catalog.Format(msgs.locale, "writeAssetsKind", nil)
+}
+
+// WriteAssetsSize says "Size"
+// in the language the app shows.
+//
+// The assets table's column of file sizes.
+func WriteAssetsSize() string { return In(i18n.Locale()).WriteAssetsSize() }
+
+// WriteAssetsSize says "Size"
+// in the language of msgs.
+//
+// The assets table's column of file sizes.
+func (msgs Messages) WriteAssetsSize() string {
+	return Catalog.Format(msgs.locale, "writeAssetsSize", nil)
+}
+
+// WriteAssetsFormat says "Format"
+// in the language the app shows.
+//
+// The assets table's column of file extensions.
+func WriteAssetsFormat() string { return In(i18n.Locale()).WriteAssetsFormat() }
+
+// WriteAssetsFormat says "Format"
+// in the language of msgs.
+//
+// The assets table's column of file extensions.
+func (msgs Messages) WriteAssetsFormat() string {
+	return Catalog.Format(msgs.locale, "writeAssetsFormat", nil)
+}
+
+// WriteAssetsRefs says "Referenced by"
+// in the language the app shows.
+//
+// The assets table's column of the notes that carry a file.
+func WriteAssetsRefs() string { return In(i18n.Locale()).WriteAssetsRefs() }
+
+// WriteAssetsRefs says "Referenced by"
+// in the language of msgs.
+//
+// The assets table's column of the notes that carry a file.
+func (msgs Messages) WriteAssetsRefs() string {
+	return Catalog.Format(msgs.locale, "writeAssetsRefs", nil)
+}
+
+// WriteAssetRefs says "{n, plural, one {# note} other {# notes}}"
+// in the language the app shows.
+//
+// An asset row's count of the notes that reference it.
+func WriteAssetRefs(n int) string { return In(i18n.Locale()).WriteAssetRefs(n) }
+
+// WriteAssetRefs says "{n, plural, one {# note} other {# notes}}"
+// in the language of msgs.
+//
+// An asset row's count of the notes that reference it.
+func (msgs Messages) WriteAssetRefs(n int) string {
+	return Catalog.Format(msgs.locale, "writeAssetRefs", map[string]any{"n": n})
+}
+
+// WriteAssetUnreferenced says "Not referenced"
+// in the language the app shows.
+//
+// An asset row that no note references.
+func WriteAssetUnreferenced() string { return In(i18n.Locale()).WriteAssetUnreferenced() }
+
+// WriteAssetUnreferenced says "Not referenced"
+// in the language of msgs.
+//
+// An asset row that no note references.
+func (msgs Messages) WriteAssetUnreferenced() string {
+	return Catalog.Format(msgs.locale, "writeAssetUnreferenced", nil)
+}
+
+// WriteKindImage says "Image"
+// in the language the app shows.
+//
+// An asset kind: a picture.
+func WriteKindImage() string { return In(i18n.Locale()).WriteKindImage() }
+
+// WriteKindImage says "Image"
+// in the language of msgs.
+//
+// An asset kind: a picture.
+func (msgs Messages) WriteKindImage() string {
+	return Catalog.Format(msgs.locale, "writeKindImage", nil)
+}
+
+// WriteKindSound says "Sound"
+// in the language the app shows.
+//
+// An asset kind: a sound file.
+func WriteKindSound() string { return In(i18n.Locale()).WriteKindSound() }
+
+// WriteKindSound says "Sound"
+// in the language of msgs.
+//
+// An asset kind: a sound file.
+func (msgs Messages) WriteKindSound() string {
+	return Catalog.Format(msgs.locale, "writeKindSound", nil)
+}
+
+// WriteKindOther says "File"
+// in the language the app shows.
+//
+// An asset kind: neither a picture nor a sound.
+func WriteKindOther() string { return In(i18n.Locale()).WriteKindOther() }
+
+// WriteKindOther says "File"
+// in the language of msgs.
+//
+// An asset kind: neither a picture nor a sound.
+func (msgs Messages) WriteKindOther() string {
+	return Catalog.Format(msgs.locale, "writeKindOther", nil)
+}
+
+// WriteTemplatesTitle says "Templates"
+// in the language the app shows.
+//
+// The templates page's title.
+func WriteTemplatesTitle() string { return In(i18n.Locale()).WriteTemplatesTitle() }
+
+// WriteTemplatesTitle says "Templates"
+// in the language of msgs.
+//
+// The templates page's title.
+func (msgs Messages) WriteTemplatesTitle() string {
+	return Catalog.Format(msgs.locale, "writeTemplatesTitle", nil)
+}
+
+// WriteTemplatesHint says "A note tagged {tag} is a template: a copy strips the marker and mints new block IDs."
+// in the language the app shows.
+//
+// The templates page's subtitle: what makes a note a template, and what a
+// copy does.
+func WriteTemplatesHint(tag string) string { return In(i18n.Locale()).WriteTemplatesHint(tag) }
+
+// WriteTemplatesHint says "A note tagged {tag} is a template: a copy strips the marker and mints new block IDs."
+// in the language of msgs.
+//
+// The templates page's subtitle: what makes a note a template, and what a
+// copy does.
+func (msgs Messages) WriteTemplatesHint(tag string) string {
+	return Catalog.Format(msgs.locale, "writeTemplatesHint", map[string]any{"tag": tag})
+}
+
+// WriteTemplatesEmpty says "No templates yet."
+// in the language the app shows.
+//
+// The templates page's empty state.
+func WriteTemplatesEmpty() string { return In(i18n.Locale()).WriteTemplatesEmpty() }
+
+// WriteTemplatesEmpty says "No templates yet."
+// in the language of msgs.
+//
+// The templates page's empty state.
+func (msgs Messages) WriteTemplatesEmpty() string {
+	return Catalog.Format(msgs.locale, "writeTemplatesEmpty", nil)
+}
+
+// WriteTemplateNew says "New from template"
+// in the language the app shows.
+//
+// A template row's action that starts a note from it.
+func WriteTemplateNew() string { return In(i18n.Locale()).WriteTemplateNew() }
+
+// WriteTemplateNew says "New from template"
+// in the language of msgs.
+//
+// A template row's action that starts a note from it.
+func (msgs Messages) WriteTemplateNew() string {
+	return Catalog.Format(msgs.locale, "writeTemplateNew", nil)
+}
+
+// WriteTemplateBlank says "Blank note"
+// in the language the app shows.
+//
+// The templates page's action that starts a note with no template.
+func WriteTemplateBlank() string { return In(i18n.Locale()).WriteTemplateBlank() }
+
+// WriteTemplateBlank says "Blank note"
+// in the language of msgs.
+//
+// The templates page's action that starts a note with no template.
+func (msgs Messages) WriteTemplateBlank() string {
+	return Catalog.Format(msgs.locale, "writeTemplateBlank", nil)
+}
+
+// WriteTemplateBlocks says "{n, plural, one {# block} other {# blocks}}"
+// in the language the app shows.
+//
+// A template row's count of the paragraphs it holds.
+func WriteTemplateBlocks(n int) string { return In(i18n.Locale()).WriteTemplateBlocks(n) }
+
+// WriteTemplateBlocks says "{n, plural, one {# block} other {# blocks}}"
+// in the language of msgs.
+//
+// A template row's count of the paragraphs it holds.
+func (msgs Messages) WriteTemplateBlocks(n int) string {
+	return Catalog.Format(msgs.locale, "writeTemplateBlocks", map[string]any{"n": n})
+}
+
+// WriteTreeTitle says "Excerpt tree"
+// in the language the app shows.
+//
+// The excerpt tree page's title.
+func WriteTreeTitle() string { return In(i18n.Locale()).WriteTreeTitle() }
+
+// WriteTreeTitle says "Excerpt tree"
+// in the language of msgs.
+//
+// The excerpt tree page's title.
+func (msgs Messages) WriteTreeTitle() string {
+	return Catalog.Format(msgs.locale, "writeTreeTitle", nil)
+}
+
+// WriteTreeHint says "Each excerpt sits under the note it was taken from."
+// in the language the app shows.
+//
+// The excerpt tree page's subtitle.
+func WriteTreeHint() string { return In(i18n.Locale()).WriteTreeHint() }
+
+// WriteTreeHint says "Each excerpt sits under the note it was taken from."
+// in the language of msgs.
+//
+// The excerpt tree page's subtitle.
+func (msgs Messages) WriteTreeHint() string {
+	return Catalog.Format(msgs.locale, "writeTreeHint", nil)
+}
+
+// WriteTreeEmpty says "No excerpts yet."
+// in the language the app shows.
+//
+// The excerpt tree page's empty state.
+func WriteTreeEmpty() string { return In(i18n.Locale()).WriteTreeEmpty() }
+
+// WriteTreeEmpty says "No excerpts yet."
+// in the language of msgs.
+//
+// The excerpt tree page's empty state.
+func (msgs Messages) WriteTreeEmpty() string {
+	return Catalog.Format(msgs.locale, "writeTreeEmpty", nil)
+}
+
+// WriteTreeStart says "Start reading"
+// in the language the app shows.
+//
+// The excerpt tree page's action that opens the reading queue.
+func WriteTreeStart() string { return In(i18n.Locale()).WriteTreeStart() }
+
+// WriteTreeStart says "Start reading"
+// in the language of msgs.
+//
+// The excerpt tree page's action that opens the reading queue.
+func (msgs Messages) WriteTreeStart() string {
+	return Catalog.Format(msgs.locale, "writeTreeStart", nil)
+}
+
+// WriteTreeContinue says "Continue reading"
+// in the language the app shows.
+//
+// The excerpt tree page's action that opens the reading queue.
+func WriteTreeContinue() string { return In(i18n.Locale()).WriteTreeContinue() }
+
+// WriteTreeContinue says "Continue reading"
+// in the language of msgs.
+//
+// The excerpt tree page's action that opens the reading queue.
+func (msgs Messages) WriteTreeContinue() string {
+	return Catalog.Format(msgs.locale, "writeTreeContinue", nil)
+}
+
+// WriteTreeCards says "{n, plural, one {# card} other {# cards}}"
+// in the language the app shows.
+//
+// A tree node's count of the cards it feeds.
+func WriteTreeCards(n int) string { return In(i18n.Locale()).WriteTreeCards(n) }
+
+// WriteTreeCards says "{n, plural, one {# card} other {# cards}}"
+// in the language of msgs.
+//
+// A tree node's count of the cards it feeds.
+func (msgs Messages) WriteTreeCards(n int) string {
+	return Catalog.Format(msgs.locale, "writeTreeCards", map[string]any{"n": n})
+}
+
+// WriteTreeMore says "{n, plural, one {# excerpt} other {# excerpts}}"
+// in the language the app shows.
+//
+// A tree node's count of the excerpts taken from it.
+func WriteTreeMore(n int) string { return In(i18n.Locale()).WriteTreeMore(n) }
+
+// WriteTreeMore says "{n, plural, one {# excerpt} other {# excerpts}}"
+// in the language of msgs.
+//
+// A tree node's count of the excerpts taken from it.
+func (msgs Messages) WriteTreeMore(n int) string {
+	return Catalog.Format(msgs.locale, "writeTreeMore", map[string]any{"n": n})
+}
+
+// WriteTreeOrphans says "Orphans"
+// in the language the app shows.
+//
+// The section heading of the excerpts whose source is gone.
+func WriteTreeOrphans() string { return In(i18n.Locale()).WriteTreeOrphans() }
+
+// WriteTreeOrphans says "Orphans"
+// in the language of msgs.
+//
+// The section heading of the excerpts whose source is gone.
+func (msgs Messages) WriteTreeOrphans() string {
+	return Catalog.Format(msgs.locale, "writeTreeOrphans", nil)
+}
+
+// WriteTreeOrphanHint says "The note they were taken from is gone; the excerpts are still here."
+// in the language the app shows.
+//
+// The line under the orphans section heading.
+func WriteTreeOrphanHint() string { return In(i18n.Locale()).WriteTreeOrphanHint() }
+
+// WriteTreeOrphanHint says "The note they were taken from is gone; the excerpts are still here."
+// in the language of msgs.
+//
+// The line under the orphans section heading.
+func (msgs Messages) WriteTreeOrphanHint() string {
+	return Catalog.Format(msgs.locale, "writeTreeOrphanHint", nil)
+}
+
+// WriteCardsCount says "{n, plural, one {# card} other {# cards}}"
+// in the language the app shows.
+//
+// A note row's badge counting the cards its paragraphs feed, and its
+// accessible name.
+func WriteCardsCount(n int) string { return In(i18n.Locale()).WriteCardsCount(n) }
+
+// WriteCardsCount says "{n, plural, one {# card} other {# cards}}"
+// in the language of msgs.
+//
+// A note row's badge counting the cards its paragraphs feed, and its
+// accessible name.
+func (msgs Messages) WriteCardsCount(n int) string {
+	return Catalog.Format(msgs.locale, "writeCardsCount", map[string]any{"n": n})
+}
+
+// WriteAssetsImported says "{n} files imported"
+// in the language the app shows.
+//
+// The report after the assets page copied files into the library.
+func WriteAssetsImported(n int) string { return In(i18n.Locale()).WriteAssetsImported(n) }
+
+// WriteAssetsImported says "{n} files imported"
+// in the language of msgs.
+//
+// The report after the assets page copied files into the library.
+func (msgs Messages) WriteAssetsImported(n int) string {
+	return Catalog.Format(msgs.locale, "writeAssetsImported", map[string]any{"n": n})
+}
+
+// DocumentPage says "Document"
+// in the language the app shows.
+//
+// Page of the write area: the note written in. It is a page of its own
+// until the document gets a route.
+func DocumentPage() string { return In(i18n.Locale()).DocumentPage() }
+
+// DocumentPage says "Document"
+// in the language of msgs.
+//
+// Page of the write area: the note written in. It is a page of its own
+// until the document gets a route.
+func (msgs Messages) DocumentPage() string {
+	return Catalog.Format(msgs.locale, "documentPage", nil)
+}
+
+// WritePlainText says "plain text"
+// in the language the app shows.
+//
+// The notes page's subtitle names the library as plain text: the notes are
+// files the user owns.
+func WritePlainText() string { return In(i18n.Locale()).WritePlainText() }
+
+// WritePlainText says "plain text"
+// in the language of msgs.
+//
+// The notes page's subtitle names the library as plain text: the notes are
+// files the user owns.
+func (msgs Messages) WritePlainText() string {
+	return Catalog.Format(msgs.locale, "writePlainText", nil)
+}

@@ -1,6 +1,12 @@
-// Package notes is the notebook: the notes list, the note written in, read
-// beside its own source or read whole, and the panel beside it — the note's
-// outline, the notes that point at it, and the cards its paragraphs feed.
+// Package notes is the write area: the notebook — the notes list, the note
+// written in, read beside its own source or read whole, and the panel beside it
+// — and the five pages beside the notebook that answer what the library holds:
+// the notes list with its search, filters and order (S05), the search over notes
+// and cards (S06), the tags (S07), the assets (S08), the templates (S09) and the
+// excerpt tree (S10).
+//
+// Every one of them reads its rows through Deps and reports what the user chose;
+// the app derives the rows from the store, so a frame asks it for nothing.
 //
 // The screen keeps the session: which note is open, its draft, the one document
 // editor the note is written in, the split widths and the panel's tab. What the
@@ -11,6 +17,7 @@ package notes
 
 import (
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/markdown"
@@ -107,8 +114,15 @@ type State struct {
 	FindOpen bool
 	// TagFilter is the tag the notes are filtered by, empty for none.
 	TagFilter string
-	// Query is what the sidebar's search looks for.
+	// Query is what the notes lists search for: the notebook's column, and the
+	// notes page the sub-navigation shows.
 	Query string
+	// Filter is which notes the notes page keeps besides the query and the tag.
+	Filter Filter
+	// Sort is the order the notes page shows the notes in.
+	Sort Sort
+	// SearchQuery is what the search page looks for.
+	SearchQuery string
 	// Doc is the note as one document, markers and all.
 	Doc *richtext.Document
 	// readOptions is the reading views' Markdown options. Keeping one lets
@@ -116,6 +130,17 @@ type State struct {
 	readOptions *markdown.Options
 	// OutlineCurrent is the heading the caret is under, -1 for none.
 	OutlineCurrent int
+
+	// The list pages' rows, choices and scrolls: the state a reload must not
+	// lose, which is each list's own.
+	list         ui.ListState      // the notes page's rows
+	tagList      ui.ListState      // the tags page's rows
+	assetList    ui.ListState      // the assets page's rows
+	templateList ui.ListState      // the templates page's rows
+	searchNotes  ui.ListState      // the search page's note hits
+	searchCards  ui.ListState      // the search page's card hits
+	search       ui.Handle         // the search page's field, for a link or ⌘F
+	treeOpen     map[core.ID]*bool // which excerpt-tree nodes are open
 
 	docNote       core.ID // the note the document holds
 	docText       string  // the text the document was last built from
@@ -153,6 +178,14 @@ type State struct {
 	tables        map[string]string    // table source by the attachment reference that stands for it
 	tableWord     string               // the localized name a table placeholder shows
 }
+
+// FocusSearch puts the caret in the search page's field. A link from outside
+// the window may ask before the field was ever built: the request waits for it.
+func (s *State) FocusSearch() { s.search.Focus() }
+
+// ClearFilters puts the whole notebook back on the notes page: no query, no
+// tag, none of the three filters.
+func (s *State) ClearFilters() { s.Query, s.TagFilter, s.Filter = "", "", Filter{} }
 
 // New returns the notebook's state with the widths and rows the window opens
 // with.
@@ -214,6 +247,40 @@ type Deps struct {
 	ChooseImage func() (string, error)
 	// OpenCardEdit opens the field editor on a card.
 	OpenCardEdit func(*ui.Context, core.ID)
+
+	// Rows is the notes page's rows — the query, tag, filters and order the
+	// state holds, answered by the store — and how many notes match in all.
+	Rows func() (rows []Row, total int)
+	// TagRows are the tags page's rows.
+	TagRows func() []TagRow
+	// AssetRows are the assets page's rows.
+	AssetRows func() []AssetRow
+	// ImportAssets asks the system for files and stores them in the library.
+	ImportAssets func(*ui.Context)
+	// SearchResults is the search page's answer: the notes and the cards the
+	// state's query found, and how many results there are in all.
+	SearchResults func() (notes, cards []Hit, total int)
+	// Excerpts is the excerpt tree: the notes excerpts were taken from, and
+	// the excerpts under each.
+	Excerpts func() []TreeNode
+	// Now is the clock the lists' "today" is measured against, so that a
+	// frame reads no clock of its own.
+	Now func() time.Time
+
+	// OpenNote shows a note in the notebook.
+	OpenNote func(core.ID)
+	// OpenNoteRead shows a note read whole.
+	OpenNoteRead func(core.ID)
+	// QueueReading puts a note in the reading queue.
+	QueueReading func(*ui.Context, core.ID)
+	// OpenTag opens the notes page narrowed to one tag.
+	OpenTag func(string)
+	// OpenReadingQueue shows the reading queue.
+	OpenReadingQueue func()
+	// OpenCard shows a card's detail. Until that page is built it opens the
+	// note the card renders from, read whole: a hit always goes somewhere that
+	// shows the card's own text.
+	OpenCard func(core.ID)
 }
 
 // View draws the notebook: the notes on the left, and on the right the note

@@ -9,6 +9,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // lostBody is the sentence a lost card's row shows: its prompt has no text of
@@ -42,16 +43,20 @@ func TestBrowseEnter(t *testing.T) {
 	}
 }
 
-// Cmd+F opens browse on its search field from anywhere, and what is typed
-// narrows the rows by the cards' text: a prompt comes and goes.
+// The card table's own search narrows the rows by the cards' text: a prompt
+// comes and goes.
 func TestBrowseSearch(t *testing.T) {
+	msgs := locales.In("en")
 	_, _, tt := openApp(t)
 	tt.Advance(320 * time.Millisecond) // the opening card's entry
 
-	tt.Key(ui.Cmd, ui.KeyF)
+	cardsPage(t, tt, "en")
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 	if !tt.HasText("Browse cards") {
-		t.Fatalf("Cmd+F did not open browse; texts %q", tt.Texts())
+		t.Fatalf("the card table did not open; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.BrowseSearch()); err != nil {
+		t.Fatalf("the card table has no search field: %v", err)
 	}
 	tt.Type("testing")
 	if !tt.HasText("The testing effect") {
@@ -65,6 +70,7 @@ func TestBrowseSearch(t *testing.T) {
 
 	// Escape with text clears the query and the rows come back.
 	tt.Key(0, ui.KeyEscape)
+	tt.Frame()
 	for _, want := range []string{"Spacing beats cramming", "A good card asks", "A block divides at"} {
 		if !tt.HasText(want) {
 			t.Fatalf("clearing the query lost %q; texts %q", want, tt.Texts())
@@ -257,8 +263,8 @@ func TestBrowseOpensLostCard(t *testing.T) {
 	}
 }
 
-// A search link from outside the window opens browse on its query, its field
-// ready for typing.
+// A search link from outside the window opens the write area's search page on
+// its query, its field ready for typing.
 func TestSearchLink(t *testing.T) {
 	a, _ := newTestApp(t)
 
@@ -267,18 +273,18 @@ func TestSearchLink(t *testing.T) {
 	a.Search("question")
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	for _, want := range []string{"Browse cards", "A good card asks"} {
+	for _, want := range []string{"Search", "Writing cards"} {
 		if !tt.HasText(want) {
 			t.Fatalf("the search link is missing %q; texts %q", want, tt.Texts())
 		}
 	}
-	if tt.HasText("Spacing beats cramming") {
-		t.Error("the search link did not narrow the rows")
+	if a.area != areaWrite || a.sub != subSearch {
+		t.Fatalf("the link went to %v/%v, want the search page", a.area, a.sub)
 	}
 
 	// Typing reaches the field the link focused.
 	tt.Type("zzz")
-	if !tt.HasText("No cards match.") {
+	if !tt.HasText("No note or card matches.") {
 		t.Fatalf("the search field did not take the text; texts %q", tt.Texts())
 	}
 	if tt.FramePending() {

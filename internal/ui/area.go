@@ -28,9 +28,15 @@ type subID uint8
 
 const (
 	subNone subID = iota
-	// The write area: the notebook, then the pages beside it.
+	// The write area: the notebook, and the six list pages its
+	// sub-navigation shows beside it.
 	subNotes
+	subNoteList
 	subSearch
+	subTags
+	subAssets
+	subTemplates
+	subTree
 	// The read area.
 	subReadQueue
 	subReadArchive
@@ -72,7 +78,10 @@ const (
 func subsOf(area areaID) []subID {
 	switch area {
 	case areaWrite:
-		return []subID{subNotes, subSearch}
+		// The document comes first: it is where the area opens, and where the
+		// key and the rail go. Its tab goes when the document gets a route of
+		// its own (#201, W3b).
+		return []subID{subNotes, subNoteList, subSearch, subTags, subAssets, subTemplates, subTree}
 	case areaRead:
 		return []subID{subReadQueue, subReadArchive}
 	case areaRecall:
@@ -152,9 +161,19 @@ func areaLabel(msgs locales.Messages, area areaID) string {
 func subLabel(msgs locales.Messages, sub subID) string {
 	switch sub {
 	case subNotes:
+		return msgs.DocumentPage()
+	case subNoteList:
 		return msgs.ModeNotes()
 	case subSearch:
 		return msgs.SearchPage()
+	case subTags:
+		return msgs.WriteTagsTitle()
+	case subAssets:
+		return msgs.WriteAssetsTitle()
+	case subTemplates:
+		return msgs.WriteTemplatesTitle()
+	case subTree:
+		return msgs.WriteTreeTitle()
 	case subReadQueue, subRecallQueue:
 		return msgs.QueuePage()
 	case subReadArchive:
@@ -191,9 +210,21 @@ func subLabel(msgs locales.Messages, sub subID) string {
 func subName(sub subID) string {
 	switch sub {
 	case subNotes:
+		// The notebook has been the write area's "notes" page since the
+		// contract was written: the list beside it names itself apart.
 		return "notes"
+	case subNoteList:
+		return "list"
 	case subSearch:
 		return "search"
+	case subTags:
+		return "tags"
+	case subAssets:
+		return "assets"
+	case subTemplates:
+		return "templates"
+	case subTree:
+		return "tree"
 	case subReadQueue:
 		return "queue"
 	case subReadArchive:
