@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -147,7 +148,7 @@ func TestSettingsSurviveRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("settings.Load: %v", err)
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("settings on disk = %+v, want %+v", got, want)
 	}
 	if !agent.on {

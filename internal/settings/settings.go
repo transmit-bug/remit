@@ -41,6 +41,10 @@ type Settings struct {
 	// RemindedOn is the calendar day (2006-01-02) of the last reminder, so
 	// that "once a day" holds across restarts; empty means none yet.
 	RemindedOn string `json:"reminded_on,omitempty"`
+	// SavedFilters are the recall queue's filters the user kept, by their stable
+	// id: a chip on the queue page, and no card data, so it belongs to the app
+	// rather than to a library.
+	SavedFilters []string `json:"saved_filters,omitempty"`
 }
 
 // HotkeyAccelerator is the shortcut the app binds: the one the user chose, or

@@ -193,19 +193,17 @@ export function summary(session) {
 	t.Cleanup(func() { _ = runner.Close() })
 
 	a := NewApp(Options{LibraryDir: dir, Scheduler: runner})
-	// A library with nothing due: the summary is what the screen shows.
-	for _, card := range a.Library().Cards() {
-		card.Status = core.StatusSuspended
-		if err := a.Library().SaveCard(card); err != nil {
-			t.Fatal(err)
-		}
-	}
-	a.reload()
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	recallQueue(tt)
 
-	if !tt.HasText("you reviewed 0 cards") {
+	// The session runs to its end: the summary is what the screen shows then.
+	for range a.Library().Cards() {
+		tt.Key(0, ui.KeySpace)
+		tt.Key(0, ui.Key3) // Good
+		tt.Advance(320 * time.Millisecond)
+	}
+	if !tt.HasText("you reviewed 4 cards") {
 		t.Fatalf("the summary does not carry the plugin's line; texts %q", tt.Texts())
 	}
 	// The plugin names the scheduler every review it writes is stamped with.

@@ -129,18 +129,19 @@ func TestTypedAnswerTakesTheKeys(t *testing.T) {
 	}
 }
 
-// The recall queue is a page of the window: the rail, the bar and the queue's
-// own row stay around the card, and Esc still gives the notebook back.
-func TestTheReviewPageKeepsTheFrame(t *testing.T) {
+// The recall queue is a page of the window and the session is not: the rail,
+// the bar and the queue's rows stay around the page, the card takes the window
+// whole, and Esc gives the page back.
+func TestTheRecallQueueKeepsTheFrame(t *testing.T) {
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
 			a, _ := newTestApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
-			recallQueue(tt)
+			recallPage(tt)
 
-			// The frame is there, and the page inside it is the review's.
-			for _, want := range []string{"Recall", "Queue", "Show answer", "4 cards left"} {
+			// The frame is there, and the page inside it is the queue's.
+			for _, want := range []string{"Recall", "Queue", "Start review", "Memory and recall"} {
 				if !tt.HasText(want) {
 					t.Fatalf("the page lost %q; texts %q", want, tt.Texts())
 				}
@@ -152,12 +153,28 @@ func TestTheReviewPageKeepsTheFrame(t *testing.T) {
 				}
 			}
 
+			// The session takes the window whole: no rail, no bar, no page tabs.
+			if err := tt.Click("Start review"); err != nil {
+				t.Fatal(err)
+			}
+			tt.Advance(320 * time.Millisecond)
+			for _, want := range []string{"Show answer", "4 cards left"} {
+				if !tt.HasText(want) {
+					t.Fatalf("the session lost %q; texts %q", want, tt.Texts())
+				}
+			}
+			for _, gone := range []string{"Start review", "Search actions"} {
+				if tt.HasText(gone) {
+					t.Errorf("the session still shows the frame's %q", gone)
+				}
+			}
+
 			tt.Key(0, ui.KeyEscape)
 			tt.Advance(320 * time.Millisecond) // the screen's entrance
-			// The notebook is back, with its own controls.
-			for _, want := range []string{"Notebook", "New note", "Memory and recall"} {
+			// The queue page is back, with the frame's controls.
+			for _, want := range []string{"Start review", "Search actions", "Queue"} {
 				if !tt.HasText(want) {
-					t.Fatalf("Esc did not give the notebook back: missing %q; texts %q", want, tt.Texts())
+					t.Fatalf("Esc did not give the queue page back: missing %q; texts %q", want, tt.Texts())
 				}
 			}
 			if tt.FramePending() {
@@ -230,8 +247,13 @@ func TestReviewIsKeyboardOnly(t *testing.T) {
 	tt.Advance(320 * time.Millisecond)
 	tt.Key(0, ui.KeyEscape)
 	tt.Advance(320 * time.Millisecond)
+	if !tt.HasText("Start review") {
+		t.Errorf("Esc did not leave the session for the queue page; texts %q", tt.Texts())
+	}
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(320 * time.Millisecond)
 	if !tt.HasText("Notebook") {
-		t.Errorf("Esc did not leave review for the notes; texts %q", tt.Texts())
+		t.Errorf("Cmd+2 did not open the notebook; texts %q", tt.Texts())
 	}
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")

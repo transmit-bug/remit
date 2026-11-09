@@ -26,7 +26,7 @@ func TestAreaShortcutsSwitchAreas(t *testing.T) {
 		{ui.Key1, msgs.AreaToday(), "", msgs.TodayBudget()},
 		{ui.Key2, msgs.AreaWrite(), msgs.ModeNotes(), msgs.Notebook()},
 		{ui.Key3, msgs.AreaRead(), msgs.QueuePage(), msgs.ReadQueueEmpty()},
-		{ui.Key4, msgs.AreaRecall(), msgs.QueuePage(), "Spacing beats cramming"},
+		{ui.Key4, msgs.AreaRecall(), msgs.QueuePage(), msgs.RecallStart()},
 		{ui.Key5, msgs.AreaStats(), msgs.OverviewPage(), msgs.StatsTitle()},
 		{ui.Key6, msgs.AreaSettings(), msgs.AppearancePage(), msgs.SettingsTitle()},
 	}
@@ -117,7 +117,7 @@ func TestMinimumSizeControls(t *testing.T) {
 	assertControl(t, tt, 720, 520, "Show answer")
 
 	tt.Key(ui.Cmd, ui.KeyK)
-	assertControl(t, tt, 720, 520, "Search actions")
+	assertControl(t, tt, 720, 520, locales.In("en").PaletteSearch())
 	assertControl(t, tt, 720, 520, "Edit notes")
 	tt.Advance(320 * time.Millisecond) // the palette's arrival
 	if err := tt.Click("Edit notes"); err != nil {
@@ -158,7 +158,7 @@ func TestAppBarAtMinimumSize(t *testing.T) {
 		name string
 		want string
 	}{
-		{msgs.AreaRecall(), "Spacing beats cramming"},
+		{msgs.AreaRecall(), msgs.RecallStart()},
 		{msgs.AreaStats(), msgs.StatsTitle()},
 		{msgs.AreaSettings(), msgs.SettingsTitle()},
 		{msgs.AreaWrite(), msgs.Notebook()},
@@ -278,7 +278,7 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.Key4)
 	tt.Advance(320 * time.Millisecond) // the page's entrance
-	for _, want := range []string{"显示答案", "撤销 (U)"} {
+	for _, want := range []string{"开始复习", "今天的复习量", "筛选队列"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing Chinese text %q; texts %q", want, tt.Texts())
 		}

@@ -73,6 +73,9 @@ const (
 	// MeterWidth is a row's paragraph progress bar: wide enough to read as a
 	// fraction, narrow enough to leave the title the room it needs (spec §4.5).
 	MeterWidth float32 = 120
+	// SourceLabelWidth is the column a card's context names its three paragraphs
+	// in — before, this one, after — so their texts start on one line.
+	SourceLabelWidth float32 = 76
 
 	// The frame: a rail, a top bar, a sub-navigation and a status line around
 	// the stage. RailWidth is the rail open, RailCollapsed the icon strip it

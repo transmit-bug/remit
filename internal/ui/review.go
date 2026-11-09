@@ -10,7 +10,6 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/ui/design"
-	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	"github.com/transmit-bug/remit/locales"
 )
@@ -21,48 +20,9 @@ func (a *App) reviewView(c *ui.Context, tk design.Tokens) {
 	review.View(c, &a.review, a.reviewDeps(c))
 }
 
-// reviewScopeMenu is the scope picker beside the mode switch: the whole
-// library, one note, or one tag. The choice lives in the session only — it is
-// app state, never written to the library — and switching re-derives the queue,
-// which is what Sync then hands the screen. Widgets checked against the
-// inventory (mygo-components, v0.8.1): MenuButton + Submenu + Radio, the same
-// shape pluginPagesMenu uses; Select would be a second control style beside
-// the mode switch it sits with.
-func (a *App) reviewScopeMenu(c *ui.Context, msgs locales.Messages) {
-	ui.MenuButton(c, a.scopeLabel(msgs), func(menu *ui.Menu) {
-		menu.MaxWidth(360)
-		if menu.Item(msgs.ReviewScope()).Radio(a.reviewScope.Kind == queue.ScopeAll).Chosen() {
-			a.setReviewScope(c, queue.Scope{})
-		}
-		notes := a.scopeNotes()
-		if len(notes) > 0 {
-			menu.Submenu(msgs.ReviewScopeNotes(), func(sub *ui.Menu) {
-				sub.MaxWidth(360)
-				for _, note := range notes {
-					note := note
-					if sub.Item(note.Title).Radio(a.reviewScope.Kind == queue.ScopeNote && a.reviewScope.Note == note.ID).Chosen() {
-						a.setReviewScope(c, queue.Scope{Kind: queue.ScopeNote, Note: note.ID})
-					}
-				}
-			})
-		}
-		tags := a.scopeTags()
-		if len(tags) > 0 {
-			menu.Submenu(msgs.ReviewScopeTags(), func(sub *ui.Menu) {
-				sub.MaxWidth(360)
-				for _, tag := range tags {
-					tag := tag
-					if sub.Item(tag).Radio(a.reviewScope.Kind == queue.ScopeTag && a.reviewScope.Tag == tag).Chosen() {
-						a.setReviewScope(c, queue.Scope{Kind: queue.ScopeTag, Tag: tag})
-					}
-				}
-			})
-		}
-	}).Label(msgs.ReviewScopeMenu())
-}
-
 // scopeLabel names the scope the session is under: the whole library, or the
-// note or tag it draws from.
+// note or tag it draws from. The picker that sets it is the recall queue's scope
+// button, which opens the scope dialog.
 func (a *App) scopeLabel(msgs locales.Messages) string {
 	switch a.reviewScope.Kind {
 	case queue.ScopeNote:
@@ -73,15 +33,6 @@ func (a *App) scopeLabel(msgs locales.Messages) string {
 		return "#" + a.reviewScope.Tag
 	}
 	return msgs.ReviewScope()
-}
-
-// scopeNotes lists the notes a scope can name: the snapshot's rows, in the
-// notebook's order, without touching the store in the frame.
-func (a *App) scopeNotes() []notes.Note {
-	if a.lib == nil {
-		return nil
-	}
-	return a.notesRows
 }
 
 // scopeTags lists the tags a scope can name, most notes first, from the
@@ -138,6 +89,7 @@ func (a *App) reviewDeps(c *ui.Context) review.Deps {
 				out.Tone = review.Celebrated
 			}
 			out.Lines = a.summaryWord.Lines
+			out.Failed = a.failedCardsOf()
 			return out, true
 		},
 		Preview: func() ([4]review.Interval, bool) {
@@ -150,8 +102,12 @@ func (a *App) reviewDeps(c *ui.Context) review.Deps {
 			}
 			return out, true
 		},
-		Grade: func(id core.ID, r review.Rating) { a.grade(c, id, r) },
-		Undo:  func() { a.undo(c) },
+		Grade:      func(id core.ID, r review.Rating) { a.grade(c, id, r) },
+		Undo:       func() { a.undo(c) },
+		Source:     a.cardSource,
+		OpenSource: func(note core.ID) { a.openNote(note) },
+		Items:      func() []review.PluginItem { return a.reviewCardActions(c) },
+		EditCard:   func(id core.ID) { a.openCardEdit(c, id) },
 		Suspend: func(id core.ID) {
 			a.suspend(c, id)
 		},
@@ -219,11 +175,33 @@ func (a *App) grade(c *ui.Context, id core.ID, r review.Rating) {
 		a.report(c, "review", err)
 		return
 	}
+	if r == review.Again {
+		a.failed = append(a.failed, card.ID)
+	}
 	a.review.Advance(true)
 	a.reload()
 	// The change is visual first; say it too, so a screen reader hears that the
 	// grade landed and how much is left.
 	c.Announce(m(c).Remaining(a.review.Remaining()))
+}
+
+// reviewCardActions are the review.card slot's actions for the card on screen, as
+// the session's action row draws them: the label is the host's text for the
+// command, and the run is the host's runner.
+func (a *App) reviewCardActions(c *ui.Context) []review.PluginItem {
+	refs := a.reviewCardItems()
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]review.PluginItem, 0, len(refs))
+	for _, ref := range refs {
+		command := ref.CommandRef
+		out = append(out, review.PluginItem{
+			Label: a.pluginText(c, ref.Plugin, string(ref.Command.Title)),
+			Run:   func() { a.runContribution(c, command) },
+		})
+	}
+	return out
 }
 
 // undo cancels the newest review, puts its card back on screen with the answer
@@ -239,8 +217,20 @@ func (a *App) undo(c *ui.Context) {
 	}
 	a.review.Forget()
 	a.review.Restore(id)
+	a.forgetFailed(id)
 	a.reload()
 	c.Toast(m(c).GradeUndone())
+}
+
+// forgetFailed takes a miss back out of the session's summary: a grade that was
+// undone is no longer a card the session did not remember.
+func (a *App) forgetFailed(id core.ID) {
+	for i := len(a.failed) - 1; i >= 0; i-- {
+		if a.failed[i] == id {
+			a.failed = append(a.failed[:i], a.failed[i+1:]...)
+			return
+		}
+	}
 }
 
 // suspend takes a card out of the queue without touching its history.

@@ -46,6 +46,7 @@ func (a *App) View(c *ui.Context) {
 		a.keysView(c, tk)
 		a.importView(c, tk)
 		a.exportView(c, tk)
+		a.recallScopeView(c)
 		a.relinkView(c)
 		a.cardEditView(c, tk)
 	})
@@ -93,7 +94,7 @@ func (a *App) stage(c *ui.Context, tk design.Tokens) {
 		case a.area == areaRead:
 			a.readView(c)
 		case a.area == areaRecall:
-			a.reviewView(c, tk)
+			a.recallView(c)
 		case a.area == areaStats:
 			screenstats.View(c, statsPage(a.sub), a.stats, screenstats.Deps{
 				Items:      a.statsBlockItems(),

@@ -24,6 +24,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/read"
 	"github.com/transmit-bug/remit/internal/ui/screens/reading"
+	"github.com/transmit-bug/remit/internal/ui/screens/recall"
 	"github.com/transmit-bug/remit/internal/ui/screens/relink"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
@@ -92,8 +93,17 @@ type App struct {
 	session          sessionKind     // the session over the stage, when one is open; none until the session screens land
 	page             contrib.PageRef // the contributed page on screen, when area is areaPlugin
 	review           review.State
-	reviewScope      queue.Scope   // what the review session draws from; within the session only, never stored
-	reading          reading.State // the reading session: the queue's order and where the reader is
+	reviewScope      queue.Scope             // what the review session draws from; within the session only, never stored
+	failed           []core.ID               // the cards this session answered Again, in the order they were missed
+	blockCards       map[core.ID][]core.Card // the snapshot's cards by paragraph, in ordinal order
+	recall           recall.State
+	recallRows       []recall.NoteRow   // the queue page's rows, as loadRecall derived them
+	recallCounts     queue.Counts       // what the session's scope holds
+	recallScope      recall.ScopeCounts // what each scope would take
+	recallHistory    []stats.DayCount   // the half year the queue page's strip shows
+	recallTomorrow   int                // what comes due the day after
+	recallLost       int                // cards whose paragraph is gone, outside the queue
+	reading          reading.State      // the reading session: the queue's order and where the reader is
 	readingPositions map[core.ID]core.ID
 	readingCount     int
 	notes            notes.State       // the notebook: the note open, its draft and its panes
@@ -107,7 +117,7 @@ type App struct {
 	readPages readPages
 	// excerpted are the blocks something already quotes, so that a paragraph can
 	// say it was excerpted without a frame reading the library's links.
-	excerpted map[core.ID]bool
+	excerpted        map[core.ID]bool
 	browse           browse.State
 	browseRows       []browse.Row // the cards browse lists, as loadBrowse derived them
 	stats            screenstats.State

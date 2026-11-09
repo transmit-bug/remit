@@ -11,8 +11,8 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// scopeSeed gives the harness library a tagged note beside the seeded ones, so
-// a scope has something to name that the rest of the library does not match.
+// scopeSeed gives the harness library a tagged note with a card of its own, so a
+// scope has something to name that the rest of the library does not match.
 func scopeSeed(t *testing.T, a *App) core.Note {
 	t.Helper()
 	if a.lib == nil {
@@ -25,14 +25,35 @@ func scopeSeed(t *testing.T, a *App) core.Note {
 	if err != nil {
 		t.Fatalf("save scoped note: %v", err)
 	}
+	if _, err := a.lib.CreateCards(note.Blocks[0].ID, []core.Derived{{Type: core.TypeBasic}}); err != nil {
+		t.Fatalf("make the scoped card: %v", err)
+	}
 	a.reload()
 	return note
 }
 
-// The scope picker sits beside the mode switch on the review side only, names
-// the whole library until a scope is chosen, and lists the notes and tags the
-// snapshot holds.
-func TestReviewScopePickerSitsBesideTheSwitch(t *testing.T) {
+// scopeLabel is the scope button's name on the queue page: the scope it would
+// take, which is the whole library until a dialog changes it.
+func scopeButtonName(msgs locales.Messages, scope string) string {
+	return msgs.ReviewScopeMenu() + ": " + scope
+}
+
+// clickRole clicks the element assistive technology knows by a role and a name,
+// which is how a dialog's radios are reached: their labels are the notes' titles,
+// and the page behind the dialog says the same words.
+func clickRole(t *testing.T, tt *ui.Tester, role ui.Role, name string) {
+	t.Helper()
+	info, ok := tt.AccessByRole(role, name)
+	if !ok {
+		t.Fatalf("no %v named %q; texts %q", role, name, tt.Texts())
+	}
+	tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
+	tt.Frame()
+}
+
+// The scope button names the scope the session draws from and opens the dialog
+// that changes it, at both sizes the window holds.
+func TestScopeDialogOpensFromTheQueuePage(t *testing.T) {
 	msgs := locales.In("en")
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
@@ -40,113 +61,188 @@ func TestReviewScopePickerSitsBesideTheSwitch(t *testing.T) {
 			scopeSeed(t, a)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
-			recallQueue(tt)
+			recallPage(tt)
 
-			if err := tt.Click(msgs.ReviewScopeMenu()); err != nil {
-				t.Fatalf("the scope menu did not open: %v; texts %q", err, tt.Texts())
+			if err := tt.Click(scopeButtonName(msgs, msgs.ReviewScope())); err != nil {
+				t.Fatalf("the page has no scope button: %v; texts %q", err, tt.Texts())
 			}
-			if items := tt.Menu(); !contains(items, msgs.ReviewScope()) {
-				t.Fatalf("the scope menu lost %q; items %q", msgs.ReviewScope(), items)
+			tt.Frame()
+			for _, want := range []string{
+				msgs.RecallScopeTitle(), msgs.RecallScopeAll(), msgs.RecallScopeNote(),
+				msgs.RecallScopeTag(), msgs.RecallScopeAllBody(), msgs.RecallScopeTake(5),
+			} {
+				if !tt.HasText(want) {
+					t.Fatalf("the dialog is missing %q; texts %q", want, tt.Texts())
+				}
 			}
-			// The submenus list their entries once opened through the path.
-			if err := tt.ChooseMenuItem(msgs.ReviewScopeNotes(), "A chapter of its own"); err != nil {
-				t.Fatalf("the menu does not reach the note: %v; items %q", err, tt.Menu())
-			}
+			// Escape closes it and the page is where it was.
+			tt.Key(0, ui.KeyEscape)
 			tt.Advance(320 * time.Millisecond)
-			if a.reviewScope.Note == "" {
-				t.Fatalf("choosing the note did not take: items %q", tt.Menu())
+			if tt.HasText(msgs.RecallScopeAllBody()) {
+				t.Fatalf("Escape left the scope dialog open; texts %q", tt.Texts())
+			}
+			if !tt.HasText(msgs.RecallStart()) {
+				t.Fatalf("the queue page did not come back; texts %q", tt.Texts())
 			}
 		})
 	}
 }
 
-func contains(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
-}
-
-// Choosing a note narrows the queue to that note's cards, and back on the whole
-// library everything returns: the choice lives in the session, not in the
-// library.
-func TestReviewScopeChoosesANoteAndGivesItBack(t *testing.T) {
+// The dialog's scope is what the session takes: one note's cards instead of the
+// library's, and the choice lives in the session — the library is untouched.
+func TestScopeDialogNarrowsTheSession(t *testing.T) {
 	msgs := locales.In("en")
 	a, _ := newTestApp(t)
 	note := scopeSeed(t, a)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	recallQueue(tt)
+	recallPage(tt)
 
-	if !tt.HasText("4 cards left") {
-		t.Fatalf("the whole-library queue is not four cards; texts %q", tt.Texts())
-	}
-
-	if err := tt.Click(msgs.ReviewScopeMenu()); err != nil {
+	if err := tt.Click(scopeButtonName(msgs, msgs.ReviewScope())); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem(msgs.ReviewScopeNotes(), "A chapter of its own"); err != nil {
-		t.Fatalf("the note was not chosen: %v; items %q", err, tt.Menu())
+	tt.Frame()
+	clickRole(t, tt, ui.RoleRadio, msgs.RecallScopeNote())
+	clickRole(t, tt, ui.RoleRadio, note.Title)
+	if !tt.HasText(msgs.RecallScopeTake(1)) {
+		t.Fatalf("the dialog does not count the note's cards; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.RecallScopeStart()); err != nil {
+		t.Fatal(err)
 	}
 	tt.Advance(320 * time.Millisecond)
 
-	if _, ok := tt.Find(msgs.ReviewScopeEmpty()); !ok {
-		t.Fatalf("the scoped queue did not say it is empty; texts %q", tt.Texts())
-	}
-	if tt.HasText("4 cards left") {
-		t.Fatal("the scoped session still counts the whole library")
+	if !tt.HasText(msgs.Remaining(1)) {
+		t.Fatalf("the session did not narrow to the note; texts %q", tt.Texts())
 	}
 	if a.reviewScope.Kind != queue.ScopeNote || a.reviewScope.Note != note.ID {
 		t.Fatalf("the app did not take the scope: %+v", a.reviewScope)
 	}
+	// Nothing was written: the scope is the session's, not the library's.
+	if got := len(a.Library().Cards()); got != 5 {
+		t.Fatalf("the library holds %d cards after a scoped session, want 5", got)
+	}
 
-	// Back on the whole library: no note is left out, because nothing was
-	// stored — the scope lives in the session only.
-	if err := tt.Click(msgs.ReviewScopeMenu()); err != nil {
+	// Back on the page the button names the scope, and Start takes it again.
+	tt.Key(0, ui.KeyEscape)
+	tt.Advance(320 * time.Millisecond)
+	if !tt.HasText(scopeButtonName(msgs, note.Title)) {
+		t.Fatalf("the button does not name the scope; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.RecallStart()); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem(msgs.ReviewScope()); err != nil {
-		t.Fatalf("the whole-library entry was not chosen: %v; items %q", err, tt.Menu())
+	tt.Advance(320 * time.Millisecond)
+	if !tt.HasText(msgs.Remaining(1)) {
+		t.Fatalf("the second sitting did not keep the scope; texts %q", tt.Texts())
+	}
+
+	// The whole library gives every card back.
+	tt.Key(0, ui.KeyEscape)
+	tt.Advance(320 * time.Millisecond)
+	if err := tt.Click(scopeButtonName(msgs, note.Title)); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	clickRole(t, tt, ui.RoleRadio, msgs.RecallScopeAll())
+	if !tt.HasText(msgs.RecallScopeTake(5)) {
+		t.Fatalf("the whole library does not count every card; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.RecallScopeStart()); err != nil {
+		t.Fatal(err)
 	}
 	tt.Advance(320 * time.Millisecond)
-	if !tt.HasText("4 cards left") {
+	if !tt.HasText(msgs.Remaining(5)) {
 		t.Fatalf("leaving the scope did not give the queue back; texts %q", tt.Texts())
 	}
 	if a.reviewScope.Kind != queue.ScopeAll {
 		t.Fatalf("the scope did not reset: %+v", a.reviewScope)
 	}
-	if tt.FramePending() {
-		t.Error("view still requests frames after the scope returned")
-	}
 }
 
-// A tag scope keeps only the cards whose blocks carry the tag, and the picker's
-// label names it.
-func TestReviewScopeChoosesATag(t *testing.T) {
+// A tag scope keeps the cards whose paragraphs carry the tag, and the dialog
+// names the tag the session drew from.
+func TestScopeDialogChoosesATag(t *testing.T) {
 	msgs := locales.In("en")
 	a, _ := newTestApp(t)
 	scopeSeed(t, a)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	recallQueue(tt)
+	recallPage(tt)
 
-	if err := tt.Click(msgs.ReviewScopeMenu()); err != nil {
+	if err := tt.Click(scopeButtonName(msgs, msgs.ReviewScope())); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem(msgs.ReviewScopeTags(), "chapter"); err != nil {
-		t.Fatalf("the tag was not chosen: %v; items %q", err, tt.Menu())
+	tt.Frame()
+	clickRole(t, tt, ui.RoleRadio, msgs.RecallScopeTag())
+	clickRole(t, tt, ui.RoleRadio, "#chapter")
+	if !tt.HasText(msgs.RecallScopeTake(1)) {
+		t.Fatalf("the dialog does not count the tag's cards; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.RecallScopeStart()); err != nil {
+		t.Fatal(err)
 	}
 	tt.Advance(320 * time.Millisecond)
 
-	if _, ok := tt.Find(msgs.ReviewScopeEmpty()); !ok {
-		t.Fatalf("the tag scope did not narrow to its cards; texts %q", tt.Texts())
+	if !tt.HasText(msgs.Remaining(1)) {
+		t.Fatalf("the tag scope did not narrow the session; texts %q", tt.Texts())
 	}
 	if a.reviewScope.Tag != "chapter" {
 		t.Fatalf("the app did not take the tag scope: %+v", a.reviewScope)
 	}
-	if _, ok := tt.Find("#chapter"); !ok {
-		t.Fatalf("the picker does not name the tag; texts %q", tt.Texts())
+	tt.Key(0, ui.KeyEscape)
+	tt.Advance(320 * time.Millisecond)
+	if !tt.HasText(scopeButtonName(msgs, "#chapter")) {
+		t.Fatalf("the button does not name the tag; texts %q", tt.Texts())
+	}
+}
+
+// A scope with nothing due disables the dialog's action and says why: a scope of
+// its own can name a note nobody owes today.
+func TestScopeDialogRefusesAnEmptyScope(t *testing.T) {
+	msgs := locales.In("en")
+	a, _ := newTestApp(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	recallPage(tt)
+
+	if err := tt.Click(scopeButtonName(msgs, msgs.ReviewScope())); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	clickRole(t, tt, ui.RoleRadio, msgs.RecallScopeNote())
+	// Every note is due, so the library gains one whose card waits for later.
+	quiet, err := a.Library().SaveNote(core.Note{Title: "Nothing today", Blocks: []core.Block{
+		{Text: "Quiet asks :: quiet answers"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cards, err := a.Library().CreateCards(quiet.Blocks[0].ID, []core.Derived{{Type: core.TypeBasic}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cards[0].Status = core.StatusSuspended
+	if err := a.Library().SaveCard(cards[0]); err != nil {
+		t.Fatal(err)
+	}
+	a.reload()
+	tt.Frame()
+	clickRole(t, tt, ui.RoleRadio, quiet.Title)
+
+	if !tt.HasText(msgs.RecallScopeTake(0)) || !tt.HasText(msgs.RecallStartEmpty()) {
+		t.Fatalf("an empty scope does not say why it cannot start; texts %q", tt.Texts())
+	}
+	// The action is disabled, so the click lands nowhere: the dialog stays open
+	// and no session starts.
+	if err := tt.Click(msgs.RecallScopeStart()); err != nil {
+		t.Fatalf("the action has no box: %v", err)
+	}
+	tt.Frame()
+	if a.session != sessionNone {
+		t.Errorf("an empty scope entered the session: %v", a.session)
+	}
+	if !tt.HasText(msgs.RecallScopeTake(0)) {
+		t.Fatalf("the disabled action closed the dialog; texts %q", tt.Texts())
 	}
 }

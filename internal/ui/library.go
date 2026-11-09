@@ -385,6 +385,7 @@ func (a *App) loadCurrent() {
 	case sessionReview:
 		a.preview, a.hasPreview = a.previewFor()
 		a.summary, a.hasSummary = a.summaryFor()
+		a.blockCards = a.cardsByBlock()
 		return
 	case sessionReading:
 		// The reading screen reads the queue reload derived; it has nothing
@@ -413,8 +414,7 @@ func (a *App) loadCurrent() {
 			a.loadBrowse()
 			return
 		}
-		a.preview, a.hasPreview = a.previewFor()
-		a.summary, a.hasSummary = a.summaryFor()
+		a.loadRecall()
 	case areaStats:
 		a.loadStats()
 	case areaSettings:
