@@ -1,6 +1,8 @@
 package notes
 
 import (
+	"fmt"
+
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
@@ -8,59 +10,98 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// cardsStrip shows the note's card paragraphs as badges: how many cards each
-// feeds, and a button that edits the overrides of each. It sits above the
-// document rather than in a gutter, so that it never covers the text it
-// describes.
-func (s *State) cardsStrip(c *ui.Context, tk design.Tokens, d Deps) {
-	paras := d.Cards(s.Draft)
-	if len(paras) == 0 {
-		return
+// gutterBadge is one paragraph's card badge in the gutter: how many cards read
+// the paragraph, and the shape the state draws — a card due now, one never
+// answered, one that comes later, and one that stopped following the paragraph.
+// The words beside the number say the state, and the whole badge is the way into
+// the paragraph's inspector (S11, S20).
+func (s *State) gutterBadge(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps, badge Badge, block core.ID) {
+	label := msgs.CardOnParagraph(badge.Cards, badge.Paragraph)
+	count := itoa(badge.Cards)
+	edge, ink := badgeEdge(tk, badge.State)
+	if badge.State == BadgeLost {
+		count = "!" + count
 	}
-	msgs := locales.In(c.Locale())
-	ui.ScrollHorizontal(c).Children(func() {
-		ui.Row(c).Gap(tk.SpaceS).Padding(tk.SpaceXS, 0).Children(func() {
-			for _, para := range paras {
-				for _, card := range para.Cards {
-					label := msgs.CardOnParagraph(para.Paragraph, len(para.Cards))
-					badge := ui.ButtonBase(c.Key(string(card.ID))).
-						Padding(tk.SpaceXS, tk.SpaceS).MinHeight(tk.Control-tk.SpaceS).
-						Radius(tk.RadiusControl).Background(tk.Surface).
-						Border(tk.Hairline, tk.RatingEdge(cardColour(tk, card))).
-						Label(label).Tooltip(msgs.EditCard()).
-						OnClick(func() { d.OpenCardEdit(c, card.ID) })
-					badge.Children(func() {
-						tk.Icon(c, cardIcon(card), design.IconSmall).
-							TextColor(cardColour(tk, card))
-						ui.Text(c, label).FontSize(tk.TypeUI).TextColor(tk.Text)
-					})
-				}
-			}
-		})
+	// The badge says how many cards with its number, and what state they are in
+	// with its shape; the words for both are its description and its tip, so the
+	// shape is never the only thing that carries the meaning.
+	button := ui.ButtonBase(c.Key(fmt.Sprintf("block-badge-%d", badge.Paragraph))).
+		Size(blockHandle-3, blockHandle-3).Radius(tk.RadiusControl).Justify(ui.Center).
+		Background(tk.Surface).Border(tk.Hairline, edge).BorderStyle(badgeBorder(badge.State)).
+		Description(badgeStateWord(msgs, badge.State)).
+		Tooltip(label + " · " + badgeStateWord(msgs, badge.State)).
+		Label(label).Cursor(ui.CursorPointer)
+	if button.Hovered() {
+		button.Background(tk.SurfaceHover)
+	}
+	button.Children(func() {
+		ui.Text(c, count).FontSize(tk.TypeCaption).TextColor(ink)
 	})
-}
-
-// cardIcon names a card's state in the strip: a card that is still fed by its
-// paragraph, one whose snapshot stopped following it, one whose source is gone.
-func cardIcon(card core.Card) string {
-	switch {
-	case card.Ref.Frozen != nil:
-		return "snowflake"
-	case card.Status == core.StatusSuspended:
-		return "moon"
-	default:
-		return "sparkles"
+	if button.Clicked() {
+		s.openInspector(c, d, block)
 	}
 }
 
-// cardColour is the badge's edge for the state the icon names.
-func cardColour(tk design.Tokens, card core.Card) ui.Color {
-	switch {
-	case card.Ref.Frozen != nil:
-		return tk.Warning
-	case card.Status == core.StatusSuspended:
-		return tk.TextMuted
-	default:
-		return tk.Accent
+// badgeEdge is the badge's border and number for the state its shape draws: a
+// due card's edge is the mark colour, a new card's is dashed, a later one is
+// faint, and one that stopped following its paragraph is the warning colour.
+func badgeEdge(tk design.Tokens, state BadgeState) (edge, ink ui.Color) {
+	switch state {
+	case BadgeDue:
+		return tk.Accent, tk.Accent
+	case BadgeNew:
+		return tk.BorderStrong, tk.Text
+	case BadgeLost:
+		return tk.Warning, tk.Warning
 	}
+	return tk.Border, tk.TextMuted
+}
+
+// badgeBorder is the badge's edge style for the state: only a new card's is
+// dashed, so the shape alone says "never answered".
+func badgeBorder(state BadgeState) ui.BorderStyle {
+	if state == BadgeNew {
+		return ui.BorderDashed
+	}
+	return ui.BorderSolid
+}
+
+// badgeStateWord names the state in words, so the shape and the colour never
+// carry the meaning alone.
+func badgeStateWord(msgs locales.Messages, state BadgeState) string {
+	switch state {
+	case BadgeDue:
+		return msgs.BadgeDue()
+	case BadgeNew:
+		return msgs.BadgeNew()
+	case BadgeLost:
+		return msgs.BadgeLost()
+	}
+	return msgs.BadgeLater()
+}
+
+// blockBadges is the badges of the note's paragraphs by their place, which is
+// how the gutter finds one for a paragraph box.
+func blockBadges(d Deps, note core.Note) map[int]Badge {
+	if d.Badges == nil {
+		return nil
+	}
+	badges := d.Badges(note)
+	if len(badges) == 0 {
+		return nil
+	}
+	out := make(map[int]Badge, len(badges))
+	for _, badge := range badges {
+		out[badge.Paragraph] = badge
+	}
+	return out
+}
+
+// blockOfParagraph is the block one of the note's paragraphs holds, false when
+// the draft is shorter than the document the editor shows.
+func (s *State) blockOfParagraph(index int) (core.Block, bool) {
+	if index < 0 || index >= len(s.Draft.Blocks) {
+		return core.Block{}, false
+	}
+	return s.Draft.Blocks[index], true
 }

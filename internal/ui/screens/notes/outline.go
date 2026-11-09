@@ -10,28 +10,25 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// outlineEntry is one heading of the note: what it says, where it starts in the
-// document the editor holds, how deep it sits, and the heading it is under.
+// outlineEntry is one heading of the note: what it says, the paragraph it is
+// (counted from one, as the reader counts), how deep it sits, and the heading it
+// is under.
 type outlineEntry struct {
-	label  string
-	offset int
-	level  int
-	parent int // the entry this one sits under, -1 at the top
+	label     string
+	paragraph int
+	level     int
+	parent    int // the entry this one sits under, -1 at the top
 }
 
 // outlineEntries reads a note's blocks into its headings, in document order. The
 // blocks carry the Markdown source — the editor keeps a heading's hashes as
-// style, not text — and the offset is where the heading starts in the document
-// the editor holds. A heading is a child of the last heading above it that is
-// shallower, which is the tree the panel shows.
+// style, not text — and each entry names the paragraph it is, which is what the
+// editor is asked to show. A heading is a child of the last heading above it
+// that is shallower, which is the tree the panel shows.
 func outlineEntries(blocks []core.Block) []outlineEntry {
 	var out []outlineEntry
 	last := [7]int{-1, -1, -1, -1, -1, -1, -1}
-	offset := 0
 	for i, block := range blocks {
-		if i > 0 {
-			offset += 2 // the blank line between blocks
-		}
 		if level, label := heading(strings.TrimSpace(block.Text)); level > 0 {
 			parent := -1
 			for l := level - 1; l >= 1; l-- {
@@ -40,13 +37,12 @@ func outlineEntries(blocks []core.Block) []outlineEntry {
 					break
 				}
 			}
-			out = append(out, outlineEntry{label: label, offset: offset, level: level, parent: parent})
+			out = append(out, outlineEntry{label: label, paragraph: i + 1, level: level, parent: parent})
 			last[level] = len(out) - 1
 			for l := level + 1; l < len(last); l++ {
 				last[l] = -1
 			}
 		}
-		offset += len(block.Text)
 	}
 	return out
 }
@@ -76,9 +72,12 @@ func (s *State) outlineList(c *ui.Context, tk design.Tokens) {
 	msgs := locales.In(c.Locale())
 	entries := outlineEntries(s.Draft.Blocks)
 	if s.Doc == nil || len(entries) == 0 {
-		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, 0).Children(func() {
+		ui.Row(c).AlignItems(ui.Start).Gap(tk.SpaceS).Padding(tk.SpaceS, 0).Children(func() {
 			tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.TextFaint)
-			ui.Text(c, msgs.OutlineEmpty()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+			ui.Column(c).Grow(1).MinWidth(0).Gap(tk.SpaceXS).Children(func() {
+				ui.Text(c, msgs.OutlineEmpty()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+				ui.Text(c, msgs.OutlineEmptyHint()).FontSize(tk.TypeCaption).TextColor(tk.TextFaint)
+			})
 		})
 		return
 	}
@@ -94,7 +93,7 @@ func (s *State) outlineList(c *ui.Context, tk design.Tokens) {
 	s.openOutline(entries)
 	// The caret marks the heading it is under; the choice stays the user's, so a
 	// click on a row is always a choice and never just a remark about the caret.
-	s.OutlineCurrent = headingAt(entries, s.caretOffset())
+	s.OutlineCurrent = headingAt(entries, s.caretParagraph())
 	s.outline.List.Selected = &s.outlineChosen
 	s.outline.List.Label = func(row int) string { return entries[s.outline.Item(row)].label }
 	list := ui.Outline(c, &s.outline, roots, func(i int) []int { return children[i] }, func(i int) {
@@ -109,7 +108,7 @@ func (s *State) outlineList(c *ui.Context, tk design.Tokens) {
 	// jumps again, for a reader who scrolled away from it.
 	if list.Changed() || list.Submitted() {
 		if i := s.outline.Item(s.outlineChosen); i >= 0 && i < len(entries) {
-			s.pendingJump = entries[i].offset
+			s.pendingJump = entries[i].paragraph
 		}
 	}
 }
@@ -132,11 +131,11 @@ func (s *State) openOutline(entries []outlineEntry) {
 	s.outlineFor, s.outlineShape = s.Draft.ID, len(entries)
 }
 
-// headingAt is the heading the offset falls under, -1 before the first one.
-func headingAt(entries []outlineEntry, offset int) int {
+// headingAt is the heading the paragraph is under, -1 before the first one.
+func headingAt(entries []outlineEntry, paragraph int) int {
 	at := -1
 	for i, entry := range entries {
-		if entry.offset > offset {
+		if entry.paragraph > paragraph {
 			break
 		}
 		at = i
@@ -144,21 +143,47 @@ func headingAt(entries []outlineEntry, offset int) int {
 	return at
 }
 
-// caretOffset is where the caret sits in the document the editor holds.
-func (s *State) caretOffset() int {
-	if s.Doc == nil {
+// caretParagraph is the paragraph the caret sits in, counted from one as the
+// reader counts; zero before the editor has one.
+func (s *State) caretParagraph() int {
+	at, ok := s.ParagraphAtCaret()
+	if !ok {
 		return 0
 	}
-	_, caret := s.Doc.Selection()
-	return caret
+	return at + 1
 }
 
 // jumpInDocument puts the caret on a paragraph of the note open now, which the
 // editor scrolls into view.
-func (s *State) jumpInDocument(c *ui.Context, offset int) {
+func (s *State) jumpInDocument(c *ui.Context, paragraph int) {
 	if s.Doc == nil {
 		return
 	}
-	s.Doc.SetSelection(offset, offset)
+	at := s.OffsetOfParagraph(paragraph)
+	if at < 0 {
+		return
+	}
+	s.Doc.SetSelection(at, at)
 	s.body.Focus(c)
+}
+
+// OffsetOfParagraph is where a paragraph starts in the editor's own text,
+// counted from one as the reader counts; -1 when the note has fewer paragraphs.
+func (s *State) OffsetOfParagraph(paragraph int) int {
+	if s.Doc == nil || paragraph < 1 {
+		return -1
+	}
+	at, index := 0, 1
+	for _, held := range s.Doc.Text().Paragraphs() {
+		if index == paragraph {
+			return at
+		}
+		length := 0
+		for _, run := range held.Runs {
+			length += len([]rune(run.Text))
+		}
+		at += length + 1
+		index++
+	}
+	return -1
 }

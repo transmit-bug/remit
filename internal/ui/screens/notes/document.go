@@ -2,7 +2,6 @@ package notes
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/transmit-bug/remit/internal/core"
 )
@@ -123,42 +122,4 @@ func carryBlockIDs(ids []core.ID, at int, prev, now []core.Block) {
 	for i := 0; i < len(prev) && i < len(now); i++ {
 		ids[at+i] = prev[i].ID
 	}
-}
-
-// paragraphAt is the paragraph of text the offset falls in, as a range: blank
-// lines separate paragraphs, as they separate blocks.
-func paragraphAt(text string, offset int) (start, end int) {
-	if offset < 0 {
-		offset = 0
-	}
-	if offset > len(text) {
-		offset = len(text)
-	}
-	start = strings.LastIndex(text[:offset], "\n\n")
-	if start < 0 {
-		start = 0
-	} else {
-		start += 2
-	}
-	end = strings.Index(text[offset:], "\n\n")
-	if end < 0 {
-		return start, len(text)
-	}
-	return start, offset + end
-}
-
-// ParagraphOffset is where a paragraph starts in the document's text, counted
-// from one as the panel counts; -1 when the note has fewer paragraphs.
-func ParagraphOffset(text string, paragraph int) int {
-	if paragraph < 1 {
-		return -1
-	}
-	at := 0
-	for i, part := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n\n") {
-		if i+1 == paragraph {
-			return at
-		}
-		at += utf8.RuneCountInString(part) + 2
-	}
-	return -1
 }

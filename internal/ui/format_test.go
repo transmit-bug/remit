@@ -67,11 +67,25 @@ func TestViewModesSwitchPanes(t *testing.T) {
 		t.Fatalf("the view switch has no split mode: %v", err)
 	}
 	tt.Advance(320 * time.Millisecond)
-	if _, ok := tt.Find(msgs.NoteBody()); !ok {
-		t.Errorf("the document is missing in split view; texts %q", tt.Texts())
+	editor, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the document is missing in split view; texts %q", tt.Texts())
 	}
 	if !tt.HasText("The first part") {
 		t.Errorf("the reading pane is missing in split view; texts %q", tt.Texts())
+	}
+	// The two halves share the room: the reading pane is a second document to
+	// the right of the editor, and neither takes the other's.
+	reading, ok := tt.Find("The first part")
+	if !ok {
+		t.Fatalf("the reading pane has no text; texts %q", tt.Texts())
+	}
+	if reading.X < editor.X+editor.W-editor.W/4 {
+		t.Errorf("the reading pane at %v is not beside the editor at %v", reading, editor)
+	}
+	mid := editor.X + editor.W/2
+	if reading.X < mid {
+		t.Errorf("the reading pane starts at %v, inside the editor's half ending at %v", reading.X, mid)
 	}
 
 	if err := tt.Click(msgs.ViewEdit()); err != nil {

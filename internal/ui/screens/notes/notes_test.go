@@ -26,6 +26,8 @@ type fake struct {
 	tags      map[string]int
 	backlinks []notes.Backlink
 	groups    []notes.CardGroup
+	badges    []notes.Badge
+	marks     map[core.ID]notes.Mark
 	due       int
 
 	reloads   int
@@ -34,6 +36,18 @@ type fake struct {
 	saved     []core.Note
 	documents []core.Note
 	edits     []core.ID
+	newCards  []core.ID
+	details   []core.ID
+	clozes    [][3]string
+	excerpts  []core.ID
+	opened    []core.ID
+	inspected []core.ID
+	boarded   []core.ID
+	locateIn  []core.ID
+	shown     map[core.ID]notes.Inspector
+	onBoard   bool
+	plugged   int
+	failSaves int
 
 	chooseImage func() (string, error)
 	putAsset    func([]byte, string) (string, error)
@@ -42,20 +56,47 @@ type fake struct {
 
 func (f *fake) deps() notes.Deps {
 	d := notes.Deps{
-		Notes:      func() []notes.Note { return f.library },
-		Tags:       func() map[string]int { return f.tags },
-		Backlinks:  func() []notes.Backlink { return f.backlinks },
-		Cards:      func(core.Note) []notes.CardGroup { return f.groups },
+		Notes:     func() []notes.Note { return f.library },
+		Tags:      func() map[string]int { return f.tags },
+		Backlinks: func() []notes.Backlink { return f.backlinks },
+		Cards:     func(core.Note) []notes.CardGroup { return f.groups },
+		Badges:    func(core.Note) []notes.Badge { return f.badges },
+		Marks:     func(core.Note) map[core.ID]notes.Mark { return f.marks },
+		Inspector: func(id core.ID) (notes.Inspector, bool) {
+			f.inspected = append(f.inspected, id)
+			shown, ok := f.shown[id]
+			return shown, ok
+		},
 		Due:        func() int { return f.due },
 		Reload:     func() { f.reloads++ },
+		OpenNote:   func(id core.ID) { f.opened = append(f.opened, id) },
 		OpenReview: func() { f.reviews++ },
 		NewNote:    func(*ui.Context) { f.newNotes++ },
 		SaveNote:   func(_ *ui.Context, n core.Note) (core.Note, bool) { f.saved = append(f.saved, n); return n, true },
 		SaveDocument: func(_ *ui.Context, n core.Note) (core.Note, bool) {
 			f.documents = append(f.documents, n)
+			if f.failSaves > 0 {
+				f.failSaves--
+				return core.Note{}, false
+			}
 			return n, true
 		},
 		OpenCardEdit: func(_ *ui.Context, id core.ID) { f.edits = append(f.edits, id) },
+		OpenCardEditor: func(_ *ui.Context, id core.ID) {
+			f.newCards = append(f.newCards, id)
+		},
+		OpenCardDetail: func(_ *ui.Context, id core.ID) { f.details = append(f.details, id) },
+		ClozeSelection: func(_ *ui.Context, note, block core.ID, selected string) bool {
+			f.clozes = append(f.clozes, [3]string{string(note), string(block), selected})
+			return true
+		},
+		Excerpt: func(_ *ui.Context, note, block core.ID) {
+			f.excerpts = append(f.excerpts, block)
+		},
+		LocateOnBoard: func(_ *ui.Context, id core.ID) { f.boarded = append(f.boarded, id) },
+		BlockItems: func(*ui.Context) []notes.BlockItem {
+			return []notes.BlockItem{{Label: "Plugin block action", Run: func(*ui.Context) { f.plugged++ }}}
+		},
 	}
 	if f.chooseImage != nil {
 		d.ChooseImage = f.chooseImage
@@ -91,6 +132,7 @@ func newFake() *fake {
 		library: notebook,
 		tags:    map[string]int{"memory": 1, "writing": 1},
 		groups:  []notes.CardGroup{{Paragraph: 2, Cards: []core.Card{{ID: "card-1"}}}},
+		badges:  []notes.Badge{{Paragraph: 2, Cards: 1, State: notes.BadgeNew}},
 		due:     4,
 	}
 }
@@ -137,10 +179,15 @@ func TestPanes(t *testing.T) {
 			if !panel {
 				t.Fatalf("the panel is missing; texts %q", tt.Texts())
 			}
-			for _, text := range []string{"The first part", "The second part", msgs.CardOnParagraph(2, 1)} {
+			for _, text := range []string{"The first part", "The second part"} {
 				if !tt.HasText(text) {
 					t.Fatalf("missing %q; texts %q", text, tt.Texts())
 				}
+			}
+			// The paragraph's cards are its gutter badge, wherever the window
+			// puts the panel: the badge strip above the document is gone.
+			if _, ok := tt.Find(msgs.CardOnParagraph(1, 2)); !ok {
+				t.Errorf("the paragraph has no badge; texts %q", tt.Texts())
 			}
 			if !tt.HasText(msgs.NoteBody()) {
 				t.Errorf("the document is not drawn; texts %q", tt.Texts())
@@ -220,10 +267,9 @@ func TestOutlineJumpsToItsParagraph(t *testing.T) {
 		t.Fatalf("the outline does not offer the heading: %v", err)
 	}
 	tt.Frame()
-	want := notes.ParagraphOffset(notes.DocumentText(s.Draft), 3) // the heading's own paragraph
-	_, caret := s.Doc.Selection()
-	if caret != want {
-		t.Errorf("the caret is at %d, want the second heading at %d", caret, want)
+	// The heading is the note's third paragraph, and the caret is in it.
+	if at, ok := s.ParagraphAtCaret(); !ok || at != 2 {
+		t.Errorf("the caret is in paragraph %d, want the second heading's", at+1)
 	}
 	if !tt.Focused("Note") {
 		t.Error("the document did not take the focus after the jump")
@@ -420,9 +466,8 @@ func TestBacklinkOpensItsNote(t *testing.T) {
 	if s.Selected != "note-2" {
 		t.Fatalf("the notebook chose %q, want note-2", s.Selected)
 	}
-	want := notes.ParagraphOffset(notes.DocumentText(s.Draft), 2)
-	if _, caret := s.Doc.Selection(); caret != want {
-		t.Errorf("the caret is at %d, want the linking paragraph at %d", caret, want)
+	if at, ok := s.ParagraphAtCaret(); !ok || at != 1 {
+		t.Errorf("the caret is in paragraph %d, want the paragraph that links here", at+1)
 	}
 }
 
@@ -448,20 +493,6 @@ func TestFindInTheOpenNote(t *testing.T) {
 	}
 	if !s.FindOpen {
 		t.Error("the bar closed itself")
-	}
-}
-
-// A card badge is the way to its overrides: the click goes back to the app with
-// the card it names.
-func TestBadgeOpensTheFieldEditor(t *testing.T) {
-	f := newFake()
-	_, tt := at(t, f, 1024, 720)
-
-	if err := tt.Click(locales.In("en").CardOnParagraph(2, 1)); err != nil {
-		t.Fatalf("open the card's overrides: %v", err)
-	}
-	if len(f.edits) != 1 || f.edits[0] != "card-1" {
-		t.Errorf("the screen asked for %v, want card-1", f.edits)
 	}
 }
 

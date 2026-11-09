@@ -9,7 +9,6 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
-	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -56,8 +55,7 @@ func TestDeleteBlockWarnsBeforeCardLoss(t *testing.T) {
 	msgs := locales.In("en")
 	f := newFake()
 	s, tt := at(t, f, 1024, 720)
-	text := notes.DocumentText(s.Draft)
-	at := notes.ParagraphOffset(text, 2)
+	at := s.OffsetOfParagraph(2)
 	s.Doc.SetSelection(at, at)
 	tt.Frame()
 

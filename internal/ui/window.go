@@ -56,9 +56,12 @@ func (a *App) contextActions(c *ui.Context, tk design.Tokens) {
 	toolbarRule(c, tk)
 	a.viewSwitch(c, tk, msgs)
 	toolbarRule(c, tk)
-	iconButton(c, tk, msgs.PanelTitle(), "panel-right", false, func() {
+	// The panel's own button holds the focus the panel gives back, so closing
+	// it leaves the keyboard where the user opened it.
+	w, _ := c.Size()
+	iconButton(c, tk, msgs.PanelTitle(), "panel-right", a.notes.PanelVisible(w), func() {
 		a.notes.TogglePanel(c)
-	})
+	}).Bind(&a.notes.PanelToggle)
 }
 
 // viewSwitch is the note page's three ways of looking at the same document:
@@ -165,6 +168,15 @@ func (a *App) shortcuts(c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.KeyD, func() { a.openDailyNote(c) })
 	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyO, func() { a.showPanel(notes.PanelOutline) })
 	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyB, func() { a.showPanel(notes.PanelBacklinks) })
+
+	// The document's own keys: a note read whole is read with the keyboard, so
+	// E takes the paragraph on screen out into a note and M goes back to
+	// writing it. They exist only in the reading view, which has no field to
+	// type into, and they wait while a session has the window.
+	if a.area == areaWrite && a.sub == subNotes && a.session == sessionNone && a.notes.View == notes.Read {
+		c.OnShortcut(0, ui.KeyE, func() { a.excerptReadBlock(c) })
+		c.OnShortcut(0, ui.KeyM, func() { a.notes.View = notes.Edit })
+	}
 
 	// The card's keys belong to the session, not to the recall area: the queue
 	// page has its own actions, and a digit there is not a grade.

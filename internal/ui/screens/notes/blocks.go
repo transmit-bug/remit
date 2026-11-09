@@ -12,8 +12,6 @@ import (
 )
 
 const (
-	// blockGutter is the room left of the writing for its block controls.
-	blockGutter float32 = 48
 	// blockHandle is the height of one paragraph's handle, lined up with its
 	// first line.
 	blockHandle float32 = 24
@@ -89,19 +87,27 @@ func (s *State) blockHighlight(c *ui.Context, tk design.Tokens, boxes []richtext
 	}
 }
 
-// blockHandles draws the controls beside the current paragraph: the one under
-// the pointer from the last frame, or the caret's. The menu button stays while
-// its menu is open, so moving the pointer into the menu does not make its
-// anchor disappear.
+// blockHandles draws the gutter beside every visible paragraph: its card badge
+// above, and — for the paragraph under the pointer, or the caret's — the `+`
+// and the drag handle below it. The gutter is the paper's own room, sized by the
+// theme, so the writing is never covered; the menu button stays while its menu
+// is open, so moving the pointer into the menu does not make its anchor
+// disappear.
 func (s *State) blockHandles(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps, action *blockAction) {
 	boxes := s.Doc.VisibleParagraphs()
 	active := activeBlock(boxes, s.caret(), s.blockHover)
+	badges := blockBadges(d, s.Draft)
 	hovered := -1
 	for _, box := range boxes {
+		badge, hasBadge := badges[box.Index+1]
+		height := blockHandle
+		if hasBadge {
+			height += blockHandle
+		}
 		row := ui.Row(c.Key(fmt.Sprintf("block-gutter-%d", box.Index))).
-			Absolute().Left(-blockGutter).Top(max(0, box.Top)).
-			Width(blockGutter).Height(blockHandle).
-			AlignItems(ui.Center).Justify(ui.End).Gap(2)
+			Absolute().Left(-tk.Gutter).Top(max(0, box.Top)).
+			Width(tk.Gutter).Height(height).
+			AlignItems(ui.End).Justify(ui.End)
 		isHovered := row.Hovered()
 		if isHovered {
 			hovered = box.Index
@@ -109,25 +115,35 @@ func (s *State) blockHandles(c *ui.Context, tk design.Tokens, msgs locales.Messa
 		open := s.blockMenus[box.Index]
 		shown := box.Index == active || open
 		row.Children(func() {
-			if shown {
-				plus := blockButton(c, tk, fmt.Sprintf("block-add-%d", box.Index), "plus", msgs.AddBlockBelow()).
-					Tooltip(msgs.AddBlockBelow())
-				if plus.Clicked() {
-					*action = blockAction{kind: blockActionInsert, start: box.Start}
+			ui.Column(c).AlignItems(ui.End).Justify(ui.Start).Gap(0).Children(func() {
+				if hasBadge {
+					if block, ok := s.blockOfParagraph(box.Index); ok {
+						s.gutterBadge(c, tk, msgs, d, badge, block.ID)
+					}
 				}
-			}
+				controls := ui.Row(c).AlignItems(ui.Center).Justify(ui.End).Gap(2)
+				controls.Children(func() {
+					if shown {
+						plus := blockButton(c, tk, fmt.Sprintf("block-add-%d", box.Index), "plus", msgs.AddBlockBelow()).
+							Tooltip(msgs.AddBlockBelow())
+						if plus.Clicked() {
+							*action = blockAction{kind: blockActionInsert, start: box.Start}
+						}
+					}
 
-			grip := blockButton(c, tk, fmt.Sprintf("block-menu-%d", box.Index), "grip-vertical", msgs.BlockActionsFor(box.Index+1)).
-				Tooltip(msgs.DragBlockFor(box.Index + 1)).Cursor(ui.CursorGrab)
-			if !shown {
-				grip.Opacity(0)
-			}
-			if grip.Clicked() {
-				open = !open
-			}
-			if shown {
-				s.blockMenu(c, tk, msgs, d, box, grip, &open, action)
-			}
+					grip := blockButton(c, tk, fmt.Sprintf("block-menu-%d", box.Index), "grip-vertical", msgs.BlockActionsFor(box.Index+1)).
+						Tooltip(msgs.DragBlockFor(box.Index + 1)).Cursor(ui.CursorGrab)
+					if !shown {
+						grip.Opacity(0)
+					}
+					if grip.Clicked() {
+						open = !open
+					}
+					if shown {
+						s.blockMenu(c, tk, msgs, d, box, grip, &open, action)
+					}
+				})
+			})
 			if open {
 				if s.blockMenus == nil {
 					s.blockMenus = map[int]bool{}
@@ -172,13 +188,20 @@ func (s *State) blockMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 					*open = false
 				}
 				cards := blockCards(d, s.Draft, box.Index)
-				if row("delete", msgs.DeleteBlock(), false, len(s.Draft.Blocks) <= 1, true).Clicked() {
+				last := len(s.Draft.Blocks) <= 1
+				if row("delete", msgs.DeleteBlock(), false, last, true).Clicked() && !last {
 					if cards > 0 {
 						s.blockDelete, s.blockLost = box.Index, cards
 					} else {
 						*action = blockAction{kind: blockActionDelete, from: box.Index}
 					}
 					*open = false
+				}
+				if last {
+					// A disabled item shows no tooltip, so the reason a note keeps a
+					// paragraph is a line of its own.
+					ui.Text(c, msgs.LastBlockKept()).FontSize(tk.TypeLabel).
+						TextColor(tk.TextFaint).Padding(tk.SpaceXS, tk.SpaceS).MaxWidth(220)
 				}
 				ui.Divider(c)
 				for _, choice := range []struct {
@@ -198,6 +221,35 @@ func (s *State) blockMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 					if row("style-"+choice.key, choice.name, sameBlockStyle(style, choice.style), false, false).Clicked() {
 						*action = blockAction{kind: blockActionStyle, start: box.Start, style: choice.style}
 						*open = false
+					}
+				}
+				// What the paragraph is for, beside what it looks like: the way
+				// out into a note of its own, a card, and its inspector.
+				block, has := s.blockOfParagraph(box.Index)
+				ui.Divider(c)
+				if row("excerpt", msgs.ExcerptWholeBlock(), false, !has || d.Excerpt == nil, false).Clicked() && has {
+					*open = false
+					d.Excerpt(c, s.Draft.ID, block.ID)
+				}
+				if row("card", msgs.MakeCard(), false, !has || d.OpenCardEditor == nil, false).Clicked() && has {
+					*open = false
+					d.OpenCardEditor(c, block.ID)
+				}
+				if row("inspector", msgs.OpenInspector(), false, !has, false).Clicked() && has {
+					*open = false
+					s.openInspector(c, d, block.ID)
+				}
+				// A plugin's actions for a paragraph sit at the bottom, under
+				// the host's, as every contributed menu does.
+				items := blockItems(d, c)
+				if len(items) == 0 {
+					return
+				}
+				ui.Divider(c)
+				for i, item := range items {
+					if row(fmt.Sprintf("plugin-%d", i), item.Label, false, false, false).Clicked() {
+						*open = false
+						item.Run(c)
 					}
 				}
 			})
@@ -421,17 +473,17 @@ func (s *State) deleteBlock(c *ui.Context, d Deps, at, cards int) {
 // text; the caret goes to the block the user acted on, so the next keystroke
 // lands where the block now is.
 func (s *State) rebuildDocument(c *ui.Context, focus int) {
-	text := DocumentText(s.Draft)
 	if s.Doc == nil {
 		s.Doc = richtext.NewDocument(s.noteDocument())
 	} else {
 		s.Doc.SetText(s.noteDocument())
 	}
-	s.docText = text
+	s.docText = DocumentText(s.Draft)
 	s.rehydrate(s.deps)
 	if focus >= 0 {
-		at := ParagraphOffset(text, focus+1)
-		s.Doc.SetSelection(at, at)
+		if at := s.OffsetOfParagraph(focus + 1); at >= 0 {
+			s.Doc.SetSelection(at, at)
+		}
 	}
 	s.body.Focus(c)
 }
