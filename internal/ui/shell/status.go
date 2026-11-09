@@ -8,16 +8,16 @@ import (
 )
 
 // statusbar is the window's last row: one line about the page on screen, in the
-// smallest type the scale has. A page with nothing to report gets the room back
-// rather than an empty band, and the line is not focusable — it reports, it does
-// not act.
+// smallest type the scale has, centred under the paper it describes. A page with
+// nothing to report gets the room back rather than an empty band, and the line is
+// not focusable — it reports, it does not act.
 func statusbar(c *ui.Context, tk design.Tokens, d Deps) {
 	if len(d.Status) == 0 {
 		return
 	}
 	msgs := locales.In(c.Locale())
 	ui.Row(c).Height(tk.StatusbarHeight).Shrink(0).
-		Padding(0, tk.SpaceL).AlignItems(ui.Center).Gap(tk.SpaceS).
+		Padding(0, tk.SpaceL).AlignItems(ui.Center).Justify(ui.Center).Gap(tk.SpaceS).
 		Background(tk.Surface).
 		BorderWidth(tk.Hairline, 0, 0, 0).BorderColor(tk.Border).
 		Label(msgs.StatusLine()).Children(func() {

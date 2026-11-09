@@ -48,6 +48,7 @@ func TemplatesView(c *ui.Context, s *State, d Deps) {
 			}
 			s.templateList.Key = func(row int) any { return templates[row].ID }
 			s.templateList.Label = func(row int) string { return templates[row].Title }
+			ui.Divider(c)
 			ui.List(c, &s.templateList, len(templates), func(row int) {
 				templateRow(c, tk, msgs, templates[row], d)
 			}).Grow(1).Label(msgs.WriteTemplatesTitle())
@@ -59,7 +60,8 @@ func TemplatesView(c *ui.Context, s *State, d Deps) {
 // it opens with, and the button that starts a note from it.
 func templateRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, template core.Note, d Deps) {
 	ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
-		Padding(tk.SpaceS, tk.SpaceM).Radius(tk.RadiusControl).Children(func() {
+		Padding(tk.SpaceM, tk.SpaceS).
+		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).Children(func() {
 		open := ui.Button(c, "").Label(msgs.WriteTemplateNew()+" "+template.Title).
 			Grow(1).MinHeight(tk.Hit).Padding(tk.SpaceS, tk.SpaceM)
 		if open.Clicked() && d.NewFromTemplate != nil {

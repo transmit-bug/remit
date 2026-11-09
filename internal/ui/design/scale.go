@@ -68,8 +68,11 @@ const (
 	HeatCellLarge float32 = 20
 	HeatGap       float32 = 3
 	HeatWeekday   float32 = 34
-	// FilterPaneWidth is the filter rail the card table keeps on its left.
+	// FilterPaneWidth is the filter rail the card table keeps on its left, and
+	// TableFloor the narrowest the table goes beside it: below that the
+	// filters fold into one row above the table.
 	FilterPaneWidth float32 = 200
+	TableFloor      float32 = 720
 	// The card table's fixed columns: the checkbox that chooses a row, the two
 	// counts read right-aligned, and the date and the name that are read as
 	// words. Every other column shares what the row leaves.

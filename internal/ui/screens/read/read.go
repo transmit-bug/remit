@@ -185,6 +185,7 @@ func queuePage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design
 	now := d.Now()
 	s.queue.Key = func(row int) any { return items[row].Note }
 	s.queue.Label = func(row int) string { return items[row].Title }
+	ui.Divider(c)
 	ui.List(c, &s.queue, len(items), func(i int) {
 		queueRow(c, tk, msgs, items[i], now, d)
 	}).Grow(1).Label(msgs.ReadQueueTitle())
@@ -194,7 +195,8 @@ func queuePage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design
 // queueRow is one note waiting to be read: its title, where the last session
 // stopped, its paragraph progress, and the button that opens the session there.
 func queueRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, it Item, now time.Time, d Deps) {
-	ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Padding(tk.SpaceS, tk.SpaceM).Children(func() {
+	ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Padding(tk.SpaceM, tk.SpaceS).
+		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).Children(func() {
 		ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {
 			ui.Text(c, it.Title).FontSize(tk.TypeUI).SingleLine()
 			ui.Text(c, place(msgs, it, now)).FontSize(tk.TypeLabel).
@@ -264,8 +266,7 @@ func sameDay(a, b time.Time) bool {
 // They are numbers to read, not controls to press.
 func rhythm(c *ui.Context, tk design.Tokens, msgs locales.Messages, counts Counts) {
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		ui.Text(c, msgs.ReadRhythm()).FontSize(tk.TypeLabel).
-			TextColor(tk.TextMuted).Bold()
+		kit.SectionHead(c, tk, msgs.ReadRhythm(), "", nil)
 		kit.StyleCard(c, ui.Row(c).Padding(tk.SpaceM, tk.SpaceL).Gap(tk.SpaceL).
 			AlignItems(ui.Center)).Children(func() {
 			kit.Stat(c, count(counts.Due), msgs.ReadRhythmDue()).Grow(1)
@@ -303,7 +304,7 @@ func archivePage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk desi
 	rows = appendSection(rows, msgs.ReadDismissedSection(), dismissed)
 	if len(rows) == 0 {
 		kit.Empty(c, "square-check", msgs.ReadArchiveEmpty(), func() {
-			ui.Text(c, msgs.ReadArchiveHint()).FontSize(tk.TypeUI).
+			ui.Text(c, msgs.ReadArchiveHint()).FontSize(tk.TypeLabel).
 				TextColor(tk.TextMuted).Wrap()
 		})
 		return
@@ -356,10 +357,11 @@ func appendSection(rows []archiveRow, section string, items []Item) []archiveRow
 // sectionHead is one section's name and how many notes it holds. It stays at the
 // top of the list while its own rows scroll under it.
 func sectionHead(c *ui.Context, tk design.Tokens, msgs locales.Messages, section string, count int) {
-	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, tk.SpaceM).
+	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, 0).
 		Background(tk.Surface).Children(func() {
-		ui.Text(c, section).FontSize(tk.TypeLabel).Bold().TextColor(tk.TextMuted)
-		ui.Badge(c, msgs.ReadNotesMark(count))
+		ui.Text(c, section).FontSize(tk.TypeUI).FontWeight(600)
+		ui.Text(c, msgs.ReadNotesMark(count)).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+		ui.Spacer(c)
 	})
 }
 
@@ -367,7 +369,8 @@ func sectionHead(c *ui.Context, tk design.Tokens, msgs locales.Messages, section
 // the two things that can be done with it — open it in the notebook, or put it
 // back in the queue.
 func archiveRowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, it Item, d Deps) {
-	ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Padding(tk.SpaceS, tk.SpaceM).Children(func() {
+	ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Padding(tk.SpaceM, tk.SpaceS).
+		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).Children(func() {
 		ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {
 			ui.Text(c, it.Title).FontSize(tk.TypeUI).SingleLine()
 			ui.Text(c, archivePlace(msgs, it)).FontSize(tk.TypeLabel).

@@ -19,6 +19,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -81,22 +82,15 @@ func pageHead(c *ui.Context, tk design.Tokens, title, subtitle string) {
 	ui.Column(c).Gap(tk.SpaceXS).Children(func() {
 		ui.Text(c, title).FontSize(tk.TypeH1).Bold()
 		if subtitle != "" {
-			ui.Text(c, subtitle).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+			ui.Text(c, subtitle).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 		}
 	})
 }
 
 // sectionHead is one section's title and its one-line summary, when it has
-// something to summarise.
+// something to summarise: the UI step over the page's title, not a second one.
 func sectionHead(c *ui.Context, tk design.Tokens, title, summary string) {
-	ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-		ui.Text(c, title).FontSize(tk.TypeH2).Bold()
-		if summary == "" {
-			return
-		}
-		ui.Spacer(c)
-		ui.Text(c, summary).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-	})
+	kit.SectionHead(c, tk, title, summary, nil)
 }
 
 // note is a page's one-line explanation: where a number came from, or why two

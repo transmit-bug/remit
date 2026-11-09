@@ -5044,5 +5044,17 @@
   "outlineEmptyHint": "Type / in a paragraph to start a section.",
   "@outlineEmptyHint": {
     "description": "Under the outline's empty state: how a heading is made."
+  },
+  "recallPresetsCardValue": "{count, plural, one {# card} other {# cards}}",
+  "@recallPresetsCardValue": {
+    "description": "How many cards a day's limit allows, as the slider's value."
+  },
+  "recallPresetsMinuteValue": "{count, plural, one {# minute} other {# minutes}}",
+  "@recallPresetsMinuteValue": {
+    "description": "How many minutes a day's limit allows, as the slider's value."
+  },
+  "recallPresetsLapseValue": "{count, plural, one {# lapse} other {# lapses}}",
+  "@recallPresetsLapseValue": {
+    "description": "How often a card must fail to be called hard, as the slider's value."
   }
 }

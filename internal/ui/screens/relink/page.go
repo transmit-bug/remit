@@ -261,5 +261,5 @@ func confirmDialog(c *ui.Context, s *PageState, d PageDeps, msgs locales.Message
 
 // sectionTitle is one section's heading on the page.
 func sectionTitle(c *ui.Context, tk design.Tokens, title string) {
-	ui.Text(c, title).FontSize(tk.TypeH2).Bold()
+	kit.SectionHead(c, tk, title, "", nil)
 }

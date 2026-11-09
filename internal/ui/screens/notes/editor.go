@@ -40,6 +40,7 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 		s.jumpTo = 0
 	}
 
+	w, _ := c.Size()
 	edited, retitled := false, false
 	var blockChange blockAction
 	// The band under the frame: the format bar, then the paper itself. The
@@ -49,9 +50,11 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 		s.saveNotice(c, tk, msgs, d)
 		s.formatBar(c, tk)
 		ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Stretch).Justify(ui.Center).Children(func() {
+			// The margin keeps the block gutter's width: the handles hang in it,
+			// so it does not tighten with the window as the reading view's does.
 			ui.Column(c).Grow(1).MaxWidth(tk.PaperWidth).
 				Padding(tk.SpaceXXL, tk.Gutter).Children(func() {
-				title := ui.TextInput(c, &note.Title).FontSize(tk.TypeDisplay).Bold().
+				title := ui.TextInput(c, &note.Title).FontSize(displaySize(tk, w)).Bold().
 					Placeholder(msgs.NoteTitle()).Bind(&s.title).
 					Label(msgs.NoteTitle()).
 					Background(ui.RGBA(0, 0, 0, 0)).Border(0, tk.Border).
@@ -361,10 +364,7 @@ func (s *State) saveNotice(c *ui.Context, tk design.Tokens, msgs locales.Message
 	if !s.saveFailed {
 		return
 	}
-	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, tk.SpaceL).
-		Background(tk.Danger.Alpha(0.10)).Children(func() {
-		tk.Icon(c, "circle-alert", design.IconSmall).TextColor(tk.Danger)
-		ui.Text(c, msgs.SaveFailed()).FontSize(tk.TypeUI).TextColor(tk.Danger).Grow(1)
+	kit.Notice(c, "circle-alert", msgs.SaveFailed(), tk.Danger, func() {
 		if ui.Button(c, msgs.NoteRetry()).MinHeight(tk.Control).Clicked() {
 			s.retrySave(c, d)
 		}

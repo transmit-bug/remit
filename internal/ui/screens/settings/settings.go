@@ -102,8 +102,8 @@ func View(c *ui.Context, s *State, d Deps) {
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
 			ui.Column(c).FillWidth().MaxWidth(tk.SettingsWidth).Gap(tk.SpaceL).Children(func() {
-				ui.Text(c, pageTitle(msgs, page)).FontSize(tk.TypeH2).Bold()
-				ui.Text(c, pageLead(msgs, page)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+				ui.Text(c, pageTitle(msgs, page)).FontSize(tk.TypeH1).Bold()
+				ui.Text(c, pageLead(msgs, page)).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 				ui.Form(c, func() {
 					switch page {
 					case PageReview:

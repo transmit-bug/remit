@@ -13550,3 +13550,49 @@ func OutlineEmptyHint() string { return In(i18n.Locale()).OutlineEmptyHint() }
 func (msgs Messages) OutlineEmptyHint() string {
 	return Catalog.Format(msgs.locale, "outlineEmptyHint", nil)
 }
+
+// RecallPresetsCardValue says "{count, plural, one {# card} other {# cards}}"
+// in the language the app shows.
+//
+// How many cards a day's limit allows, as the slider's value.
+func RecallPresetsCardValue(count int) string { return In(i18n.Locale()).RecallPresetsCardValue(count) }
+
+// RecallPresetsCardValue says "{count, plural, one {# card} other {# cards}}"
+// in the language of msgs.
+//
+// How many cards a day's limit allows, as the slider's value.
+func (msgs Messages) RecallPresetsCardValue(count int) string {
+	return Catalog.Format(msgs.locale, "recallPresetsCardValue", map[string]any{"count": count})
+}
+
+// RecallPresetsMinuteValue says "{count, plural, one {# minute} other {# minutes}}"
+// in the language the app shows.
+//
+// How many minutes a day's limit allows, as the slider's value.
+func RecallPresetsMinuteValue(count int) string {
+	return In(i18n.Locale()).RecallPresetsMinuteValue(count)
+}
+
+// RecallPresetsMinuteValue says "{count, plural, one {# minute} other {# minutes}}"
+// in the language of msgs.
+//
+// How many minutes a day's limit allows, as the slider's value.
+func (msgs Messages) RecallPresetsMinuteValue(count int) string {
+	return Catalog.Format(msgs.locale, "recallPresetsMinuteValue", map[string]any{"count": count})
+}
+
+// RecallPresetsLapseValue says "{count, plural, one {# lapse} other {# lapses}}"
+// in the language the app shows.
+//
+// How often a card must fail to be called hard, as the slider's value.
+func RecallPresetsLapseValue(count int) string {
+	return In(i18n.Locale()).RecallPresetsLapseValue(count)
+}
+
+// RecallPresetsLapseValue says "{count, plural, one {# lapse} other {# lapses}}"
+// in the language of msgs.
+//
+// How often a card must fail to be called hard, as the slider's value.
+func (msgs Messages) RecallPresetsLapseValue(count int) string {
+	return Catalog.Format(msgs.locale, "recallPresetsLapseValue", map[string]any{"count": count})
+}

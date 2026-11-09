@@ -10,11 +10,10 @@
 // which a hand-built row would have cost.
 //
 // One deliberate departure from the spec's rail vocabulary: the area chosen
-// keeps ui.Sidebar's own selected state rather than a second accent tint. The
-// sidebar paints that state from its focus — the accent while it has the
-// keyboard, gray while it does not — and overriding the face would drop what
-// the widget says about focus. The rail and the top bar still read as one
-// surface, one step above the stage.
+// keeps ui.Sidebar's own choice — one tab stop, one ring, the arrows — while its
+// face is the mark's wash, as the prototype draws it, rather than the widget's
+// solid accent: a bar of accent down the rail would out-shout the page. The rail
+// and the top bar still read as one surface, one step above the stage.
 package shell
 
 import (

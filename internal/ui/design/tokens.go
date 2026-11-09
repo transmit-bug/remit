@@ -57,8 +57,9 @@ type Tokens struct {
 	// dialog's, as wide as a short page's sentence.
 	ListWidth, SettingsWidth, BrowseWidth, WelcomeWidth, SummaryWidth float32
 	// NotesColumnWidth and FilterPaneWidth are the two working columns: a
-	// document's notes list, and the card table's filters.
-	NotesColumnWidth, FilterPaneWidth float32
+	// document's notes list, and the card table's filters. TableFloor is the
+	// narrowest the table goes beside its filters.
+	NotesColumnWidth, FilterPaneWidth, TableFloor float32
 	// The card table's fixed columns: a row's checkbox, a count, a date and a
 	// name.
 	CheckColumnWidth, CountColumnWidth, DateColumnWidth, NameColumnWidth float32
@@ -122,6 +123,7 @@ func NewTokens(base *ui.Theme) Tokens {
 		BrowseWidth: BrowseWidth, WelcomeWidth: WelcomeWidth,
 		SummaryWidth:     SummaryWidth,
 		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
+		TableFloor:       TableFloor,
 		CheckColumnWidth: CheckColumnWidth, CountColumnWidth: CountColumnWidth,
 		DateColumnWidth: DateColumnWidth, NameColumnWidth: NameColumnWidth,
 		MeterWidth: MeterWidth,

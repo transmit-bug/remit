@@ -30,6 +30,9 @@ func TestTextContrast(t *testing.T) {
 	texts := map[string]func(design.Palette) ui.Color{
 		"text":  func(p design.Palette) ui.Color { return p.Text },
 		"muted": func(p design.Palette) ui.Color { return p.Muted },
+		// A hint or a status line is small print read at arm's length: it is
+		// quieter than the secondary text and still clears the same floor.
+		"faint": func(p design.Palette) ui.Color { return p.Faint },
 	}
 	for _, a := range appearances {
 		p := a.pal()

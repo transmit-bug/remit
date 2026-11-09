@@ -105,7 +105,7 @@ func pageHead(c *ui.Context, tk design.Tokens, title, body string) {
 	ui.Column(c).Gap(tk.SpaceXS).Children(func() {
 		ui.Text(c, title).FontSize(tk.TypeH1).Bold()
 		if body != "" {
-			ui.Text(c, body).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+			ui.Text(c, body).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 		}
 	})
 }
