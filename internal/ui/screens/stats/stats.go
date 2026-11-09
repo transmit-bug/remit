@@ -1,208 +1,95 @@
-// Package stats is the statistics page: the reviews of the past half year as a
-// heatmap, how well recall matched what the schedule predicted, and what the
-// next month holds. Every number on it is loaded before the frame draws, so the
-// page reads State and never touches the store.
+// Package stats is the statistics area: three read-only pages over the same
+// append-only review log. Overview says how much the library holds, how today
+// looks and what is coming; Heatmap draws the past half year day by day;
+// Forecast says what comes due over the next month. None of them writes: the
+// log is the record, and these pages only read it back.
+//
+// The app loads everything before the frame draws — the pages read State and
+// never touch the store — so a page has no loading state to show. A library
+// whose index cannot be read answers zeros rather than an error: every section
+// then says what it lacks instead of plotting an empty axis, which is the same
+// degradation the rest of the window makes.
 package stats
 
 import (
 	"math"
-	"strconv"
-	"time"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/chart"
 
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
 
+// Page is which of the area's three pages is on screen. It is the app's sub
+// navigation, resolved: the screen does not know the route's names.
+type Page uint8
+
 const (
-	// chartHeight is one plot's height; three of them scroll at the smallest
-	// window rather than squeeze the rows.
-	chartHeight float32 = 150
-	// heatCell is one day's box and heatGap what separates two of them. ui/chart
-	// has no heatmap at v0.8.1, so the calendar is a grid of tinted ui.Boxes;
-	// the two sizes are the cell grid's, named here rather than in the view.
-	// The cell is as tall as the small type's line, so a weekday name beside
-	// it sits on its own row.
-	heatCell float32 = 14
-	heatGap  float32 = 3
-	// heatWeekdayWidth is the column the weekday names get, wide enough for the
-	// longest name a locale writes at the small size.
-	heatWeekdayWidth float32 = 34
+	// Overview is the summary page: the numbers, the production, the calendar
+	// strip, the time share, the trend and the month's first two weeks.
+	Overview Page = iota
+	// HeatmapPage is the calendar page: the past half year, large.
+	HeatmapPage
+	// ForecastPage is the month ahead, day by day.
+	ForecastPage
 )
 
-// Deps is what the page asks of the app, which is nothing: the heatmap, the
-// retention picture and the forecast are all loaded before the page is drawn.
-type Deps struct{}
+// plotHeight is one plot's height. It is the plot's, not a column's: a page of
+// three plots scrolls at the smallest window rather than squeezing them.
+const plotHeight float32 = 150
 
-// View draws the statistics page: the year's reviews as a heatmap, then the
-// retention and forecast plots. A series with nothing in it says so instead of
-// plotting an axis with no values.
-func View(c *ui.Context, s State, _ Deps) {
+// Deps is what the page asks of the app: the plugin items the stats.block slot
+// holds, as the library load cached them, and the two functions that resolve
+// and run one. A page never calls a plugin: the items are read from the index,
+// and a command runs off the frame like any other contribution.
+type Deps struct {
+	// Items is the slot's items in drawing order, one section per plugin.
+	Items []contrib.MenuRef
+	// PluginText resolves one of a plugin's own messages in the frame's
+	// language; nil shows the message as written.
+	PluginText func(c *ui.Context, plugin, raw string) string
+	// Run answers one of them; nil draws none as pressable.
+	Run func(c *ui.Context, ref contrib.CommandRef)
+}
+
+// View draws the page that is up, inside the paper's measure.
+func View(c *ui.Context, page Page, s State, d Deps) {
 	msgs := locales.In(c.Locale())
 	tk := design.NewTokens(c.Theme())
 
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
 			ui.Column(c).FillWidth().MaxWidth(tk.PaperWidth).Gap(tk.SpaceXL).Children(func() {
-				ui.Text(c, msgs.StatsTitle()).FontSize(tk.TypeH2).Bold()
-				heatmapSection(c, s, msgs, tk)
-				retentionSection(c, s, msgs, tk)
-				forecastSection(c, s, msgs, tk)
+				switch page {
+				case HeatmapPage:
+					heatmapPage(c, s, msgs, tk)
+				case ForecastPage:
+					forecastPage(c, s, msgs, tk)
+				default:
+					overviewPage(c, s, d, msgs, tk)
+				}
 			})
 		})
 	})
 }
 
-// heatmapSection is the review heatmap: one small box per day, weeks as
-// columns and weekdays as rows, tinted by how many reviews the day holds. It
-// is composed from stock widgets because ui/chart has no heatmap at v0.8.1;
-// see RECONCILE.md.
-func heatmapSection(c *ui.Context, s State, msgs locales.Messages, tk design.Tokens) {
-	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		if s.HeatTotal == 0 {
-			statsHeading(c, tk, msgs.StatsHeat(), "")
-			ui.Text(c, msgs.StatsHeatEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-			return
+// pageHead is every page's title and the one line under it that says what the
+// page is.
+func pageHead(c *ui.Context, tk design.Tokens, title, subtitle string) {
+	ui.Column(c).Gap(tk.SpaceXS).Children(func() {
+		ui.Text(c, title).FontSize(tk.TypeH1).Bold()
+		if subtitle != "" {
+			ui.Text(c, subtitle).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 		}
-		statsHeading(c, tk, msgs.StatsHeat(),
-			msgs.StatsHeatRange(s.HeatFrom, s.HeatTo, s.HeatTotal))
-
-		ui.Row(c).Gap(heatGap).AlignItems(ui.Start).Label(msgs.StatsHeat()).Children(func() {
-			ui.Column(c).Gap(heatGap).Children(func() {
-				for _, day := range s.Heat[0] {
-					ui.Text(c, msgs.StatsHeatWeekday(day.Day)).NoWrap().
-						Width(heatWeekdayWidth).Height(heatCell).LineHeight(1).
-						FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-				}
-			})
-			for _, week := range s.Heat {
-				ui.Column(c).Gap(heatGap).Children(func() {
-					for _, day := range week {
-						heatCellBox(c, tk, msgs, day, s.HeatMax)
-					}
-				})
-			}
-		})
-		heatLegend(c, tk, msgs)
 	})
 }
 
-// heatCellBox is one day: a tinted box for a counted day, a spacer for one
-// still ahead of today.
-func heatCellBox(c *ui.Context, tk design.Tokens, msgs locales.Messages, day HeatDay, most int) {
-	box := ui.Box(c).Width(heatCell).Height(heatCell).Radius(tk.RadiusBar)
-	switch {
-	case day.Future:
-		return
-	case day.Count == 0:
-		box.Background(tk.Sunken)
-	default:
-		box.Background(tk.HeatFill(heatLevel(day.Count, most)))
-		label := msgs.StatsDayCount(day.Day, day.Count)
-		box.Tooltip(label).Label(label)
-	}
-}
-
-// heatLegend names the two ends of the tint scale, so the boxes read as
-// counts rather than decoration.
-func heatLegend(c *ui.Context, tk design.Tokens, msgs locales.Messages) {
-	ui.Row(c).Gap(heatGap).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, msgs.StatsHeatLess()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-		for level := 0; level <= 4; level++ {
-			ui.Box(c).Width(heatCell).Height(heatCell).Radius(tk.RadiusBar).
-				Background(tk.HeatFill(level))
-		}
-		ui.Text(c, msgs.StatsHeatMore()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-	})
-}
-
-// retentionSection is how often a card was recalled, per range of the chance
-// the schedule predicted. A range no review fell in has no bar.
-func retentionSection(c *ui.Context, s State, msgs locales.Messages, tk design.Tokens) {
-	r := s.Retention
-	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		if r.Reviews == 0 {
-			statsHeading(c, tk, msgs.StatsRetention(), "")
-			ui.Text(c, msgs.StatsRetentionEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-			return
-		}
-		statsHeading(c, tk, msgs.StatsRetention(),
-			msgs.StatsRetentionSummary(msgs.StatsPercent(float64(r.Passes)/float64(r.Reviews)), r.Reviews))
-
-		labels := make([]string, len(r.Buckets))
-		for i, b := range r.Buckets {
-			labels[i] = msgs.StatsBucket(int(math.Round(b.Low*100)), min(100, int(math.Round(b.High*100))))
-		}
-		x := chart.NewBand(labels...).Padding(0.3, 0.12)
-		y := chart.NewLinear(0, 1)
-		y.Format = func(v float64) string { return msgs.StatsPercent(v) }
-
-		axis := mutedAxis(c, tk)
-		chart.Plot(c, chart.Axes{Left: y.Ticks(4), Bottom: x.Ticks(), Label: axis}, func(area ui.Element) {
-			for i, b := range r.Buckets {
-				if b.Reviews == 0 {
-					continue
-				}
-				rate := float64(b.Passes) / float64(b.Reviews)
-				chart.Rect(c, x.Band(i), y.Span(0, rate)).
-					Background(tk.Accent).Radius(tk.RadiusBar).
-					Tooltip(msgs.StatsBucketReviews(labels[i], b.Reviews))
-			}
-		}).Height(chartHeight).Gap(tk.SpaceS).Label(msgs.StatsRetention())
-	})
-}
-
-// forecastSection is how many cards are due on each of the next 30 days.
-func forecastSection(c *ui.Context, s State, msgs locales.Messages, tk design.Tokens) {
-	total := 0
-	for _, day := range s.Forecast {
-		total += day.Count
-	}
-	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		if total == 0 {
-			statsHeading(c, tk, msgs.StatsForecast(), "")
-			ui.Text(c, msgs.StatsForecastEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-			return
-		}
-		statsHeading(c, tk, msgs.StatsForecast(), msgs.CardCount(total))
-		dayPlot(c, tk, msgs, s.Forecast, msgs.StatsForecast(), msgs.StatsDueCount)
-	})
-}
-
-// dayPlot draws one bar per day with its count, over a time axis: ui/chart's
-// plot, time scale and rect marks, so nothing here paints a pixel. tooltip
-// names a day's count for the pointer.
-func dayPlot(c *ui.Context, tk design.Tokens, msgs locales.Messages, days []DayCount, label string, tooltip func(day time.Time, n int) string) {
-	from, to := days[0].Day, days[len(days)-1].Day.AddDate(0, 0, 1)
-	x := chart.NewTime(from, to)
-	x.Format = func(t time.Time) string { return msgs.StatsDay(t) }
-
-	_, hi := chart.Extent(counts(days)...)
-	y := chart.NewLinear(0, max(1, hi))
-	y.Format = func(v float64) string { return strconv.Itoa(int(math.Round(v))) }
-
-	axis := mutedAxis(c, tk)
-	chart.Plot(c, chart.Axes{Left: wholeTicks(y.Ticks(4)), Bottom: x.Ticks(5), Label: axis}, func(area ui.Element) {
-		for _, day := range days {
-			span := x.Span(day.Day, day.Day.AddDate(0, 0, 1))
-			inset := (span.Hi - span.Lo) * 0.18
-			bar := chart.Rect(c,
-				chart.Span{Lo: span.Lo + inset, Hi: span.Hi - inset},
-				y.Span(0, float64(day.Count)),
-			).Background(tk.Accent).Radius(tk.RadiusBar)
-			if day.Count > 0 {
-				bar.Tooltip(tooltip(day.Day, day.Count))
-			}
-		}
-	}).Height(chartHeight).Gap(tk.SpaceS).Label(label)
-}
-
-// statsHeading is one section's title and its one-line summary, when it has
-// data to summarise.
-func statsHeading(c *ui.Context, tk design.Tokens, title, summary string) {
-	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
+// sectionHead is one section's title and its one-line summary, when it has
+// something to summarise.
+func sectionHead(c *ui.Context, tk design.Tokens, title, summary string) {
+	ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
 		ui.Text(c, title).FontSize(tk.TypeH2).Bold()
 		if summary == "" {
 			return
@@ -212,10 +99,26 @@ func statsHeading(c *ui.Context, tk design.Tokens, title, summary string) {
 	})
 }
 
-// mutedAxis labels a plot's ticks in the small muted type.
+// note is a page's one-line explanation: where a number came from, or why two
+// things share a chart. It is muted because it explains rather than reports.
+func note(c *ui.Context, tk design.Tokens, text string) {
+	ui.Text(c, text).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+}
+
+// quiet is a section that has nothing to draw: the heading stays and the
+// sentence says what would fill it.
+func quiet(c *ui.Context, tk design.Tokens, title, text string) {
+	ui.Column(c).Gap(tk.SpaceS).Children(func() {
+		sectionHead(c, tk, title, "")
+		ui.Text(c, text).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+	})
+}
+
+// mutedAxis labels a plot's ticks in the muted type, so the data is what the
+// eye lands on.
 func mutedAxis(c *ui.Context, tk design.Tokens) func(chart.Side, chart.Tick) {
 	return func(_ chart.Side, tick chart.Tick) {
-		ui.Text(c, tick.Label).NoWrap().FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+		ui.Text(c, tick.Label).NoWrap().FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 	}
 }
 
@@ -227,15 +130,6 @@ func wholeTicks(ticks []chart.Tick) []chart.Tick {
 		if tick.Value == math.Trunc(tick.Value) {
 			out = append(out, tick)
 		}
-	}
-	return out
-}
-
-// counts is a series' counts, for the extent of its axis.
-func counts(days []DayCount) []float64 {
-	out := make([]float64, len(days))
-	for i, day := range days {
-		out[i] = float64(day.Count)
 	}
 	return out
 }

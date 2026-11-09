@@ -91,7 +91,11 @@ func (a *App) stage(c *ui.Context, tk design.Tokens) {
 		case a.area == areaRecall:
 			a.reviewView(c, tk)
 		case a.area == areaStats:
-			screenstats.View(c, a.stats, screenstats.Deps{})
+			screenstats.View(c, statsPage(a.sub), a.stats, screenstats.Deps{
+				Items:      a.statsBlockItems(),
+				PluginText: a.pluginText,
+				Run:        a.runContribution,
+			})
 		case a.area == areaPlugin:
 			a.pluginPageView(c)
 		default:

@@ -58,6 +58,10 @@ type Tokens struct {
 	// NotesColumnWidth and FilterPaneWidth are the two working columns: a
 	// document's notes list, and the card table's filters.
 	NotesColumnWidth, FilterPaneWidth float32
+	// The statistics calendar: a day's box in the overview's strip and on the
+	// heatmap page's grid, the room between two, and the column the weekday
+	// names get.
+	HeatCell, HeatCellLarge, HeatGap, HeatWeekday float32
 }
 
 // NewTokens resolves Remit's appearance for this frame: the palette at the text
@@ -111,6 +115,8 @@ func NewTokens(base *ui.Theme) Tokens {
 		ListWidth: ListWidth, SettingsWidth: SettingsWidth,
 		BrowseWidth: BrowseWidth, WelcomeWidth: WelcomeWidth,
 		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
+		HeatCell: HeatCell, HeatCellLarge: HeatCellLarge,
+		HeatGap: HeatGap, HeatWeekday: HeatWeekday,
 	}
 }
 

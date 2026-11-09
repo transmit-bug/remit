@@ -1,6 +1,7 @@
 package ui
 
 import (
+	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/internal/ui/shell"
 	"github.com/transmit-bug/remit/locales"
 )
@@ -35,9 +36,12 @@ const (
 	// The recall area.
 	subRecallQueue
 	subRecallCards
-	// The statistics and settings areas, each one page until its workflow
-	// splits it.
+	// The statistics area: the summary, the calendar and the forecast, each a
+	// page of its own.
 	subStatsOverview
+	subStatsHeatmap
+	subStatsForecast
+	// The settings area, one page until its workflow splits it.
 	subSettingsAppearance
 )
 
@@ -65,7 +69,7 @@ func subsOf(area areaID) []subID {
 	case areaRecall:
 		return []subID{subRecallQueue, subRecallCards}
 	case areaStats:
-		return []subID{subStatsOverview}
+		return []subID{subStatsOverview, subStatsHeatmap, subStatsForecast}
 	case areaSettings:
 		return []subID{subSettingsAppearance}
 	}
@@ -144,6 +148,10 @@ func subLabel(msgs locales.Messages, sub subID) string {
 		return msgs.CardsPage()
 	case subStatsOverview:
 		return msgs.OverviewPage()
+	case subStatsHeatmap:
+		return msgs.StatsHeat()
+	case subStatsForecast:
+		return msgs.StatsForecastTitle()
 	case subSettingsAppearance:
 		return msgs.AppearancePage()
 	}
@@ -165,6 +173,10 @@ func subName(sub subID) string {
 		return "cards"
 	case subStatsOverview:
 		return "overview"
+	case subStatsHeatmap:
+		return "heatmap"
+	case subStatsForecast:
+		return "forecast"
 	case subSettingsAppearance:
 		return "appearance"
 	}
@@ -182,6 +194,17 @@ func subOfName(area areaID, name string) subID {
 	return defaultSub(area)
 }
 
+// statsPage is the statistics area's page as the screen names it.
+func statsPage(sub subID) screenstats.Page {
+	switch sub {
+	case subStatsHeatmap:
+		return screenstats.HeatmapPage
+	case subStatsForecast:
+		return screenstats.ForecastPage
+	}
+	return screenstats.Overview
+}
+
 // setArea is the one way the window changes area. Every control that navigates
 // calls it or setSub; syncMode derives the plugin contract's mode from what they
 // leave, and the page the new area reads is loaded here, never in a view.
@@ -195,6 +218,11 @@ func (a *App) setArea(area areaID, sub subID) {
 	a.area, a.sub = area, sub
 	a.session = sessionNone
 	a.syncMode()
+	// A contribution's when expression reads the route, not only the mode: a
+	// slot's items ask about the area they sit in and the page inside it, which
+	// mode cannot say for the areas that share one. The route is the only writer
+	// of that answer.
+	a.setContributionArea(string(areaName(area)), subName(sub))
 	a.loadCurrent()
 }
 
