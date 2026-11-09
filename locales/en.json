@@ -2263,51 +2263,51 @@
     }
   },
   "readQueueTitle": "Reading queue",
-  "@readQueueTitle":   {
+  "@readQueueTitle": {
     "description": "The read area's queue page: the notes due to read now."
   },
   "readArchiveTitle": "Archive",
-  "@readArchiveTitle":   {
+  "@readArchiveTitle": {
     "description": "The read area's archive page: the notes that left the queue for good."
   },
   "archivePage": "Archive",
-  "@archivePage":   {
+  "@archivePage": {
     "description": "Page of the read area: the notes that left the reading queue."
   },
   "readAdd": "Add to queue",
-  "@readAdd":   {
+  "@readAdd": {
     "description": "Opens the notebook so a note can be queued for reading."
   },
   "readStart": "Start reading",
-  "@readStart":   {
+  "@readStart": {
     "description": "Enters the reading session at the head of the queue."
   },
   "readContinue": "Continue",
-  "@readContinue":   {
+  "@readContinue": {
     "description": "Enters the reading session at the note on that row."
   },
   "readOpen": "Open",
-  "@readOpen":   {
+  "@readOpen": {
     "description": "Opens an archived note in the notebook."
   },
   "readRestore": "Restore",
-  "@readRestore":   {
+  "@readRestore": {
     "description": "Puts an archived or dismissed note back in the reading queue."
   },
   "readRestored": "Back in the reading queue.",
-  "@readRestored":   {
+  "@readRestored": {
     "description": "A restored note returned to the reading queue."
   },
   "readRetry": "Try again",
-  "@readRetry":   {
+  "@readRetry": {
     "description": "Asks the read area to load again after it failed."
   },
   "readLoading": "Loading the reading queue…",
-  "@readLoading":   {
+  "@readLoading": {
     "description": "The read area before its queue has loaded."
   },
   "readLoadFailed": "The reading area could not be read: {reason}",
-  "@readLoadFailed":   {
+  "@readLoadFailed": {
     "description": "The read area's queue or archive could not be loaded.",
     "placeholders": {
       "reason": {
@@ -2317,7 +2317,7 @@
     }
   },
   "readRowPlace": "Paragraph {at} of {blocks}",
-  "@readRowPlace":   {
+  "@readRowPlace": {
     "description": "Where a queued note resumes: the paragraph, and how many it holds.",
     "placeholders": {
       "at": {
@@ -2331,11 +2331,11 @@
     }
   },
   "readRowUnread": "Not started",
-  "@readRowUnread":   {
+  "@readRowUnread": {
     "description": "A queued note no session has read yet."
   },
   "readRowBlocks": "{count, plural, one {# paragraph} other {# paragraphs}}",
-  "@readRowBlocks":   {
+  "@readRowBlocks": {
     "description": "How many paragraphs a note holds.",
     "placeholders": {
       "count": {
@@ -2345,7 +2345,7 @@
     }
   },
   "readRowStopped": "last stopped {day}",
-  "@readRowStopped":   {
+  "@readRowStopped": {
     "description": "When a session last stopped in a note: today, yesterday, or a date.",
     "placeholders": {
       "day": {
@@ -2355,7 +2355,7 @@
     }
   },
   "readRowQueued": "queued {day}",
-  "@readRowQueued":   {
+  "@readRowQueued": {
     "description": "When a note joined the reading queue: today, yesterday, or a date.",
     "placeholders": {
       "day": {
@@ -2365,59 +2365,59 @@
     }
   },
   "readDayToday": "today",
-  "@readDayToday":   {
+  "@readDayToday": {
     "description": "The day a note was last touched, when it is the day on screen."
   },
   "readDayYesterday": "yesterday",
-  "@readDayYesterday":   {
+  "@readDayYesterday": {
     "description": "The day a note was last touched, when it was the day before."
   },
   "readRhythm": "Rhythm",
-  "@readRhythm":   {
+  "@readRhythm": {
     "description": "The row of numbers under the reading queue: what it holds and how reading digests."
   },
   "readRhythmDue": "due today",
-  "@readRhythmDue":   {
+  "@readRhythmDue": {
     "description": "How many notes the reading queue has due today."
   },
   "readRhythmQueued": "in the reading queue",
-  "@readRhythmQueued":   {
+  "@readRhythmQueued": {
     "description": "How many notes the reading queue holds, due or not."
   },
   "readRhythmTiers": "how a reading digests",
-  "@readRhythmTiers":   {
+  "@readRhythmTiers": {
     "description": "The three answers a reading session records: too hard, just right, too shallow."
   },
   "readArchiveEmpty": "The archive is still empty.",
-  "@readArchiveEmpty":   {
+  "@readArchiveEmpty": {
     "description": "The archive page with nothing archived or dismissed."
   },
   "readArchiveHint": "Press A in a reading session to archive a note.",
-  "@readArchiveHint":   {
+  "@readArchiveHint": {
     "description": "The archive page's hint at how a note gets there."
   },
   "readArchivedSection": "Archived",
-  "@readArchivedSection":   {
+  "@readArchivedSection": {
     "description": "The archive page's section of notes that were put away."
   },
   "readDismissedSection": "Dismissed",
-  "@readDismissedSection":   {
+  "@readDismissedSection": {
     "description": "The archive page's section of notes marked as not worth reading."
   },
   "readArchive": "Archive (A)",
-  "@readArchive":   {
+  "@readArchive": {
     "description": "The reading session's action that puts the note away for good."
   },
   "readDismiss": "Dismiss (D)",
-  "@readDismiss":   {
+  "@readDismiss": {
     "description": "The reading session's action that says a note is not worth reading."
   },
   "readPostpone": "Postpone (P)",
-  "@readPostpone":   {
+  "@readPostpone": {
     "description": "The reading session's action that brings a note back tomorrow."
   },
   "readArchived": "Archived “{title}”.",
-  "@readArchived":   {
+  "@readArchived": {
     "description": "The toast a reading session shows after archiving a note.",
     "placeholders": {
       "title": {
@@ -2427,7 +2427,7 @@
     }
   },
   "readDismissed": "Dismissed “{title}”.",
-  "@readDismissed":   {
+  "@readDismissed": {
     "description": "The toast a reading session shows after dismissing a note.",
     "placeholders": {
       "title": {
@@ -2437,7 +2437,7 @@
     }
   },
   "readPostponed": "Postponed “{title}” to tomorrow.",
-  "@readPostponed":   {
+  "@readPostponed": {
     "description": "The toast a reading session shows after postponing a note.",
     "placeholders": {
       "title": {
@@ -2447,11 +2447,11 @@
     }
   },
   "readUndo": "Undo",
-  "@readUndo":   {
+  "@readUndo": {
     "description": "The toast action that takes back a reading session's archive, dismissal or postpone."
   },
   "readCardsMark": "{count, plural, one {# card} other {# cards}}",
-  "@readCardsMark":   {
+  "@readCardsMark": {
     "description": "How many cards a paragraph on screen already has.",
     "placeholders": {
       "count": {
@@ -2461,19 +2461,19 @@
     }
   },
   "readExcerptedMark": "Excerpted",
-  "@readExcerptedMark":   {
+  "@readExcerptedMark": {
     "description": "A paragraph an excerpt was already taken from."
   },
   "readLastStopMark": "Last stop",
-  "@readLastStopMark":   {
+  "@readLastStopMark": {
     "description": "The paragraph the last reading session stopped at."
   },
   "readQueueEmpty": "Today's reading queue is empty.",
-  "@readQueueEmpty":   {
+  "@readQueueEmpty": {
     "description": "The queue page with no note due today."
   },
   "readNotesMark": "{count, plural, one {# note} other {# notes}}",
-  "@readNotesMark":   {
+  "@readNotesMark": {
     "description": "How many notes an archive section holds.",
     "placeholders": {
       "count": {
@@ -2483,7 +2483,7 @@
     }
   },
   "readAddNote": "Add a note",
-  "@readAddNote":   {
+  "@readAddNote": {
     "description": "The empty queue's own action: it opens the notes list, where a note is queued."
   },
   "trayTitleReading": "Remit · {cards} · {reading}",
@@ -2513,22 +2513,16 @@
         "example": "3"
       }
     }
-  }
-,
-  "pluginPages": "Plugin pages"
-,
+  },
+  "pluginPages": "Plugin pages",
   "@pluginPages": {
     "description": "The button that lists the pages plugins contributed."
-  }
-,
-  "pluginPageLoading": "Loading…"
-,
+  },
+  "pluginPageLoading": "Loading…",
   "@pluginPageLoading": {
     "description": "A plugin page whose data is still on its way."
-  }
-,
-  "pluginPageFailed": "This page could not be loaded: {reason}"
-,
+  },
+  "pluginPageFailed": "This page could not be loaded: {reason}",
   "@pluginPageFailed": {
     "description": "A plugin page whose data command failed, with the reason.",
     "placeholders": {
@@ -2537,16 +2531,12 @@
         "example": "the page's data command timed out"
       }
     }
-  }
-,
-  "pluginPageRetry": "Retry"
-,
+  },
+  "pluginPageRetry": "Retry",
   "@pluginPageRetry": {
     "description": "The button that asks a failed plugin page for its data again."
-  }
-,
-  "pluginPageUnknownNode": "{kind} is not something this version of Remit draws."
-,
+  },
+  "pluginPageUnknownNode": "{kind} is not something this version of Remit draws.",
   "@pluginPageUnknownNode": {
     "description": "A page node of a kind this host does not know, named in place.",
     "placeholders": {
@@ -2555,10 +2545,8 @@
         "example": "sparkline"
       }
     }
-  }
-,
-  "pluginCommandFailed": "{command} failed: {reason}"
-,
+  },
+  "pluginCommandFailed": "{command} failed: {reason}",
   "@pluginCommandFailed": {
     "description": "A plugin command that threw or ran past its budget.",
     "placeholders": {
@@ -2571,28 +2559,20 @@
         "example": "the command used its time"
       }
     }
-  }
-,
-  "settingsPluginOptions": "Plugin settings"
-,
+  },
+  "settingsPluginOptions": "Plugin settings",
   "@settingsPluginOptions": {
     "description": "Settings section: the settings plugins contributed."
-  }
-,
-  "settingsPluginOptionsBody": "Settings a plugin declared. They are kept in the plugin's own data, and Remit never runs it to write one."
-,
+  },
+  "settingsPluginOptionsBody": "Settings a plugin declared. They are kept in the plugin's own data, and Remit never runs it to write one.",
   "@settingsPluginOptionsBody": {
     "description": "Description of the plugin settings section."
-  }
-,
-  "pluginProblems": "Remit could not use these contributions:"
-,
+  },
+  "pluginProblems": "Remit could not use these contributions:",
   "@pluginProblems": {
     "description": "The problems a plugin's manifest declared, listed under it."
-  }
-,
-  "pluginFailures": "{count} contributed entries failed"
-,
+  },
+  "pluginFailures": "{count} contributed entries failed",
   "@pluginFailures": {
     "description": "How many of a plugin's commands or pages failed three times and were hidden.",
     "placeholders": {
@@ -2601,16 +2581,12 @@
         "example": "1"
       }
     }
-  }
-,
-  "pluginReenable": "Re-enable"
-,
+  },
+  "pluginReenable": "Re-enable",
   "@pluginReenable": {
     "description": "The button that clears a plugin's failure counts and shows its entries again."
-  }
-,
-  "pluginReenabled": "Its failed entries were given another try."
-,
+  },
+  "pluginReenabled": "Its failed entries were given another try.",
   "@pluginReenabled": {
     "description": "A plugin's failures were cleared."
   },
@@ -2627,8 +2603,7 @@
   "pluginPageRefresh": "Refresh",
   "@pluginPageRefresh": {
     "description": "The button that asks a plugin page's data command for its tree again."
-  }
-,
+  },
   "areaNav": "Areas",
   "@areaNav": {
     "description": "Accessible label of the navigation rail: the list of the workbench's areas."
@@ -2910,5 +2885,617 @@
   "todayLoading": "Loading today",
   "@todayLoading": {
     "description": "Accessible label of the loading page's placeholder rows."
+  },
+  "statsBucket": "{low, number}–{high, number}%",
+  "@statsBucket": {
+    "description": "Label of a predicted-retention range, as \"70–80%\".",
+    "placeholders": {
+      "low": {
+        "type": "int",
+        "example": "70"
+      },
+      "high": {
+        "type": "int",
+        "example": "80"
+      }
+    }
+  },
+  "statsBucketReviews": "{bucket}: {reviews, plural, one {# review} other {# reviews}}",
+  "@statsBucketReviews": {
+    "description": "Tooltip of a retention bar: how many reviews its range holds.",
+    "placeholders": {
+      "bucket": {
+        "type": "String",
+        "example": "70–80%"
+      },
+      "reviews": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "exportNote": "Export note as Markdown…",
+  "@exportNote": {
+    "description": "Command palette: write the open note's Markdown file."
+  },
+  "exportAllNotes": "Export all notes as Markdown…",
+  "@exportAllNotes": {
+    "description": "Command palette: write every note's Markdown file into a folder."
+  },
+  "exportNothingOpen": "Open a note first, then export it.",
+  "@exportNothingOpen": {
+    "description": "Exporting a note with no note open."
+  },
+  "todayStub": "Today gathers what is due to read and to review.",
+  "@todayStub": {
+    "description": "The empty state of the today area until its queue is built."
+  },
+  "reviewPage": "Review",
+  "@reviewPage": {
+    "description": "Page of the settings area: the rhythm a library's reviews keep."
+  },
+  "budgetPage": "Budget",
+  "@budgetPage": {
+    "description": "Page of the settings area: what one day's queue holds."
+  },
+  "keysPage": "Shortcuts",
+  "@keysPage": {
+    "description": "Page of the settings area: the keyboard map, read-only."
+  },
+  "agentPage": "Agent",
+  "@agentPage": {
+    "description": "Page of the settings area: the loopback agent API."
+  },
+  "updatePage": "Update",
+  "@updatePage": {
+    "description": "Page of the settings area: the version, the index and the library archive."
+  },
+  "aboutPage": "About",
+  "@aboutPage": {
+    "description": "Page of the settings area: what this build is and where its library lives."
+  },
+  "settingsLook": "Theme",
+  "@settingsLook": {
+    "description": "Settings field: the light, dark or desktop look."
+  },
+  "settingsLookBody": "Paper is the light look, ink the dark one, and system follows the desktop.",
+  "@settingsLookBody": {
+    "description": "Description of the appearance choice."
+  },
+  "settingsLookSystem": "System",
+  "@settingsLookSystem": {
+    "description": "Appearance option: follow the desktop's light or dark look."
+  },
+  "settingsLookPaper": "Paper",
+  "@settingsLookPaper": {
+    "description": "Appearance option: always the light look."
+  },
+  "settingsLookInk": "Ink",
+  "@settingsLookInk": {
+    "description": "Appearance option: always the dark look."
+  },
+  "settingsPaperWidth": "Paper width",
+  "@settingsPaperWidth": {
+    "description": "Settings field: the measure of a document's paper."
+  },
+  "settingsPaperWidthBody": "The width of a document's paper, and of the page it is set on.",
+  "@settingsPaperWidthBody": {
+    "description": "Description of the paper width slider."
+  },
+  "settingsPaperWidthValue": "{width} pt",
+  "@settingsPaperWidthValue": {
+    "description": "The paper's width, beside its slider.",
+    "placeholders": {
+      "width": {
+        "type": "int",
+        "example": "760"
+      }
+    }
+  },
+  "settingsTextSize": "Text size",
+  "@settingsTextSize": {
+    "description": "Settings field: the window's text size, which the desktop decides."
+  },
+  "settingsTextSizeBody": "Follows the desktop's text scaling; Remit keeps no second size.",
+  "@settingsTextSizeBody": {
+    "description": "Why the text size is read-only."
+  },
+  "settingsOpenDisplay": "Open system settings",
+  "@settingsOpenDisplay": {
+    "description": "The button that opens the desktop's text-size page, where the size is changed."
+  },
+  "settingsReviewRetention": "Target retention",
+  "@settingsReviewRetention": {
+    "description": "Settings field: how likely a card should be recalled when due."
+  },
+  "settingsReviewRetentionBody": "How likely you want to recall a card when it comes due. The scheduling plugin's 90% is the default.",
+  "@settingsReviewRetentionBody": {
+    "description": "Description of the retention slider."
+  },
+  "settingsReviewRetentionValue": "{percent}%",
+  "@settingsReviewRetentionValue": {
+    "description": "The retention, as a percentage beside its slider.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "example": "90"
+      }
+    }
+  },
+  "settingsReviewMaxInterval": "Longest interval",
+  "@settingsReviewMaxInterval": {
+    "description": "Settings field: the most days a card may wait."
+  },
+  "settingsReviewMaxIntervalBody": "The most days a card may wait, whatever the schedule would pick.",
+  "@settingsReviewMaxIntervalBody": {
+    "description": "Description of the longest-interval slider."
+  },
+  "settingsReviewDays": "{days, plural, one {# day} other {# days}}",
+  "@settingsReviewDays": {
+    "description": "A number of days beside the longest-interval slider.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "180"
+      }
+    }
+  },
+  "settingsReviewPreview": "Show the next interval",
+  "@settingsReviewPreview": {
+    "description": "Settings field: whether each grade says when the card would come back."
+  },
+  "settingsReviewPreviewBody": "Each grade says when the card would come back. Off, the grades show only their word.",
+  "@settingsReviewPreviewBody": {
+    "description": "Description of the interval-preview switch."
+  },
+  "settingsReviewReturn": "Back to the note after an excerpt",
+  "@settingsReviewReturn": {
+    "description": "Settings field: whether an excerpt returns the reader to the note."
+  },
+  "settingsReviewReturnBody": "An excerpt taken while reading comes back to the note instead of moving on.",
+  "@settingsReviewReturnBody": {
+    "description": "Description of the return-after-excerpt switch."
+  },
+  "settingsBudgetCards": "Cards a day",
+  "@settingsBudgetCards": {
+    "description": "Settings field: the most cards a day's queue holds."
+  },
+  "settingsBudgetCardsBody": "How many cards today's queue holds at most; zero is no cap.",
+  "@settingsBudgetCardsBody": {
+    "description": "Description of the daily cards slider."
+  },
+  "settingsBudgetMinutes": "Minutes a day",
+  "@settingsBudgetMinutes": {
+    "description": "Settings field: what a day's reading and reviewing may take."
+  },
+  "settingsBudgetMinutesBody": "What the reading and the reviewing are expected to take together.",
+  "@settingsBudgetMinutesBody": {
+    "description": "Description of the daily minutes slider."
+  },
+  "settingsBudgetPreview": "Today at this pace",
+  "@settingsBudgetPreview": {
+    "description": "Settings section: today's queue as the presets would build it."
+  },
+  "settingsBudgetPreviewBody": "Reading {read} min and reviewing {review} min of {budget} min, in {lines, plural, one {# line} other {# lines}}.",
+  "@settingsBudgetPreviewBody": {
+    "description": "What today's queue would hold at the presets' pace.",
+    "placeholders": {
+      "read": {
+        "type": "int",
+        "example": "18"
+      },
+      "review": {
+        "type": "int",
+        "example": "12"
+      },
+      "budget": {
+        "type": "int",
+        "example": "30"
+      },
+      "lines": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "settingsBudgetPreviewEmpty": "Nothing is due yet, so today's queue is empty.",
+  "@settingsBudgetPreviewEmpty": {
+    "description": "The budget preview when the library has nothing due."
+  },
+  "settingsBudgetTray": "Menu bar title",
+  "@settingsBudgetTray": {
+    "description": "Settings field: the tray title, shown as it will read."
+  },
+  "settingsBudgetTrayBody": "What the tray shows while Remit runs.",
+  "@settingsBudgetTrayBody": {
+    "description": "Description of the tray title preview."
+  },
+  "settingsKeysChange": "Change keys",
+  "@settingsKeysChange": {
+    "description": "The button that would let the user rebind keys; disabled in 1.0."
+  },
+  "settingsKeysLocked": "Custom keys are not in 1.0; see #155.",
+  "@settingsKeysLocked": {
+    "description": "Why the keys cannot be changed."
+  },
+  "settingsKeysGlobal": "Global",
+  "@settingsKeysGlobal": {
+    "description": "Shortcut group: keys that work anywhere."
+  },
+  "settingsKeysReading": "Reading",
+  "@settingsKeysReading": {
+    "description": "Shortcut group: keys of the reading session."
+  },
+  "settingsKeysReview": "Review",
+  "@settingsKeysReview": {
+    "description": "Shortcut group: keys of the review session."
+  },
+  "settingsKeysDocument": "Document",
+  "@settingsKeysDocument": {
+    "description": "Shortcut group: keys of the document."
+  },
+  "settingsKeysPalette": "Command palette",
+  "@settingsKeysPalette": {
+    "description": "Shortcut row: opens the command palette."
+  },
+  "settingsKeysOpenSettings": "Settings",
+  "@settingsKeysOpenSettings": {
+    "description": "Shortcut row: opens the settings pages."
+  },
+  "settingsKeysNewNote": "New note",
+  "@settingsKeysNewNote": {
+    "description": "Shortcut row: starts a new note."
+  },
+  "settingsKeysDailyNote": "Daily note",
+  "@settingsKeysDailyNote": {
+    "description": "Shortcut row: opens today's daily note."
+  },
+  "settingsKeysFind": "Find in the note, or search the library",
+  "@settingsKeysFind": {
+    "description": "Shortcut row: the find bar in a document, the search page elsewhere."
+  },
+  "settingsKeysAreas": "Today, Write, Read, Recall, Stats, Settings",
+  "@settingsKeysAreas": {
+    "description": "Shortcut row: the six areas, one per digit."
+  },
+  "settingsKeysBack": "Close the overlay, leave the session, or leave settings",
+  "@settingsKeysBack": {
+    "description": "Shortcut row: what Escape does, in that order."
+  },
+  "settingsKeysMove": "Next or previous paragraph",
+  "@settingsKeysMove": {
+    "description": "Shortcut row: moving the reading position."
+  },
+  "settingsKeysReadingGrade": "Too hard, just right, too shallow",
+  "@settingsKeysReadingGrade": {
+    "description": "Shortcut row: how a note digested while reading."
+  },
+  "settingsKeysExcerpt": "Excerpt the paragraph",
+  "@settingsKeysExcerpt": {
+    "description": "Shortcut row: keeping a passage."
+  },
+  "settingsKeysSkip": "Skip the note",
+  "@settingsKeysSkip": {
+    "description": "Shortcut row: passing over the note."
+  },
+  "settingsKeysDrop": "Take the note out of the queue",
+  "@settingsKeysDrop": {
+    "description": "Shortcut row: dismissing the note."
+  },
+  "settingsKeysOpenNote": "Open the note in the library",
+  "@settingsKeysOpenNote": {
+    "description": "Shortcut row: the note's own page."
+  },
+  "settingsKeysReveal": "Show the answer",
+  "@settingsKeysReveal": {
+    "description": "Shortcut row: turning the card over."
+  },
+  "settingsKeysGrade": "Again, Hard, Good, Easy",
+  "@settingsKeysGrade": {
+    "description": "Shortcut row: the four answers."
+  },
+  "settingsKeysUndo": "Undo the last answer",
+  "@settingsKeysUndo": {
+    "description": "Shortcut row: taking an answer back."
+  },
+  "settingsKeysSuspend": "Suspend the card",
+  "@settingsKeysSuspend": {
+    "description": "Shortcut row: stopping the card's schedule."
+  },
+  "settingsKeysEditCard": "Edit the card",
+  "@settingsKeysEditCard": {
+    "description": "Shortcut row: opening the card's editor."
+  },
+  "settingsKeysOutline": "Outline panel",
+  "@settingsKeysOutline": {
+    "description": "Shortcut row: the document's outline."
+  },
+  "settingsKeysBacklinks": "Backlinks panel",
+  "@settingsKeysBacklinks": {
+    "description": "Shortcut row: what links to the document."
+  },
+  "settingsPluginDetails": "Details",
+  "@settingsPluginDetails": {
+    "description": "The button that opens one plugin's details."
+  },
+  "settingsPluginDetailsOf": "{name} details",
+  "@settingsPluginDetailsOf": {
+    "description": "The accessible name of one plugin's details button.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "acme.cards"
+      }
+    }
+  },
+  "settingsPluginID": "ID",
+  "@settingsPluginID": {
+    "description": "A plugin's manifest id."
+  },
+  "settingsPluginRoles": "Roles it can play",
+  "@settingsPluginRoles": {
+    "description": "The roles a plugin implements."
+  },
+  "settingsPluginPages": "Plugin pages",
+  "@settingsPluginPages": {
+    "description": "Settings section: the pages plugins contributed."
+  },
+  "settingsPluginPageOpen": "Open",
+  "@settingsPluginPageOpen": {
+    "description": "The button that opens a plugin's page."
+  },
+  "settingsPluginNoPages": "No plugin offers a page.",
+  "@settingsPluginNoPages": {
+    "description": "No enabled plugin contributes a page."
+  },
+  "settingsAgentRoutes": "Routes",
+  "@settingsAgentRoutes": {
+    "description": "Settings section: the agent API's route table."
+  },
+  "settingsAgentRoutesBody": "Reads need no token; writes need the one above. There are no deletes.",
+  "@settingsAgentRoutesBody": {
+    "description": "Description of the route table."
+  },
+  "settingsRouteMethod": "Method",
+  "@settingsRouteMethod": {
+    "description": "Route table column: the HTTP method."
+  },
+  "settingsRoutePath": "Path",
+  "@settingsRoutePath": {
+    "description": "Route table column: the path."
+  },
+  "settingsRouteWhat": "What it does",
+  "@settingsRouteWhat": {
+    "description": "Route table column: what the endpoint answers."
+  },
+  "settingsRouteSchema": "The API and format version, and this route list",
+  "@settingsRouteSchema": {
+    "description": "Route table row: the schema endpoint."
+  },
+  "settingsRouteLibrary": "The library's counts",
+  "@settingsRouteLibrary": {
+    "description": "Route table row: the library endpoint."
+  },
+  "settingsRouteNotes": "List the notes, or add one",
+  "@settingsRouteNotes": {
+    "description": "Route table row: the notes endpoint."
+  },
+  "settingsRouteNote": "One note",
+  "@settingsRouteNote": {
+    "description": "Route table row: a single note."
+  },
+  "settingsRouteBacklinks": "What links to a note",
+  "@settingsRouteBacklinks": {
+    "description": "Route table row: a note's backlinks."
+  },
+  "settingsRouteCards": "List the cards, or add one",
+  "@settingsRouteCards": {
+    "description": "Route table row: the cards endpoint."
+  },
+  "settingsRouteCard": "One card",
+  "@settingsRouteCard": {
+    "description": "Route table row: a single card."
+  },
+  "settingsRouteCardPatch": "Change a card's fields",
+  "@settingsRouteCardPatch": {
+    "description": "Route table row: changing a card."
+  },
+  "settingsRouteReview": "Record a review",
+  "@settingsRouteReview": {
+    "description": "Route table row: recording a review."
+  },
+  "settingsRouteQueue": "The cards due now",
+  "@settingsRouteQueue": {
+    "description": "Route table row: today's queue."
+  },
+  "settingsRouteSearch": "Search the notes and the cards",
+  "@settingsRouteSearch": {
+    "description": "Route table row: search."
+  },
+  "settingsRouteTags": "The tags the library holds",
+  "@settingsRouteTags": {
+    "description": "Route table row: tags."
+  },
+  "settingsRouteTypes": "The card types, or one of them",
+  "@settingsRouteTypes": {
+    "description": "Route table row: card types."
+  },
+  "settingsRouteStats": "Summary, forecast and retention",
+  "@settingsRouteStats": {
+    "description": "Route table row: the statistics routes."
+  },
+  "settingsRouteEvents": "The library's events, as they happen",
+  "@settingsRouteEvents": {
+    "description": "Route table row: the event stream."
+  },
+  "settingsRouteReading": "The reading queue, or one note in it",
+  "@settingsRouteReading": {
+    "description": "Route table row: the reading queue."
+  },
+  "settingsTokenOnce": "The new token. It is shown once; the token file above holds it.",
+  "@settingsTokenOnce": {
+    "description": "The newly minted agent token, shown once after it is written."
+  },
+  "settingsVersion": "Version {version}",
+  "@settingsVersion": {
+    "description": "The app's version on the update page.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.1.0"
+      }
+    }
+  },
+  "settingsFormatVersion": "Library format {format}",
+  "@settingsFormatVersion": {
+    "description": "The library format the build writes.",
+    "placeholders": {
+      "format": {
+        "type": "String",
+        "example": "remit/3"
+      }
+    }
+  },
+  "settingsReindex": "Rebuild the index",
+  "@settingsReindex": {
+    "description": "The button that derives the index again."
+  },
+  "settingsReindexBody": "Derives the index from the plaintext again; nothing in the library changes.",
+  "@settingsReindexBody": {
+    "description": "Description of rebuilding the index."
+  },
+  "settingsReindexed": "The index was rebuilt.",
+  "@settingsReindexed": {
+    "description": "The rebuild finished."
+  },
+  "settingsExport": "Export the library…",
+  "@settingsExport": {
+    "description": "The button that writes a .remitlib archive."
+  },
+  "settingsExportBody": "Writes a .remitlib archive of the plaintext sources. The derived index is not in it.",
+  "@settingsExportBody": {
+    "description": "Description of exporting the library."
+  },
+  "settingsExported": "Wrote {path}.",
+  "@settingsExported": {
+    "description": "The archive was written, at the path given.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "/home/ada/Remit.remitlib"
+      }
+    }
+  },
+  "settingsAboutTagline": "AGPL-3.0 · plaintext library · zero telemetry",
+  "@settingsAboutTagline": {
+    "description": "What the app is, under its name on the about page."
+  },
+  "settingsAboutLibrary": "Library",
+  "@settingsAboutLibrary": {
+    "description": "The library's location on the about page."
+  },
+  "settingsAboutNotes": "Notes",
+  "@settingsAboutNotes": {
+    "description": "How many notes the library holds."
+  },
+  "settingsAboutCards": "Cards",
+  "@settingsAboutCards": {
+    "description": "How many cards the library holds."
+  },
+  "settingsAboutQueue": "Due now",
+  "@settingsAboutQueue": {
+    "description": "How many cards and notes are due now."
+  },
+  "settingsCredits": "Credits",
+  "@settingsCredits": {
+    "description": "The about page's thanks."
+  },
+  "settingsCreditsBody": "Built with MyGo. Spaced repetition follows FSRS; the review log is plain JSON Lines.",
+  "@settingsCreditsBody": {
+    "description": "What the app is built on."
+  },
+  "settingsAppearanceLead": "How Remit looks, and how wide its paper is.",
+  "@settingsAppearanceLead": {
+    "description": "The one sentence under the appearance page's title."
+  },
+  "settingsReviewLead": "The rhythm this library's reviews keep. It travels with the library, not the machine.",
+  "@settingsReviewLead": {
+    "description": "The one sentence under the review page's title."
+  },
+  "settingsBudgetLead": "What one day holds. The presets travel with the library.",
+  "@settingsBudgetLead": {
+    "description": "The one sentence under the budget page's title."
+  },
+  "settingsKeysLead": "What each key does. The map is the same in every library.",
+  "@settingsKeysLead": {
+    "description": "The one sentence under the shortcuts page's title."
+  },
+  "settingsAboutLead": "What this build is, and where its library lives.",
+  "@settingsAboutLead": {
+    "description": "The one sentence under the about page's title."
+  },
+  "settingsReviewNeedsLibrary": "Open a library to change the pace its reviews keep.",
+  "@settingsReviewNeedsLibrary": {
+    "description": "The review page with no library open."
+  },
+  "settingsBudgetNeedsLibrary": "Open a library to change what one of its days holds.",
+  "@settingsBudgetNeedsLibrary": {
+    "description": "The budget page with no library open."
+  },
+  "settingsBudgetCardsValue": "{count, plural, one {# card} other {# cards}}",
+  "@settingsBudgetCardsValue": {
+    "description": "The daily cards beside their slider.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "20"
+      }
+    }
+  },
+  "settingsBudgetMinutesValue": "{count, plural, one {# minute} other {# minutes}}",
+  "@settingsBudgetMinutesValue": {
+    "description": "The daily minutes beside their slider.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "30"
+      }
+    }
+  },
+  "settingsPluginDetailsHide": "Hide details",
+  "@settingsPluginDetailsHide": {
+    "description": "The button that closes one plugin's details, beside the one that opened them."
+  },
+  "settingsPluginPageOpenOf": "Open {page}",
+  "@settingsPluginPageOpenOf": {
+    "description": "The accessible name of a plugin page's button, named by the page.",
+    "placeholders": {
+      "page": {
+        "type": "String",
+        "example": "Leech report"
+      }
+    }
+  },
+  "pluginNoRoles": "Implements no role",
+  "@pluginNoRoles": {
+    "description": "A plugin's details when it plays none of the library's roles."
+  },
+  "settingsUpdateNeedsLibrary": "Open a library to rebuild its index or export it.",
+  "@settingsUpdateNeedsLibrary": {
+    "description": "The update page's two library actions with no library open."
+  },
+  "settingsAboutNoLibrary": "No library is open.",
+  "@settingsAboutNoLibrary": {
+    "description": "The about page's library line before one is open."
+  },
+  "pluginReenableOf": "Re-enable {name}",
+  "@pluginReenableOf": {
+    "description": "The accessible name of the action that shows a plugin's hidden entries again, named by the plugin.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "acme.cards"
+      }
+    }
   }
 }

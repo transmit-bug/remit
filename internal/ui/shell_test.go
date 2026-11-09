@@ -216,7 +216,7 @@ func TestNoHorizontalScrollAt720(t *testing.T) {
 		{ui.Key3, msgs.ReadQueueEmpty()},
 		{ui.Key4, "Show answer"},
 		{ui.Key5, msgs.StatsTitle()},
-		{ui.Key6, msgs.SettingsTitle()},
+		{ui.Key6, msgs.SettingsAppearanceLead()},
 	} {
 		tt.Key(ui.Cmd, page.key)
 		tt.Advance(320 * time.Millisecond)

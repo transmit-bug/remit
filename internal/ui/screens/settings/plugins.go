@@ -10,7 +10,7 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// Plugin is one plugin this build can run, as the page shows it: what its
+// Plugin is one plugin this build can run, as the pages show it: what its
 // manifest declares, the roles it can play, and whether this library approved
 // it. The built-ins ship with the app, so they are always on and cannot be
 // withdrawn.
@@ -44,35 +44,44 @@ type roleRequest struct {
 	who  string
 }
 
-// pluginsFieldset is the plugin list with its approve switches, and the two
-// roles each library plays with one plugin. Approving a plugin is the grant: the
-// capabilities it declares are shown beside it. A role change and an approval
-// both reach the app here and now, but a plugin starts on the next library
-// open, so nothing reloads under the review on screen.
-func pluginsFieldset(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design.Tokens) {
+// pluginsPage is the plugins this library may run: what each declares, whether
+// it is approved, its details, and what the host could not use or had to hide.
+// Approving a plugin is the grant — the capabilities it declares are what the
+// user agrees to — so the switch and the badges sit on one row. The roles the
+// library plays, the pages the plugins contributed and the settings they
+// declared follow.
+func pluginsPage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design.Tokens) {
 	var enable enableRequest
 	var role roleRequest
-	ui.Fieldset(c, msgs.SettingsPlugins(), func() {
-		if !s.HasLibrary {
-			muted(c, tk, msgs.SettingsPluginsNeedsLibrary())
-			return
+	var opened string
+	var openPlugin PluginPage
+
+	plugins := d.pluginList()
+	// The page's heading names the list; its rows and the two roles follow in
+	// the form, with only the groups beside them carrying a legend.
+	switch {
+	case !s.HasLibrary:
+		muted(c, tk, msgs.SettingsPluginsNeedsLibrary())
+	case len(plugins) == 0:
+		muted(c, tk, msgs.PluginEmpty())
+	default:
+		for _, p := range plugins {
+			pluginField(c, d, tk, msgs, p, s, &enable, &opened)
 		}
-		muted(c, tk, msgs.SettingsPluginsBody())
-		plugins := d.pluginList()
-		if len(plugins) == 0 {
-			muted(c, tk, msgs.PluginEmpty())
-			return
+		if s.PluginErr != "" {
+			notice(c, tk, s.PluginErr)
 		}
 		roles := d.roles()
-		for _, p := range plugins {
-			pluginField(c, d, tk, msgs, p, &enable)
-		}
 		roleField(c, msgs, tk, plugins, roles, core.RoleCardsDerive, msgs.PluginRoleCards(), msgs.PluginRoleCardsBody(), &role)
 		roleField(c, msgs, tk, plugins, roles, core.RoleReviewSchedule, msgs.PluginRoleSchedule(), msgs.PluginRoleScheduleBody(), &role)
-		if s.PluginErr != "" {
-			ui.Text(c, s.PluginErr).FontSize(tk.TypeUI).TextColor(tk.Danger)
-		}
-	})
+	}
+
+	if len(plugins) > 0 {
+		ui.Fieldset(c, msgs.SettingsPluginPages(), func() {
+			pluginPages(c, s, msgs, tk, &openPlugin)
+		})
+	}
+	pluginSettingsFieldset(c, s, d, msgs, tk)
 
 	if enable.name != "" {
 		d.enable(c, enable.name, enable.on)
@@ -80,36 +89,89 @@ func pluginsFieldset(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk 
 	if role.role != "" {
 		d.chooseRole(c, role.role, role.who)
 	}
+	if opened != "" {
+		s.toggleDetails(opened)
+	}
+	if openPlugin.Plugin != "" {
+		d.openPage(c, openPlugin.Plugin, openPlugin.ID)
+	}
 }
 
-// pluginField is one plugin: its name, the capabilities approving it grants,
-// and the switch that grants them. A built-in carries a badge instead of a
-// switch, because withdrawing the app's own card plugin is not a choice.
-func pluginField(c *ui.Context, d Deps, tk design.Tokens, msgs locales.Messages, p Plugin, enable *enableRequest) {
+// pluginField is one plugin: its name and whether it ships with the app, the
+// capabilities approving it grants, the switch that grants them, and the
+// details the user opens. A built-in carries a badge instead of a switch,
+// because withdrawing the app's own card plugin is not a choice.
+func pluginField(c *ui.Context, d Deps, tk design.Tokens, msgs locales.Messages, p Plugin, s *State, enable *enableRequest, opened *string) {
 	on := p.Enabled
-	ui.Column(c).Gap(tk.SpaceXS).Children(func() {
+	name := p.Name
+	ui.Column(c).Key(p.Name).Gap(tk.SpaceXS).Children(func() {
 		ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, p.Name).Bold()
 			if p.Builtin {
 				ui.Badge(c, msgs.PluginBuiltin())
 			}
 			ui.Spacer(c)
-			ui.Text(c, p.Version+" · "+p.ID).FontSize(tk.TypeUI).TextColor(tk.TextFaint)
-			if !p.Builtin && ui.Switch(c, &on).Label(msgs.PluginEnable(p.Name)).Changed() {
-				enable.name, enable.on = p.Name, on
+			if !p.Builtin {
+				if ui.Switch(c, &on).Label(msgs.PluginEnable(p.Name)).Changed() {
+					enable.name, enable.on = name, on
+				}
 			}
 		})
 		if len(p.Capabilities) == 0 {
 			ui.Text(c, msgs.PluginNoCapabilities()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 		} else {
-			ui.Row(c).Gap(tk.SpaceXS).Children(func() {
+			ui.Row(c).Gap(tk.SpaceXS).AlignItems(ui.Center).Children(func() {
 				for _, capability := range p.Capabilities {
 					ui.Badge(c, capability)
 				}
 			})
 		}
+		if s.detailsOpen(name) {
+			ui.Column(c).Gap(tk.SpaceXS).Children(func() {
+				ui.Text(c, msgs.SettingsPluginID()+": "+p.ID+" · "+p.Version).
+					Font("monospace").FontSize(tk.TypeMono).TextColor(tk.TextMuted).SingleLine()
+				if len(p.Roles) == 0 {
+					muted(c, tk, msgs.PluginNoRoles())
+				} else {
+					ui.Text(c, msgs.SettingsPluginRoles()+": "+join(p.Roles)).
+						FontSize(tk.TypeUI).TextColor(tk.TextMuted).SingleLine()
+				}
+			})
+		}
+		ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
+			label := msgs.SettingsPluginDetails()
+			if s.detailsOpen(name) {
+				label = msgs.SettingsPluginDetailsHide()
+			}
+			if ui.Button(c, label).MinHeight(tk.Control).AlignSelf(ui.Start).
+				Label(msgs.SettingsPluginDetailsOf(name)).Clicked() {
+				*opened = name
+			}
+		})
 		pluginProblems(c, d, msgs, tk, p)
 	})
+}
+
+// pluginPages lists the pages the enabled plugins contributed, each with the one
+// action that opens it. A plugin whose page failed three times is not here: it
+// is in the problems above, with the way back.
+func pluginPages(c *ui.Context, s *State, msgs locales.Messages, tk design.Tokens, open *PluginPage) {
+	if len(s.Pages) == 0 {
+		muted(c, tk, msgs.SettingsPluginNoPages())
+		return
+	}
+	for _, page := range s.Pages {
+		chosen := page
+		ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, page.Title).FontSize(tk.TypeUI).SingleLine()
+			ui.Text(c, page.Plugin).FontSize(tk.TypeLabel).TextColor(tk.TextFaint).SingleLine()
+			ui.Spacer(c)
+			if ui.Button(c, msgs.SettingsPluginPageOpen()).MinHeight(tk.Control).
+				Label(msgs.SettingsPluginPageOpenOf(page.Title)).Clicked() {
+				*open = chosen
+			}
+		})
+	}
 }
 
 // roleField is one role's radio group over the plugins that can play it. Only
@@ -148,7 +210,46 @@ func optionLabel(p Plugin) string {
 	return p.Name + " " + p.Version
 }
 
-// muted is one quiet line, the page's way of stating what is not there.
-func muted(c *ui.Context, tk design.Tokens, text string) {
-	ui.Text(c, text).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+// join puts a list on one line, for a row that names the roles a plugin plays.
+func join(names []string) string {
+	out := ""
+	for i, name := range names {
+		if i > 0 {
+			out += ", "
+		}
+		out += name
+	}
+	return out
+}
+
+func (d Deps) pluginList() []Plugin {
+	if d.Plugins == nil {
+		return nil
+	}
+	return d.Plugins()
+}
+
+func (d Deps) roles() map[string]string {
+	if d.Roles == nil {
+		return nil
+	}
+	return d.Roles()
+}
+
+func (d Deps) enable(c *ui.Context, name string, on bool) {
+	if d.SetEnabled != nil {
+		d.SetEnabled(c, name, on)
+	}
+}
+
+func (d Deps) chooseRole(c *ui.Context, role, name string) {
+	if d.SetRole != nil {
+		d.SetRole(c, role, name)
+	}
+}
+
+func (d Deps) openPage(c *ui.Context, plugin, page string) {
+	if d.OpenPage != nil {
+		d.OpenPage(c, plugin, page)
+	}
 }

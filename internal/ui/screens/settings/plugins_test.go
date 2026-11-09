@@ -26,6 +26,7 @@ type world struct {
 
 	enabled    []pluginChange
 	roleWrites []roleChange
+	reenabled  []string
 	saves      []core.Type
 	deletes    []core.ID
 
@@ -74,6 +75,15 @@ func (w *world) deps() settings.Deps {
 			for i := range w.plugins {
 				if w.plugins[i].Name == name {
 					w.plugins[i].Enabled = on
+				}
+			}
+		},
+		Reenable: func(_ *ui.Context, name string) {
+			w.reenabled = append(w.reenabled, name)
+			for i := range w.plugins {
+				if w.plugins[i].Name == name {
+					w.plugins[i].Failures = 0
+					w.plugins[i].Problems = nil
 				}
 			}
 		},
@@ -219,7 +229,7 @@ func TestPluginApproval(t *testing.T) {
 	for _, size := range sizes {
 		t.Run(size.name, func(t *testing.T) {
 			w := newWorld()
-			w.state = &settings.State{HasLibrary: true}
+			w.state = &settings.State{HasLibrary: true, Page: settings.PagePlugins}
 			tt := atWorld(t, w, size.w, size.h)
 
 			for _, want := range []string{
@@ -247,6 +257,73 @@ func TestPluginApproval(t *testing.T) {
 	}
 }
 
+// A plugin's row is what approving it grants and what the host had to drop: the
+// capabilities, the contributions it could not use, the entries failures hid,
+// and the one action that gives them another try.
+func TestPluginsShowCapabilitiesAndFailures(t *testing.T) {
+	msgs := en
+	w := newWorld()
+	w.plugins[2].Enabled = true
+	w.plugins[2].Capabilities = []string{"notes:read", "cards:write"}
+	w.plugins[2].Problems = []string{`icon "no-such-icon": the host has no such icon`}
+	w.plugins[2].Failures = 3
+	w.state = &settings.State{HasLibrary: true, Page: settings.PagePlugins}
+	tt := atWorld(t, w, 1024, 720)
+
+	for _, want := range []string{
+		"acme.cards", "notes:read", "cards:write",
+		msgs.PluginProblems(), `icon "no-such-icon": the host has no such icon`,
+		msgs.PluginFailures(3), msgs.PluginReenable(),
+	} {
+		reveal(t, tt, 1024, 720, want)
+		if !tt.HasText(want) {
+			t.Fatalf("the plugin's row is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+	// The built-ins carry a badge instead of a switch: withdrawing the app's own
+	// card plugin is not a choice the page offers.
+	reveal(t, tt, 1024, 720, msgs.PluginBuiltin())
+
+	reveal(t, tt, 1024, 720, "Re-enable")
+	if err := tt.Click("Re-enable"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if len(w.reenabled) != 1 || w.reenabled[0] != "acme.cards" {
+		t.Fatalf("Re-enable reached the app as %v, want acme.cards", w.reenabled)
+	}
+	if tt.HasText(msgs.PluginFailures(3)) {
+		t.Error("the failure count stayed after the app cleared it")
+	}
+}
+
+// One plugin's details are opened by its own button, and say what the row has no
+// room for: the manifest id, its version and the roles it can play.
+func TestPluginDetailsOpenOnTheirButton(t *testing.T) {
+	msgs := en
+	w := newWorld()
+	w.state = &settings.State{HasLibrary: true, Page: settings.PagePlugins}
+	tt := atWorld(t, w, 1024, 720)
+
+	reveal(t, tt, 1024, 720, msgs.SettingsPluginDetails())
+	if tt.HasText("remit.cards.standard") {
+		t.Error("the details show before their button was used")
+	}
+	info, ok := tt.AccessByRole(ui.RoleButton, msgs.SettingsPluginDetailsOf("acme.cards"))
+	if !ok {
+		t.Fatalf("the page draws no details button for acme.cards; texts %q", tt.Texts())
+	}
+	tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
+	tt.Frame()
+	reveal(t, tt, 1024, 720, "acme.cards")
+	if !tt.HasText("acme.cards · 0.3.0") {
+		t.Fatalf("the details did not open; texts %q", tt.Texts())
+	}
+	if !tt.HasText(msgs.SettingsPluginRoles()) {
+		t.Errorf("the details do not name the roles; texts %q", tt.Texts())
+	}
+}
+
 // A role is a radio group over the approved plugins that can play it. Moving
 // the choice asks the app to write it, and the choice is the plugin the library
 // then names.
@@ -255,7 +332,7 @@ func TestRoleSwitch(t *testing.T) {
 		t.Run(size.name, func(t *testing.T) {
 			w := newWorld()
 			w.plugins[2].Enabled = true // acme.cards is approved
-			w.state = &settings.State{HasLibrary: true}
+			w.state = &settings.State{HasLibrary: true, Page: settings.PagePlugins}
 			tt := atWorld(t, w, size.w, size.h)
 
 			reveal(t, tt, size.w, size.h, "acme.cards 0.3.0")
@@ -275,7 +352,7 @@ func TestRoleSwitch(t *testing.T) {
 // the user permitted, and the built-in is always there.
 func TestRoleOffersOnlyApprovedPlugins(t *testing.T) {
 	w := newWorld()
-	w.state = &settings.State{HasLibrary: true}
+	w.state = &settings.State{HasLibrary: true, Page: settings.PagePlugins}
 	tt := atWorld(t, w, 1024, 720)
 
 	reveal(t, tt, 1024, 720, "cards 1.0.0")
@@ -292,20 +369,29 @@ func TestRoleOffersOnlyApprovedPlugins(t *testing.T) {
 func TestPluginsDegradeToAStatedEmptyState(t *testing.T) {
 	msgs := en
 	empty := settings.Deps{}
-	state := settings.State{HasLibrary: true}
-	tt := at(t, state, empty, 1024, 720)
+	state := settings.State{HasLibrary: true, Page: settings.PagePlugins}
+	tt := ui.NewTester(func(c *ui.Context) { settings.View(c, &state, empty) }, 1024, 720)
+	tt.Frame()
 	reveal(t, tt, 1024, 720, msgs.PluginEmpty())
 	if !tt.HasText(msgs.PluginEmpty()) {
 		t.Fatalf("no plugin service says nothing: %q", tt.Texts())
 	}
 
-	closed := at(t, settings.State{}, empty, 1024, 720)
-	reveal(t, closed, 1024, 720, msgs.SettingsPluginsNeedsLibrary())
-	if !closed.HasText(msgs.SettingsPluginsNeedsLibrary()) {
-		t.Error("the plugins section did not ask for a library")
+	closed := settings.State{Page: settings.PagePlugins}
+	tt = ui.NewTester(func(c *ui.Context) { settings.View(c, &closed, empty) }, 1024, 720)
+	tt.Frame()
+	reveal(t, tt, 1024, 720, msgs.SettingsPluginsNeedsLibrary())
+	if !tt.HasText(msgs.SettingsPluginsNeedsLibrary()) {
+		t.Error("the plugins page did not ask for a library")
 	}
-	reveal(t, closed, 1024, 720, msgs.SettingsTypesNeedsLibrary())
-	if !closed.HasText(msgs.SettingsTypesNeedsLibrary()) {
-		t.Error("the types section did not ask for a library")
+
+	// The card types are kept whole, off the sub-navigation until W5 moves
+	// them: the page still says which library it needs.
+	types := settings.State{Page: settings.PageTypes}
+	tt = ui.NewTester(func(c *ui.Context) { settings.View(c, &types, empty) }, 1024, 720)
+	tt.Frame()
+	reveal(t, tt, 1024, 720, msgs.SettingsTypesNeedsLibrary())
+	if !tt.HasText(msgs.SettingsTypesNeedsLibrary()) {
+		t.Error("the types page did not ask for a library")
 	}
 }

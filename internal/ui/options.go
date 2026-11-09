@@ -57,6 +57,13 @@ type Options struct {
 	// ChooseExportFolder picks the folder an export writes into, mygo.Dialog's
 	// folder picker unless a test replaces it.
 	ChooseExportFolder func(title string) (string, error)
+	// ChooseExportFile picks the archive an export of the whole library writes,
+	// mygo.Dialog's save dialog unless a test replaces it.
+	ChooseExportFile func() (string, error)
+	// OpenSystemSettings opens the desktop's text-size page, which is where the
+	// window's text size is changed. nil keeps the platform's own, a build
+	// without one hides the door rather than drawing a dead button.
+	OpenSystemSettings func() error
 	// ChooseImage picks one picture for a note, mygo.Dialog's file picker
 	// unless a test replaces it.
 	ChooseImage func() (string, error)

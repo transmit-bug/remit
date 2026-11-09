@@ -135,6 +135,9 @@ func main() {
 	})
 	mygo.App.SetName(appui.Name)
 	mygo.App.SetVersion(appui.Version)
+	// The look a previous run chose, so the first frame is already the right
+	// colour rather than flashing the desktop's and switching.
+	mygo.Theme.SetSource(mygo.ThemeSource(s.ThemeSource()))
 
 	// Diagnostics go to the app's own log directory and nowhere else.
 	logDir, err := mygo.App.Path(mygo.PathLogs)
@@ -180,6 +183,13 @@ func main() {
 		}
 
 		tray := installTray(a, func() { mainWin.Focus() })
+		// The one listener for the settings: the tray's pause item follows the
+		// page, and so does the appearance the desktop's own chrome draws with.
+		// A running window folds the choice itself, from the same settings.
+		a.OnSettings(func(s settings.Settings) {
+			tray.followSettings(s)
+			mygo.Theme.SetSource(mygo.ThemeSource(s.ThemeSource()))
+		})
 		remindAtStartup(a, systemNotify)
 
 		// One check after the window is up, when the user turned checks on, off

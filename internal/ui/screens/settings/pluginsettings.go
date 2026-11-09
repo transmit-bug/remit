@@ -103,6 +103,7 @@ func pluginProblems(c *ui.Context, d Deps, msgs locales.Messages, tk design.Toke
 	ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
 		ui.Text(c, msgs.PluginFailures(p.Failures)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 		ui.Button(c, msgs.PluginReenable()).MinHeight(tk.Control).
+			Label(msgs.PluginReenableOf(p.Name)).
 			OnClick(func() { d.reenable(c, p.Name) })
 	})
 }

@@ -55,6 +55,7 @@ func TestRoundTrip(t *testing.T) {
 	want := Settings{
 		UpdateCheck: true, LibraryDir: "/home/ada/Remit", AgentServer: true,
 		Notifications: true, Hotkey: "CmdOrCtrl+Shift+J", RemindedOn: "2026-11-06",
+		Appearance: AppearanceInk, PaperWidth: 700,
 	}
 	if err := Save(dir, want); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -83,6 +84,41 @@ func TestCorruptSettingsAreReported(t *testing.T) {
 	}
 	if _, err := Load(dir); err == nil {
 		t.Error("Load accepted a corrupt settings file")
+	}
+}
+
+// The look and the paper's measure are the app's preferences: the zero value
+// follows the desktop at the default measure, and a stored one is read back
+// inside the range the page offers.
+func TestAppearanceAndPaperMeasure(t *testing.T) {
+	if got := (Settings{}).AppearanceName(); got != AppearanceSystem {
+		t.Errorf("a fresh install looks %q, want the desktop's", got)
+	}
+	if got := (Settings{}).ThemeSource(); got != "system" {
+		t.Errorf("a fresh install asks MyGo for %q, want system", got)
+	}
+	if got := (Settings{}).PaperMeasure(); got != DefaultPaperWidth {
+		t.Errorf("a fresh install's paper is %d, want %d", got, DefaultPaperWidth)
+	}
+	for _, c := range []struct {
+		appearance, source string
+	}{
+		{AppearanceSystem, "system"},
+		{AppearancePaper, "light"},
+		{AppearanceInk, "dark"},
+		{"green", "system"},
+	} {
+		s := Settings{Appearance: c.appearance}
+		if got := s.ThemeSource(); got != c.source {
+			t.Errorf("appearance %q asks for %q, want %q", c.appearance, got, c.source)
+		}
+	}
+	for _, c := range []struct{ set, want int }{
+		{0, DefaultPaperWidth}, {700, 700}, {PaperWidthMin - 40, PaperWidthMin}, {PaperWidthMax + 40, PaperWidthMax},
+	} {
+		if got := (Settings{PaperWidth: c.set}).PaperMeasure(); got != c.want {
+			t.Errorf("paper width %d reads as %d, want %d", c.set, got, c.want)
+		}
 	}
 }
 

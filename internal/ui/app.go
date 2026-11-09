@@ -4,6 +4,7 @@ package ui
 
 import (
 	"context"
+	"runtime"
 	"sync/atomic"
 
 	"github.com/egoist/mygo"
@@ -120,6 +121,7 @@ type App struct {
 	prefs            screensettings.State
 	prefsBack        areaID                                  // the area the settings page goes back to
 	prefsBackSub     subID                                   // and the page of it
+	settingsSub      subID                                   // the settings page the user was on last
 	cards            *cardPlugin                             // what a paragraph asks and how a card reads
 	scheduler        *schedulerPlugin                        // what schedules a review, and what a session is worth
 	cardsChoice      *ext.JSRunner                           // the runner Options.Cards named, nil for the app's own
@@ -204,6 +206,14 @@ type App struct {
 	// filter the files. nil falls back to the window's dialog.
 	pickPlugin func(label string, extensions []string) ([]string, error)
 
+	// openDisplay opens the desktop's own text-size page: the window draws at
+	// the desktop's scale, so the setting lives there. nil is a platform with
+	// no such page, and the settings page then says where the size comes from
+	// without offering a door it cannot open.
+	openDisplay func() error
+	// pickExport is the save dialog an export writes the .remitlib through.
+	pickExport func() (string, error)
+
 	// counts is told the queues' lengths whenever they are rebuilt, so the tray
 	// can show them without asking the window.
 	counts func(Counts)
@@ -233,6 +243,7 @@ func NewApp(opts ...Options) *App {
 		pickMd:      pickMarkdown,
 		pickFolder:  pickExportFolder,
 		pickImage:   pickNoteImage,
+		pickExport: pickLibraryArchive,
 		checkUpdate: screensettings.CheckForUpdate,
 	}
 	// The importer reads the library open now, which a dropped archive can
@@ -270,6 +281,12 @@ func NewApp(opts ...Options) *App {
 		if o.ChooseImage != nil {
 			a.pickImage = o.ChooseImage
 		}
+		if o.ChooseExportFile != nil {
+			a.pickExport = o.ChooseExportFile
+		}
+		if o.OpenSystemSettings != nil {
+			a.openDisplay = o.OpenSystemSettings
+		}
 		if o.CheckUpdate != nil {
 			a.checkUpdate = o.CheckUpdate
 		}
@@ -282,6 +299,11 @@ func NewApp(opts ...Options) *App {
 	}
 	a.cardsChoice, a.schedulerChoice = chosenCards, chosenScheduler
 	a.withoutCards, a.withoutScheduler = withoutCards, withoutScheduler
+	// The desktop's text-size page exists on macOS alone; elsewhere the settings
+	// page says where the size comes from without a door that cannot open.
+	if a.openDisplay == nil && runtime.GOOS == "darwin" {
+		a.openDisplay = openDisplaySettings
+	}
 	// With a plugin directory the roles decide what derives and schedules, so
 	// the plugins are opened per library; without one the app's own play.
 	if a.openPlugin == nil {

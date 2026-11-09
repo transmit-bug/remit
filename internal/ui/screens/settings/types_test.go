@@ -18,7 +18,7 @@ func TestTypeEditingAndPreview(t *testing.T) {
 	for _, size := range sizes {
 		t.Run(size.name, func(t *testing.T) {
 			w := newWorld()
-			w.state = &settings.State{HasLibrary: true}
+			w.state = &settings.State{HasLibrary: true, Page: settings.PageTypes}
 			tt := atWorld(t, w, size.w, size.h)
 
 			// The first type is loaded: Basic's front template renders "Front!".
@@ -64,7 +64,7 @@ func TestTypeCreation(t *testing.T) {
 	for _, size := range sizes {
 		t.Run(size.name, func(t *testing.T) {
 			w := newWorld()
-			w.state = &settings.State{HasLibrary: true}
+			w.state = &settings.State{HasLibrary: true, Page: settings.PageTypes}
 			tt := atWorld(t, w, size.w, size.h)
 
 			reveal(t, tt, size.w, size.h, en.TypeNew())
@@ -113,7 +113,7 @@ func TestTypeWriteRefusals(t *testing.T) {
 	for _, size := range sizes {
 		t.Run(size.name, func(t *testing.T) {
 			w := newWorld()
-			w.state = &settings.State{HasLibrary: true, TypeRow: 1} // Vocabulary
+			w.state = &settings.State{HasLibrary: true, Page: settings.PageTypes, TypeRow: 1} // Vocabulary
 			tt := atWorld(t, w, size.w, size.h)
 
 			// Field 3 is Extra: focus it, Tab to its Remove button, press Enter.
@@ -156,20 +156,20 @@ func TestTypeWriteRefusals(t *testing.T) {
 	}
 }
 
-// In Chinese at the smallest window the sections still work: approval, a role
-// change and a template edit that the preview follows at once.
-func TestPluginsAndTypesInChinese(t *testing.T) {
+// In Chinese at the smallest window the plugin page still works: approval, a
+// role change, and the plugin's own settings.
+func TestPluginsInChinese(t *testing.T) {
 	zh := locales.In("zh-Hans")
 	w := newWorld()
 	w.plugins[3].Enabled = true // acme.sched is approved
-	w.state = &settings.State{HasLibrary: true}
+	w.state = &settings.State{HasLibrary: true, Page: settings.PagePlugins}
 	tt := ui.NewTester(func(c *ui.Context) { settings.View(c, w.state, w.deps()) }, 720, 520)
 	tt.SetLocale("zh-Hans")
 	tt.Frame()
 
 	reveal(t, tt, 720, 520, zh.SettingsPlugins())
-	if !tt.HasText(zh.SettingsPlugins()) || !tt.HasText(zh.SettingsTypes()) {
-		t.Fatalf("the Chinese page is missing its sections; texts %q", tt.Texts())
+	if !tt.HasText(zh.SettingsPlugins()) {
+		t.Fatalf("the Chinese page is missing its heading; texts %q", tt.Texts())
 	}
 
 	reveal(t, tt, 720, 520, zh.PluginEnable("acme.cards"))
@@ -190,7 +190,26 @@ func TestPluginsAndTypesInChinese(t *testing.T) {
 	if len(w.roleWrites) != 1 || w.roleWrites[0] != (roleChange{core.RoleReviewSchedule, "acme.sched"}) {
 		t.Fatalf("the role change reached the app as %v", w.roleWrites)
 	}
+	tt.Advance(time.Second)
+	if tt.FramePending() {
+		t.Error("view still requests frames after it should settle")
+	}
+}
 
+// The type editor in Chinese at the smallest window: a template edit the
+// preview follows at once, and no English left on the page.
+func TestTypesInChinese(t *testing.T) {
+	zh := locales.In("zh-Hans")
+	w := newWorld()
+	w.state = &settings.State{HasLibrary: true, Page: settings.PageTypes}
+	tt := ui.NewTester(func(c *ui.Context) { settings.View(c, w.state, w.deps()) }, 720, 520)
+	tt.SetLocale("zh-Hans")
+	tt.Frame()
+
+	reveal(t, tt, 720, 520, zh.SettingsTypes())
+	if !tt.HasText(zh.SettingsTypes()) {
+		t.Fatalf("the Chinese page is missing its heading; texts %q", tt.Texts())
+	}
 	reveal(t, tt, 720, 520, zh.TypeFrontTemplate())
 	if err := tt.Click(zh.TypeFrontTemplate()); err != nil {
 		t.Fatal(err)
@@ -202,7 +221,7 @@ func TestPluginsAndTypesInChinese(t *testing.T) {
 	if !tt.HasText("Back?") {
 		t.Fatalf("the Chinese page's preview did not follow the edit; texts %q", tt.Texts())
 	}
-	if tt.HasText(en.SettingsTitle()) {
+	if tt.HasText(en.SettingsTypes()) {
 		t.Error("the page kept its English title")
 	}
 	tt.Advance(time.Second)

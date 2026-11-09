@@ -43,7 +43,15 @@ const (
 	subStatsHeatmap
 	subStatsForecast
 	// The settings area, one page until its workflow splits it.
+
 	subSettingsAppearance
+	subSettingsReview
+	subSettingsBudget
+	subSettingsKeys
+	subSettingsPlugins
+	subSettingsAgent
+	subSettingsUpdate
+	subSettingsAbout
 )
 
 // sessionKind is a full-window session over the stage: the review or the reading
@@ -72,7 +80,11 @@ func subsOf(area areaID) []subID {
 	case areaStats:
 		return []subID{subStatsOverview, subStatsHeatmap, subStatsForecast}
 	case areaSettings:
-		return []subID{subSettingsAppearance}
+		return []subID{
+			subSettingsAppearance, subSettingsReview, subSettingsBudget,
+			subSettingsKeys, subSettingsPlugins, subSettingsAgent,
+			subSettingsUpdate, subSettingsAbout,
+		}
 	}
 	return nil
 }
@@ -157,6 +169,20 @@ func subLabel(msgs locales.Messages, sub subID) string {
 		return msgs.StatsForecastTitle()
 	case subSettingsAppearance:
 		return msgs.AppearancePage()
+	case subSettingsReview:
+		return msgs.ReviewPage()
+	case subSettingsBudget:
+		return msgs.BudgetPage()
+	case subSettingsKeys:
+		return msgs.KeysPage()
+	case subSettingsPlugins:
+		return msgs.SettingsPlugins()
+	case subSettingsAgent:
+		return msgs.AgentPage()
+	case subSettingsUpdate:
+		return msgs.UpdatePage()
+	case subSettingsAbout:
+		return msgs.AboutPage()
 	}
 	return ""
 }
@@ -184,6 +210,20 @@ func subName(sub subID) string {
 		return "forecast"
 	case subSettingsAppearance:
 		return "appearance"
+	case subSettingsReview:
+		return "review"
+	case subSettingsBudget:
+		return "budget"
+	case subSettingsKeys:
+		return "keys"
+	case subSettingsPlugins:
+		return "plugins"
+	case subSettingsAgent:
+		return "agent"
+	case subSettingsUpdate:
+		return "update"
+	case subSettingsAbout:
+		return "about"
 	}
 	return ""
 }

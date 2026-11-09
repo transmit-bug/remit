@@ -298,7 +298,7 @@ func openPage(t *testing.T, tt *ui.Tester, page string) {
 // withdrawing the plugin takes it out of both: the declarations are the only
 // door, and disabling removes them from every receiver.
 func TestContributedCommandLivesInThePaletteAndItsSlot(t *testing.T) {
-	_, tt := openReport(t, &fakeRunner{})
+	a, tt := openReport(t, &fakeRunner{})
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
@@ -319,8 +319,7 @@ func TestContributedCommandLivesInThePaletteAndItsSlot(t *testing.T) {
 
 	// Withdrawing the plugin is the settings page's switch, and the palette and
 	// the menu lose the command with it.
-	tt.Key(ui.Cmd, ui.KeyComma)
-	tt.Advance(320 * time.Millisecond)
+	settingsPage(t, tt, a, subSettingsPlugins)
 	if !tt.HasText("Enable report") {
 		t.Fatalf("the settings page does not list the plugin; texts %q", tt.Texts())
 	}
@@ -378,7 +377,7 @@ func TestContributedCommandAppliesItsAnswer(t *testing.T) {
 // failure hides that command, and only that command.
 func TestAFailingCommandToastsThenHidesItself(t *testing.T) {
 	runner := &fakeRunner{failed: map[string]error{"show": errThrown}}
-	_, tt := openReport(t, runner)
+	a, tt := openReport(t, runner)
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
@@ -411,8 +410,7 @@ func TestAFailingCommandToastsThenHidesItself(t *testing.T) {
 
 	// The settings page counts the failures and offers the one action that
 	// clears them, and the command is back.
-	tt.Key(ui.Cmd, ui.KeyComma)
-	tt.Advance(320 * time.Millisecond)
+	settingsPage(t, tt, a, subSettingsPlugins)
 	reveal(t, tt, 1024, 720, "Re-enable")
 	if !tt.HasText("3 contributed entries failed") {
 		t.Fatalf("the settings page does not count the failures; texts %q", tt.Texts())
@@ -572,13 +570,46 @@ func TestContributedPageFailsWithARetry(t *testing.T) {
 	}
 }
 
+// TestReenableBringsBackAHiddenContribution: three failures take a contributed
+// page out of navigation, and the settings page keeps a row for it. Re-enabling
+// is the one action that puts the page back.
+func TestReenableBringsBackAHiddenContribution(t *testing.T) {
+	runner := &fakeRunner{}
+	a, tt := openReport(t, runner)
+	openReportPage(t, tt)
+
+	runner.setFailure("data", errThrown)
+	for i := 0; i < contrib.FailureLimit; i++ {
+		if err := tt.Click("Refresh"); err != nil {
+			t.Fatalf("refresh %d: %v", i+1, err)
+		}
+	}
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(320 * time.Millisecond)
+	if _, ok := tt.Find("Plugin pages"); ok {
+		t.Fatal("the page is still in navigation after three failures")
+	}
+
+	settingsPage(t, tt, a, subSettingsPlugins)
+	reveal(t, tt, 1024, 720, "Re-enable")
+	if !tt.HasText("3 contributed entries failed") {
+		t.Fatalf("the plugins page does not say the page was hidden; texts %q", tt.Texts())
+	}
+	if err := tt.Click("Re-enable"); err != nil {
+		t.Fatalf("the re-enable action: %v", err)
+	}
+	tt.Frame()
+	if _, ok := tt.Find("Plugin pages"); !ok {
+		t.Fatalf("re-enabling did not put the page back in the rail; texts %q", tt.Texts())
+	}
+}
+
 // The settings a plugin declares are the host form's fields, and the value the
 // reader changes is written into the plugin's own store, not through the plugin.
 func TestContributedSettingsWriteThroughTheHostForm(t *testing.T) {
 	a, tt := openReport(t, &fakeRunner{})
 
-	tt.Key(ui.Cmd, ui.KeyComma)
-	tt.Advance(320 * time.Millisecond)
+	settingsPage(t, tt, a, subSettingsPlugins)
 	if !tt.HasText("Lapses that make a leech") || !tt.HasText("Count suspended cards") {
 		t.Fatalf("the settings page does not draw the plugin's settings; texts %q", tt.Texts())
 	}
@@ -656,7 +687,7 @@ func TestOneBrokenContributionHidesOnlyItself(t *testing.T) {
 	  "locales": {"en": {"good": "Good command", "bad": "Bad command"}}
 	}`
 	runner := &fakeRunner{}
-	_, tt := openContrib(t, "report", contributes, runner)
+	a, tt := openContrib(t, "report", contributes, runner)
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
@@ -669,8 +700,7 @@ func TestOneBrokenContributionHidesOnlyItself(t *testing.T) {
 	}
 	tt.Key(0, ui.KeyEscape)
 
-	tt.Key(ui.Cmd, ui.KeyComma)
-	tt.Advance(320 * time.Millisecond)
+	settingsPage(t, tt, a, subSettingsPlugins)
 	if !tt.HasText(`icon "no-such-icon": the host has no such icon`) {
 		t.Errorf("the settings page does not say what was dropped; texts %q", tt.Texts())
 	}
