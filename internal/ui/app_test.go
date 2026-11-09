@@ -23,7 +23,7 @@ func TestAreaShortcutsSwitchAreas(t *testing.T) {
 		// want is what the area's first page shows.
 		want string
 	}{
-		{ui.Key1, msgs.AreaToday(), "", msgs.TodayStub()},
+		{ui.Key1, msgs.AreaToday(), "", msgs.TodayBudget()},
 		{ui.Key2, msgs.AreaWrite(), msgs.ModeNotes(), msgs.Notebook()},
 		{ui.Key3, msgs.AreaRead(), msgs.QueuePage(), msgs.NoReading()},
 		{ui.Key4, msgs.AreaRecall(), msgs.QueuePage(), "Spacing beats cramming"},
@@ -37,7 +37,7 @@ func TestAreaShortcutsSwitchAreas(t *testing.T) {
 			settle(tt)
 
 			// A library opens on today, which is a page of its own.
-			if !tt.HasText(msgs.TodayStub()) {
+			if !tt.HasText(msgs.TodayBudget()) {
 				t.Fatalf("the window did not open on today; texts %q", tt.Texts())
 			}
 
@@ -241,7 +241,7 @@ func TestCorruptLibrary(t *testing.T) {
 	if err := tt.Click("Try again"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText(msgs.TodayStub()) || tt.HasText("Remit could not open its library") {
+	if !tt.HasText(msgs.TodayBudget()) || tt.HasText("Remit could not open its library") {
 		t.Fatalf("trying again did not open the repaired library; texts %q", tt.Texts())
 	}
 	tt.Advance(320 * time.Millisecond) // the screen's entrance

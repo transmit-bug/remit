@@ -390,6 +390,8 @@ func (a *App) loadCurrent() {
 		return
 	}
 	switch a.area {
+	case areaToday:
+		a.loadToday()
 	case areaWrite:
 		if a.sub == subSearch {
 			a.loadBrowse()

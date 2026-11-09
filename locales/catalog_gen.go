@@ -4895,16 +4895,474 @@ func (msgs Messages) AppearancePage() string {
 	return Catalog.Format(msgs.locale, "appearancePage", nil)
 }
 
-// TodayStub says "Today gathers what is due to read and to review."
+// TodayTitle says "Today"
 // in the language the app shows.
 //
-// The empty state of the today area until its queue is built.
-func TodayStub() string { return In(i18n.Locale()).TodayStub() }
+// Heading of the Today screen.
+func TodayTitle() string { return In(i18n.Locale()).TodayTitle() }
 
-// TodayStub says "Today gathers what is due to read and to review."
+// TodayTitle says "Today"
 // in the language of msgs.
 //
-// The empty state of the today area until its queue is built.
-func (msgs Messages) TodayStub() string {
-	return Catalog.Format(msgs.locale, "todayStub", nil)
+// Heading of the Today screen.
+func (msgs Messages) TodayTitle() string {
+	return Catalog.Format(msgs.locale, "todayTitle", nil)
+}
+
+// TodayDay says "{date, date, ::MMMEd} · {minutes, plural, =0 {no budget} one {# min budget} other {# min budget}}"
+// in the language the app shows.
+//
+// The line under the page's title: the date, and what the day's budget
+// holds.
+func TodayDay(date time.Time, minutes int) string { return In(i18n.Locale()).TodayDay(date, minutes) }
+
+// TodayDay says "{date, date, ::MMMEd} · {minutes, plural, =0 {no budget} one {# min budget} other {# min budget}}"
+// in the language of msgs.
+//
+// The line under the page's title: the date, and what the day's budget
+// holds.
+func (msgs Messages) TodayDay(date time.Time, minutes int) string {
+	return Catalog.Format(msgs.locale, "todayDay", map[string]any{"date": date, "minutes": minutes})
+}
+
+// TodayCommands says "Commands"
+// in the language the app shows.
+//
+// The page's command button: it opens the command palette.
+func TodayCommands() string { return In(i18n.Locale()).TodayCommands() }
+
+// TodayCommands says "Commands"
+// in the language of msgs.
+//
+// The page's command button: it opens the command palette.
+func (msgs Messages) TodayCommands() string {
+	return Catalog.Format(msgs.locale, "todayCommands", nil)
+}
+
+// TodayBudget says "Today's budget"
+// in the language the app shows.
+//
+// Accessible label of the meter holding the day's estimate against its
+// budget.
+func TodayBudget() string { return In(i18n.Locale()).TodayBudget() }
+
+// TodayBudget says "Today's budget"
+// in the language of msgs.
+//
+// Accessible label of the meter holding the day's estimate against its
+// budget.
+func (msgs Messages) TodayBudget() string {
+	return Catalog.Format(msgs.locale, "todayBudget", nil)
+}
+
+// TodayMinutes says "{minutes} min"
+// in the language the app shows.
+//
+// What the day's queue costs, in the display face: an estimate in whole
+// minutes.
+func TodayMinutes(minutes int) string { return In(i18n.Locale()).TodayMinutes(minutes) }
+
+// TodayMinutes says "{minutes} min"
+// in the language of msgs.
+//
+// What the day's queue costs, in the display face: an estimate in whole
+// minutes.
+func (msgs Messages) TodayMinutes(minutes int) string {
+	return Catalog.Format(msgs.locale, "todayMinutes", map[string]any{"minutes": minutes})
+}
+
+// TodayMinutesTail says "about {minutes} min"
+// in the language the app shows.
+//
+// The tail of a queue line: what that one sitting is estimated to take.
+func TodayMinutesTail(minutes int) string { return In(i18n.Locale()).TodayMinutesTail(minutes) }
+
+// TodayMinutesTail says "about {minutes} min"
+// in the language of msgs.
+//
+// The tail of a queue line: what that one sitting is estimated to take.
+func (msgs Messages) TodayMinutesTail(minutes int) string {
+	return Catalog.Format(msgs.locale, "todayMinutesTail", map[string]any{"minutes": minutes})
+}
+
+// TodayBudgetCaption says "Reading {read} min · review {review} min"
+// in the language the app shows.
+//
+// What the day's estimate is made of: the minutes reading and the minutes
+// reviewing are priced at.
+func TodayBudgetCaption(read int, review int) string {
+	return In(i18n.Locale()).TodayBudgetCaption(read, review)
+}
+
+// TodayBudgetCaption says "Reading {read} min · review {review} min"
+// in the language of msgs.
+//
+// What the day's estimate is made of: the minutes reading and the minutes
+// reviewing are priced at.
+func (msgs Messages) TodayBudgetCaption(read int, review int) string {
+	return Catalog.Format(msgs.locale, "todayBudgetCaption", map[string]any{"read": read, "review": review})
+}
+
+// TodayDaily says "Today · {date, date, ::MMMd}"
+// in the language the app shows.
+//
+// The daily note's row: the day it is written in.
+func TodayDaily(date time.Time) string { return In(i18n.Locale()).TodayDaily(date) }
+
+// TodayDaily says "Today · {date, date, ::MMMd}"
+// in the language of msgs.
+//
+// The daily note's row: the day it is written in.
+func (msgs Messages) TodayDaily(date time.Time) string {
+	return Catalog.Format(msgs.locale, "todayDaily", map[string]any{"date": date})
+}
+
+// TodayDailyNone says "No note for today yet."
+// in the language the app shows.
+//
+// The daily row's line when the day has no note at all.
+func TodayDailyNone() string { return In(i18n.Locale()).TodayDailyNone() }
+
+// TodayDailyNone says "No note for today yet."
+// in the language of msgs.
+//
+// The daily row's line when the day has no note at all.
+func (msgs Messages) TodayDailyNone() string {
+	return Catalog.Format(msgs.locale, "todayDailyNone", nil)
+}
+
+// TodayDailyEmpty says "Nothing written today yet."
+// in the language the app shows.
+//
+// The daily row's line when the day's note exists and holds no words.
+func TodayDailyEmpty() string { return In(i18n.Locale()).TodayDailyEmpty() }
+
+// TodayDailyEmpty says "Nothing written today yet."
+// in the language of msgs.
+//
+// The daily row's line when the day's note exists and holds no words.
+func (msgs Messages) TodayDailyEmpty() string {
+	return Catalog.Format(msgs.locale, "todayDailyEmpty", nil)
+}
+
+// TodayOpen says "Open"
+// in the language the app shows.
+//
+// The way into the note a row names.
+func TodayOpen() string { return In(i18n.Locale()).TodayOpen() }
+
+// TodayOpen says "Open"
+// in the language of msgs.
+//
+// The way into the note a row names.
+func (msgs Messages) TodayOpen() string {
+	return Catalog.Format(msgs.locale, "todayOpen", nil)
+}
+
+// TodayStart says "Start"
+// in the language the app shows.
+//
+// Starts the day with the first line of the queue.
+func TodayStart() string { return In(i18n.Locale()).TodayStart() }
+
+// TodayStart says "Start"
+// in the language of msgs.
+//
+// Starts the day with the first line of the queue.
+func (msgs Messages) TodayStart() string {
+	return Catalog.Format(msgs.locale, "todayStart", nil)
+}
+
+// TodayQueue says "Queue"
+// in the language the app shows.
+//
+// Heading of the day's mixed queue, and its accessible name.
+func TodayQueue() string { return In(i18n.Locale()).TodayQueue() }
+
+// TodayQueue says "Queue"
+// in the language of msgs.
+//
+// Heading of the day's mixed queue, and its accessible name.
+func (msgs Messages) TodayQueue() string {
+	return Catalog.Format(msgs.locale, "todayQueue", nil)
+}
+
+// TodayQueueHint says "Reading first, then recall"
+// in the language the app shows.
+//
+// Says what orders the queue: reading before recall.
+func TodayQueueHint() string { return In(i18n.Locale()).TodayQueueHint() }
+
+// TodayQueueHint says "Reading first, then recall"
+// in the language of msgs.
+//
+// Says what orders the queue: reading before recall.
+func (msgs Messages) TodayQueueHint() string {
+	return Catalog.Format(msgs.locale, "todayQueueHint", nil)
+}
+
+// TodayEmpty says "Nothing to read, nothing due today."
+// in the language the app shows.
+//
+// The empty day's one sentence.
+func TodayEmpty() string { return In(i18n.Locale()).TodayEmpty() }
+
+// TodayEmpty says "Nothing to read, nothing due today."
+// in the language of msgs.
+//
+// The empty day's one sentence.
+func (msgs Messages) TodayEmpty() string {
+	return Catalog.Format(msgs.locale, "todayEmpty", nil)
+}
+
+// TodayEmptyAction says "Add a note"
+// in the language the app shows.
+//
+// The empty day's action: it starts a note in the notebook.
+func TodayEmptyAction() string { return In(i18n.Locale()).TodayEmptyAction() }
+
+// TodayEmptyAction says "Add a note"
+// in the language of msgs.
+//
+// The empty day's action: it starts a note in the notebook.
+func (msgs Messages) TodayEmptyAction() string {
+	return Catalog.Format(msgs.locale, "todayEmptyAction", nil)
+}
+
+// TodayStatReading says "to read"
+// in the language the app shows.
+//
+// Label of the count of notes due to be read.
+func TodayStatReading() string { return In(i18n.Locale()).TodayStatReading() }
+
+// TodayStatReading says "to read"
+// in the language of msgs.
+//
+// Label of the count of notes due to be read.
+func (msgs Messages) TodayStatReading() string {
+	return Catalog.Format(msgs.locale, "todayStatReading", nil)
+}
+
+// TodayStatRecall says "to recall"
+// in the language the app shows.
+//
+// Label of the count of cards due for review.
+func TodayStatRecall() string { return In(i18n.Locale()).TodayStatRecall() }
+
+// TodayStatRecall says "to recall"
+// in the language of msgs.
+//
+// Label of the count of cards due for review.
+func (msgs Messages) TodayStatRecall() string {
+	return Catalog.Format(msgs.locale, "todayStatRecall", nil)
+}
+
+// TodayStatRecalled says "recalled today"
+// in the language the app shows.
+//
+// Label of the count of cards reviewed today.
+func TodayStatRecalled() string { return In(i18n.Locale()).TodayStatRecalled() }
+
+// TodayStatRecalled says "recalled today"
+// in the language of msgs.
+//
+// Label of the count of cards reviewed today.
+func (msgs Messages) TodayStatRecalled() string {
+	return Catalog.Format(msgs.locale, "todayStatRecalled", nil)
+}
+
+// TodayReviewTitle says "Review · the whole library"
+// in the language the app shows.
+//
+// The queue's review line: every card due, as one sitting.
+func TodayReviewTitle() string { return In(i18n.Locale()).TodayReviewTitle() }
+
+// TodayReviewTitle says "Review · the whole library"
+// in the language of msgs.
+//
+// The queue's review line: every card due, as one sitting.
+func (msgs Messages) TodayReviewTitle() string {
+	return Catalog.Format(msgs.locale, "todayReviewTitle", nil)
+}
+
+// TodayReviewMeta says "{cards, plural, one {# card due} other {# cards due}} · {new, plural, =0 {none new} one {# new} other {# new}}"
+// in the language the app shows.
+//
+// The review line's second line: how many cards wait and how many of them
+// no review has touched.
+func TodayReviewMeta(cards int, new int) string { return In(i18n.Locale()).TodayReviewMeta(cards, new) }
+
+// TodayReviewMeta says "{cards, plural, one {# card due} other {# cards due}} · {new, plural, =0 {none new} one {# new} other {# new}}"
+// in the language of msgs.
+//
+// The review line's second line: how many cards wait and how many of them
+// no review has touched.
+func (msgs Messages) TodayReviewMeta(cards int, new int) string {
+	return Catalog.Format(msgs.locale, "todayReviewMeta", map[string]any{"cards": cards, "new": new})
+}
+
+// TodayParagraph says "{read} of {blocks} paragraphs"
+// in the language the app shows.
+//
+// Where the reader stopped in a note, and how long the note is.
+func TodayParagraph(read int, blocks int) string {
+	return In(i18n.Locale()).TodayParagraph(read, blocks)
+}
+
+// TodayParagraph says "{read} of {blocks} paragraphs"
+// in the language of msgs.
+//
+// Where the reader stopped in a note, and how long the note is.
+func (msgs Messages) TodayParagraph(read int, blocks int) string {
+	return Catalog.Format(msgs.locale, "todayParagraph", map[string]any{"read": read, "blocks": blocks})
+}
+
+// TodayNotStarted says "{blocks, plural, one {# paragraph} other {# paragraphs}} · not started"
+// in the language the app shows.
+//
+// A note in today's queue no reading session has opened yet.
+func TodayNotStarted(blocks int) string { return In(i18n.Locale()).TodayNotStarted(blocks) }
+
+// TodayNotStarted says "{blocks, plural, one {# paragraph} other {# paragraphs}} · not started"
+// in the language of msgs.
+//
+// A note in today's queue no reading session has opened yet.
+func (msgs Messages) TodayNotStarted(blocks int) string {
+	return Catalog.Format(msgs.locale, "todayNotStarted", map[string]any{"blocks": blocks})
+}
+
+// TodayExcerptMeta says "Read {read} of {blocks} paragraphs · no excerpt yet"
+// in the language the app shows.
+//
+// A note that was read and no excerpt was taken from: where the reader
+// stopped.
+func TodayExcerptMeta(read int, blocks int) string {
+	return In(i18n.Locale()).TodayExcerptMeta(read, blocks)
+}
+
+// TodayExcerptMeta says "Read {read} of {blocks} paragraphs · no excerpt yet"
+// in the language of msgs.
+//
+// A note that was read and no excerpt was taken from: where the reader
+// stopped.
+func (msgs Messages) TodayExcerptMeta(read int, blocks int) string {
+	return Catalog.Format(msgs.locale, "todayExcerptMeta", map[string]any{"read": read, "blocks": blocks})
+}
+
+// TodayOverBudget says "Moved to tomorrow"
+// in the language the app shows.
+//
+// Badge on a queue line past the day's budget: it waits for tomorrow rather
+// than being dropped.
+func TodayOverBudget() string { return In(i18n.Locale()).TodayOverBudget() }
+
+// TodayOverBudget says "Moved to tomorrow"
+// in the language of msgs.
+//
+// Badge on a queue line past the day's budget: it waits for tomorrow rather
+// than being dropped.
+func (msgs Messages) TodayOverBudget() string {
+	return Catalog.Format(msgs.locale, "todayOverBudget", nil)
+}
+
+// TodayExcerpts says "Read but not excerpted"
+// in the language the app shows.
+//
+// Heading of the block listing notes that were read and no excerpt was
+// taken from.
+func TodayExcerpts() string { return In(i18n.Locale()).TodayExcerpts() }
+
+// TodayExcerpts says "Read but not excerpted"
+// in the language of msgs.
+//
+// Heading of the block listing notes that were read and no excerpt was
+// taken from.
+func (msgs Messages) TodayExcerpts() string {
+	return Catalog.Format(msgs.locale, "todayExcerpts", nil)
+}
+
+// TodayExcerptsHint says "Reading is not remembering"
+// in the language the app shows.
+//
+// Why the read-but-not-excerpted block exists.
+func TodayExcerptsHint() string { return In(i18n.Locale()).TodayExcerptsHint() }
+
+// TodayExcerptsHint says "Reading is not remembering"
+// in the language of msgs.
+//
+// Why the read-but-not-excerpted block exists.
+func (msgs Messages) TodayExcerptsHint() string {
+	return Catalog.Format(msgs.locale, "todayExcerptsHint", nil)
+}
+
+// TodayTomorrowTitle says "Tomorrow"
+// in the language the app shows.
+//
+// Heading of the block saying what the day after holds.
+func TodayTomorrowTitle() string { return In(i18n.Locale()).TodayTomorrowTitle() }
+
+// TodayTomorrowTitle says "Tomorrow"
+// in the language of msgs.
+//
+// Heading of the block saying what the day after holds.
+func (msgs Messages) TodayTomorrowTitle() string {
+	return Catalog.Format(msgs.locale, "todayTomorrowTitle", nil)
+}
+
+// TodayTomorrow says "{count, plural, =0 {Nothing due} one {# item due} other {# items due}}"
+// in the language the app shows.
+//
+// What comes due tomorrow: the forecast's second day, cards and notes
+// together.
+func TodayTomorrow(count int) string { return In(i18n.Locale()).TodayTomorrow(count) }
+
+// TodayTomorrow says "{count, plural, =0 {Nothing due} one {# item due} other {# items due}}"
+// in the language of msgs.
+//
+// What comes due tomorrow: the forecast's second day, cards and notes
+// together.
+func (msgs Messages) TodayTomorrow(count int) string {
+	return Catalog.Format(msgs.locale, "todayTomorrow", map[string]any{"count": count})
+}
+
+// TodayLoadFailed says "Today's queue could not be loaded: {reason}"
+// in the language the app shows.
+//
+// The page's failure state: why the day's queue could not be built.
+func TodayLoadFailed(reason string) string { return In(i18n.Locale()).TodayLoadFailed(reason) }
+
+// TodayLoadFailed says "Today's queue could not be loaded: {reason}"
+// in the language of msgs.
+//
+// The page's failure state: why the day's queue could not be built.
+func (msgs Messages) TodayLoadFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "todayLoadFailed", map[string]any{"reason": reason})
+}
+
+// TodayRetry says "Try again"
+// in the language the app shows.
+//
+// The failure state's action: build the day's queue again.
+func TodayRetry() string { return In(i18n.Locale()).TodayRetry() }
+
+// TodayRetry says "Try again"
+// in the language of msgs.
+//
+// The failure state's action: build the day's queue again.
+func (msgs Messages) TodayRetry() string {
+	return Catalog.Format(msgs.locale, "todayRetry", nil)
+}
+
+// TodayLoading says "Loading today"
+// in the language the app shows.
+//
+// Accessible label of the loading page's placeholder rows.
+func TodayLoading() string { return In(i18n.Locale()).TodayLoading() }
+
+// TodayLoading says "Loading today"
+// in the language of msgs.
+//
+// Accessible label of the loading page's placeholder rows.
+func (msgs Messages) TodayLoading() string {
+	return Catalog.Format(msgs.locale, "todayLoading", nil)
 }

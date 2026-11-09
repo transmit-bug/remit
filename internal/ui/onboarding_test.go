@@ -44,7 +44,7 @@ func TestOpenLibraryPicker(t *testing.T) {
 	if calls != 1 {
 		t.Fatalf("the picker ran %d times", calls)
 	}
-	if !tt.HasText(locales.In("en").TodayStub()) {
+	if !tt.HasText(locales.In("en").TodayBudget()) {
 		t.Fatalf("the picked library did not open on today; texts %q", tt.Texts())
 	}
 	// The queue it found is on the rail, one key away.
@@ -77,7 +77,7 @@ func TestOpenLibraryPicker(t *testing.T) {
 	})
 	tt = ui.NewTester(next.View, 1024, 720)
 	settle(tt)
-	if !tt.HasText(locales.In("en").TodayStub()) || tt.HasText("Start your library") {
+	if !tt.HasText(locales.In("en").TodayBudget()) || tt.HasText("Start your library") {
 		t.Fatalf("the remembered library did not open; texts %q", tt.Texts())
 	}
 	if calls != 0 {
@@ -148,7 +148,7 @@ func TestFirstRun(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "remit.json")); err != nil {
 		t.Fatalf("Create library did not make one: %v", err)
 	}
-	if !tt.HasText(locales.In("en").TodayStub()) {
+	if !tt.HasText(locales.In("en").TodayBudget()) {
 		t.Fatalf("a new library did not open on today; texts %q", tt.Texts())
 	}
 	// Its queue is empty, and the queue page says so.
@@ -173,7 +173,7 @@ func TestFirstRun(t *testing.T) {
 	if tt.HasText("Start your library") {
 		t.Fatalf("the remembered library was not opened; texts %q", tt.Texts())
 	}
-	if !tt.HasText(locales.In("en").TodayStub()) {
+	if !tt.HasText(locales.In("en").TodayBudget()) {
 		t.Fatalf("the remembered library did not open on today; texts %q", tt.Texts())
 	}
 
