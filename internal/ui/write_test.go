@@ -138,6 +138,42 @@ func TestNotesListFiltersByTag(t *testing.T) {
 	}
 }
 
+// The three filters are the store's: With cards keeps the notes whose
+// paragraphs feed one, and All puts the notebook back.
+func TestNotesListFilterKeepsOnlyNotesWithCards(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed, tt := openApp(t)
+
+	writePage(t, tt, msgs.ModeNotes())
+	if err := tt.Click(msgs.WriteFilterCards()); err != nil {
+		t.Fatalf("the page has no cards filter: %v", err)
+	}
+	tt.Advance(320 * time.Millisecond)
+
+	if !a.notes.Filter.HasCards {
+		t.Fatal("the filter did not reach the screen")
+	}
+	if tt.HasText(seed.habit.Title) {
+		t.Errorf("a note that feeds no card is still listed; texts %q", tt.Texts())
+	}
+	for _, want := range []string{seed.memory.Title, seed.writing.Title} {
+		if !tt.HasText(want) {
+			t.Errorf("the filter dropped the note %q that feeds cards; texts %q", want, tt.Texts())
+		}
+	}
+
+	if err := tt.Click(msgs.WriteFilterAll()); err != nil {
+		t.Fatalf("the page has no All: %v", err)
+	}
+	tt.Advance(320 * time.Millisecond)
+	if a.notes.Filter.Any() {
+		t.Fatalf("All left the filter %+v", a.notes.Filter)
+	}
+	if !tt.HasText(seed.habit.Title) {
+		t.Errorf("All did not bring the note back; texts %q", tt.Texts())
+	}
+}
+
 // The order the user chose is the screen's, not the load's: a reload keeps it,
 // and it is the store that sorts by it.
 func TestNotesSortCyclesAndSurvivesReload(t *testing.T) {
