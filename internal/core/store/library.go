@@ -44,10 +44,6 @@ const (
 	logName    = "reviews.jsonl"
 	indexDir   = ".remit"
 	indexName  = "index.sqlite"
-	// formatVersion is what this build writes and the only one it reads: a
-	// library declaring anything else is refused, pre-1.0 with no released
-	// libraries to keep.
-	formatVersion = "remit/2"
 
 	noteKind  = "note"
 	cardKind  = "card"
@@ -55,6 +51,11 @@ const (
 	filePerms = 0o644
 	dirPerms  = 0o755
 )
+
+// FormatVersion is what this build writes and the only one it reads: a library
+// declaring anything else is refused, pre-1.0 with no released libraries to
+// keep.
+const FormatVersion = "remit/2"
 
 // Errors a caller is expected to handle rather than report as a bug.
 var (
@@ -111,6 +112,10 @@ type Library struct {
 	// sources counts what this handle has read off the disk, which a test uses
 	// to prove an open with a current index reads no source file.
 	sources sourceReads
+	// seedTypes says whether an open may write the built-in type files a
+	// library is missing. A repair tool's rebuild says no: it changes only the
+	// derived index.
+	seedTypes bool
 
 	cards map[core.ID]*cardMeta
 	// byDue is the review queue as the index orders it: every card that can be
@@ -196,6 +201,28 @@ func Create(dir string, opts Options) (*Library, error) {
 // library's own remit.json; Options.Params is the fallback for a library that
 // declares none.
 func Open(dir string, opts Options) (*Library, error) {
+	return open(dir, opts, true)
+}
+
+// RebuildIndex throws the library's derived index away and derives it again
+// from the text sources. It writes nothing outside .remit/: unlike Open it does
+// not complete the library it reads (it seeds no missing built-in type), so a
+// repair tool can rebuild without changing a source file. A rebuild that cannot
+// finish leaves no index behind; the next open builds one.
+func RebuildIndex(dir string, opts Options) error {
+	if err := os.RemoveAll(filepath.Join(dir, indexDir)); err != nil {
+		return err
+	}
+	library, err := open(dir, opts, false)
+	if err != nil {
+		return err
+	}
+	return library.Close()
+}
+
+// open is Open with the choice of whether an open may seed missing built-in
+// types.
+func open(dir string, opts Options, seedTypes bool) (*Library, error) {
 	data, err := os.ReadFile(filepath.Join(dir, configName))
 	if err != nil {
 		return nil, err
@@ -209,6 +236,7 @@ func Open(dir string, opts Options) (*Library, error) {
 		params = opts.Params.Normalized()
 	}
 	library := newLibrary(dir, opts)
+	library.seedTypes = seedTypes
 	library.params = params
 	// What schedules this library is what the app says it schedules with, or
 	// what the library was last written with.
@@ -231,6 +259,7 @@ func newLibrary(dir string, opts Options) *Library {
 		dir:             dir,
 		now:             now,
 		readingDefaults: schedule.DefaultReadingParams().Normalized(),
+		seedTypes:       true,
 		cards:           map[core.ID]*cardMeta{},
 		readings:        map[core.ID]*readingRow{},
 	}
@@ -277,7 +306,7 @@ func (l *Library) load() error {
 			return err
 		}
 	}
-	types, err := loadTypes(l.dir)
+	types, err := loadTypes(l.dir, l.seedTypes)
 	if err != nil {
 		return err
 	}
@@ -620,7 +649,7 @@ func (l *Library) readNotes() (map[core.ID]noteEntry, error) {
 	}
 	notes := make(map[core.ID]noteEntry, len(entries))
 	for _, entry := range entries {
-		id, slug, ok := splitNoteName(entry.Name())
+		id, slug, ok := SplitNoteName(entry.Name())
 		if entry.IsDir() || !ok {
 			continue
 		}
@@ -647,7 +676,7 @@ func (l *Library) readCards() (map[core.ID]cardEntry, error) {
 	}
 	cards := make(map[core.ID]cardEntry, len(entries))
 	for _, entry := range entries {
-		id, ok := splitCardName(entry.Name())
+		id, ok := SplitCardName(entry.Name())
 		if entry.IsDir() || !ok {
 			continue
 		}
@@ -656,7 +685,7 @@ func (l *Library) readCards() (map[core.ID]cardEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-		card, created, err := decodeCard(id, data)
+		card, created, err := DecodeCard(id, data)
 		if err != nil {
 			return nil, err
 		}
@@ -679,8 +708,10 @@ type cardEntry struct {
 	created time.Time
 }
 
-// splitNoteName reads the ID and the frozen slug out of <slug>-<id>.md.
-func splitNoteName(name string) (core.ID, string, bool) {
+// SplitNoteName reads the ID and the frozen slug out of <slug>-<id>.md. A name
+// that does not carry a note ID is one an open skips, which is why a checker
+// names it.
+func SplitNoteName(name string) (core.ID, string, bool) {
 	base, ok := strings.CutSuffix(name, ".md")
 	if !ok {
 		return "", "", false
@@ -696,7 +727,9 @@ func splitNoteName(name string) (core.ID, string, bool) {
 	return id, base[:cut], true
 }
 
-func splitCardName(name string) (core.ID, bool) {
+// SplitCardName reads the ID out of <id>.json. A name that does not carry a
+// card ID is one an open skips.
+func SplitCardName(name string) (core.ID, bool) {
 	base, ok := strings.CutSuffix(name, ".json")
 	if !ok {
 		return "", false
@@ -1007,7 +1040,7 @@ func (l *Library) Card(id core.ID) (core.Card, bool) {
 		return core.Card{}, false
 	}
 	l.sources.cards++
-	card, _, err := decodeCard(id, data)
+	card, _, err := DecodeCard(id, data)
 	if err != nil {
 		return core.Card{}, false
 	}
@@ -1625,7 +1658,7 @@ func slugify(title string) string {
 // encodeConfig renders remit.json, the library's declaration of how it
 // schedules, which extensions it runs and which plugin plays each role.
 func encodeConfig(params schedule.Params, extensions []string, roles map[string]string) ([]byte, error) {
-	data, err := json.MarshalIndent(configFile{Format: formatVersion, FSRS: params, Extensions: extensions, Roles: roles}, "", "  ")
+	data, err := json.MarshalIndent(configFile{Format: FormatVersion, FSRS: params, Extensions: extensions, Roles: roles}, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("store: %s: %w", configName, err)
 	}
@@ -1637,8 +1670,8 @@ func decodeConfig(data []byte) (configFile, error) {
 	if err := json.Unmarshal(data, &config); err != nil {
 		return configFile{}, fmt.Errorf("store: %s: %w", configName, err)
 	}
-	if config.Format != formatVersion {
-		return configFile{}, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, formatVersion)
+	if config.Format != FormatVersion {
+		return configFile{}, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, FormatVersion)
 	}
 	return config, nil
 }

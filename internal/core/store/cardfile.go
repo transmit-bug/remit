@@ -71,12 +71,16 @@ func encodeCard(card core.Card, created time.Time) ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-// decodeCard reads a card file. A file a person wrote by hand may leave the
-// status or the creation time out; an unknown status or type is still an
-// error, because guessing it would put the card in the wrong queue or render
-// it with the wrong schema. There is no older shape to read: remit/2 is the
-// first released format, and a library declaring another is refused on open.
-func decodeCard(id core.ID, data []byte) (card core.Card, created time.Time, err error) {
+// DecodeCard reads a card file. A file a person wrote by hand may leave the
+// status out; an unknown status or type is still an error, because guessing it
+// would put the card in the wrong queue or render it with the wrong schema.
+// There is no older shape to read: remit/2 is the first released format, and a
+// library declaring another is refused on open.
+//
+// It is exported for a reader that must not open — and so must not rebuild —
+// the library: a checker reports a card the store would refuse instead of
+// failing on it.
+func DecodeCard(id core.ID, data []byte) (card core.Card, created time.Time, err error) {
 	var file cardFile
 	if err := json.Unmarshal(data, &file); err != nil {
 		return core.Card{}, time.Time{}, fmt.Errorf("store: decode card %q: %w", id, err)

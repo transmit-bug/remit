@@ -34,6 +34,9 @@ func main() {
 	mdImport := flag.String("import-md", "", "import Markdown files (a file or a directory) into the library and exit")
 	mdExport := flag.String("export-md", "", "write every note's Markdown file into this directory and exit")
 	checkExt := flag.String("check-ext", "", "check a plugin directory's manifest and contributions, then exit (deprecated: remit ext check <dir>)")
+	doctorCheck := flag.Bool("doctor", false, "check the library's files and exit: 0 whole, 1 findings, 2 error")
+	doctorJSON := flag.Bool("doctor-json", false, "check the library and print the report as JSON, then exit")
+	doctorFix := flag.Bool("doctor-fix", false, "repair the derived index and stale temporary files, report the rest, then exit")
 	flag.Parse()
 
 	if code, checked := runCheckExtension(*checkExt, os.Stdout); checked {
@@ -63,6 +66,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("library directory: %v", err)
 		}
+	}
+	if code, checked := runDoctor(place, *doctorCheck, *doctorJSON, *doctorFix, os.Stdout, os.Stderr); checked {
+		os.Exit(code)
 	}
 	if runOffline(place, *export, *importPath) {
 		return
