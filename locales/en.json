@@ -1971,8 +1971,218 @@
   "@appearancePage": {
     "description": "Page of the settings area: theme, density and the paper's width."
   },
-  "todayStub": "Today gathers what is due to read and to review.",
-  "@todayStub": {
-    "description": "The empty state of the today area until its queue is built."
+  "todayTitle": "Today",
+  "@todayTitle": {
+    "description": "Heading of the Today screen."
+  },
+  "todayDay": "{date, date, ::MMMEd} · {minutes, plural, =0 {no budget} one {# min budget} other {# min budget}}",
+  "@todayDay": {
+    "description": "The line under the page's title: the date, and what the day's budget holds.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-09-18"
+      },
+      "minutes": {
+        "type": "int",
+        "example": "30"
+      }
+    }
+  },
+  "todayCommands": "Commands",
+  "@todayCommands": {
+    "description": "The page's command button: it opens the command palette."
+  },
+  "todayBudget": "Today's budget",
+  "@todayBudget": {
+    "description": "Accessible label of the meter holding the day's estimate against its budget."
+  },
+  "todayMinutes": "{minutes} min",
+  "@todayMinutes": {
+    "description": "What the day's queue costs, in the display face: an estimate in whole minutes.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "29"
+      }
+    }
+  },
+  "todayMinutesTail": "about {minutes} min",
+  "@todayMinutesTail": {
+    "description": "The tail of a queue line: what that one sitting is estimated to take.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "6"
+      }
+    }
+  },
+  "todayBudgetCaption": "Reading {read} min · review {review} min",
+  "@todayBudgetCaption": {
+    "description": "What the day's estimate is made of: the minutes reading and the minutes reviewing are priced at.",
+    "placeholders": {
+      "read": {
+        "type": "int",
+        "example": "12"
+      },
+      "review": {
+        "type": "int",
+        "example": "11"
+      }
+    }
+  },
+  "todayDaily": "Today · {date, date, ::MMMd}",
+  "@todayDaily": {
+    "description": "The daily note's row: the day it is written in.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-09-18"
+      }
+    }
+  },
+  "todayDailyNone": "No note for today yet.",
+  "@todayDailyNone": {
+    "description": "The daily row's line when the day has no note at all."
+  },
+  "todayDailyEmpty": "Nothing written today yet.",
+  "@todayDailyEmpty": {
+    "description": "The daily row's line when the day's note exists and holds no words."
+  },
+  "todayOpen": "Open",
+  "@todayOpen": {
+    "description": "The way into the note a row names."
+  },
+  "todayStart": "Start",
+  "@todayStart": {
+    "description": "Starts the day with the first line of the queue."
+  },
+  "todayQueue": "Queue",
+  "@todayQueue": {
+    "description": "Heading of the day's mixed queue, and its accessible name."
+  },
+  "todayQueueHint": "Reading first, then recall",
+  "@todayQueueHint": {
+    "description": "Says what orders the queue: reading before recall."
+  },
+  "todayEmpty": "Nothing to read, nothing due today.",
+  "@todayEmpty": {
+    "description": "The empty day's one sentence."
+  },
+  "todayEmptyAction": "Add a note",
+  "@todayEmptyAction": {
+    "description": "The empty day's action: it starts a note in the notebook."
+  },
+  "todayStatReading": "to read",
+  "@todayStatReading": {
+    "description": "Label of the count of notes due to be read."
+  },
+  "todayStatRecall": "to recall",
+  "@todayStatRecall": {
+    "description": "Label of the count of cards due for review."
+  },
+  "todayStatRecalled": "recalled today",
+  "@todayStatRecalled": {
+    "description": "Label of the count of cards reviewed today."
+  },
+  "todayReviewTitle": "Review · the whole library",
+  "@todayReviewTitle": {
+    "description": "The queue's review line: every card due, as one sitting."
+  },
+  "todayReviewMeta": "{cards, plural, one {# card due} other {# cards due}} · {new, plural, =0 {none new} one {# new} other {# new}}",
+  "@todayReviewMeta": {
+    "description": "The review line's second line: how many cards wait and how many of them no review has touched.",
+    "placeholders": {
+      "cards": {
+        "type": "int",
+        "example": "19"
+      },
+      "new": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "todayParagraph": "{read} of {blocks} paragraphs",
+  "@todayParagraph": {
+    "description": "Where the reader stopped in a note, and how long the note is.",
+    "placeholders": {
+      "read": {
+        "type": "int",
+        "example": "7"
+      },
+      "blocks": {
+        "type": "int",
+        "example": "14"
+      }
+    }
+  },
+  "todayNotStarted": "{blocks, plural, one {# paragraph} other {# paragraphs}} · not started",
+  "@todayNotStarted": {
+    "description": "A note in today's queue no reading session has opened yet.",
+    "placeholders": {
+      "blocks": {
+        "type": "int",
+        "example": "6"
+      }
+    }
+  },
+  "todayExcerptMeta": "Read {read} of {blocks} paragraphs · no excerpt yet",
+  "@todayExcerptMeta": {
+    "description": "A note that was read and no excerpt was taken from: where the reader stopped.",
+    "placeholders": {
+      "read": {
+        "type": "int",
+        "example": "5"
+      },
+      "blocks": {
+        "type": "int",
+        "example": "6"
+      }
+    }
+  },
+  "todayOverBudget": "Moved to tomorrow",
+  "@todayOverBudget": {
+    "description": "Badge on a queue line past the day's budget: it waits for tomorrow rather than being dropped."
+  },
+  "todayExcerpts": "Read but not excerpted",
+  "@todayExcerpts": {
+    "description": "Heading of the block listing notes that were read and no excerpt was taken from."
+  },
+  "todayExcerptsHint": "Reading is not remembering",
+  "@todayExcerptsHint": {
+    "description": "Why the read-but-not-excerpted block exists."
+  },
+  "todayTomorrowTitle": "Tomorrow",
+  "@todayTomorrowTitle": {
+    "description": "Heading of the block saying what the day after holds."
+  },
+  "todayTomorrow": "{count, plural, =0 {Nothing due} one {# item due} other {# items due}}",
+  "@todayTomorrow": {
+    "description": "What comes due tomorrow: the forecast's second day, cards and notes together.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "9"
+      }
+    }
+  },
+  "todayLoadFailed": "Today's queue could not be loaded: {reason}",
+  "@todayLoadFailed": {
+    "description": "The page's failure state: why the day's queue could not be built.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "store: closed"
+      }
+    }
+  },
+  "todayRetry": "Try again",
+  "@todayRetry": {
+    "description": "The failure state's action: build the day's queue again."
+  },
+  "todayLoading": "Loading today",
+  "@todayLoading": {
+    "description": "Accessible label of the loading page's placeholder rows."
   }
 }

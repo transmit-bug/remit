@@ -5,7 +5,6 @@ import (
 
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
-	"github.com/transmit-bug/remit/internal/ui/kit"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/internal/ui/shell"
@@ -94,17 +93,10 @@ func (a *App) stage(c *ui.Context, tk design.Tokens) {
 			screenstats.View(c, a.stats, screenstats.Deps{})
 		case a.area == areaPlugin:
 			a.pluginPageView(c)
-		default:
-			a.todayStub(c)
+		case a.area == areaToday:
+			a.todayView(c)
 		}
 	})
-}
-
-// todayStub is where today's queue goes. The page itself is W2's; until then the
-// area says what it is for and offers nothing it cannot do, so that choosing it
-// is not a dead end with a button that does nothing.
-func (a *App) todayStub(c *ui.Context) {
-	kit.Empty(c, "inbox", m(c).TodayStub(), nil)
 }
 
 // shellDeps is the frame as the app hands it over: where the user is, what the

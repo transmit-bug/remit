@@ -27,6 +27,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
+	screenToday "github.com/transmit-bug/remit/internal/ui/screens/today"
 	"github.com/transmit-bug/remit/internal/ui/shell"
 	"github.com/transmit-bug/remit/internal/update"
 )
@@ -91,8 +92,11 @@ type App struct {
 	reading          reading.State // the reading session: the queue's order and where the reader is
 	readingPositions map[core.ID]core.ID
 	readingCount     int
-	notes            notes.State  // the notebook: the note open, its draft and its panes
-	notesRows        []notes.Note // the notebook's list, as the snapshot derived it
+	notes            notes.State       // the notebook: the note open, its draft and its panes
+	notesRows        []notes.Note      // the notebook's list, as the snapshot derived it
+	today            screenToday.State // today: the day's queue and the list's place
+	todayDay         queue.Today       // the day's queue, as loadToday derived it
+	todayTomorrow    int               // what comes due on the day after
 	browse           browse.State
 	browseRows       []browse.Row // the cards browse lists, as loadBrowse derived them
 	stats            screenstats.State
