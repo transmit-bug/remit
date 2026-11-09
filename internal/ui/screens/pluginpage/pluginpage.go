@@ -42,6 +42,12 @@ type State struct {
 	// Loading is a load in flight: the page shows a skeleton and no error.
 	Loading bool
 
+	// Highlight is the board node the window was told to locate, "" for none,
+	// and HighlightRun is how often that moved: a new run replays the pointer
+	// once, and a second trip to the same node plays it again.
+	Highlight    string
+	HighlightRun uint64
+
 	tabs map[string]*int
 	open map[string]*bool
 	md   map[string]*markdown.Options
@@ -49,7 +55,7 @@ type State struct {
 
 // Deps is what the page asks of the app: the plugin's own strings in this
 // frame's language, the command an action runs, and a retry when the data did
-// not arrive.
+// not arrive. Everything else is the cache the app loaded before the frame.
 type Deps struct {
 	// Message resolves one of the plugin's messages in the frame's language.
 	Message func(c *ui.Context, raw string) string
@@ -59,6 +65,29 @@ type Deps struct {
 	// Retry asks for the page's data again: the action of a failed page, and
 	// the refresh a reader asks for at any other time.
 	Retry func(c *ui.Context)
+	// Header is the page's own actions — the page.header slot's items, as the
+	// app read them from its cache. The host's refresh follows them.
+	Header []Action
+	// Node answers what a board node says now: the note's title, the block's
+	// first line and how many cards the block feeds, false when the note no
+	// longer holds the block, which leaves the page's own words standing.
+	Node func(note, block string) (NodeInfo, bool)
+	// OpenBlock shows the note a board node names, read at its block.
+	OpenBlock func(c *ui.Context, note, block string)
+}
+
+// Action is one control a page's header offers: the slot item it came from, in
+// the frame's language, and what it runs.
+type Action struct {
+	Label string
+	Run   func(c *ui.Context)
+}
+
+// NodeInfo is a board node as the library holds it now.
+type NodeInfo struct {
+	Title string
+	Text  string
+	Cards int
 }
 
 // View draws the page: its title, then the tree, or why there is none.
@@ -71,12 +100,19 @@ func View(c *ui.Context, s *State, d Deps) {
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
 			ui.Column(c).FillWidth().MaxWidth(tk.PaperWidth).Gap(tk.SpaceL).Label(d.message(c, s.Title)).Children(func() {
-				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
+				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
+					Label(msgs.PluginPageActions()).Children(func() {
 					ui.Text(c, d.message(c, s.Title)).FontSize(tk.TypeH2).Bold()
 					ui.Spacer(c)
-					// A page's data is asked for on entering, on an explicit
-					// refresh and on an event — never every frame — so the
-					// refresh is a control the reader can press (ui.md §9).
+					// The page's own actions, then the host's refresh: a page's data
+					// is asked for on entering, on an explicit refresh and on an
+					// event — never every frame — so the refresh is a control the
+					// reader can press (ui.md §9).
+					for _, action := range d.Header {
+						run := action.Run
+						ui.Button(c, action.Label).MinHeight(tk.Control).
+							OnClick(func() { run(c) })
+					}
 					ui.Button(c, "").Label(msgs.PluginPageRefresh()).Tooltip(msgs.PluginPageRefresh()).
 						MinHeight(tk.Control).
 						Children(func() { tk.Icon(c, "undo-2", design.IconSmall) }).
@@ -154,6 +190,12 @@ func draw(c *ui.Context, s *State, d Deps, n contrib.Node, path string, tk desig
 		columns := n.Columns
 		if narrow {
 			columns = 1
+		}
+		if isBoard(n.Children) {
+			// A grid whose cards each name a block is a board: the host draws the
+			// places the page listed, and goes there itself (§6.4).
+			drawBoard(c, s, d, n.Children, columns, tk)
+			return
 		}
 		ui.Grid(c).FillWidth().Columns(columns).GapX(gap).GapY(gap).Children(func() {
 			drawChildren(c, s, d, n.Children, path, tk, narrow)

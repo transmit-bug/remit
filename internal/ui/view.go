@@ -48,6 +48,7 @@ func (a *App) View(c *ui.Context) {
 		a.exportView(c, tk)
 		a.relinkView(c)
 		a.cardEditView(c, tk)
+		a.cardDetailView(c, tk)
 	})
 }
 
