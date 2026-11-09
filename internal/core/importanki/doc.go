@@ -1,11 +1,18 @@
 // Package importanki imports Anki packages (.apkg) into a Remit library.
 //
 // An .apkg is a zip holding a SQLite collection, a media map and numbered media
-// files. This package reads the legacy collection Anki writes for older
-// clients: Anki schema 11, in collection.anki2 (legacy 1) or collection.anki21
-// (legacy 2). The zstd-compressed collection.anki21b of the newest export is
-// refused with an error rather than guessed at, and so is any collection whose
-// note types are not in the col table (schema 18).
+// files. This package reads both collection schemas Anki has written: schema 11
+// (and what Anki 2.1 kept writing beside it), in collection.anki2 (legacy 1) or
+// collection.anki21 (legacy 2), and the current schema 18 of
+// collection.anki21b, which is zstd-compressed. The newest entry a package
+// carries is the one read; an older package still opens, and a package with
+// several entries is not read twice.
+//
+// Which schema a collection is in is decided by the tables and columns it has,
+// never by the entry name: schema 18 moved note types and decks out of the col
+// table's JSON into notetypes, fields, templates and decks. A notetype reads as
+// the same shape either way — an ordered field list plus the templates that
+// turn a note into two card sides.
 //
 // # Mapping
 //
@@ -30,6 +37,10 @@
 //	                                         cloze field's block; the prompt
 //	                                         masks the card's deletion as [...]
 //	                                         and the answer shows the field
+//	complex cloze (same-number groups,       flattened: every blank of the
+//	  hints, nesting)                        group is masked, a hint is dropped,
+//	                                         and a nested deletion keeps its
+//	                                         text; the report says each one
 //	revlog type 1 (review), ease 1..4        store.Review with Again, Hard, Good,
 //	                                         Easy
 //	revlog type 0/2 (learning/relearning)    Again when ease <= 1, else Good
@@ -47,8 +58,10 @@
 // templates, filtered decks, media bytes (ADR 0003 has no media directory, so
 // file names stay in the text and are counted in Report.UnreachableMedia), and
 // Anki's scheduling state (due dates, intervals, ease, leech and lapse
-// counters). Reviews are replayed through Remit's FSRS, so the resulting due
-// dates are Remit's, not Anki's.
+// counters). A cloze hint is dropped too, because a Remit card has two plain
+// sides and no hint line; the report counts it rather than losing it silently.
+// Reviews are replayed through Remit's FSRS, so the resulting due dates are
+// Remit's, not Anki's.
 //
 // # Idempotence
 //

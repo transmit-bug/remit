@@ -13,8 +13,8 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/cards"
+	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
@@ -144,13 +144,29 @@ type revlogRow struct {
 // exercises archive/zip and the SQLite driver the same way an .apkg does.
 func buildPackage(t *testing.T, f fixture) string {
 	t.Helper()
+	collection := buildLegacyDB(t, f)
+	path := filepath.Join(t.TempDir(), "deck.apkg")
+	writePackage(t, path, func(zw *zip.Writer) {
+		entry := f.collection
+		if entry == "" {
+			entry = "collection.anki2"
+		}
+		writeEntry(t, zw, entry, collection)
+		writeMedia(t, zw, f.media, f.mediaFiles)
+	})
+	return path
+}
+
+// buildLegacyDB writes the schema 11 collection Anki wrote, with its note
+// types and decks as JSON in the col table, and returns the database bytes.
+func buildLegacyDB(t *testing.T, f fixture) []byte {
+	t.Helper()
 	omit := make(map[string]bool, len(f.omit))
 	for _, table := range f.omit {
 		omit[table] = true
 	}
 
-	work := t.TempDir()
-	dbPath := filepath.Join(work, "collection.db")
+	dbPath := filepath.Join(t.TempDir(), "collection.db")
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		t.Fatalf("open fixture database: %v", err)
@@ -180,6 +196,21 @@ func buildPackage(t *testing.T, f fixture) string {
 			t.Fatalf("insert col: %v", err)
 		}
 	}
+	insertRows(t, db, f, omit)
+	if err := db.Close(); err != nil {
+		t.Fatalf("close fixture database: %v", err)
+	}
+	collection, err := os.ReadFile(dbPath)
+	if err != nil {
+		t.Fatalf("read fixture database: %v", err)
+	}
+	return collection
+}
+
+// insertRows writes the notes, cards and revlog rows both collection schemas
+// share, skipping the tables the fixture leaves out.
+func insertRows(t *testing.T, db *sql.DB, f fixture, omit map[string]bool) {
+	t.Helper()
 	if !omit["notes"] {
 		for _, note := range f.notes {
 			if _, err := db.Exec(
@@ -210,42 +241,38 @@ func buildPackage(t *testing.T, f fixture) string {
 			}
 		}
 	}
-	if err := db.Close(); err != nil {
-		t.Fatalf("close fixture database: %v", err)
-	}
-	collection, err := os.ReadFile(dbPath)
-	if err != nil {
-		t.Fatalf("read fixture database: %v", err)
-	}
+}
 
-	path := filepath.Join(t.TempDir(), "deck.apkg")
+// writePackage creates the zip at path, lets add fill it, and closes it.
+func writePackage(t *testing.T, path string, add func(*zip.Writer)) {
+	t.Helper()
 	file, err := os.Create(path)
 	if err != nil {
 		t.Fatalf("create package: %v", err)
 	}
 	zw := zip.NewWriter(file)
-	entry := f.collection
-	if entry == "" {
-		entry = "collection.anki2"
-	}
-	writeEntry(t, zw, entry, collection)
-	if f.media != nil {
-		manifest, err := json.Marshal(f.media)
-		if err != nil {
-			t.Fatalf("media map: %v", err)
-		}
-		writeEntry(t, zw, "media", manifest)
-	}
-	for name, contents := range f.mediaFiles {
-		writeEntry(t, zw, name, []byte(contents))
-	}
+	add(zw)
 	if err := zw.Close(); err != nil {
 		t.Fatalf("close zip writer: %v", err)
 	}
 	if err := file.Close(); err != nil {
 		t.Fatalf("close package: %v", err)
 	}
-	return path
+}
+
+// writeMedia writes the package's media map and the files it names.
+func writeMedia(t *testing.T, zw *zip.Writer, media, files map[string]string) {
+	t.Helper()
+	if media != nil {
+		manifest, err := json.Marshal(media)
+		if err != nil {
+			t.Fatalf("media map: %v", err)
+		}
+		writeEntry(t, zw, "media", manifest)
+	}
+	for name, contents := range files {
+		writeEntry(t, zw, name, []byte(contents))
+	}
 }
 
 func writeEntry(t *testing.T, zw *zip.Writer, name string, data []byte) {

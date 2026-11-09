@@ -391,7 +391,9 @@ func TestImportErrors(t *testing.T) {
 	if err := os.WriteFile(corrupt, []byte("this is not a zip"), 0o644); err != nil {
 		t.Fatalf("write corrupt package: %v", err)
 	}
-	latest := buildPackage(t, fixture{collection: "collection.anki21b"})
+	// A zstd entry that holds an uncompressed database: the entry name says
+	// schema 18, the bytes do not.
+	uncompressed := buildPackage(t, fixture{collection: "collection.anki21b"})
 
 	fixtures := map[string]fixture{
 		"missing cards table":  {models: basicModels(), decks: basicDecks(), omit: []string{"cards"}},
@@ -418,7 +420,7 @@ func TestImportErrors(t *testing.T) {
 		want string
 	}{
 		{name: "corrupt zip", path: corrupt, want: "not an Anki package"},
-		{name: "latest export", path: latest, want: "collection.anki21b"},
+		{name: "anki21b that is not zstd", path: uncompressed, want: "collection.anki21b"},
 	}
 	for name, f := range fixtures {
 		path := buildPackage(t, f)

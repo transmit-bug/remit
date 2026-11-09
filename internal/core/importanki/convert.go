@@ -165,58 +165,114 @@ func clozeAt(text string, i int) (ord, body int, ok bool) {
 	return ord, j + 2, true
 }
 
-// clozeBody reads a cloze deletion's contents up to its closing braces, with
-// the optional hint after a second "::" removed.
-func clozeBody(text string, body int) (inner string, after int, ok bool) {
-	end := strings.Index(text[body:], "}}")
-	if end < 0 {
-		return "", 0, false
-	}
-	inner = text[body : body+end]
-	if cut := strings.Index(inner, "::"); cut >= 0 {
-		inner = inner[:cut]
-	}
-	return inner, body + end + 2, true
+// noClozeMask asks for no deletion to be hidden: it renders the note's own
+// text.
+const noClozeMask = -1
+
+// maskedCloze stands where a card hides the deletion it asks.
+const maskedCloze = "[...]"
+
+// clozeStats says what flattening a field's cloze markup had to reduce.
+type clozeStats struct {
+	hints  int  // hints Anki would show on request, dropped here
+	nested int  // deletions inside a deletion, unwrapped into their text
+	masked int  // deletions this card's prompt hides
+	found  bool // a deletion of the asked ordinal exists at all
 }
 
-// clozeUnwrap turns {{c1::Paris::capital}} into Paris, so a note reads as the
-// text Anki would show once the card is answered.
-func clozeUnwrap(text string) string {
+// clozeText renders cloze markup as plain text: every deletion shows its
+// content, and the deletion of mask is hidden as [...] when mask is not
+// noClozeMask.
+//
+// This is the one flattening both collection schemas use, for a note's text and
+// for a card's two sides. A hint after a second "::" is dropped, a deletion
+// nested in another is unwrapped into the enclosing text, and a same-number
+// group hides every one of its deletions on the prompt. stats says what the
+// markup forced, so the import report can say it too instead of losing it
+// silently.
+func clozeText(text string, mask int) (string, clozeStats) {
 	var out strings.Builder
-	for i := 0; i < len(text); {
-		if _, body, ok := clozeAt(text, i); ok {
-			if inner, after, ok := clozeBody(text, body); ok {
-				out.WriteString(inner)
-				i = after
-				continue
-			}
-		}
-		out.WriteByte(text[i])
-		i++
-	}
-	return out.String()
+	stats := clozeStats{}
+	clozeWalk(&out, text, mask, 0, true, &stats)
+	return out.String(), stats
 }
 
-// maskCloze hides the deletion of one card behind [...], which is what Anki
-// shows on the question side.
-func maskCloze(text string, ord int) string {
-	var out strings.Builder
+// clozeWalk writes the visible text of one stretch of a field and counts the
+// markup it met. A hidden deletion still has its contents walked, so hints and
+// nesting inside it are counted; visible says whether that walk also writes.
+func clozeWalk(out *strings.Builder, text string, mask, depth int, visible bool, stats *clozeStats) {
 	for i := 0; i < len(text); {
-		if number, body, ok := clozeAt(text, i); ok {
-			if inner, after, ok := clozeBody(text, body); ok {
-				if number == ord {
-					out.WriteString("[...]")
-				} else {
-					out.WriteString(inner)
-				}
-				i = after
+		number, body, ok := clozeAt(text, i)
+		if !ok {
+			if visible {
+				out.WriteByte(text[i])
+			}
+			i++
+			continue
+		}
+		content, after, hint, ok := clozeEntry(text, body)
+		if !ok {
+			if visible {
+				out.WriteByte(text[i])
+			}
+			i++
+			continue
+		}
+		if depth > 0 {
+			stats.nested++
+		}
+		if hint != "" {
+			stats.hints++
+		}
+		if number == mask {
+			stats.found = true
+			if visible {
+				stats.masked++
+				out.WriteString(maskedCloze)
+			}
+			clozeWalk(out, content, mask, depth+1, false, stats)
+		} else {
+			clozeWalk(out, content, mask, depth+1, visible, stats)
+		}
+		i = after
+	}
+}
+
+// clozeEntry reads one deletion from the offset where its content starts. It
+// returns the content, the offset after the closing braces, the hint after a
+// second "::", and whether the markup closes at all. A nested deletion is
+// stepped over by its own braces, so the outer one still ends where its marker
+// says.
+func clozeEntry(text string, body int) (content string, after int, hint string, ok bool) {
+	depth := 0
+	hintAt := -1
+	for i := body; i < len(text); {
+		switch {
+		case strings.HasPrefix(text[i:], "}}"):
+			if depth > 0 {
+				depth--
+				i += 2
 				continue
 			}
+			if hintAt >= 0 {
+				return text[body:hintAt], i + 2, text[hintAt+2 : i], true
+			}
+			return text[body:i], i + 2, "", true
+		case depth == 0 && strings.HasPrefix(text[i:], "::"):
+			if hintAt < 0 {
+				hintAt = i
+			}
+			i += 2
+		default:
+			if _, inner, ok := clozeAt(text, i); ok {
+				depth++
+				i = inner
+				continue
+			}
+			i++
 		}
-		out.WriteByte(text[i])
-		i++
 	}
-	return out.String()
+	return "", 0, "", false
 }
 
 // normalizeLines collapses each line's inner whitespace and drops empty lines,

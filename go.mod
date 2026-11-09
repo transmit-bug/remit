@@ -7,6 +7,7 @@ tool github.com/egoist/mygo/cmd/mygo
 require (
 	github.com/MoeForge/moejs v0.1.0-alpha.11
 	github.com/egoist/mygo v0.8.1
+	github.com/klauspost/compress v1.20.4
 	github.com/open-spaced-repetition/go-fsrs/v4 v4.0.0
 	modernc.org/sqlite v1.61.1
 )

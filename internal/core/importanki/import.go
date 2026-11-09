@@ -71,6 +71,7 @@ func Import(path string, lib *store.Library) (Report, error) {
 		decks:   map[int64]bool{},
 	}
 	report.Warnings = append(report.Warnings, pkg.warnings...)
+	report.Warnings = append(report.Warnings, col.warnings...)
 	if err := im.plan(col); err != nil {
 		return report, err
 	}
@@ -136,12 +137,12 @@ type reviewPlan struct {
 // plan reads every row before anything is written, so a package that does not
 // make sense fails without leaving half a library behind.
 func (im *importer) plan(col *collection) error {
-	models, err := parseModels(col.modelsJSON)
+	models, err := col.models()
 	if err != nil {
 		return err
 	}
-	decks := parseDecks(col.decksJSON)
-	if decks == nil {
+	decks, named := col.deckNames()
+	if !named {
 		im.warn("decks: col.decks is not the expected JSON; cards are keyed by deck number")
 	}
 
@@ -192,12 +193,12 @@ func (im *importer) planNote(row dbNote, models map[int64]*notetype) (*notePlan,
 		return nil, fmt.Errorf("importanki: notes row %d: unknown notetype %d", row.id, row.mid)
 	}
 	if len(model.fields) == 0 {
-		return nil, fmt.Errorf("importanki: notes row %d: notetype %d has no fields", row.id, row.mid)
+		return nil, fmt.Errorf("importanki: notes row %d: %s has no fields", row.id, model.label())
 	}
 	if len(row.fields) > len(model.fields) {
 		for _, extra := range row.fields[len(model.fields):] {
 			if strings.TrimSpace(extra) != "" {
-				im.warn("notes row %d: more fields than notetype %d has; the extra text is not imported", row.id, row.mid)
+				im.warn("notes row %d: more fields than %s has; the extra text is not imported", row.id, model.label())
 				break
 			}
 		}
@@ -223,6 +224,7 @@ func (im *importer) planNote(row dbNote, models map[int64]*notetype) (*notePlan,
 		np.existing = &existing
 	}
 
+	var hints, nested int
 	for i := range model.fields {
 		raw := ""
 		if i < len(row.fields) {
@@ -230,7 +232,10 @@ func (im *importer) planNote(row dbNote, models map[int64]*notetype) (*notePlan,
 		}
 		var media []string
 		np.cleaned[i] = normalizeLines(plainText(raw, &media))
-		np.fields[i] = clozeUnwrap(np.cleaned[i])
+		var stats clozeStats
+		np.fields[i], stats = clozeText(np.cleaned[i], noClozeMask)
+		hints += stats.hints
+		nested += stats.nested
 		if np.existing == nil {
 			for _, name := range media {
 				im.media[name] = struct{}{}
@@ -238,6 +243,12 @@ func (im *importer) planNote(row dbNote, models map[int64]*notetype) (*notePlan,
 		}
 	}
 	np.title = noteTitle(np.fields, guid, row.id)
+	if hints > 0 {
+		im.warn("note %q: %d cloze hint(s) are flattened away; a Remit card has two plain sides and no hint line", np.title, hints)
+	}
+	if nested > 0 {
+		im.warn("note %q: %d nested cloze deletion(s) are flattened into their enclosing text", np.title, nested)
+	}
 
 	if np.existing != nil {
 		np.fieldAt = mapFieldBlocks(*np.existing, np.fields)
@@ -275,7 +286,7 @@ func (im *importer) planCard(row dbCard, np *notePlan, decks map[int64]string) *
 	if !ok {
 		if len(np.model.templates) == 0 {
 			cp.skip = "notetype has no templates"
-			im.warn("cards row %d: notetype %d has no template; card skipped", row.id, np.model.id)
+			im.warn("cards row %d: %s has no template; card skipped", row.id, np.model.label())
 			return cp
 		}
 		tmpl = np.model.templates[0]
@@ -286,7 +297,7 @@ func (im *importer) planCard(row dbCard, np *notePlan, decks map[int64]string) *
 	if name := frontFieldName(tmpl.front); name != "" {
 		field = np.model.fieldIndex(name)
 		if field < 0 {
-			im.warn("cards row %d: front template names field %q, which notetype %d does not have", row.id, name, np.model.id)
+			im.warn("cards row %d: front template names field %q, which %s does not have", row.id, name, np.model.label())
 		}
 	}
 	if field < 0 {
@@ -310,9 +321,12 @@ func (im *importer) planCard(row dbCard, np *notePlan, decks map[int64]string) *
 	}
 
 	if np.model.kind == notetypeCloze {
-		masked := maskCloze(np.cleaned[field], row.ord)
-		if masked == np.fields[field] {
+		masked, stats := clozeText(np.cleaned[field], row.ord)
+		if !stats.found {
 			im.warn("cards row %d: cloze c%d has no deletion in field %q", row.id, row.ord, np.model.fields[field])
+		}
+		if stats.masked > 1 {
+			im.warn("cards row %d: cloze c%d asks %d deletions; the prompt hides them all", row.id, row.ord, stats.masked)
 		}
 		cp.prompt = masked
 		cp.answer = np.fields[field]
@@ -454,7 +468,7 @@ func (im *importer) deckName(decks map[int64]string, id int64) string {
 	}
 	if !im.decks[id] {
 		im.decks[id] = true
-		im.warn("deck %d has no name in col.decks", id)
+		im.warn("deck %d has no name in the collection", id)
 	}
 	return "deck " + strconv.FormatInt(id, 10)
 }
