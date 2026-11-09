@@ -110,8 +110,8 @@ func TestConfigIsWritten(t *testing.T) {
 	if err := json.Unmarshal(read(t, filepath.Join(dir, "remit.json")), &config); err != nil {
 		t.Fatalf("remit.json: %v", err)
 	}
-	if config.Format != "remit/2" {
-		t.Errorf("format = %q, want remit/2", config.Format)
+	if config.Format != "remit/3" {
+		t.Errorf("format = %q, want remit/3", config.Format)
 	}
 	if len(config.FSRS.Weights) != 21 {
 		t.Errorf("weights = %d, want 21", len(config.FSRS.Weights))

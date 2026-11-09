@@ -647,3 +647,34 @@ func TestReadingAllowanceLeavesTheCadenceAlone(t *testing.T) {
 		t.Fatalf("reading queue = %+v, want the note coming back and not the unread one", due)
 	}
 }
+
+// A library's presets pace the queues it answers: the limits travel with the
+// library, so a screen passes Limits rather than numbers of its own.
+func TestPresetsPaceNewCardsAndReading(t *testing.T) {
+	lib := library(t)
+	cards(t, lib, 12)
+	for i := range 5 {
+		queueNote(t, lib, todayNote(t, lib, fmt.Sprintf("unread%d", i), 1), now.AddDate(0, 0, -2))
+	}
+	presets := store.DefaultPresets()
+	presets.Review.NewPerDay = 4
+	presets.Reading.NewPerDay = 2
+	if err := lib.SetPresets(presets); err != nil {
+		t.Fatalf("SetPresets: %v", err)
+	}
+
+	review, err := Cards(lib, now, Limits(lib.Presets()))
+	if err != nil {
+		t.Fatalf("Cards: %v", err)
+	}
+	if len(review) != 4 {
+		t.Errorf("review queue = %d cards, want the preset's 4", len(review))
+	}
+	reading, err := Reading(lib, now, Limits(lib.Presets()))
+	if err != nil {
+		t.Fatalf("Reading: %v", err)
+	}
+	if len(reading) != 2 {
+		t.Errorf("reading queue = %d notes, want the preset's 2", len(reading))
+	}
+}

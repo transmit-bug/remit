@@ -48,6 +48,17 @@ type Options struct {
 	ReadingNewPerDay int
 }
 
+// Limits answers the options a library's presets set: the daily allowance of
+// new cards and of new reading. The limits travel with the library, so a queue
+// takes them from it rather than from the caller's own settings; zero still
+// means no cap.
+func Limits(presets store.Presets) Options {
+	return Options{
+		NewPerDay:        presets.Review.NewPerDay,
+		ReadingNewPerDay: presets.Reading.NewPerDay,
+	}
+}
+
 // Counts is what the tray and the first screen show.
 type Counts struct {
 	Due       int

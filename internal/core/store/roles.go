@@ -73,10 +73,12 @@ func (l *Library) SetRole(role, name string) error {
 		}
 		next[role] = name
 	}
-	if err := l.writeConfigLocked(next); err != nil {
+	held := l.roles
+	l.roles = next
+	if err := l.writeConfigLocked(); err != nil {
+		l.roles = held
 		return err
 	}
-	l.roles = next
 	return nil
 }
 
@@ -96,7 +98,7 @@ func ReadRoles(dir string) map[string]string {
 	if err != nil {
 		return roles
 	}
-	config, err := decodeConfig(data)
+	config, err := readConfig(data)
 	if err != nil {
 		return roles
 	}
@@ -142,14 +144,4 @@ func (l *Library) enabledLocked(name string) bool {
 		}
 	}
 	return false
-}
-
-// writeConfigLocked writes remit.json with the given roles, keeping the
-// library's enabled extensions as they are.
-func (l *Library) writeConfigLocked(roles map[string]string) error {
-	data, err := encodeConfig(l.params, l.extensions, roles)
-	if err != nil {
-		return err
-	}
-	return writeFileAtomic(filepath.Join(l.dir, configName), data)
 }
