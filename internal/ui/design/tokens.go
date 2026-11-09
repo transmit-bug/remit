@@ -58,6 +58,8 @@ type Tokens struct {
 	// NotesColumnWidth and FilterPaneWidth are the two working columns: a
 	// document's notes list, and the card table's filters.
 	NotesColumnWidth, FilterPaneWidth float32
+	// MeterWidth is a row's paragraph progress bar.
+	MeterWidth float32
 }
 
 // NewTokens resolves Remit's appearance for this frame: the palette at the text
@@ -111,6 +113,7 @@ func NewTokens(base *ui.Theme) Tokens {
 		ListWidth: ListWidth, SettingsWidth: SettingsWidth,
 		BrowseWidth: BrowseWidth, WelcomeWidth: WelcomeWidth,
 		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
+		MeterWidth: MeterWidth,
 	}
 }
 

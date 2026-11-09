@@ -4,10 +4,11 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // State is the reading session: the queue's order, where the reader is in the
-// note on screen, and what an excerpt does.
+// note on screen, what an excerpt does, and which notes it already ended.
 //
 // What belongs in it is the app's answer to what is due (queue.Reading), and the
 // session's own place in it, so that a reader who leaves the screen for the
@@ -119,6 +120,35 @@ func (s *State) Choose(block core.ID) {
 	s.pos = block
 }
 
+// Begin starts the session at a note: the one the reader asked for comes first,
+// then the queue's own order. An empty id starts at the head. Beginning at a note
+// derives nothing — the app's queue already holds it — so an id the session does
+// not hold leaves the order as it is.
+//
+// Entering the session resumes where the store says the note was left, not where
+// the paragraph was when the session was last left open.
+func (s *State) Begin(id core.ID) {
+	s.forgetPosition()
+	if id == "" {
+		return
+	}
+	at := -1
+	for i, held := range s.queue {
+		if held == id {
+			at = i
+			break
+		}
+	}
+	if at <= 0 {
+		return
+	}
+	order := make([]core.ID, 0, len(s.queue))
+	order = append(order, id)
+	order = append(order, s.queue[:at]...)
+	order = append(order, s.queue[at+1:]...)
+	s.queue = order
+}
+
 // Move puts the reading position delta paragraphs further on, within the note.
 func (s *State) Move(note Note, delta int) {
 	if len(note.Blocks) == 0 {
@@ -149,6 +179,52 @@ func (s *State) Excerpt(c *ui.Context, note Note, d Deps) {
 // the screen's checkbox holds.
 func (s *State) ExcerptWithCard() bool { return s.excerptCard }
 
+// Decision is what the reader decided about the note on screen: to put it away,
+// to say it is not worth reading, or to come back to it tomorrow.
+type Decision uint8
+
+const (
+	// ArchiveDecision takes the note out of the queue for good, keeping its
+	// history and its place to resume at.
+	ArchiveDecision Decision = iota
+	// DismissDecision says the note is not worth reading: the other terminal
+	// state, with the other meaning.
+	DismissDecision
+	// PostponeDecision brings the note back tomorrow, without touching its place
+	// in the queue or its rating history.
+	PostponeDecision
+)
+
+// End carries out a decision on the note on screen: the app writes the event,
+// the session moves past the note without recording an answer — ending a note is
+// not a difficulty — and the reader is told what happened with the one action
+// that takes it back. It is one gesture behind both the buttons and the keys.
+func (s *State) End(c *ui.Context, d Deps, note Note, decision Decision) {
+	msgs := locales.In(c.Locale())
+	var (
+		act  func()
+		told string
+	)
+	switch decision {
+	case ArchiveDecision:
+		act, told = d.Archive, msgs.ReadArchived(note.Title)
+	case DismissDecision:
+		act, told = d.Dismiss, msgs.ReadDismissed(note.Title)
+	default:
+		act, told = d.Postpone, msgs.ReadPostponed(note.Title)
+	}
+	if act == nil {
+		return
+	}
+	act()
+	s.AdvancePast(note.ID)
+	if d.QueueNote == nil {
+		c.Toast(told)
+		return
+	}
+	c.ToastAction(told, msgs.ReadUndo(), func() { d.QueueNote(note.ID) })
+}
+
 // Advance moves past the note on screen, counting it when it was read rather
 // than skipped. Either way the session is done with it: it stays out of the
 // queue until the next session, whatever the store says about its due date.
@@ -159,10 +235,39 @@ func (s *State) Advance(read bool) {
 	if read {
 		s.read++
 	}
+	s.pass(s.queue[0])
+	s.queue = s.queue[1:]
+	s.forgetPosition()
+}
+
+// AdvancePast moves past a note the reader ended — archived, dismissed or
+// postponed — wherever the queue holds it, and records no answer: ending a note
+// is not a difficulty. The store's own answer may have taken the note out of the
+// queue already, so it is found by its id rather than by being the note on
+// screen.
+func (s *State) AdvancePast(id core.ID) {
+	if id == "" {
+		return
+	}
+	s.pass(id)
+	kept := s.queue[:0]
+	for i, held := range s.queue {
+		if held != id {
+			kept = append(kept, held)
+			continue
+		}
+		if i == 0 {
+			s.forgetPosition()
+		}
+	}
+	s.queue = kept
+}
+
+// pass remembers that this session is done with a note: a skipped note is still
+// due, so moving on must not put it back at the end of its own queue.
+func (s *State) pass(id core.ID) {
 	if s.passed == nil {
 		s.passed = map[core.ID]bool{}
 	}
-	s.passed[s.queue[0]] = true
-	s.queue = s.queue[1:]
-	s.forgetPosition()
+	s.passed[id] = true
 }

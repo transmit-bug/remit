@@ -20,6 +20,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
+	"github.com/transmit-bug/remit/internal/ui/screens/read"
 	"github.com/transmit-bug/remit/internal/ui/screens/start"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/locales"
@@ -324,6 +325,7 @@ func (a *App) reload() {
 	}
 	a.resolver = cards.New(runner, a.lib.Types())
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
+	a.excerpted = a.excerptedBlocks()
 	a.notesRows = a.noteRows()
 	now := time.Now()
 	a.due = a.dueToday()
@@ -392,6 +394,14 @@ func (a *App) loadCurrent() {
 	switch a.area {
 	case areaToday:
 		a.loadToday()
+	case areaRead:
+		// The read area shows the page its sub-navigation names: the queue, or
+		// the archive beside it.
+		if a.sub == subReadArchive {
+			a.read.Show(read.Archive)
+		} else {
+			a.read.Show(read.Queue)
+		}
 	case areaWrite:
 		if a.sub == subSearch {
 			a.loadBrowse()

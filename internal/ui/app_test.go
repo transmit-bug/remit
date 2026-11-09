@@ -25,7 +25,7 @@ func TestAreaShortcutsSwitchAreas(t *testing.T) {
 	}{
 		{ui.Key1, msgs.AreaToday(), "", msgs.TodayBudget()},
 		{ui.Key2, msgs.AreaWrite(), msgs.ModeNotes(), msgs.Notebook()},
-		{ui.Key3, msgs.AreaRead(), msgs.QueuePage(), msgs.NoReading()},
+		{ui.Key3, msgs.AreaRead(), msgs.QueuePage(), msgs.ReadQueueEmpty()},
 		{ui.Key4, msgs.AreaRecall(), msgs.QueuePage(), "Spacing beats cramming"},
 		{ui.Key5, msgs.AreaStats(), msgs.OverviewPage(), msgs.StatsTitle()},
 		{ui.Key6, msgs.AreaSettings(), msgs.AppearancePage(), msgs.SettingsTitle()},

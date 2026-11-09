@@ -22,6 +22,7 @@ import (
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/browse"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
+	"github.com/transmit-bug/remit/internal/ui/screens/read"
 	"github.com/transmit-bug/remit/internal/ui/screens/reading"
 	"github.com/transmit-bug/remit/internal/ui/screens/relink"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
@@ -97,6 +98,13 @@ type App struct {
 	today            screenToday.State // today: the day's queue and the list's place
 	todayDay         queue.Today       // the day's queue, as loadToday derived it
 	todayTomorrow    int               // what comes due on the day after
+	// read is the read area's own pages — the queue and the archive — and readPages
+	// is what the last load derived for them: the rows and the rhythm under them.
+	read      read.State
+	readPages readPages
+	// excerpted are the blocks something already quotes, so that a paragraph can
+	// say it was excerpted without a frame reading the library's links.
+	excerpted map[core.ID]bool
 	browse           browse.State
 	browseRows       []browse.Row // the cards browse lists, as loadBrowse derived them
 	stats            screenstats.State

@@ -10,6 +10,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ui/screens/read"
 	"github.com/transmit-bug/remit/internal/ui/screens/reading"
 )
 
@@ -20,14 +21,53 @@ func (a *App) readingView(c *ui.Context) {
 	reading.View(c, &a.reading, a.readingDeps(c))
 }
 
+// readView draws the read area's page: today's queue, or the archive. The rows
+// are what the last load derived, so the page reads a snapshot and never the
+// store.
+func (a *App) readView(c *ui.Context) {
+	read.View(c, &a.read, a.readDeps(c))
+}
+
+// readDeps is what the read area's pages ask of the app: the rows it derived,
+// the rhythm under them, and what a row can do. Each runs on the UI thread.
+func (a *App) readDeps(c *ui.Context) read.Deps {
+	return read.Deps{
+		Queue: func() []read.Item { return a.readPages.queue },
+		Archive: func() (archived, dismissed []read.Item) {
+			return a.readPages.archived, a.readPages.dismissed
+		},
+		Counts: func() read.Counts {
+			return read.Counts{Due: len(a.readPages.queue), Queued: a.readPages.queued}
+		},
+		Now:      time.Now,
+		Start:    func() { a.startReading("") },
+		Continue: func(id core.ID) { a.startReading(id) },
+		Add:      func() { a.setArea(areaWrite, subNotes) },
+		Open:     a.openNote,
+		Restore:  func(id core.ID) { a.restoreReading(c, id) },
+		Reload:   a.reload,
+	}
+}
+
 // readingDeps is what the screen asks of the app: the note to read, and what the
 // user can do with it, each recorded by the app on the UI thread.
 func (a *App) readingDeps(c *ui.Context) reading.Deps {
+	// The terminal actions act on the note on screen, which is the one the session
+	// shows when the frame asks; the keys and the buttons both come through here.
+	current, _ := a.reading.Current()
 	return reading.Deps{
-		Note: a.readingNote,
-		Read: func(id core.ID, r reading.Rating, position core.ID) { a.readNote(c, id, r, position) },
-		Skip: func(id core.ID) { a.skipReading(id) },
-		Drop: func(id core.ID) { a.dropReading(c, id) },
+		Note:     a.readingNote,
+		Read:     func(id core.ID, r reading.Rating, position core.ID) { a.readNote(c, id, r, position) },
+		Skip:     func(id core.ID) { a.skipReading(id) },
+		Drop:     func(id core.ID) { a.dropReading(c, id) },
+		Archive:  func() { a.archiveReading(c, current) },
+		Dismiss:  func() { a.dismissReading(c, current) },
+		Postpone: func() { a.postponeReading(c, current) },
+		QueueNote: func(id core.ID) {
+			if err := a.queueReading(id); err != nil {
+				slog.Error("remit: restore reading", "err", err)
+			}
+		},
 		Excerpt: func(note, block core.ID, withCard bool) {
 			a.excerptBlock(c, note, block, withCard)
 		},
@@ -42,18 +82,33 @@ func (a *App) readingDeps(c *ui.Context) reading.Deps {
 }
 
 // readingNote is the note the reading screen shows: its blocks in file order,
-// and the block the last session stopped at.
+// the block the last session stopped at, and what each paragraph already
+// carries.
 func (a *App) readingNote(id core.ID) (reading.Note, bool) {
 	note, ok := a.data.note(id)
 	if !ok {
 		return reading.Note{}, false
 	}
-	return reading.Note{
+	position := a.readingPositions[id]
+	out := reading.Note{
 		ID:       note.ID,
 		Title:    note.Title,
 		Blocks:   note.Blocks,
-		Position: a.readingPositions[id],
-	}, true
+		Position: position,
+		Marks:    map[core.ID]reading.Mark{},
+	}
+	for _, block := range note.Blocks {
+		mark := reading.Mark{
+			Cards:     a.data.cardsForBlock(block.ID),
+			Excerpted: a.excerpted[block.ID],
+			LastStop:  position != "" && block.ID == position,
+		}
+		if mark.Cards == 0 && !mark.Excerpted && !mark.LastStop {
+			continue
+		}
+		out.Marks[block.ID] = mark
+	}
+	return out, true
 }
 
 // currentReadingNote is the note on the reading screen, when an action needs the
@@ -115,6 +170,110 @@ func (a *App) dropReading(c *ui.Context, id core.ID) {
 	}
 	a.reload()
 	c.Toast(m(c).ReadingRemoved())
+}
+
+// archiveReading puts a note away for good: it leaves the queue, keeps its
+// history and the block it stopped at, and comes back only if it is queued again.
+// The session reports the decision and offers the undo; this is the write.
+func (a *App) archiveReading(c *ui.Context, id core.ID) {
+	if a.lib == nil || id == "" {
+		return
+	}
+	if err := a.lib.ArchiveReading(id, time.Now()); err != nil {
+		a.report(c, "archive reading", err)
+		return
+	}
+	a.reload()
+}
+
+// dismissReading says a note is not worth reading: the other terminal state, and
+// the same way back.
+func (a *App) dismissReading(c *ui.Context, id core.ID) {
+	if a.lib == nil || id == "" {
+		return
+	}
+	if err := a.lib.DismissReading(id, time.Now()); err != nil {
+		a.report(c, "dismiss reading", err)
+		return
+	}
+	a.reload()
+}
+
+// postponeReading brings a note back tomorrow: it keeps its place in the queue
+// and its rating history, and today's queue stops holding it.
+func (a *App) postponeReading(c *ui.Context, id core.ID) {
+	if a.lib == nil || id == "" {
+		return
+	}
+	now := time.Now()
+	if err := a.lib.PostponeReading(id, startOfTomorrow(now), now); err != nil {
+		a.report(c, "postpone reading", err)
+		return
+	}
+	a.reload()
+}
+
+// startOfTomorrow is the midnight after the day now falls on, in now's own zone:
+// a postponed note comes back with the day, not an hour later.
+func startOfTomorrow(now time.Time) time.Time {
+	year, month, day := now.Date()
+	return time.Date(year, month, day+1, 0, 0, 0, 0, now.Location())
+}
+
+// queueReading puts a note back in the reading queue, which is what undoing the
+// session's terminal decisions and the archive's restore both do. A note the
+// schedule had put off comes due now too, or it would join the queue and still
+// not be on today's page.
+func (a *App) queueReading(id core.ID) error {
+	if a.lib == nil || id == "" {
+		return nil
+	}
+	now := time.Now()
+	if err := a.lib.AddToReading(id, now); err != nil {
+		return err
+	}
+	if row, ok := a.lib.ReadingFor(id); ok && row.Due().After(now) {
+		return a.lib.PostponeReading(id, now, now)
+	}
+	return nil
+}
+
+// restoreReading is the archive page's way back: a note that left the queue for
+// good is queued again, and the reader is told it worked.
+func (a *App) restoreReading(c *ui.Context, id core.ID) {
+	if err := a.queueReading(id); err != nil {
+		a.report(c, "restore reading", err)
+		return
+	}
+	a.reload()
+	c.Toast(m(c).ReadRestored())
+}
+
+// startReading enters the reading session, at the note the reader asked for or at
+// the head of the queue. The session takes the window whole; the queue page stays
+// behind it.
+func (a *App) startReading(id core.ID) {
+	if a.lib == nil {
+		return
+	}
+	a.reading.Begin(id)
+	if a.reading.Remaining() == 0 {
+		return
+	}
+	a.session = sessionReading
+	a.syncMode()
+	a.loadCurrent()
+}
+
+// endCurrentReading is the key form of the session's terminal actions: the same
+// gesture the buttons run, so the note leaves the screen and the reader is told
+// with the undo either way.
+func (a *App) endCurrentReading(c *ui.Context, decision reading.Decision) {
+	note, ok := a.currentReadingNote()
+	if !ok {
+		return
+	}
+	a.reading.End(c, a.readingDeps(c), note, decision)
 }
 
 // addReading puts a note in the reading queue, which is what the notebook's
@@ -250,11 +409,24 @@ func (a *App) readingNoteOrEmpty(id core.ID) reading.Note {
 	return note
 }
 
-// loadReading derives the reading queue and the block each note resumes at. It
-// is a load path: the screen reads what it leaves, so no frame asks the store.
+// readPages is the read area as a load derived it: the queue page's rows, the
+// archive's two sections, and how many notes the reading queue holds at all.
+// The pages read it, so no frame asks the store.
+type readPages struct {
+	queue     []read.Item
+	archived  []read.Item
+	dismissed []read.Item
+	queued    int
+}
+
+// loadReading derives the reading session's queue, the block each note resumes
+// at, and both read pages' rows. It is a load path: the screens read what it
+// leaves, so no frame asks the store.
 func (a *App) loadReading(now time.Time) {
 	a.readingPositions = map[core.ID]core.ID{}
 	a.readingCount = 0
+	a.readPages = readPages{}
+	a.read.Loaded, a.read.Err = true, ""
 	if a.lib == nil {
 		return
 	}
@@ -263,7 +435,7 @@ func (a *App) loadReading(now time.Time) {
 	// there whether or not the schedule has brought it back.
 	queued, err := a.lib.ReadingQueue()
 	if err != nil {
-		slog.Error("remit: reading queue", "err", err)
+		a.readFailed("reading queue", err)
 		return
 	}
 	for _, entry := range queued {
@@ -271,13 +443,73 @@ func (a *App) loadReading(now time.Time) {
 	}
 	due, err := queue.Reading(a.lib, now, queue.Options{})
 	if err != nil {
-		slog.Error("remit: reading queue", "err", err)
+		a.readFailed("reading queue", err)
 		return
 	}
 	ids := make([]core.ID, 0, len(due))
 	for _, entry := range due {
 		ids = append(ids, entry.Note)
+		a.readPages.queue = append(a.readPages.queue, a.readItem(entry))
 	}
 	a.reading.Sync(ids)
 	a.readingCount = len(due)
+	a.readPages.queued = len(queued)
+
+	// The archive is the notes that left the queue for good, in the two sections
+	// the archive page draws: put away after reading, and not worth reading.
+	archive, err := a.lib.ReadingArchive()
+	if err != nil {
+		a.readFailed("reading archive", err)
+		return
+	}
+	for _, entry := range archive {
+		item := a.readItem(entry)
+		if entry.Dismissed {
+			a.readPages.dismissed = append(a.readPages.dismissed, item)
+			continue
+		}
+		a.readPages.archived = append(a.readPages.archived, item)
+	}
+}
+
+// readUnread records why the read area has no rows: the pages say so and offer to
+// ask again, rather than showing an empty queue that is not empty.
+func (a *App) readFailed(what string, err error) {
+	slog.Error("remit: "+what, "err", err)
+	a.read.Err = err.Error()
+}
+
+// readItem is one reading entry as the read area lists it: the note's name and
+// length, the paragraph it resumes at, and when it was last read.
+func (a *App) readItem(entry store.Reading) read.Item {
+	item := read.Item{Note: entry.Note, Due: entry.Due(), LastSeen: entry.State.LastReview}
+	note, ok := a.data.note(entry.Note)
+	if !ok {
+		return item
+	}
+	item.Title, item.Blocks = note.Title, len(note.Blocks)
+	for i, block := range note.Blocks {
+		if block.ID == entry.Position {
+			item.At = i + 1
+			break
+		}
+	}
+	return item
+}
+
+// excerptedBlocks names every block something quotes: a paragraph's marks say
+// which of them already became an excerpt. It is derived with the snapshot, so no
+// frame reads the library's links.
+func (a *App) excerptedBlocks() map[core.ID]bool {
+	out := map[core.ID]bool{}
+	for _, note := range a.data.notes {
+		for _, block := range note.Blocks {
+			for _, link := range core.Links(block.Text) {
+				if link.Block != "" {
+					out[link.Block] = true
+				}
+			}
+		}
+	}
+	return out
 }

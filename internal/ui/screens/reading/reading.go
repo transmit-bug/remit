@@ -1,6 +1,7 @@
 // Package reading is the reading screen: one note at a time, the block the
-// reader stopped at, the three ways a reading digested, and the excerpt that
-// turns a passage into a note of its own.
+// reader stopped at, the three ways a reading digested, the excerpt that turns a
+// passage into a note of its own, and the three decisions that end a note —
+// archived, dismissed, postponed.
 //
 // It owns the session's queue order and draws what the queue says; the app owns
 // the store, and Deps is the whole of what the screen asks of it. Nothing here
@@ -20,13 +21,27 @@ import (
 )
 
 // Note is what the screen shows of a note: its title, its blocks in file order,
-// and the block the last session stopped at.
+// the block the last session stopped at, and what each paragraph already
+// carries.
 type Note struct {
 	ID     core.ID
 	Title  string
 	Blocks []core.Block
 	// Position is where the note was left: the block a session resumes at.
 	Position core.ID
+	// Marks are what a paragraph carries beside its text, by block. A block with
+	// no entry carries nothing.
+	Marks map[core.ID]Mark
+}
+
+// Mark is what a paragraph says about itself: how many cards quote it, whether
+// an excerpt was taken from it, and whether it is where the last session
+// stopped. Three different kinds of fact, so the reader can tell "already kept"
+// from "already asked".
+type Mark struct {
+	Cards     int
+	Excerpted bool
+	LastStop  bool
 }
 
 // Block returns the block with the given ID.
@@ -99,6 +114,17 @@ type Deps struct {
 	Skip func(core.ID)
 	// Drop takes the note out of the reading queue: it stops coming back.
 	Drop func(core.ID)
+	// Archive puts the note on screen away for good: it leaves the queue, keeps
+	// its history and its position, and comes back only if it is queued again.
+	Archive func()
+	// Dismiss says the note on screen is not worth reading: the other terminal
+	// state, restored the same way.
+	Dismiss func()
+	// Postpone brings the note on screen back tomorrow.
+	Postpone func()
+	// QueueNote puts a note back in the reading queue and clears a postpone:
+	// what undoing an archive, a dismissal or a postpone does.
+	QueueNote func(core.ID)
 	// Excerpt takes a block out into a child note, making a card of it too when
 	// withCard is set.
 	Excerpt func(core.ID, core.ID, bool)
@@ -127,22 +153,28 @@ func View(c *ui.Context, s *State, d Deps) {
 		note, hasNote = d.Note(id)
 		cursor = s.Cursor(note)
 	}
+	// The smallest window keeps the card, its paragraphs and the whole action
+	// row on screen: the page tightens its pad rather than pushing the actions
+	// under the fold.
+	narrow := false
+	if w, _ := c.Size(); w <= design.BreakpointSmall {
+		narrow = true
+	}
 	ui.Column(c).Fill().Children(func() {
-		statusBar(c, s, note)
+		sessionBar(c, s, note, hasNote, d)
 		ui.Scroll(c).Grow(1).Children(func() {
 			pad := float32(design.SpaceXXL)
-			if w, _ := c.Size(); w < 800 {
-				pad = design.SpaceXL
+			if narrow {
+				pad = design.SpaceL
 			}
 			ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(pad).Children(func() {
-				ui.Column(c).FillWidth().MaxWidth(design.ReadingWidth).Gap(design.SpaceL).Children(func() {
+				ui.Column(c).FillWidth().MaxWidth(design.ReadingWidth).Gap(design.SpaceS).Children(func() {
 					if !hasNote {
 						empty(c, d)
 						return
 					}
-					noteBody(c, s, note, cursor)
-					difficulties(c, d, note, cursor)
-					actions(c, s, d, note)
+					noteBody(c, s, note, cursor, narrow)
+					actions(c, s, d, note, cursor)
 					reference(c, d, note, cursor)
 				})
 			})
@@ -150,50 +182,49 @@ func View(c *ui.Context, s *State, d Deps) {
 	})
 }
 
-// statusBar is the one line the taking-over screen keeps: which note of how
-// many, where in it, and the keys that move it.
-func statusBar(c *ui.Context, s *State, note Note) {
+// sessionBar is the one line the taking-over screen keeps: which note of how
+// many, its title, where in it the reader is, and the way out.
+func sessionBar(c *ui.Context, s *State, note Note, hasNote bool, d Deps) {
 	msgs := locales.In(c.Locale())
 	t := c.Theme()
 	done, total := s.Progress()
-	ui.Row(c).Height(design.SpaceXL+design.SpaceXS).Padding(design.SpaceXS, design.SpaceL).
+	ui.Row(c).MinHeight(design.Hit).Padding(design.SpaceXS, design.SpaceL).
 		AlignItems(ui.Center).Gap(design.SpaceS).Children(func() {
-		ui.Text(c, msgs.ReadingProgress(done, total)).
+		ui.Text(c, msgs.ReadingProgress(done, total)).NoWrap().
 			FontSize(design.TypeUI).TextColor(t.TextMuted)
-		if total > 0 {
-			ui.Progress(c, float64(done)/float64(total)).Grow(1)
+		if hasNote {
+			// The title gives way first: the numbers beside it are what the
+			// reader steers by.
+			ui.Text(c, note.Title).SingleLine().Shrink(1).
+				FontSize(design.TypeUI).TextColor(t.Text)
 		}
 		ui.Spacer(c)
-		if at, total := s.At(note); total > 0 {
-			ui.Text(c, msgs.ReadingWhere(at, total)).
+		if at, of := s.At(note); hasNote && of > 0 {
+			ui.Text(c, msgs.ReadingWhere(at, of)).NoWrap().
 				FontSize(design.TypeUI).TextColor(t.TextMuted)
+			ui.Meter(c, float64(at)/float64(of), 0, 1, nil).
+				Width(design.MeterWidth).Label(msgs.ReadingWhere(at, of))
 		}
-		ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Children(func() {
-			for _, k := range []struct{ key, label string }{
-				{"J/K", msgs.ReadingMove()},
-				{"E", msgs.Excerpt()},
-				{"1–3", msgs.ReadingDigest()},
-				{"S", msgs.Skip()},
-				{"X", msgs.RemoveReading()},
-				{"M", msgs.ReadingEdit()},
-				{"Esc", msgs.ModeNotes()},
-			} {
-				kit.Keycap(c, k.key).Tooltip(k.label)
-			}
-		})
+		if d.Home != nil {
+			ui.Button(c, msgs.BackToNotes()).MinHeight(design.ControlHeight).OnClick(d.Home)
+		}
 	})
 }
 
 // noteBody is the note as it reads: its title and every paragraph in file
 // order, with the block the reader is on marked.
-func noteBody(c *ui.Context, s *State, note Note, cursor core.ID) {
+func noteBody(c *ui.Context, s *State, note Note, cursor core.ID, narrow bool) {
+	pad := float32(design.SpaceXL)
+	if narrow {
+		pad = design.SpaceL
+	}
 	kit.StyleCard(c, ui.Column(c).Key(string(note.ID)).
-		Padding(design.SpaceXL).Gap(design.SpaceL)).Children(func() {
+		Padding(pad).Gap(design.SpaceS)).Children(func() {
 		ui.Text(c, note.Title).FontSize(design.TypeH2).Bold()
 		ui.Divider(c)
 		ui.Column(c).Gap(design.SpaceXS).Children(func() {
 			for i, block := range note.Blocks {
-				paragraph(c, s, block, block.ID == cursor, i+1)
+				paragraph(c, s, block, block.ID == cursor, i+1, note.Marks[block.ID])
 			}
 		})
 	})
@@ -202,11 +233,12 @@ func noteBody(c *ui.Context, s *State, note Note, cursor core.ID) {
 // paragraph is one block of the note. The block the reader is on carries the
 // reading position, which is what a session records and an excerpt takes; the
 // note opens on the block the last session stopped at, so that is where it
-// starts.
+// starts. The marks on its right say what the block already carries, so the
+// reader does not excerpt a passage twice or make a second card by accident.
 //
 // It is a wrapper, not a copied widget: ui.Text renders the text, and the box
 // around it is what the pointer and the focus move.
-func paragraph(c *ui.Context, s *State, block core.Block, current bool, number int) {
+func paragraph(c *ui.Context, s *State, block core.Block, current bool, number int, mark Mark) {
 	msgs := locales.In(c.Locale())
 	t := c.Theme()
 	face := ui.Column(c).Key(string(block.ID)).Padding(design.SpaceS, design.SpaceM).
@@ -216,54 +248,89 @@ func paragraph(c *ui.Context, s *State, block core.Block, current bool, number i
 		face.Label(msgs.ReadingCurrent(number))
 	}
 	face.OnClick(func() { s.Choose(block.ID) }).Children(func() {
-		// The paragraph's formulas are set for reading; the note keeps the
-		// source.
-		ui.Text(c, maths.Render(block.Text)).FontSize(design.TypeBody).TextColor(t.Text)
-	})
-}
-
-// difficulties is the three ways a reading digested, each in its own colour.
-func difficulties(c *ui.Context, d Deps, note Note, cursor core.ID) {
-	msgs := locales.In(c.Locale())
-	t := c.Theme()
-	ui.Row(c).Gap(design.SpaceM).Children(func() {
-		for r := TooHard; r <= TooShallow; r++ {
-			face := r.colour(t)
-			label := r.label(msgs)
-			key := ui.ButtonBase(c).Grow(1).MinHeight(design.ControlHeight).
-				Gap(design.SpaceS).Padding(design.SpaceXS, design.SpaceS).
-				Background(t.Surface.Mix(face, 0.16)).Border(design.Hairline, t.Border.Mix(face, 0.5)).
-				Radius(design.RadiusControl).Label(label).
-				OnClick(func() { d.Read(note.ID, r, cursor) }).
-				Children(func() {
-					kit.Keycap(c, r.Key())
-					ui.Text(c, label).FontSize(design.TypeUI).TextColor(t.Text)
-				})
-			if key.Hovered() {
-				key.Background(t.Surface.Mix(face, 0.24)).
-					Transition(ui.ElementTransition{Colors: true, Animation: &design.Hover})
+		ui.Row(c).Gap(design.SpaceM).AlignItems(ui.Start).Children(func() {
+			// The paragraph's formulas are set for reading; the note keeps the
+			// source.
+			ui.Text(c, maths.Render(block.Text)).FontSize(design.TypeBody).
+				TextColor(t.Text).Grow(1)
+			if mark.Cards > 0 || mark.Excerpted || mark.LastStop {
+				ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Shrink(0).
+					Children(func() {
+						if mark.Cards > 0 {
+							ui.Badge(c, msgs.ReadCardsMark(mark.Cards))
+						}
+						if mark.Excerpted {
+							ui.Badge(c, msgs.ReadExcerptedMark())
+						}
+						if mark.LastStop {
+							ui.Badge(c, msgs.ReadLastStopMark()).
+								Background(t.Accent.Alpha(0.12)).TextColor(t.Accent)
+						}
+					})
 			}
-		}
+		})
 	})
 }
 
-// actions are what the reader can do besides finishing: excerpt the block on
-// screen — into a note alone, or into a note and a card — move on, take the note
-// out of the queue, or go and fix the note.
-func actions(c *ui.Context, s *State, d Deps, note Note) {
+// actions are what the reader can do with the note, in two groups: how the
+// reading digested, kept as three equal answers across the card, and what to do
+// with the note itself — excerpt it, move on, end it, or go and fix it. A narrow
+// window wraps the actions rather than shortening them, and a terminal action
+// never lands beside a difficulty.
+func actions(c *ui.Context, s *State, d Deps, note Note, cursor core.ID) {
 	msgs := locales.In(c.Locale())
-	ui.Row(c).Gap(design.SpaceS).AlignItems(ui.Center).Wrap().Children(func() {
-		ui.Checkbox(c, &s.excerptCard, msgs.ExcerptWithCard()).
-			Label(msgs.ExcerptWithCard())
-		ui.PrimaryButton(c, msgs.Excerpt()).MinHeight(design.ControlHeight).
-			OnClick(func() { s.Excerpt(c, note, d) })
-		ui.Button(c, msgs.Skip()).MinHeight(design.ControlHeight).
-			OnClick(func() { d.Skip(note.ID) })
-		ui.Button(c, msgs.RemoveReading()).MinHeight(design.ControlHeight).
-			OnClick(func() { d.Drop(note.ID) })
-		ui.Button(c, msgs.ReadingEdit()).MinHeight(design.ControlHeight).
-			OnClick(func() { d.EditNote(note.ID) })
+	ui.Column(c).Gap(design.SpaceS).Children(func() {
+		ui.Row(c).Gap(design.SpaceS).AlignItems(ui.Center).Children(func() {
+			for r := TooHard; r <= TooShallow; r++ {
+				difficulty(c, r, func() { d.Read(note.ID, r, cursor) })
+			}
+		})
+		ui.Row(c).Gap(design.SpaceS).AlignItems(ui.Center).Wrap().Children(func() {
+			ui.Checkbox(c, &s.excerptCard, msgs.ExcerptWithCard()).
+				Label(msgs.ExcerptWithCard())
+			ui.PrimaryButton(c, msgs.Excerpt()).MinHeight(design.ControlHeight).
+				OnClick(func() { s.Excerpt(c, note, d) })
+			ui.Button(c, msgs.Skip()).MinHeight(design.ControlHeight).
+				OnClick(func() { d.Skip(note.ID) })
+			ui.Button(c, msgs.ReadArchive()).MinHeight(design.ControlHeight).
+				OnClick(func() { s.End(c, d, note, ArchiveDecision) })
+			ui.Button(c, msgs.ReadDismiss()).MinHeight(design.ControlHeight).
+				OnClick(func() { s.End(c, d, note, DismissDecision) })
+			ui.Button(c, msgs.ReadPostpone()).MinHeight(design.ControlHeight).
+				OnClick(func() { s.End(c, d, note, PostponeDecision) })
+			ui.Button(c, msgs.RemoveReading()).MinHeight(design.ControlHeight).
+				OnClick(func() { d.Drop(note.ID) })
+			ui.Button(c, msgs.ReadingEdit()).MinHeight(design.ControlHeight).
+				OnClick(func() { d.EditNote(note.ID) })
+		})
+		ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Children(func() {
+			kit.Keycap(c, "J/K")
+			ui.Text(c, msgs.ReadingMove()).FontSize(design.TypeCaption).
+				TextColor(c.Theme().TextMuted)
+		})
 	})
+}
+
+// difficulty is one of the three ways a reading digested, in its own colour and
+// with the key that records it.
+func difficulty(c *ui.Context, r Rating, choose func()) {
+	t := c.Theme()
+	msgs := locales.In(c.Locale())
+	face := r.colour(t)
+	label := r.label(msgs)
+	key := ui.ButtonBase(c).Grow(1).MinHeight(design.ControlHeight).
+		Gap(design.SpaceS).Padding(design.SpaceXS, design.SpaceS).
+		Background(t.Surface.Mix(face, 0.16)).Border(design.Hairline, t.Border.Mix(face, 0.5)).
+		Radius(design.RadiusControl).Label(label).
+		OnClick(choose).
+		Children(func() {
+			kit.Keycap(c, r.Key())
+			ui.Text(c, label).FontSize(design.TypeUI).TextColor(t.Text)
+		})
+	if key.Hovered() {
+		key.Background(t.Surface.Mix(face, 0.24)).
+			Transition(ui.ElementTransition{Colors: true, Animation: &design.Hover})
+	}
 }
 
 // reference is the way back to where an excerpt came from: a block that carries

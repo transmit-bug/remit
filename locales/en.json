@@ -1760,6 +1760,230 @@
       }
     }
   },
+  "readQueueTitle": "Reading queue",
+  "@readQueueTitle":   {
+    "description": "The read area's queue page: the notes due to read now."
+  },
+  "readArchiveTitle": "Archive",
+  "@readArchiveTitle":   {
+    "description": "The read area's archive page: the notes that left the queue for good."
+  },
+  "archivePage": "Archive",
+  "@archivePage":   {
+    "description": "Page of the read area: the notes that left the reading queue."
+  },
+  "readAdd": "Add to queue",
+  "@readAdd":   {
+    "description": "Opens the notebook so a note can be queued for reading."
+  },
+  "readStart": "Start reading",
+  "@readStart":   {
+    "description": "Enters the reading session at the head of the queue."
+  },
+  "readContinue": "Continue",
+  "@readContinue":   {
+    "description": "Enters the reading session at the note on that row."
+  },
+  "readOpen": "Open",
+  "@readOpen":   {
+    "description": "Opens an archived note in the notebook."
+  },
+  "readRestore": "Restore",
+  "@readRestore":   {
+    "description": "Puts an archived or dismissed note back in the reading queue."
+  },
+  "readRestored": "Back in the reading queue.",
+  "@readRestored":   {
+    "description": "A restored note returned to the reading queue."
+  },
+  "readRetry": "Try again",
+  "@readRetry":   {
+    "description": "Asks the read area to load again after it failed."
+  },
+  "readLoading": "Loading the reading queue…",
+  "@readLoading":   {
+    "description": "The read area before its queue has loaded."
+  },
+  "readLoadFailed": "The reading area could not be read: {reason}",
+  "@readLoadFailed":   {
+    "description": "The read area's queue or archive could not be loaded.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "Memory"
+      }
+    }
+  },
+  "readRowPlace": "Paragraph {at} of {blocks}",
+  "@readRowPlace":   {
+    "description": "Where a queued note resumes: the paragraph, and how many it holds.",
+    "placeholders": {
+      "at": {
+        "type": "int",
+        "example": "3"
+      },
+      "blocks": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "readRowUnread": "Not started",
+  "@readRowUnread":   {
+    "description": "A queued note no session has read yet."
+  },
+  "readRowBlocks": "{count, plural, one {# paragraph} other {# paragraphs}}",
+  "@readRowBlocks":   {
+    "description": "How many paragraphs a note holds.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "readRowStopped": "last stopped {day}",
+  "@readRowStopped":   {
+    "description": "When a session last stopped in a note: today, yesterday, or a date.",
+    "placeholders": {
+      "day": {
+        "type": "String",
+        "example": "Memory"
+      }
+    }
+  },
+  "readRowQueued": "queued {day}",
+  "@readRowQueued":   {
+    "description": "When a note joined the reading queue: today, yesterday, or a date.",
+    "placeholders": {
+      "day": {
+        "type": "String",
+        "example": "Memory"
+      }
+    }
+  },
+  "readDayToday": "today",
+  "@readDayToday":   {
+    "description": "The day a note was last touched, when it is the day on screen."
+  },
+  "readDayYesterday": "yesterday",
+  "@readDayYesterday":   {
+    "description": "The day a note was last touched, when it was the day before."
+  },
+  "readRhythm": "Rhythm",
+  "@readRhythm":   {
+    "description": "The row of numbers under the reading queue: what it holds and how reading digests."
+  },
+  "readRhythmDue": "due today",
+  "@readRhythmDue":   {
+    "description": "How many notes the reading queue has due today."
+  },
+  "readRhythmQueued": "in the reading queue",
+  "@readRhythmQueued":   {
+    "description": "How many notes the reading queue holds, due or not."
+  },
+  "readRhythmTiers": "how a reading digests",
+  "@readRhythmTiers":   {
+    "description": "The three answers a reading session records: too hard, just right, too shallow."
+  },
+  "readArchiveEmpty": "The archive is still empty.",
+  "@readArchiveEmpty":   {
+    "description": "The archive page with nothing archived or dismissed."
+  },
+  "readArchiveHint": "Press A in a reading session to archive a note.",
+  "@readArchiveHint":   {
+    "description": "The archive page's hint at how a note gets there."
+  },
+  "readArchivedSection": "Archived",
+  "@readArchivedSection":   {
+    "description": "The archive page's section of notes that were put away."
+  },
+  "readDismissedSection": "Dismissed",
+  "@readDismissedSection":   {
+    "description": "The archive page's section of notes marked as not worth reading."
+  },
+  "readArchive": "Archive (A)",
+  "@readArchive":   {
+    "description": "The reading session's action that puts the note away for good."
+  },
+  "readDismiss": "Dismiss (D)",
+  "@readDismiss":   {
+    "description": "The reading session's action that says a note is not worth reading."
+  },
+  "readPostpone": "Postpone (P)",
+  "@readPostpone":   {
+    "description": "The reading session's action that brings a note back tomorrow."
+  },
+  "readArchived": "Archived “{title}”.",
+  "@readArchived":   {
+    "description": "The toast a reading session shows after archiving a note.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Memory"
+      }
+    }
+  },
+  "readDismissed": "Dismissed “{title}”.",
+  "@readDismissed":   {
+    "description": "The toast a reading session shows after dismissing a note.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Memory"
+      }
+    }
+  },
+  "readPostponed": "Postponed “{title}” to tomorrow.",
+  "@readPostponed":   {
+    "description": "The toast a reading session shows after postponing a note.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Memory"
+      }
+    }
+  },
+  "readUndo": "Undo",
+  "@readUndo":   {
+    "description": "The toast action that takes back a reading session's archive, dismissal or postpone."
+  },
+  "readCardsMark": "{count, plural, one {# card} other {# cards}}",
+  "@readCardsMark":   {
+    "description": "How many cards a paragraph on screen already has.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "readExcerptedMark": "Excerpted",
+  "@readExcerptedMark":   {
+    "description": "A paragraph an excerpt was already taken from."
+  },
+  "readLastStopMark": "Last stop",
+  "@readLastStopMark":   {
+    "description": "The paragraph the last reading session stopped at."
+  },
+  "readQueueEmpty": "Today's reading queue is empty.",
+  "@readQueueEmpty":   {
+    "description": "The queue page with no note due today."
+  },
+  "readNotesMark": "{count, plural, one {# note} other {# notes}}",
+  "@readNotesMark":   {
+    "description": "How many notes an archive section holds.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "readAddNote": "Add a note",
+  "@readAddNote":   {
+    "description": "The empty queue's own action: it opens the notes list, where a note is queued."
+  },
   "trayTitleReading": "Remit · {cards} · {reading}",
   "@trayTitleReading": {
     "description": "Tray title when notes also wait to be read: the cards left and the notes left.",
