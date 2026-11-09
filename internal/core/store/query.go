@@ -3,9 +3,293 @@ package store
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/transmit-bug/remit/internal/core"
 )
+
+// The query layer answers what a list shows: which rows, in which order, one
+// page at a time. It runs on the derived index in SQL, so a page costs the rows
+// it returns rather than a walk over every note or card, and it never reads a
+// source file. A caller that wants the text of the rows it got asks Note or
+// Card for them.
+
+// NoteSort names the order QueryNotes returns notes in. A value the index does
+// not know falls back to the default.
+type NoteSort string
+
+const (
+	// NoteSortUpdated lists newest save first, as the notebook does.
+	NoteSortUpdated NoteSort = "updated"
+	// NoteSortTitle lists by title, ignoring case.
+	NoteSortTitle NoteSort = "title"
+	// NoteSortCreated lists oldest save first. A note's source carries one
+	// moment — its last save — so this is the order the notes were written in
+	// until one of them is edited; the format has no creation stamp to order by.
+	NoteSortCreated NoteSort = "created"
+)
+
+// NoteQuery is what a note list asks for: a filter, an order and a page.
+type NoteQuery struct {
+	// Text matches a note whose title or any block contains it, ignoring case.
+	Text string
+	// Tag matches a note carrying that tag, by its bare name.
+	Tag  string
+	Sort NoteSort
+	// Limit is the page size. Zero or less means no limit.
+	Limit int
+	// Offset skips that many matches.
+	Offset int
+}
+
+// NoteSummary is a note as a list shows it: no block text, so a page of a
+// hundred notes costs no text read.
+type NoteSummary struct {
+	ID      core.ID
+	Title   string
+	Updated time.Time
+}
+
+// CardSort names the order QueryCards returns cards in. A value the index does
+// not know falls back to the default.
+type CardSort string
+
+const (
+	// CardSortCreated lists oldest card first, as Cards does.
+	CardSortCreated CardSort = "created"
+	// CardSortDue lists soonest due first: the replayed due moment, or the
+	// moment of creation for a card no review has scheduled.
+	CardSortDue CardSort = "due"
+	// CardSortTitle lists by the title of the note the card's block lives in.
+	CardSortTitle CardSort = "title"
+)
+
+// CardQuery is what a card list asks for: a filter, an order and a page.
+type CardQuery struct {
+	// Text matches a card whose block, or whose edited field values, contains
+	// it, ignoring case.
+	Text string
+	// Tag matches a card whose note carries that tag, by its bare name — the
+	// same notes NotesWithTag answers for.
+	Tag string
+	// Note matches a card whose block lives in that note.
+	Note string
+	// Status matches a card in that lifecycle state; nil matches any.
+	Status *core.Status
+	Sort   CardSort
+	// Limit is the page size. Zero or less means no limit.
+	Limit int
+	// Offset skips that many matches.
+	Offset int
+}
+
+// CardSummary is a card as a list shows it: no field values, so a page costs no
+// rendering.
+type CardSummary struct {
+	ID      string
+	Block   string
+	Type    string
+	Status  core.Status
+	Created time.Time
+	Due     time.Time
+}
+
+// QueryNotes returns one page of the notes the query matches, and how many
+// notes match in all, so a caller can page. An offset past the end is an empty
+// page, not an error.
+func (l *Library) QueryNotes(q NoteQuery) ([]NoteSummary, int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, 0, ErrClosed
+	}
+	where, args := noteWhere(q)
+	total, err := l.index.count(`SELECT COUNT(*) FROM notes n`+where, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return nil, 0, nil
+	}
+
+	page, pageArgs := pageLimit(q.Limit, q.Offset)
+	rows, err := l.index.db.Query(
+		`SELECT n.id, n.title, n.updated FROM notes n`+where+noteOrder(q.Sort)+page,
+		append(args, pageArgs...)...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("store: notes query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []NoteSummary
+	for rows.Next() {
+		var (
+			summary NoteSummary
+			id      string
+			updated int64
+		)
+		if err := rows.Scan(&id, &summary.Title, &updated); err != nil {
+			return nil, 0, err
+		}
+		summary.ID = core.ID(id)
+		summary.Updated = time.Unix(0, updated).UTC()
+		out = append(out, summary)
+	}
+	return out, total, rows.Err()
+}
+
+// QueryCards returns one page of the cards the query matches, and how many cards
+// match in all, so a caller can page. An offset past the end is an empty page,
+// not an error.
+func (l *Library) QueryCards(q CardQuery) ([]CardSummary, int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil, 0, ErrClosed
+	}
+	where, args := cardWhere(q)
+	total, err := l.index.count(`SELECT COUNT(*) FROM cards c`+where, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return nil, 0, nil
+	}
+
+	page, pageArgs := pageLimit(q.Limit, q.Offset)
+	rows, err := l.index.db.Query(
+		`SELECT c.id, c.block_id, c.type, c.status, c.created, COALESCE(s.due, c.created)`+
+			fromCards+where+cardOrder(q.Sort)+page, append(args, pageArgs...)...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("store: cards query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []CardSummary
+	for rows.Next() {
+		var (
+			summary           CardSummary
+			id, block, status string
+			created, due      int64
+		)
+		if err := rows.Scan(&id, &block, &summary.Type, &status, &created, &due); err != nil {
+			return nil, 0, err
+		}
+		summary.ID, summary.Block = id, block
+		summary.Status, _ = core.ParseStatus(status)
+		summary.Created = time.Unix(0, created).UTC()
+		summary.Due = time.Unix(0, due).UTC()
+		out = append(out, summary)
+	}
+	return out, total, rows.Err()
+}
+
+// noteWhere is the filter QueryNotes and its count share, so the total always
+// describes the page.
+func noteWhere(q NoteQuery) (string, []any) {
+	var where []string
+	var args []any
+	if text := strings.TrimSpace(q.Text); text != "" {
+		like := "%" + escapeLike(text) + "%"
+		where = append(where, `(n.title LIKE ? ESCAPE '\' OR EXISTS (
+			SELECT 1 FROM blocks b WHERE b.note_id = n.id AND b.text LIKE ? ESCAPE '\'))`)
+		args = append(args, like, like)
+	}
+	if tag := strings.TrimSpace(q.Tag); tag != "" {
+		where = append(where, `EXISTS (SELECT 1 FROM tags t WHERE t.note_id = n.id AND t.tag = ?)`)
+		args = append(args, tag)
+	}
+	if len(where) == 0 {
+		return "", nil
+	}
+	return ` WHERE ` + strings.Join(where, ` AND `), args
+}
+
+// noteOrder is a note list's ORDER BY. Every order ends on the ID, so two notes
+// that tie stay in one order across pages.
+func noteOrder(sort NoteSort) string {
+	switch sort {
+	case NoteSortTitle:
+		return ` ORDER BY lower(n.title), n.id`
+	case NoteSortCreated:
+		return ` ORDER BY n.updated, n.id`
+	}
+	return ` ORDER BY n.updated DESC, n.id`
+}
+
+// cardWhere is the filter QueryCards and its count share, so the total always
+// describes the page.
+func cardWhere(q CardQuery) (string, []any) {
+	var where []string
+	var args []any
+	if text := strings.TrimSpace(q.Text); text != "" {
+		like := "%" + escapeLike(text) + "%"
+		where = append(where, `(EXISTS (SELECT 1 FROM blocks b WHERE b.id = c.block_id AND b.text LIKE ? ESCAPE '\')
+			OR c.fields_text LIKE ? ESCAPE '\')`)
+		args = append(args, like, like)
+	}
+	if tag := strings.TrimSpace(q.Tag); tag != "" {
+		where = append(where, `c.block_id IN (
+			SELECT b.id FROM tags t JOIN blocks b ON b.note_id = t.note_id WHERE t.tag = ?)`)
+		args = append(args, tag)
+	}
+	if note := strings.TrimSpace(q.Note); note != "" {
+		where = append(where, `c.block_id IN (SELECT id FROM blocks WHERE note_id = ?)`)
+		args = append(args, note)
+	}
+	if q.Status != nil {
+		where = append(where, `c.status = ?`)
+		args = append(args, q.Status.String())
+	}
+	if len(where) == 0 {
+		return "", nil
+	}
+	return ` WHERE ` + strings.Join(where, ` AND `), args
+}
+
+// cardNoteTitle is the title of the note a card's block lives in, which is the
+// title a card list sorts by: a card has none of its own.
+const cardNoteTitle = `COALESCE((SELECT n.title FROM blocks b JOIN notes n ON n.id = b.note_id
+	WHERE b.id = c.block_id ORDER BY b.note_id, b.position LIMIT 1), '')`
+
+// cardOrder is a card list's ORDER BY. The due moment is the schedule the index
+// cached, or the card's creation for one no review has scheduled, which is the
+// order the queue puts it in. Every order ends on the ID, so two cards that tie
+// stay in one order across pages.
+func cardOrder(sort CardSort) string {
+	switch sort {
+	case CardSortDue:
+		return ` ORDER BY COALESCE(s.due, c.created), c.id`
+	case CardSortTitle:
+		return ` ORDER BY lower(` + cardNoteTitle + `), c.id`
+	}
+	return ` ORDER BY c.created, c.id`
+}
+
+// pageLimit is the LIMIT/OFFSET clause of a page and its arguments. A limit of
+// zero or less is no limit, which SQLite spells -1; an offset past the end is an
+// empty page.
+func pageLimit(limit, offset int) (string, []any) {
+	if offset < 0 {
+		offset = 0
+	}
+	if limit <= 0 {
+		if offset == 0 {
+			return "", nil
+		}
+		return ` LIMIT -1 OFFSET ?`, []any{offset}
+	}
+	return ` LIMIT ? OFFSET ?`, []any{limit, offset}
+}
+
+// count runs a SELECT COUNT(*) and answers how many rows it found.
+func (x *index) count(query string, args ...any) (int, error) {
+	var n int
+	if err := x.db.QueryRow(query, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("store: count query: %w", err)
+	}
+	return n, nil
+}
 
 // CardsWithStatus returns the cards whose stored status is s, oldest first.
 //
@@ -32,6 +316,10 @@ func (l *Library) CardsWithStatus(s core.Status) ([]core.Card, error) {
 // SearchCards returns the cards whose source block, or whose hand-edited field
 // values, contain text, ignoring case. The search runs on the derived index, so
 // it costs nothing on the files and needs no text in memory.
+//
+// It answers with the same cards the ranked Search does, in the oldest-first
+// order a listing has: it is the unranked reading of the same corpus, kept for
+// the callers that want every match rather than a page of the best ones.
 func (l *Library) SearchCards(text string) ([]core.Card, error) {
 	query := strings.TrimSpace(text)
 	if query == "" {
@@ -55,9 +343,11 @@ func (l *Library) SearchCards(text string) ([]core.Card, error) {
 	return cards, nil
 }
 
-// SearchNotes returns the notes whose text contains text, ignoring case. Like
-// SearchCards it runs on the derived index, one SQL shape for both: a block's
-// text matched with LIKE, the user's text escaped to a literal pattern.
+// SearchNotes returns the notes whose text contains text, ignoring case.
+//
+// It searches a note's blocks and not its title, and leaves note templates out,
+// which is what its callers — the notebook's search — have always received. A
+// caller that wants the ranked answer over titles and bodies asks Search.
 func (l *Library) SearchNotes(text string) ([]core.Note, error) {
 	query := strings.TrimSpace(text)
 	if query == "" {

@@ -22,8 +22,12 @@ import (
 // and 4 ms at 100k cards). The ceiling is ten times the baseline, so the test
 // catches a change of order of magnitude without failing on a slow laptop.
 const (
-	budgetRead   = 30 * time.Millisecond
-	budgetWrite  = 40 * time.Millisecond
+	budgetRead  = 30 * time.Millisecond
+	budgetWrite = 40 * time.Millisecond
+	// budgetSearch is a search aimed at one note, in a library that holds the
+	// fixture's worth of cards: the full-text index answers it from the term,
+	// so the cost is the page and not the library.
+	budgetSearch = 30 * time.Millisecond
 	defaultCards = 2000
 
 	// fixturePerNote is how many blocks one fixture note holds, which is the
@@ -143,6 +147,34 @@ func TestPerformanceBudget(t *testing.T) {
 	t.Logf("%d cards: due read %s (%d due), review write %s (first write %s), queue %s (%d cards), counts %s",
 		n, readFor.Round(time.Microsecond), len(due), writeFor.Round(time.Microsecond),
 		coldFor.Round(time.Millisecond), todayFor.Round(time.Millisecond), len(cards), countsFor.Round(time.Millisecond))
+
+	// A search for a term one note carries is the read a search box makes on
+	// every keystroke: the index answers it from the term, so it costs the page
+	// however many cards the library holds.
+	searching := time.Now()
+	hits, total, err := lib.Search("bulk 00007", "note", 20, 0)
+	searchFor := time.Since(searching)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	if total != 1 || len(hits) != 1 {
+		t.Errorf("search for one note's title found %d hits of %d, want 1", len(hits), total)
+	}
+	if searchFor > budgetSearch {
+		t.Errorf("a search for one note took %s, budget %s", searchFor, budgetSearch)
+	}
+
+	// A query every card carries is the other end of the same read: the ranking
+	// has to score every match, which is the cost a ranked search cannot avoid.
+	// It is measured and not asserted, because the fixture makes such a query
+	// match the whole library and the budget above describes the aimed read.
+	broad := time.Now()
+	hits, total, err = lib.Search("question", "", 20, 0)
+	if err != nil {
+		t.Fatalf("broad search: %v", err)
+	}
+	t.Logf("%d cards: a one-note search %s, a search every row matches %s (%d of %d hits ranked)",
+		n, searchFor.Round(time.Microsecond), time.Since(broad).Round(time.Millisecond), len(hits), total)
 }
 
 // writeFixture writes a library's sources without the store: one note file per
@@ -157,7 +189,8 @@ func writeFixture(t *testing.T, dir string, cards int, now time.Time) {
 		end := min(start+fixturePerNote, cards)
 		note := fmt.Sprintf("note_%032x", start/fixturePerNote)
 		var body strings.Builder
-		body.WriteString("# bulk\n\n")
+		// Every note carries its own title, so a search can aim at one of them.
+		fmt.Fprintf(&body, "# bulk %05d\n\n", start/fixturePerNote)
 		for i := start; i < end; i++ {
 			fmt.Fprintf(&body, "question :: answer ^%s\n\n", blockID(i))
 		}

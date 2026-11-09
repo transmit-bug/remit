@@ -47,6 +47,11 @@ the code wins and this file follows.
 - **UI is immediate-mode over snapshot state.** State lives in app structs;
   a `View` reads it and returns. Handlers mutate state, write to the store on
   the UI thread, then retake the snapshot — no frame touches the store.
+- **Lists and search are queries, not scans.** `QueryNotes`, `QueryCards` and the
+  ranked `Search` answer one page and its total from the derived index: a filter
+  over every note or card in memory does not scale, so a screen asks the store.
+  The full-text table is derived with the rest of the index and rebuilt from the
+  text sources like them.
 - **OS services are injected seams** (dialogs, hotkeys, tray, updates) through
   `Options` structs and callback interfaces, so the whole UI runs headless.
 - **The agent API is loopback-only** and token-gated for writes; it exposes no
