@@ -34,10 +34,14 @@ type fake struct {
 	saved     []core.Note
 	documents []core.Note
 	edits     []core.ID
+
+	chooseImage func() (string, error)
+	putAsset    func([]byte, string) (string, error)
+	getAsset    func(string) ([]byte, bool)
 }
 
 func (f *fake) deps() notes.Deps {
-	return notes.Deps{
+	d := notes.Deps{
 		Notes:      func() []notes.Note { return f.library },
 		Tags:       func() map[string]int { return f.tags },
 		Backlinks:  func() []notes.Backlink { return f.backlinks },
@@ -53,6 +57,16 @@ func (f *fake) deps() notes.Deps {
 		},
 		OpenCardEdit: func(_ *ui.Context, id core.ID) { f.edits = append(f.edits, id) },
 	}
+	if f.chooseImage != nil {
+		d.ChooseImage = f.chooseImage
+	}
+	if f.putAsset != nil {
+		d.PutAsset = f.putAsset
+	}
+	if f.getAsset != nil {
+		d.GetAsset = f.getAsset
+	}
+	return d
 }
 
 // notebook is the library the screen is handed: a note with headings and cards,
@@ -213,6 +227,171 @@ func TestOutlineJumpsToItsParagraph(t *testing.T) {
 	}
 	if !tt.Focused("Note") {
 		t.Error("the document did not take the focus after the jump")
+	}
+}
+
+// The handle appears in the gutter of the paragraph under the pointer. Its
+// plus adds an empty paragraph there, and typing in it keeps every other
+// block's identity, so the cards pointing at them keep their source.
+func TestBlockHandleInsertsParagraph(t *testing.T) {
+	msgs := locales.In("en")
+	f := newFake()
+	s, tt := at(t, f, 1024, 720)
+	tt.Frame()
+
+	body, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the note body is missing; texts %q", tt.Texts())
+	}
+	tt.Move(body.X-44, body.Y+12)
+	tt.Frame()
+	if !tt.HasText(msgs.AddBlockBelow()) {
+		t.Fatalf("the gutter shows no add control; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.AddBlockBelow()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	tt.Type("New block")
+	tt.Frame()
+
+	var saved core.Note
+	if len(f.documents) == 0 {
+		t.Fatal("the inserted block was not saved")
+	}
+	saved = f.documents[len(f.documents)-1]
+	if len(saved.Blocks) != len(notebook[0].Blocks)+1 {
+		t.Fatalf("saved %d blocks, want %d", len(saved.Blocks), len(notebook[0].Blocks)+1)
+	}
+	wantIDs := []string{"block-1", "", "block-2", "block-3", "block-4"}
+	for i, id := range wantIDs {
+		if id == "" {
+			if saved.Blocks[i].ID == "" {
+				t.Errorf("the inserted block %d has no id", i)
+			}
+			continue
+		}
+		if got := string(saved.Blocks[i].ID); got != id {
+			t.Errorf("block %d has id %q, want %q", i, got, id)
+		}
+	}
+	if s.Doc.Text().ParagraphCount() <= 4 {
+		t.Error("the editor did not keep the inserted paragraph")
+	}
+}
+
+// A block's menu turns its paragraph into another shape without touching the
+// other paragraphs.
+func TestBlockMenuConvertsParagraph(t *testing.T) {
+	msgs := locales.In("en")
+	f := newFake()
+	s, tt := at(t, f, 1024, 720)
+	tt.Frame()
+
+	body, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the note body is missing; texts %q", tt.Texts())
+	}
+	tt.Move(body.X-44, body.Y+12)
+	tt.Frame()
+	if err := tt.Click(msgs.BlockActionsFor(1)); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.StyleHeading()); err != nil {
+		t.Fatalf("the block menu does not offer a heading: %v", err)
+	}
+	tt.Frame()
+
+	if got := s.Doc.Text().ParagraphStyleAt(0).Heading; got != 2 {
+		t.Errorf("the first paragraph is heading %d, want 2", got)
+	}
+	if len(f.documents) == 0 {
+		t.Fatal("the converted block was not saved")
+	}
+	if got := f.documents[len(f.documents)-1].Blocks[0].Text; got != "## The first part" {
+		t.Errorf("saved block is %q, want a level-two heading", got)
+	}
+}
+
+// Duplicating a block copies its text and gives the copy a new identity,
+// while the original and every block after it keep theirs.
+func TestBlockMenuDuplicatesParagraph(t *testing.T) {
+	msgs := locales.In("en")
+	f := newFake()
+	_, tt := at(t, f, 1024, 720)
+	tt.Frame()
+
+	body, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the note body is missing; texts %q", tt.Texts())
+	}
+	tt.Move(body.X-44, body.Y+12)
+	tt.Frame()
+	if err := tt.Click(msgs.BlockActionsFor(1)); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.DuplicateBlock()); err != nil {
+		t.Fatalf("the block menu does not offer duplication: %v", err)
+	}
+	tt.Frame()
+
+	if len(f.documents) == 0 {
+		t.Fatal("the duplicated block was not saved")
+	}
+	saved := f.documents[len(f.documents)-1]
+	if len(saved.Blocks) != len(notebook[0].Blocks)+1 {
+		t.Fatalf("saved %d blocks, want %d", len(saved.Blocks), len(notebook[0].Blocks)+1)
+	}
+	if saved.Blocks[0].Text != "# The first part" || saved.Blocks[1].Text != "# The first part" {
+		t.Fatalf("the copy is not beside its original: %q", []string{saved.Blocks[0].Text, saved.Blocks[1].Text})
+	}
+	if saved.Blocks[0].ID != "block-1" {
+		t.Errorf("the original has id %q, want block-1", saved.Blocks[0].ID)
+	}
+	if saved.Blocks[1].ID == "" || saved.Blocks[1].ID == saved.Blocks[0].ID {
+		t.Errorf("the copy has id %q, want a new one", saved.Blocks[1].ID)
+	}
+	for i, want := range []string{"block-2", "block-3", "block-4"} {
+		if got := string(saved.Blocks[i+2].ID); got != want {
+			t.Errorf("block %d has id %q, want %q", i+2, got, want)
+		}
+	}
+}
+
+// The gutter keeps its room when the window is at its smallest, so a block can
+// still be added without covering the writing.
+func TestBlockHandlesAtMinimumSize(t *testing.T) {
+	msgs := locales.In("en")
+	f := newFake()
+	_, tt := at(t, f, 720, 520)
+	tt.Frame()
+
+	body, ok := tt.Find(msgs.NoteBody())
+	if !ok {
+		t.Fatalf("the note body is missing; texts %q", tt.Texts())
+	}
+	tt.Move(body.X-44, body.Y+12)
+	tt.Frame()
+	handle, ok := tt.Find(msgs.AddBlockBelow())
+	if !ok {
+		t.Fatalf("the smallest window hides the block handle; texts %q", tt.Texts())
+	}
+	if handle.X >= body.X {
+		t.Errorf("the handle at x %.1f covers the writing at x %.1f", handle.X, body.X)
+	}
+}
+
+// The block at the caret keeps its handle even when the pointer is elsewhere,
+// so the control is reachable without a hover.
+func TestBlockHandleAtCaretIsReachable(t *testing.T) {
+	msgs := locales.In("en")
+	f := newFake()
+	_, tt := at(t, f, 1024, 720)
+	tt.Frame()
+	if !tt.HasText(msgs.AddBlockBelow()) {
+		t.Fatalf("the caret's block has no handle; texts %q", tt.Texts())
 	}
 }
 

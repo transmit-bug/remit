@@ -1397,6 +1397,20 @@ func (msgs Messages) BlockActionsFor(number int) string {
 	return Catalog.Format(msgs.locale, "blockActionsFor", map[string]any{"number": number})
 }
 
+// DragBlockFor says "Move block {number}"
+// in the language the app shows.
+//
+// Accessible label of the grip that drags one block.
+func DragBlockFor(number int) string { return In(i18n.Locale()).DragBlockFor(number) }
+
+// DragBlockFor says "Move block {number}"
+// in the language of msgs.
+//
+// Accessible label of the grip that drags one block.
+func (msgs Messages) DragBlockFor(number int) string {
+	return Catalog.Format(msgs.locale, "dragBlockFor", map[string]any{"number": number})
+}
+
 // AddBlockBelow says "Add block below"
 // in the language the app shows.
 //
@@ -1409,6 +1423,20 @@ func AddBlockBelow() string { return In(i18n.Locale()).AddBlockBelow() }
 // Block menu: add an empty block after this one.
 func (msgs Messages) AddBlockBelow() string {
 	return Catalog.Format(msgs.locale, "addBlockBelow", nil)
+}
+
+// DuplicateBlock says "Duplicate block"
+// in the language the app shows.
+//
+// Block menu: copy this block after itself.
+func DuplicateBlock() string { return In(i18n.Locale()).DuplicateBlock() }
+
+// DuplicateBlock says "Duplicate block"
+// in the language of msgs.
+//
+// Block menu: copy this block after itself.
+func (msgs Messages) DuplicateBlock() string {
+	return Catalog.Format(msgs.locale, "duplicateBlock", nil)
 }
 
 // SplitAtCursor says "Split at cursor"
@@ -1467,6 +1495,50 @@ func (msgs Messages) DeleteBlock() string {
 	return Catalog.Format(msgs.locale, "deleteBlock", nil)
 }
 
+// DeleteBlockTitle says "Delete this block?"
+// in the language the app shows.
+//
+// Title of the alert shown before deleting a block that feeds cards.
+func DeleteBlockTitle() string { return In(i18n.Locale()).DeleteBlockTitle() }
+
+// DeleteBlockTitle says "Delete this block?"
+// in the language of msgs.
+//
+// Title of the alert shown before deleting a block that feeds cards.
+func (msgs Messages) DeleteBlockTitle() string {
+	return Catalog.Format(msgs.locale, "deleteBlockTitle", nil)
+}
+
+// DeleteBlockWarning says "{cards, plural, one {# card points at this block and will lose its source. Its review history is kept.} other {# card…"
+// in the language the app shows.
+//
+// How many cards a block deletion leaves without a source; their history is
+// kept.
+func DeleteBlockWarning(cards int) string { return In(i18n.Locale()).DeleteBlockWarning(cards) }
+
+// DeleteBlockWarning says "{cards, plural, one {# card points at this block and will lose its source. Its review history is kept.} other {# card…"
+// in the language of msgs.
+//
+// How many cards a block deletion leaves without a source; their history is
+// kept.
+func (msgs Messages) DeleteBlockWarning(cards int) string {
+	return Catalog.Format(msgs.locale, "deleteBlockWarning", map[string]any{"cards": cards})
+}
+
+// BlockMoved says "Block moved to position {number}."
+// in the language the app shows.
+//
+// Screen-reader announcement after a block reorder.
+func BlockMoved(number int) string { return In(i18n.Locale()).BlockMoved(number) }
+
+// BlockMoved says "Block moved to position {number}."
+// in the language of msgs.
+//
+// Screen-reader announcement after a block reorder.
+func (msgs Messages) BlockMoved(number int) string {
+	return Catalog.Format(msgs.locale, "blockMoved", map[string]any{"number": number})
+}
+
 // BlockDeleted says "Block deleted. {cards, plural, =0 {No card pointed at it} one {# card lost its source} other {# cards lost their sour…"
 // in the language the app shows.
 //
@@ -1481,6 +1553,76 @@ func BlockDeleted(cards int) string { return In(i18n.Locale()).BlockDeleted(card
 // that read it.
 func (msgs Messages) BlockDeleted(cards int) string {
 	return Catalog.Format(msgs.locale, "blockDeleted", map[string]any{"cards": cards})
+}
+
+// NoSlashMatches says "No matching commands."
+// in the language the app shows.
+//
+// The slash insertion menu’s empty state.
+func NoSlashMatches() string { return In(i18n.Locale()).NoSlashMatches() }
+
+// NoSlashMatches says "No matching commands."
+// in the language of msgs.
+//
+// The slash insertion menu’s empty state.
+func (msgs Messages) NoSlashMatches() string {
+	return Catalog.Format(msgs.locale, "noSlashMatches", nil)
+}
+
+// SlashFormula says "Formula"
+// in the language the app shows.
+//
+// Slash menu: insert a display formula between dollar signs.
+func SlashFormula() string { return In(i18n.Locale()).SlashFormula() }
+
+// SlashFormula says "Formula"
+// in the language of msgs.
+//
+// Slash menu: insert a display formula between dollar signs.
+func (msgs Messages) SlashFormula() string {
+	return Catalog.Format(msgs.locale, "slashFormula", nil)
+}
+
+// SlashInlineFormula says "Inline formula"
+// in the language the app shows.
+//
+// Slash menu: insert an inline formula between dollar signs.
+func SlashInlineFormula() string { return In(i18n.Locale()).SlashInlineFormula() }
+
+// SlashInlineFormula says "Inline formula"
+// in the language of msgs.
+//
+// Slash menu: insert an inline formula between dollar signs.
+func (msgs Messages) SlashInlineFormula() string {
+	return Catalog.Format(msgs.locale, "slashInlineFormula", nil)
+}
+
+// SlashImage says "Image"
+// in the language the app shows.
+//
+// Slash menu: choose a picture file and insert it as an asset.
+func SlashImage() string { return In(i18n.Locale()).SlashImage() }
+
+// SlashImage says "Image"
+// in the language of msgs.
+//
+// Slash menu: choose a picture file and insert it as an asset.
+func (msgs Messages) SlashImage() string {
+	return Catalog.Format(msgs.locale, "slashImage", nil)
+}
+
+// SlashTable says "Table"
+// in the language the app shows.
+//
+// Slash menu: insert a table, and the placeholder that names one.
+func SlashTable() string { return In(i18n.Locale()).SlashTable() }
+
+// SlashTable says "Table"
+// in the language of msgs.
+//
+// Slash menu: insert a table, and the placeholder that names one.
+func (msgs Messages) SlashTable() string {
+	return Catalog.Format(msgs.locale, "slashTable", nil)
 }
 
 // ActionEditTitle says "Edit note title"
@@ -2693,6 +2835,62 @@ func ImageStoreFailed(err string) string { return In(i18n.Locale()).ImageStoreFa
 // library's assets.
 func (msgs Messages) ImageStoreFailed(err string) string {
 	return Catalog.Format(msgs.locale, "imageStoreFailed", map[string]any{"err": err})
+}
+
+// ChooseImageFailed says "Could not choose a picture: {err}"
+// in the language the app shows.
+//
+// The system picture picker failed before a file was chosen.
+func ChooseImageFailed(err string) string { return In(i18n.Locale()).ChooseImageFailed(err) }
+
+// ChooseImageFailed says "Could not choose a picture: {err}"
+// in the language of msgs.
+//
+// The system picture picker failed before a file was chosen.
+func (msgs Messages) ChooseImageFailed(err string) string {
+	return Catalog.Format(msgs.locale, "chooseImageFailed", map[string]any{"err": err})
+}
+
+// PickImage says "Insert picture"
+// in the language the app shows.
+//
+// Title of the file picker the image slash command opens.
+func PickImage() string { return In(i18n.Locale()).PickImage() }
+
+// PickImage says "Insert picture"
+// in the language of msgs.
+//
+// Title of the file picker the image slash command opens.
+func (msgs Messages) PickImage() string {
+	return Catalog.Format(msgs.locale, "pickImage", nil)
+}
+
+// InsertImage says "Insert"
+// in the language the app shows.
+//
+// Confirm button of the picture picker.
+func InsertImage() string { return In(i18n.Locale()).InsertImage() }
+
+// InsertImage says "Insert"
+// in the language of msgs.
+//
+// Confirm button of the picture picker.
+func (msgs Messages) InsertImage() string {
+	return Catalog.Format(msgs.locale, "insertImage", nil)
+}
+
+// ImageFiles says "Pictures"
+// in the language the app shows.
+//
+// File filter name for the image formats a note accepts.
+func ImageFiles() string { return In(i18n.Locale()).ImageFiles() }
+
+// ImageFiles says "Pictures"
+// in the language of msgs.
+//
+// File filter name for the image formats a note accepts.
+func (msgs Messages) ImageFiles() string {
+	return Catalog.Format(msgs.locale, "imageFiles", nil)
 }
 
 // PasteImageFailed says "Could not read the picture on the clipboard."

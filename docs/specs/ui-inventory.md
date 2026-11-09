@@ -38,12 +38,14 @@ Update a row in the same change that touches its surface.
 | Body | attributed text with headings, lists, links | `richtext.Editor` + `richtext.ParseMarkdown` | ok |
 | Save state | a short status label | `ui.Text` 11px in the status line | ok — every edit is written at once, so the label reports a fact ("Saved"), not a promise |
 | View modes (编辑/分栏/阅读) | one of a few adjacent views | `ui.Segmented` + `ui.Split` + `ui/markdown.View` | ok |
-| Text size | a choice from a menu | `ui.MenuButton` + `c.SetTheme` | todo — chrome follows the desktop text scale (`design.Tokens`); the document's own size (`noteFont`) reads the scale constant, so it does not follow yet |
+| Text size | a choice from a menu | `ui.MenuButton` + `c.SetTheme` | ok — chrome and the note body both follow the desktop text scale (`design.Tokens`) |
 | Export | a menu of commands | `ui.MenuButton` | todo — no export exists yet to put in the menu |
 | Overflow | a menu of rare commands | icon `Button` + `Element.Menu` | ok (import, make card, settings) |
 | Format bar | toggles that report the selection's formats | `ui.Toolbar` + `ui.MenuButton` + `Document.Formatting()` + `Document.Toggle*` | ok (the pressed look is a `Button` in the accent tint, as MyGo's notes example does) |
 | Find in note | find inside a document | `ui.FindBar` | ok |
-| Paragraph handles | a menu per visible paragraph | `Document.VisibleParagraphs()` + `ui.MenuButton` | gap (not built) |
+| Paragraph handles | drag, insert, and a menu per visible paragraph | `Document.VisibleParagraphs()` + `ui.ButtonBase` + `Element.Drag`/`Drop` + `ui.Popover` | ok (move, duplicate, delete with card warning, convert) |
+| Slash insert | filterable commands at the caret | `ui.PopoverBase` + `ButtonBase` rows + editor shortcuts | ok (text shapes, image, formula, table) |
+| Table block | preserve GFM without cell editing | host attachment placeholder + raw source in the block | partial — read-only until #218 |
 | Card badges | action per paragraph | `ui.ButtonBase` in a `ScrollHorizontal` row | ok (composition, no widget carries "a row of badges") |
 
 ## Review
@@ -85,4 +87,5 @@ Update a row in the same change that touches its surface.
 - **Heatmap** — `ui/chart` (v0.8.1) has no calendar heatmap; `stats.go` builds a grid of tinted boxes.
 - **Split editing** — `richtext` keeps one view per `Document` (v0.8.1), so the 分栏 right side is `ui/markdown.View`, read-only.
 - **`::` card derivation** — product design (ADR 0002), not a rendering gap.
-- **Block handles, insert menu, export** — not built yet; `docs/specs/ui-redesign.md` P1.
+- **Slash insert menu and block tools** — built in `docs/specs/block-tools.md`;
+  table cells stay read-only until #218. Export remains `ui-redesign.md` P1/P3.

@@ -536,9 +536,23 @@
       }
     }
   },
+  "dragBlockFor": "Move block {number}",
+  "@dragBlockFor": {
+    "description": "Accessible label of the grip that drags one block.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
   "addBlockBelow": "Add block below",
   "@addBlockBelow": {
     "description": "Block menu: add an empty block after this one."
+  },
+  "duplicateBlock": "Duplicate block",
+  "@duplicateBlock": {
+    "description": "Block menu: copy this block after itself."
   },
   "splitAtCursor": "Split at cursor",
   "@splitAtCursor": {
@@ -556,6 +570,30 @@
   "@deleteBlock": {
     "description": "Block menu: remove the block; cards that pointed at it become lost."
   },
+  "deleteBlockTitle": "Delete this block?",
+  "@deleteBlockTitle": {
+    "description": "Title of the alert shown before deleting a block that feeds cards."
+  },
+  "deleteBlockWarning": "{cards, plural, one {# card points at this block and will lose its source. Its review history is kept.} other {# cards point at this block and will lose their source. Their review history is kept.}}",
+  "@deleteBlockWarning": {
+    "description": "How many cards a block deletion leaves without a source; their history is kept.",
+    "placeholders": {
+      "cards": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "blockMoved": "Block moved to position {number}.",
+  "@blockMoved": {
+    "description": "Screen-reader announcement after a block reorder.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
   "blockDeleted": "Block deleted. {cards, plural, =0 {No card pointed at it} one {# card lost its source} other {# cards lost their source}}",
   "@blockDeleted": {
     "description": "One-shot notice after deleting a block, saying what happened to the cards that read it.",
@@ -565,6 +603,26 @@
         "example": "1"
       }
     }
+  },
+  "noSlashMatches": "No matching commands.",
+  "@noSlashMatches": {
+    "description": "The slash insertion menu’s empty state."
+  },
+  "slashFormula": "Formula",
+  "@slashFormula": {
+    "description": "Slash menu: insert a display formula between dollar signs."
+  },
+  "slashInlineFormula": "Inline formula",
+  "@slashInlineFormula": {
+    "description": "Slash menu: insert an inline formula between dollar signs."
+  },
+  "slashImage": "Image",
+  "@slashImage": {
+    "description": "Slash menu: choose a picture file and insert it as an asset."
+  },
+  "slashTable": "Table",
+  "@slashTable": {
+    "description": "Slash menu: insert a table, and the placeholder that names one."
   },
   "actionEditTitle": "Edit note title",
   "@actionEditTitle": {
@@ -1067,6 +1125,28 @@
         "example": "read-only file system"
       }
     }
+  },
+  "chooseImageFailed": "Could not choose a picture: {err}",
+  "@chooseImageFailed": {
+    "description": "The system picture picker failed before a file was chosen.",
+    "placeholders": {
+      "err": {
+        "type": "String",
+        "example": "dialog unavailable"
+      }
+    }
+  },
+  "pickImage": "Insert picture",
+  "@pickImage": {
+    "description": "Title of the file picker the image slash command opens."
+  },
+  "insertImage": "Insert",
+  "@insertImage": {
+    "description": "Confirm button of the picture picker."
+  },
+  "imageFiles": "Pictures",
+  "@imageFiles": {
+    "description": "File filter name for the image formats a note accepts."
   },
   "pasteImageFailed": "Could not read the picture on the clipboard.",
   "@pasteImageFailed": {

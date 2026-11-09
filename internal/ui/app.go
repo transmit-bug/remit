@@ -86,7 +86,7 @@ type App struct {
 	mode             mode
 	page             contrib.PageRef // the contributed page on screen, when mode is modePlugin
 	review           review.State
-	reviewScope      queue.Scope // what the review session draws from; within the session only, never stored
+	reviewScope      queue.Scope   // what the review session draws from; within the session only, never stored
 	reading          reading.State // the reading session: the queue's order and where the reader is
 	readingPositions map[core.ID]core.ID
 	readingCount     int
@@ -172,6 +172,7 @@ type App struct {
 	pickMd     func() ([]string, error)
 	importMd   func(path string) (importmd.Report, error)
 	pickFolder func(title string) (string, error)
+	pickImage  func() (string, error)
 	// pickPlugin is the file picker a plugin importer's entry opens through,
 	// shaped like the app's own: the label names the entry, the extensions
 	// filter the files. nil falls back to the window's dialog.
@@ -204,6 +205,7 @@ func NewApp(opts ...Options) *App {
 		pickAnki:    pickAnkiPackage,
 		pickMd:      pickMarkdown,
 		pickFolder:  pickExportFolder,
+		pickImage:   pickNoteImage,
 		checkUpdate: screensettings.CheckForUpdate,
 	}
 	// The importer reads the library open now, which a dropped archive can
@@ -234,6 +236,9 @@ func NewApp(opts ...Options) *App {
 		}
 		if o.ChooseExportFolder != nil {
 			a.pickFolder = o.ChooseExportFolder
+		}
+		if o.ChooseImage != nil {
+			a.pickImage = o.ChooseImage
 		}
 		if o.CheckUpdate != nil {
 			a.checkUpdate = o.CheckUpdate

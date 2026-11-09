@@ -78,6 +78,23 @@ func pickMarkdown() ([]string, error) {
 	})
 }
 
+// pickNoteImage is the picture picker the slash menu opens: one file the
+// library can decode and store as an asset.
+func pickNoteImage() (string, error) {
+	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
+		Title:       locales.PickImage(),
+		ButtonLabel: locales.InsertImage(),
+		Filters: []mygo.FileFilter{{
+			Name:       locales.ImageFiles(),
+			Extensions: []string{"png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"},
+		}},
+	})
+	if err != nil || len(paths) == 0 {
+		return "", err
+	}
+	return paths[0], nil
+}
+
 // pickExportFolder is the folder picker an export writes into. It blocks,
 // so a handler calls it.
 func pickExportFolder(title string) (string, error) {

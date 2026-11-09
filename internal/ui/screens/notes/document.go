@@ -2,6 +2,7 @@ package notes
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/transmit-bug/remit/internal/core"
 )
@@ -38,16 +39,90 @@ func blocksOfDocument(text string, prev []core.Block) []core.Block {
 		if body == "" {
 			continue
 		}
-		id := core.ID("")
-		if at := len(out); at < len(prev) {
-			id = prev[at].ID
-		}
+		out = append(out, core.Block{Text: body})
+	}
+	for at, id := range blockIDs(prev, out) {
+		out[at].ID = id
+	}
+	for at := range out {
+		id := out[at].ID
 		if id == "" {
 			id = core.NewID(core.BlockKind)
 		}
-		out = append(out, core.Block{ID: id, Text: body})
+		out[at].ID = id
 	}
 	return out
+}
+
+// blockIDs carries block identities from prev to the blocks an edit made.
+// Unchanged blocks are anchors wherever they moved by insertion; the blocks
+// between two anchors are paired in order, so typing inside one keeps its ID
+// and the blocks after an insertion keep theirs. A block with no partner is
+// new.
+func blockIDs(prev, now []core.Block) []core.ID {
+	ids := make([]core.ID, len(now))
+	if len(prev) == 0 || len(now) == 0 {
+		return ids
+	}
+	if len(prev) == len(now) {
+		for at := range prev {
+			ids[at] = prev[at].ID
+		}
+		return ids
+	}
+	if len(prev)*len(now) > 4_000_000 {
+		for at := 0; at < len(prev) && at < len(now); at++ {
+			ids[at] = prev[at].ID
+		}
+		return ids
+	}
+
+	// lcs[i][j] is the longest common run of block texts in prev[i:] and
+	// now[j:].
+	lcs := make([][]int, len(prev)+1)
+	for i := range lcs {
+		lcs[i] = make([]int, len(now)+1)
+	}
+	for i := len(prev) - 1; i >= 0; i-- {
+		for j := len(now) - 1; j >= 0; j-- {
+			if prev[i].Text == now[j].Text {
+				lcs[i][j] = lcs[i+1][j+1] + 1
+			} else {
+				lcs[i][j] = max(lcs[i+1][j], lcs[i][j+1])
+			}
+		}
+	}
+
+	type anchor struct{ prev, now int }
+	var anchors []anchor
+	for i, j := 0, 0; i < len(prev) && j < len(now); {
+		switch {
+		case prev[i].Text == now[j].Text:
+			anchors = append(anchors, anchor{i, j})
+			i, j = i+1, j+1
+		case lcs[i+1][j] >= lcs[i][j+1]:
+			i++
+		default:
+			j++
+		}
+	}
+
+	oldAt, newAt := 0, 0
+	for _, a := range anchors {
+		carryBlockIDs(ids, newAt, prev[oldAt:a.prev], now[newAt:a.now])
+		ids[a.now] = prev[a.prev].ID
+		oldAt, newAt = a.prev+1, a.now+1
+	}
+	carryBlockIDs(ids, newAt, prev[oldAt:], now[newAt:])
+	return ids
+}
+
+// carryBlockIDs pairs the blocks of a gap between two unchanged anchors in
+// their order, up to the shorter side.
+func carryBlockIDs(ids []core.ID, at int, prev, now []core.Block) {
+	for i := 0; i < len(prev) && i < len(now); i++ {
+		ids[at+i] = prev[i].ID
+	}
 }
 
 // paragraphAt is the paragraph of text the offset falls in, as a range: blank
@@ -83,7 +158,7 @@ func ParagraphOffset(text string, paragraph int) int {
 		if i+1 == paragraph {
 			return at
 		}
-		at += len(part) + 2
+		at += utf8.RuneCountInString(part) + 2
 	}
 	return -1
 }

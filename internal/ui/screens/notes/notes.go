@@ -138,6 +138,20 @@ type State struct {
 	outlineFor    core.ID              // the note the outline was opened for
 	outlineShape  int                  // how many headings that note had
 	pendingJump   int                  // where a panel row asks the caret to go, -1 for none
+	blockHover    int                  // the visible paragraph under the pointer, -1 for none
+	blockMenus    map[int]bool         // the visible paragraphs whose block menu is open
+	blockDelete   int                  // the paragraph a delete awaits confirmation for, -1 for none
+	blockLost     int                  // the cards that delete would leave without a source
+	slashOpen     bool                 // the block insertion menu is up
+	slashSeen     bool                 // the current slash query already opened its menu
+	slashQuery    string               // what filters the slash menu
+	slashStart    int                  // where the slash query starts in the document
+	slashEnd      int                  // where it ends, at the caret that chose a command
+	slashChoice   int                  // the chosen slash command, -1 until one is taken
+	slashTake     bool                 // Enter or a click took the chosen command
+	slashMatches  []slashCommand       // the commands the query leaves
+	tables        map[string]string    // table source by the attachment reference that stands for it
+	tableWord     string               // the localized name a table placeholder shows
 }
 
 // New returns the notebook's state with the widths and rows the window opens
@@ -150,6 +164,9 @@ func New() State {
 		outlineChosen:  -1,
 		OutlineCurrent: -1,
 		pendingJump:    -1,
+		blockHover:     -1,
+		blockDelete:    -1,
+		slashChoice:    -1,
 	}
 }
 
@@ -192,6 +209,9 @@ type Deps struct {
 	// GetAsset reads a stored asset's bytes, false when the library holds
 	// no such file.
 	GetAsset func(rel string) ([]byte, bool)
+	// ChooseImage asks the system for one picture file to insert, and answers
+	// its path: empty when the user cancels. nil leaves the image command out.
+	ChooseImage func() (string, error)
 	// OpenCardEdit opens the field editor on a card.
 	OpenCardEdit func(*ui.Context, core.ID)
 }
@@ -270,6 +290,9 @@ func (s *State) hold(note core.Note) {
 	s.Loaded = string(note.ID)
 	s.Selected = string(note.ID)
 	s.Doc, s.docNote, s.docText = nil, "", ""
+	s.blockHover, s.blockMenus = -1, nil
+	s.blockDelete, s.blockLost = -1, 0
+	s.resetSlash()
 }
 
 // Keep takes the note the store returned as the draft: the ids it minted are
@@ -284,8 +307,11 @@ func (s *State) ensureDocument() {
 		return
 	}
 	text := DocumentText(s.Draft)
-	s.Doc = richtext.NewDocument(richtext.ParseMarkdown(text))
+	s.Doc = richtext.NewDocument(s.noteDocument())
 	s.docNote, s.docText = s.Draft.ID, text
+	s.blockHover, s.blockMenus = -1, nil
+	s.blockDelete, s.blockLost = -1, 0
+	s.resetSlash()
 	s.rehydrate(s.deps)
 }
 

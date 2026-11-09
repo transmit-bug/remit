@@ -48,7 +48,8 @@
 | 浏览（卡片列表） | `ListState` + 手拼行 | `ui.Table` + `Columns`/`Sortable`/`CellMenu` | 待迁 |
 | 笔记栏 | 视图 `Segmented`（编辑/分栏/阅读）+ `⋯` 菜单 + 面板开关，在窗口顶栏里，所以在三种视图里都在 | — | 已建 |
 | 格式工具条 | `Toolbar` + `MenuButton` + `richtext` 的 `Formatting()`/`Toggle*`，含链接气泡 | — | 已建 |
-| 段落手柄（+ / ⋮⋮） | 无（`::` 分隔符即制卡） | `Document.VisibleParagraphs()` 的 `ParagraphBox` + `MenuButton` | 待评估 |
+| 段落手柄（+ / 拖动柄） | 左侧沟槽的悬停手柄，拖动排序，单击开块菜单；当前段落有浅底与强调色竖线 | `Document.VisibleParagraphs()` 的 `ParagraphBox` + `ButtonBase` + `Element.Drag`/`Drop` + `ui.Popover` | 已建（见 `block-tools.md`） |
+| `/` 插入菜单 | 空段落开头的过滤命令菜单 | `ui.PopoverBase` + `ButtonBase` 行 + 编辑器快捷键 | 已建（文本块、图片、公式、表格） |
 | 标签筛选 | `ButtonBase` chip | `ui.ToggleGroup` | 待迁 |
 | 笔记列表 | `ui.Sidebar` ✓ | — | 已合规 |
 | 纸面 + 状态行 | 居中的 `Column(MaxWidth 760)` + `Row`/`Text` 11px | — | 已建（组合） |
