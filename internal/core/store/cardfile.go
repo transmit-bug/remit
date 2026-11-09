@@ -30,6 +30,11 @@ type cardFile struct {
 	Status  string            `json:"status"`
 	Created string            `json:"created"`
 	Frozen  *frozenFile       `json:"frozen,omitempty"`
+	// Due and DueAt are a due date the user set on this card by hand, and when
+	// they set it — the one scheduling fact a card file carries, written only
+	// when the user moved the date.
+	Due   string `json:"due,omitempty"`
+	DueAt string `json:"dueAt,omitempty"`
 }
 
 // producerFile is a card's record of what derived it.
@@ -62,6 +67,12 @@ func encodeCard(card core.Card, created time.Time) ([]byte, error) {
 		file.Frozen = &frozenFile{
 			Text: card.Ref.Frozen.Text,
 			At:   formatTime(card.Ref.Frozen.At),
+		}
+	}
+	if card.Due != nil {
+		file.Due = formatTime(card.Due.At)
+		if !card.Due.Set.IsZero() {
+			file.DueAt = formatTime(card.Due.Set)
 		}
 	}
 	data, err := json.MarshalIndent(file, "", "  ")
@@ -117,6 +128,18 @@ func DecodeCard(id core.ID, data []byte) (card core.Card, created time.Time, err
 			return core.Card{}, time.Time{}, fmt.Errorf("store: card %q: %w", id, err)
 		}
 		card.Ref.Frozen = &core.Snapshot{Text: file.Frozen.Text, At: at}
+	}
+	if file.Due != "" {
+		due := &core.DueOverride{}
+		if due.At, err = parseTime(file.Due); err != nil {
+			return core.Card{}, time.Time{}, fmt.Errorf("store: card %q: %w", id, err)
+		}
+		if file.DueAt != "" {
+			if due.Set, err = parseTime(file.DueAt); err != nil {
+				return core.Card{}, time.Time{}, fmt.Errorf("store: card %q: %w", id, err)
+			}
+		}
+		card.Due = due
 	}
 	return card, created, nil
 }

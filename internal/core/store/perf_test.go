@@ -164,6 +164,35 @@ func TestPerformanceBudget(t *testing.T) {
 		t.Errorf("a search for one note took %s, budget %s", searchFor, budgetSearch)
 	}
 
+	// The redesigned lists read a page and its total from the index, never a walk
+	// over every row: a page of the notebook or of the card table costs its own
+	// rows, however many the library holds.
+	notesRead := time.Now()
+	rows, notesTotal, err := lib.QueryNoteRows(store.NoteRowQuery{Limit: 50})
+	noteRowsFor := time.Since(notesRead)
+	if err != nil {
+		t.Fatalf("note rows: %v", err)
+	}
+	cardsRead := time.Now()
+	page, cardTotal, err := lib.QueryCards(store.CardQuery{Limit: 50})
+	cardsFor := time.Since(cardsRead)
+	if err != nil {
+		t.Fatalf("card rows: %v", err)
+	}
+	treeRead := time.Now()
+	tree := lib.ExcerptTree()
+	treeFor := time.Since(treeRead)
+	if noteRowsFor > budgetRead {
+		t.Errorf("a page of %d of %d notes took %s, budget %s", len(rows), notesTotal, noteRowsFor, budgetRead)
+	}
+	if cardsFor > budgetRead {
+		t.Errorf("a page of %d of %d cards took %s, budget %s", len(page), cardTotal, cardsFor, budgetRead)
+	}
+	t.Logf("%d cards: a notebook page %s (%d of %d), a card page %s (%d of %d), the excerpt tree %s (%d roots)",
+		n, noteRowsFor.Round(time.Microsecond), len(rows), notesTotal,
+		cardsFor.Round(time.Microsecond), len(page), cardTotal,
+		treeFor.Round(time.Microsecond), len(tree))
+
 	// A query every card carries is the other end of the same read: the ranking
 	// has to score every match, which is the cost a ranked search cannot avoid.
 	// It is measured and not asserted, because the fixture makes such a query

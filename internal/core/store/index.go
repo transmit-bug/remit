@@ -21,7 +21,12 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "11"
+//
+// 12: the links table records the block a link anchors to (the excerpt tree and
+// the notebook's excerpt filter read it instead of re-reading block text), the
+// cards table carries a due-date override the user set by hand, and the assets
+// table answers the assets page from the index.
+const schemaVersion = "12"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -35,6 +40,7 @@ DROP TABLE IF EXISTS blocks;
 DROP TABLE IF EXISTS cards;
 DROP TABLE IF EXISTS card_state;
 DROP TABLE IF EXISTS search;
+DROP TABLE IF EXISTS assets;
 CREATE TABLE meta (
 	key   TEXT PRIMARY KEY,
 	value TEXT NOT NULL
@@ -69,16 +75,25 @@ CREATE TABLE cards (
 	edited      INTEGER NOT NULL DEFAULT 0,
 	fields      TEXT NOT NULL DEFAULT '{}',
 	fields_text TEXT NOT NULL DEFAULT '',
-	ordinal     INTEGER NOT NULL DEFAULT 0
+	ordinal     INTEGER NOT NULL DEFAULT 0,
+	-- due and due_set are a due date the user set by hand, and when they set it:
+	-- the one schedule fact a card file carries, because a review log cannot
+	-- name a card's postponed date without a new event kind (see bulk.go).
+	due         INTEGER NOT NULL DEFAULT 0,
+	due_set     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX cards_block ON cards (block_id);
 CREATE TABLE links (
 	note_id   TEXT NOT NULL,
 	block_id  TEXT NOT NULL,
 	title     TEXT NOT NULL,
-	paragraph INTEGER NOT NULL
+	paragraph INTEGER NOT NULL,
+	-- anchor is the block the link points into, empty for a link that names the
+	-- note as a whole: [[Note]] rather than [[Note#^block_…]].
+	anchor    TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX links_title ON links (title);
+CREATE INDEX links_anchor ON links (anchor);
 CREATE TABLE tags (
 	note_id  TEXT NOT NULL,
 	block_id TEXT NOT NULL,
@@ -110,6 +125,16 @@ CREATE TABLE reading (
 	archived    INTEGER NOT NULL DEFAULT 0,
 	dismissed   INTEGER NOT NULL DEFAULT 0,
 	until       INTEGER NOT NULL DEFAULT 0
+);
+-- assets is the library's non-text files: one row per file in assets/, with
+-- the notes that reference it. It is derived — the files are the truth and the
+-- references are read from the notes' text — and AssetRows fills it from those
+-- two when the notes or the directory have moved since it was written.
+CREATE TABLE assets (
+	name  TEXT PRIMARY KEY,
+	ext   TEXT NOT NULL,
+	bytes INTEGER NOT NULL,
+	notes TEXT NOT NULL
 );
 -- search is the full-text index: one row per note (its title and block text),
 -- one per card (the block it renders and the fields edited over it). The
@@ -424,14 +449,34 @@ type cardRow struct {
 	lastSeq int64
 }
 
-// cardColumns is the projection a card row is read through, in scan order.
+// cardColumns is the projection a card row is read through, in scan order. The
+// due column is the effective one (see cardDueNS); the override itself is read
+// beside it, so a rebuild writes back what the card file says and not the
+// schedule the log happens to give the card today.
 const cardColumns = `
 	c.id, c.block_id, c.status, c.stored, c.created,
 	c.frozen, c.frozen_text, c.frozen_at, c.live,
 	c.type, c.producer_id, c.producer_version, c.edited, c.fields, c.ordinal,
-	COALESCE(s.stability, 0), COALESCE(s.difficulty, 0), COALESCE(s.due, 0),
+	COALESCE(s.stability, 0), COALESCE(s.difficulty, 0),
+	c.due, c.due_set, ` + cardDueNS + `,
 	COALESCE(s.last_review, 0), COALESCE(s.reviews, 0), COALESCE(s.last_rating, ''),
 	COALESCE(s.last_seq, 0), COALESCE(s.lapses, 0)`
+
+// cardDueNS is when a card comes up: the moment the user moved it to while that
+// override stands, else the schedule replay derived, else the moment the card
+// was made. An override stops standing once a review is written after it — the
+// answer is newer than the hand-set date — which is the same rule
+// core.DueOverride.Stands states in Go.
+const cardDueNS = `(CASE
+	WHEN c.due <> 0 AND (COALESCE(s.last_review, 0) = 0 OR c.due_set >= s.last_review) THEN c.due
+	ELSE COALESCE(s.due, c.created) END)`
+
+// cardIntervalDays is the interval a card is on, in whole days — the divisor is
+// the nanoseconds in a day — from the newest review to the due moment. A card
+// no review has touched has no interval yet.
+const cardIntervalDays = `(CASE
+	WHEN COALESCE(s.reviews, 0) > 0 AND COALESCE(s.last_review, 0) <> 0
+	THEN MAX(0, (` + cardDueNS + ` - s.last_review) / 86400000000000) ELSE 0 END)`
 
 // fromCards joins the schedule a card's log gives it, if it has one.
 const fromCards = ` FROM cards c LEFT JOIN card_state s ON s.card_id = c.id`
@@ -442,6 +487,10 @@ func putCard(e execer, row cardRow) error {
 		frozen = 1
 		frozenText = row.card.Ref.Frozen.Text
 		frozenAt = row.card.Ref.Frozen.At.UnixNano()
+	}
+	due, dueSet := int64(0), int64(0)
+	if row.card.Due != nil {
+		due, dueSet = unixNano(row.card.Due.At), unixNano(row.card.Due.Set)
 	}
 	live := 0
 	if row.live {
@@ -458,12 +507,12 @@ func putCard(e execer, row cardRow) error {
 	_, err = e.Exec(
 		`INSERT OR REPLACE INTO cards
 		 (id, block_id, status, stored, created, frozen, frozen_text, frozen_at, live,
-		  type, producer_id, producer_version, edited, fields, fields_text, ordinal)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		  type, producer_id, producer_version, edited, fields, fields_text, ordinal, due, due_set)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		string(row.card.ID), string(row.card.Ref.Block), row.card.Status.String(), row.stored.String(),
 		row.created.UnixNano(), frozen, frozenText, frozenAt, live,
 		string(row.card.Type), row.card.Producer.ID, row.card.Producer.Version, edited, string(fields),
-		cardFieldsText(row.card.Fields), row.card.Ordinal)
+		cardFieldsText(row.card.Fields), row.card.Ordinal, due, dueSet)
 	return err
 }
 
@@ -604,19 +653,21 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 	var out []cardRow
 	for rows.Next() {
 		var (
-			row                                cardRow
-			id, block, status, stored, typ     string
-			producerID, producerVersion        string
-			frozenText, fields, lastRating     string
-			created, frozenAt, due, lastReview int64
-			frozen, live, ordinal, edited      int
-			stability, difficulty              float64
-			reviews, lapses                    int
+			row                            cardRow
+			id, block, status, stored, typ string
+			producerID, producerVersion    string
+			frozenText, fields, lastRating string
+			created, frozenAt, due, dueSet int64
+			effectiveDue, lastReview       int64
+			frozen, live, ordinal, edited  int
+			stability, difficulty          float64
+			reviews, lapses                int
 		)
 		err := rows.Scan(&id, &block, &status, &stored, &created,
 			&frozen, &frozenText, &frozenAt, &live,
 			&typ, &producerID, &producerVersion, &edited, &fields, &ordinal,
-			&stability, &difficulty, &due, &lastReview, &reviews, &lastRating, &row.lastSeq,
+			&stability, &difficulty, &due, &dueSet, &effectiveDue,
+			&lastReview, &reviews, &lastRating, &row.lastSeq,
 			&lapses)
 		if err != nil {
 			return nil, err
@@ -632,6 +683,7 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 			}
 		}
 		row.card.Ordinal = ordinal
+		row.card.Due = dueOverride(due, dueSet)
 		row.card.Status, _ = core.ParseStatus(status)
 		row.stored, _ = core.ParseStatus(stored)
 		if frozen == 1 {
@@ -642,7 +694,7 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 		if reviews > 0 {
 			row.state = schedule.State{
 				Memory:     schedule.Memory{Stability: stability, Difficulty: difficulty},
-				Due:        time.Unix(0, due).UTC(),
+				Due:        moment(effectiveDue),
 				LastReview: time.Unix(0, lastReview).UTC(),
 				Reviews:    reviews,
 				Lapses:     lapses,
@@ -652,6 +704,14 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 		out = append(out, row)
 	}
 	return out, rows.Err()
+}
+
+// dueOverride reads a card's hand-set due date back, nil when it has none.
+func dueOverride(due, set int64) *core.DueOverride {
+	if due == 0 {
+		return nil
+	}
+	return &core.DueOverride{At: moment(due), Set: moment(set)}
 }
 
 // ---------------------------------------------------------------------------

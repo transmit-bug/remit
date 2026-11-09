@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/transmit-bug/remit/internal/core"
 )
@@ -233,6 +234,42 @@ func isSpace(b byte) bool {
 	return b == ' ' || b == '\t' || b == '\r' || b == '\n' || b == '\v' || b == '\f'
 }
 
+// oneLine presses a block's text into the single line a list row shows: every
+// run of whitespace, the line breaks between a block's lines included, becomes
+// one space, and at most limit characters are kept. Nothing is added for what it
+// leaves out — a list shows one line and truncates with an ellipsis of its own —
+// and a cut never leaves a trailing space.
+func oneLine(text string, limit int) string {
+	if limit <= 0 {
+		return ""
+	}
+	var out strings.Builder
+	written := 0
+	gap := false
+	for _, r := range text {
+		if unicode.IsSpace(r) {
+			gap = written > 0
+			continue
+		}
+		if gap {
+			// The space goes in only when the word after it has room to
+			// start, so a cut never ends on one.
+			if written+1 >= limit {
+				break
+			}
+			out.WriteByte(' ')
+			written++
+			gap = false
+		}
+		if written == limit {
+			break
+		}
+		out.WriteRune(r)
+		written++
+	}
+	return out.String()
+}
+
 // firstLine is the line the first block would start with.
 func firstLine(note core.Note) string {
 	for _, block := range note.Blocks {
@@ -241,4 +278,35 @@ func firstLine(note core.Note) string {
 		}
 	}
 	return ""
+}
+
+// assetRefs names the assets a block's text references. A note names one by the
+// relative path the library stores it under — assets/<sha256>.<ext>, which is
+// what PutAsset answers and what a markdown image or link carries — so the scan
+// is for that prefix and the file name that follows it, up to whatever ends a
+// path in prose: a space, a bracket, a quote, a query.
+func assetRefs(text string) []string {
+	var out []string
+	for rest := text; ; {
+		at := strings.Index(rest, assetPrefix)
+		if at < 0 {
+			return out
+		}
+		rest = rest[at+len(assetPrefix):]
+		end := strings.IndexFunc(rest, assetRefEnd)
+		if end < 0 {
+			end = len(rest)
+		}
+		name := strings.TrimRight(rest[:end], ".,;:!")
+		rest = rest[end:]
+		if _, ok := assetFileName(assetPrefix + name); ok {
+			out = append(out, name)
+		}
+	}
+}
+
+// assetRefEnd ends the file name of a reference: the characters a path cannot
+// hold in prose without being quoted.
+func assetRefEnd(r rune) bool {
+	return unicode.IsSpace(r) || strings.ContainsRune(")([]{}<>\"'`|?#,;:*", r)
 }
