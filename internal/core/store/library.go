@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -52,10 +53,14 @@ const (
 	dirPerms  = 0o755
 )
 
-// FormatVersion is what this build writes and the only one it reads: a library
-// declaring anything else is refused, pre-1.0 with no released libraries to
+// FormatVersion is what this build writes. A remit/2 library is migrated once
+// when it opens, keeping its file as remit.json.bak; any other version is
+// refused without the file being touched, pre-1.0 with no released libraries to
 // keep. It is the agent API's data format version too.
-const FormatVersion = "remit/2"
+const FormatVersion = "remit/3"
+
+// legacyFormat is what a library written before presets declares (ADR 0011).
+const legacyFormat = "remit/2"
 
 // Errors a caller is expected to handle rather than report as a bug.
 var (
@@ -85,9 +90,12 @@ var (
 type Options struct {
 	// Now is the library's clock. A zero value means time.Now.
 	Now func() time.Time
-	// Params is the schedule a new library starts with. An existing library
-	// keeps the one in its remit.json.
+	// Params is the schedule a new library starts with, and the fallback for one
+	// whose remit.json declares none. An existing library keeps the one it has.
 	Params schedule.Params
+	// Presets is the rhythm a new library starts with. An existing library keeps
+	// the one in its remit.json; a zero value means DefaultPresets.
+	Presets Presets
 	// Scheduler names what schedules this library's reviews; every review it
 	// records is stamped with it. Empty keeps whatever the library holds.
 	Scheduler string
@@ -101,11 +109,15 @@ type Options struct {
 // ask for on every write. Note and block text stay on disk, read when a caller
 // names a note, a block or a card file.
 type Library struct {
-	mu        sync.Mutex
-	dir       string
-	now       func() time.Time
-	params    schedule.Params
-	scheduler string
+	mu  sync.Mutex
+	dir string
+	now func() time.Time
+	// baseParams is the fsrs section remit.json declares; params is what the
+	// library schedules with, which a preset's retention may override.
+	baseParams schedule.Params
+	params     schedule.Params
+	presets    Presets
+	scheduler  string
 	// readingDefaults is what reading entries are scheduled with: the host's own
 	// defaults, never what a scheduling plugin made of the cards.
 	readingDefaults schedule.Params
@@ -139,6 +151,9 @@ type Library struct {
 
 	extensions []string
 	roles      map[string]string
+	// unknown is every top-level remit.json key this build does not read, kept
+	// as it was written so a write puts it back (#226).
+	unknown map[string]json.RawMessage
 
 	// onEvent is the window's handler; subscribers is the event stream's fan-out
 	// (see events.go). Both are told on every write, and neither waits for the
@@ -173,6 +188,36 @@ type configFile struct {
 	// Roles are the plugins that play each role in this library, by role name.
 	// A role left out plays the built-in (see Roles).
 	Roles map[string]string `json:"roles,omitempty"`
+	// Presets are the rhythm this library keeps. A file declaring none reads as
+	// DefaultPresets.
+	Presets *Presets `json:"presets,omitempty"`
+	// Unknown holds the top-level keys this build does not read, so a write
+	// gives them back as they were (#226).
+	Unknown map[string]json.RawMessage `json:"-"`
+
+	// needsMigration says the file declares legacyFormat, which an open rewrites
+	// as this build's format once the original is safe in remit.json.bak.
+	needsMigration bool
+}
+
+// MarshalJSON writes the keys this build reads and then the ones it does not,
+// so a key a person added survives a write the library makes for something else.
+func (c configFile) MarshalJSON() ([]byte, error) {
+	type file configFile // the same fields without this method
+	data, err := json.Marshal(file(c))
+	if err != nil || len(c.Unknown) == 0 {
+		return data, err
+	}
+	fields := map[string]json.RawMessage{}
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return nil, err
+	}
+	for key, value := range c.Unknown {
+		if _, known := fields[key]; !known {
+			fields[key] = value
+		}
+	}
+	return json.Marshal(fields)
 }
 
 // Blocks reports whether a Library can stand in for a card's source of text.
@@ -188,16 +233,18 @@ func Create(dir string, opts Options) (*Library, error) {
 	}
 
 	library := newLibrary(dir, opts)
-	library.params = opts.Params.Normalized()
+	library.baseParams = opts.Params.Normalized()
+	presets, err := opts.Presets.orDefault()
+	if err != nil {
+		return nil, err
+	}
+	library.presets = presets.clone()
+	library.params = presets.scheduleParams(library.baseParams)
 	library.scheduler = firstNonEmpty(opts.Scheduler, library.params.Scheduler)
 	if err := os.MkdirAll(dir, dirPerms); err != nil {
 		return nil, err
 	}
-	config, err := encodeConfig(library.params, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	if err := writeFileAtomic(path, config); err != nil {
+	if err := library.writeConfigLocked(); err != nil {
 		return nil, err
 	}
 	if err := library.load(); err != nil {
@@ -237,22 +284,33 @@ func open(dir string, opts Options, seedTypes bool) (*Library, error) {
 	if err != nil {
 		return nil, err
 	}
-	config, err := decodeConfig(data)
+	config, err := readConfig(data)
 	if err != nil {
 		return nil, err
 	}
-	params := config.FSRS.Normalized()
-	if params.IsZero() {
-		params = opts.Params.Normalized()
+	base := config.FSRS.Normalized()
+	if base.IsZero() {
+		base = opts.Params.Normalized()
 	}
+	presets := config.presetsOrDefault()
 	library := newLibrary(dir, opts)
 	library.seedTypes = seedTypes
-	library.params = params
+	library.baseParams = base
+	library.presets = presets
+	library.params = presets.scheduleParams(base)
 	// What schedules this library is what the app says it schedules with, or
 	// what the library was last written with.
-	library.scheduler = firstNonEmpty(opts.Scheduler, params.Scheduler)
+	library.scheduler = firstNonEmpty(opts.Scheduler, library.params.Scheduler)
 	library.extensions = config.Extensions
 	library.roles = config.Roles
+	library.unknown = config.Unknown
+	if config.needsMigration {
+		if err := migrateConfig(dir, data, library.configLocked()); err != nil {
+			// The library still opens with what it read: a migration is a
+			// convenience, never a reason to refuse the text already there.
+			slog.Warn("remit: library config not migrated", "dir", dir, "err", err)
+		}
+	}
 	if err := library.load(); err != nil {
 		library.Close()
 		return nil, err
@@ -1691,24 +1749,79 @@ func slugify(title string) string {
 }
 
 // encodeConfig renders remit.json, the library's declaration of how it
-// schedules, which extensions it runs and which plugin plays each role.
-func encodeConfig(params schedule.Params, extensions []string, roles map[string]string) ([]byte, error) {
-	data, err := json.MarshalIndent(configFile{Format: FormatVersion, FSRS: params, Extensions: extensions, Roles: roles}, "", "  ")
+// schedules, which extensions it runs, which plugin plays each role, and the
+// rhythm it keeps.
+func encodeConfig(config configFile) ([]byte, error) {
+	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("store: %s: %w", configName, err)
 	}
 	return append(data, '\n'), nil
 }
 
-func decodeConfig(data []byte) (configFile, error) {
+// readConfig reads remit.json, and says whether an open has to migrate it. A
+// version this build does not know is refused here, before anything is written.
+func readConfig(data []byte) (configFile, error) {
 	var config configFile
 	if err := json.Unmarshal(data, &config); err != nil {
 		return configFile{}, fmt.Errorf("store: %s: %w", configName, err)
 	}
-	if config.Format != FormatVersion {
+	switch config.Format {
+	case FormatVersion:
+	case legacyFormat:
+		config.needsMigration = true
+	default:
 		return configFile{}, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, FormatVersion)
 	}
+	config.Unknown = unknownConfigKeys(data)
 	return config, nil
+}
+
+// presetsOrDefault is the rhythm the file declares, or the defaults when it
+// declares none.
+func (c configFile) presetsOrDefault() Presets {
+	if c.Presets == nil {
+		return DefaultPresets()
+	}
+	return c.Presets.normalized()
+}
+
+// configKeys are the top-level keys this build reads.
+var configKeys = map[string]bool{
+	"format": true, "fsrs": true, "extensions": true, "roles": true, "presets": true,
+}
+
+// unknownConfigKeys keeps the keys this build does not read, verbatim, so that
+// writing the file back does not drop what a person added (#226).
+func unknownConfigKeys(data []byte) map[string]json.RawMessage {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return nil
+	}
+	for key := range fields {
+		if configKeys[key] {
+			delete(fields, key)
+		}
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	return fields
+}
+
+// migrateConfig rewrites a legacy remit.json as this build's format. The
+// original goes to remit.json.bak first, so rolling back is putting the copy
+// back; a write that fails leaves remit.json as it was and reports why.
+func migrateConfig(dir string, original []byte, next configFile) error {
+	data, err := encodeConfig(next)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(dir, configName)
+	if err := writeFileAtomic(path+".bak", original); err != nil {
+		return fmt.Errorf("store: %s.bak: %w", configName, err)
+	}
+	return writeFileAtomic(path, data)
 }
 
 // paramsDigest fingerprints the scheduling parameters: a library that changed
@@ -1750,17 +1863,37 @@ func (l *Library) SetEnabledExtensions(names []string) error {
 			roles[role] = name
 		}
 	}
-	data, err := encodeConfig(l.params, names, roles)
+	heldExtensions, heldRoles := l.extensions, l.roles
+	l.extensions, l.roles = append([]string(nil), names...), roles
+	if err := l.writeConfigLocked(); err != nil {
+		l.extensions, l.roles = heldExtensions, heldRoles
+		return err
+	}
+	return nil
+}
+
+// configLocked is remit.json as this library would write it now: what it
+// schedules with, what it runs, the roles it plays and the rhythm it keeps.
+func (l *Library) configLocked() configFile {
+	presets := l.presets
+	return configFile{
+		Format:     FormatVersion,
+		FSRS:       l.baseParams,
+		Extensions: l.extensions,
+		Roles:      l.roles,
+		Presets:    &presets,
+		Unknown:    l.unknown,
+	}
+}
+
+// writeConfigLocked writes remit.json as the library holds it, so a write of
+// one field never drops another — nor a key this build does not read.
+func (l *Library) writeConfigLocked() error {
+	data, err := encodeConfig(l.configLocked())
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(l.dir, configName)
-	if err := writeFileAtomic(path, data); err != nil {
-		return err
-	}
-	l.extensions = append([]string(nil), names...)
-	l.roles = roles
-	return nil
+	return writeFileAtomic(filepath.Join(l.dir, configName), data)
 }
 
 // firstNonEmpty is the first of the values that has anything in it.
