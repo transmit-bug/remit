@@ -8,15 +8,28 @@ data format and the agent interface may still change between minor versions
 
 ## What it is
 
-- **Review is the core.** Cards are scheduled with FSRS and surfaced through a
-  Review Queue, which is the app's first screen.
-- **Notes are first-class.** Notes are plain text on disk; cards reference
-  them instead of copying them, so editing a note updates every card that
-  points at it.
-- **Local-first and open.** No account, no server, no telemetry. Your library
-  is a directory of readable files plus a rebuildable index.
-- **Agent-friendly.** A local interface lets an external agent read the
-  library and write cards, without Remit shipping an AI of its own.
+Remit is a local-first, open-source **3-in-1 knowledge-memory workbench**:
+
+- **A complete Markdown notebook.** Notes are plain text on disk; blocks are
+  addressable, links and backlinks are derived, and assets live in the
+  library. This is the Obsidian-like layer.
+- **An Anki-grade card system.** Card types, fields and templates turn a block
+  into a reviewable card; FSRS schedules it through a Review Queue. This is
+  the Anki-like layer.
+- **A SuperMemo-style reading loop.** A Reading Queue brings long notes back
+  by FSRS cadence, remembers the block where reading stopped, and turns the
+  current block into a referenced excerpt that can become a card. This is the
+  incremental-reading layer.
+- **One model, one library, one history.** Notes, cards and reading share the
+  same plaintext library and the same append-only review log; the index is
+  derived and rebuildable.
+- **Local-first, open, agent-friendly.** No account, no server, no telemetry.
+  A loopback agent API reads the library and writes cards with a token; it
+  exposes no deletes.
+
+The full 3-in-1 product definition, including what 1.0 ships and what full
+parity with Obsidian, Anki and SuperMemo means after 1.0, is in
+[`docs/specs/three-in-one.md`](docs/specs/three-in-one.md).
 
 ## Building and running
 

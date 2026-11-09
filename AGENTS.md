@@ -3,8 +3,16 @@
 ## Project Overview
 
 Remit is a local-first, open-source knowledge-memory desktop app: plain-text
-notes and FSRS-scheduled flashcards share one library. Go on MyGo
-(`github.com/egoist/mygo`), AGPL-3.0, pre-1.0 — the data format may still change.
+notes, FSRS-scheduled flashcards and incremental reading share one library. Go
+on MyGo (`github.com/egoist/mygo`), AGPL-3.0, pre-1.0 — the data format may
+still change.
+
+Product shape: a **3-in-1 workbench** — a complete Markdown notebook
+(Obsidian-like), Anki-grade card creation and review, and SuperMemo-style
+incremental reading — sharing one Block model, one plaintext library and one
+review log. The stable product definition is
+`docs/specs/three-in-one.md`; open design decisions live in the 3-in-1 map
+(GitHub #201).
 
 Design philosophy — **Remember it**: every feature either helps the user
 remember (writing, review, revisiting, incremental digestion) or carries the
@@ -24,6 +32,7 @@ the code wins and this file follows.
 | --- | --- |
 | `GLOSSARY.md` | the domain vocabulary — name things with its terms |
 | `docs/adr/` | decisions already taken, one per file; read the one covering the area before reshaping it |
+| `docs/specs/three-in-one.md` | the 3-in-1 product definition: 1.0 scope and post-1.0 parity direction |
 | `docs/specs/` | designs in progress for an area that is being rewritten; plugin contracts live under `docs/specs/plugins/` |
 
 ## Architecture
