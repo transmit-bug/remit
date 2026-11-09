@@ -9,6 +9,9 @@
 - **Amended:** 2026-11-08 — a library also holds `assets/<sha256>.<ext>`, the
   images notes reference (#151, #152); they are truth like the text files and
   travel in the archive
+- **Amended:** 2026-11-10 — the log carries three more reading events
+  (`archived`, `dismissed`, `postponed` with `until`), and the configuration
+  file moves to `remit/3` with `presets` (#213, #216, #226, ADR 0011)
 - **Related:** #23, #7, ADR 0002
 
 ## Context
@@ -97,3 +100,22 @@ text":
 
 `.remit/index.sqlite` is still derived and still disposable: a copied library's
 index is discarded and rebuilt from the notes, the card files and the log.
+
+## Amended 2026-11-10
+
+Three event kinds join the log, and the rule of one authority stands unchanged:
+
+- `archived` and `dismissed` take a note out of the reading queue and keep the
+  source note; `postponed` keeps the membership and moves the due date to the
+  `until` it carries (RFC 3339). Non-rating events name a `note`, never a `card`
+  or a `rating` (ADR 0011, #216).
+- `remit.json` moves to `remit/3` and gains `presets` — the library's own
+  rhythm (budget, daily limits, hard threshold, broken-link policy) travels
+  with the library; the app's preferences stay in `settings.json` (#207, #226,
+  `docs/specs/ui-redesign-v2.md` §5.3).
+- The index's `schemaVersion` moves `10 → 11` for the derived columns those
+  events and presets need; `.remit/` is still disposable.
+- One log is still the only scheduling truth: terminal states are events,
+  replayed like a rating, and a restore is the opposite event, not a rewrite.
+  `void` still cancels a rating alone (#213, `docs/specs/ui-redesign-v2.md`
+  §5.2/§5.3).

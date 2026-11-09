@@ -46,6 +46,12 @@
 - `void` 仍只撤销一条评分事件（撤销键是卡片侧的），不撤销成员变更。
 - 日志只手写可改：坏行让打开失败，末行缺换行视为写了一半，与卡片事件同一套规则。
 
+> **2026-11-10 扩展（#213/#216）**：终态与推后按
+> [`docs/specs/ui-redesign-v2.md`](ui-redesign-v2.md) §5.2 追加三种事件：`archived`（归档）、
+> `dismissed`（不再出现）、`postponed`（推后，带 `until`）。它们与 `queued` / `dropped` 同形——
+> 带 `note`、不带 `card` / `rating`；`until` 只出现在 `postponed` 上、RFC 3339。撤销仍只撤一条评分
+> 事件，终态的恢复是写反向事件（`queued`）。
+
 ## 4. 重放
 
 `internal/core/schedule` 的重放同时答卡片与笔记：
@@ -260,3 +266,6 @@ basic / cloze 卡面逐字冻结（缝 5）。
    的口径是「上次会话停下的块」。
 6. **阅读参数是宿主默认值**（§4）：冻结稿说「配独立的参数默认值」，落地时不与库的卡片参数
    联动，也不读取调度插件的策略。
+7. **终态与推后是事件，不是文件操作**（§3）：`archived` / `dismissed` / `postponed` 追加进同一份
+   日志，`postponed` 带 RFC 3339 的 `until`；读完不删源笔记，撤销仍只撤评分事件。口径见
+   [`ui-redesign-v2.md`](ui-redesign-v2.md) §1.12/§5.2 与 [ADR 0011](../adr/0011-library-format-v3.md)。
