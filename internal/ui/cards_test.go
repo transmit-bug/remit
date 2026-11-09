@@ -100,9 +100,9 @@ func TestRemovingTheSeparatorSuspendsTheCard(t *testing.T) {
 	}
 }
 
-// The badge edits the card's own prompt and answer, and what it writes is what
-// the store holds.
-func TestCardBadgeEditsOverrides(t *testing.T) {
+// A paragraph's badge opens its inspector, and a card row there opens the card's
+// own detail: the road from the paper to a card's prompt and answer.
+func TestCardBadgeReachesTheCardDetail(t *testing.T) {
 	msgs := locales.In("en")
 	a, _, tt := openApp(t)
 	newNoteTyped(t, a, tt, "What is spacing? :: Practice spread over days.")
@@ -114,7 +114,19 @@ func TestCardBadgeEditsOverrides(t *testing.T) {
 	made := cards[len(cards)-1]
 
 	if err := tt.Click(msgs.CardOnParagraph(1, 1)); err != nil {
-		t.Fatalf("open the card's overrides: %v", err)
+		t.Fatalf("open the block inspector: %v", err)
+	}
+	if !tt.HasText(msgs.BlockInspector()) {
+		t.Fatalf("the inspector did not open; texts %q", tt.Texts())
+	}
+	if err := tt.Click("What is spacing?"); err != nil {
+		t.Fatalf("the inspector has no card row: %v", err)
+	}
+	if !tt.HasText(msgs.CardHistory()) {
+		t.Fatalf("the card detail did not open; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.EditCard()); err != nil {
+		t.Fatalf("the card has no way to its fields: %v", err)
 	}
 	if !tt.HasText(msgs.EditCard()) {
 		t.Fatalf("the dialog did not open; texts %q", tt.Texts())
@@ -160,7 +172,7 @@ func TestClozeMakesOneCardPerBlank(t *testing.T) {
 	a, _, tt := openApp(t)
 	newNoteTyped(t, a, tt, "The {{first}} blank asks {{second}}.")
 
-	if !tt.HasText(msgs.CardOnParagraph(1, 2)) {
+	if !tt.HasText(msgs.CardOnParagraph(2, 1)) {
 		t.Fatalf("the paragraph's badge does not say two cards; texts %q", tt.Texts())
 	}
 	var cloze []core.Card
@@ -208,7 +220,9 @@ func TestMakeCard(t *testing.T) {
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("make card")
 	tt.Key(0, ui.KeyEnter)
-	if !tt.HasText("Card made from block 1") {
+	// The note opens with the caret at its end, so the card is made from its
+	// last paragraph.
+	if !tt.HasText("Card made from block 2") {
 		t.Fatalf("no outcome for making a card; texts %q", tt.Texts())
 	}
 	cards, err := os.ReadDir(filepath.Join(seed.dir, "cards"))

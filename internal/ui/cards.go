@@ -18,8 +18,8 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// cardGroups lists the note's card-bearing paragraphs as the notebook's badge
-// strip shows them, in document order.
+// cardGroups lists the note's card-bearing paragraphs in document order, which
+// is what the block menu counts before it deletes one.
 func (a *App) cardGroups(note core.Note) []notes.CardGroup {
 	var out []notes.CardGroup
 	for i, block := range note.Blocks {

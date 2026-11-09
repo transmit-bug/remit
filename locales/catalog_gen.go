@@ -13142,3 +13142,337 @@ func RecallPresetsResetConfirm() string { return In(i18n.Locale()).RecallPresets
 func (msgs Messages) RecallPresetsResetConfirm() string {
 	return Catalog.Format(msgs.locale, "recallPresetsResetConfirm", nil)
 }
+
+// SelectionActions says "Selection actions"
+// in the language the app shows.
+//
+// Accessible label of the bar that acts on a selection in the document.
+func SelectionActions() string { return In(i18n.Locale()).SelectionActions() }
+
+// SelectionActions says "Selection actions"
+// in the language of msgs.
+//
+// Accessible label of the bar that acts on a selection in the document.
+func (msgs Messages) SelectionActions() string {
+	return Catalog.Format(msgs.locale, "selectionActions", nil)
+}
+
+// SelectionCloze says "Cloze"
+// in the language the app shows.
+//
+// The selection bar's action that turns the selected words into a cloze
+// blank.
+func SelectionCloze() string { return In(i18n.Locale()).SelectionCloze() }
+
+// SelectionCloze says "Cloze"
+// in the language of msgs.
+//
+// The selection bar's action that turns the selected words into a cloze
+// blank.
+func (msgs Messages) SelectionCloze() string {
+	return Catalog.Format(msgs.locale, "selectionCloze", nil)
+}
+
+// ExcerptWholeBlock says "Excerpt the whole paragraph"
+// in the language the app shows.
+//
+// The selection bar's and the block menu's action that takes the whole
+// paragraph out into a note of its own.
+func ExcerptWholeBlock() string { return In(i18n.Locale()).ExcerptWholeBlock() }
+
+// ExcerptWholeBlock says "Excerpt the whole paragraph"
+// in the language of msgs.
+//
+// The selection bar's and the block menu's action that takes the whole
+// paragraph out into a note of its own.
+func (msgs Messages) ExcerptWholeBlock() string {
+	return Catalog.Format(msgs.locale, "excerptWholeBlock", nil)
+}
+
+// OpenInspector says "Inspector…"
+// in the language the app shows.
+//
+// The block menu's action that opens the paragraph inspector.
+func OpenInspector() string { return In(i18n.Locale()).OpenInspector() }
+
+// OpenInspector says "Inspector…"
+// in the language of msgs.
+//
+// The block menu's action that opens the paragraph inspector.
+func (msgs Messages) OpenInspector() string {
+	return Catalog.Format(msgs.locale, "openInspector", nil)
+}
+
+// LastBlockKept says "A note keeps its last paragraph."
+// in the language the app shows.
+//
+// Shown in the block menu instead of a delete that cannot act: the note's
+// last paragraph cannot be deleted.
+func LastBlockKept() string { return In(i18n.Locale()).LastBlockKept() }
+
+// LastBlockKept says "A note keeps its last paragraph."
+// in the language of msgs.
+//
+// Shown in the block menu instead of a delete that cannot act: the note's
+// last paragraph cannot be deleted.
+func (msgs Messages) LastBlockKept() string {
+	return Catalog.Format(msgs.locale, "lastBlockKept", nil)
+}
+
+// BadgeDue says "due"
+// in the language the app shows.
+//
+// A card badge state: at least one of the paragraph's cards is due now.
+func BadgeDue() string { return In(i18n.Locale()).BadgeDue() }
+
+// BadgeDue says "due"
+// in the language of msgs.
+//
+// A card badge state: at least one of the paragraph's cards is due now.
+func (msgs Messages) BadgeDue() string {
+	return Catalog.Format(msgs.locale, "badgeDue", nil)
+}
+
+// BadgeNew says "new"
+// in the language the app shows.
+//
+// A card badge state: none of the paragraph's cards has been answered yet.
+func BadgeNew() string { return In(i18n.Locale()).BadgeNew() }
+
+// BadgeNew says "new"
+// in the language of msgs.
+//
+// A card badge state: none of the paragraph's cards has been answered yet.
+func (msgs Messages) BadgeNew() string {
+	return Catalog.Format(msgs.locale, "badgeNew", nil)
+}
+
+// BadgeLater says "later"
+// in the language the app shows.
+//
+// A card badge state: the paragraph's cards are all scheduled ahead.
+func BadgeLater() string { return In(i18n.Locale()).BadgeLater() }
+
+// BadgeLater says "later"
+// in the language of msgs.
+//
+// A card badge state: the paragraph's cards are all scheduled ahead.
+func (msgs Messages) BadgeLater() string {
+	return Catalog.Format(msgs.locale, "badgeLater", nil)
+}
+
+// BadgeLost says "stopped following"
+// in the language the app shows.
+//
+// A card badge state: a card stopped following the paragraph, so its words
+// are no longer the card's.
+func BadgeLost() string { return In(i18n.Locale()).BadgeLost() }
+
+// BadgeLost says "stopped following"
+// in the language of msgs.
+//
+// A card badge state: a card stopped following the paragraph, so its words
+// are no longer the card's.
+func (msgs Messages) BadgeLost() string {
+	return Catalog.Format(msgs.locale, "badgeLost", nil)
+}
+
+// ReadLastStop says "Last stop here"
+// in the language the app shows.
+//
+// The reading view's mark on the paragraph a reading session stopped at.
+func ReadLastStop() string { return In(i18n.Locale()).ReadLastStop() }
+
+// ReadLastStop says "Last stop here"
+// in the language of msgs.
+//
+// The reading view's mark on the paragraph a reading session stopped at.
+func (msgs Messages) ReadLastStop() string {
+	return Catalog.Format(msgs.locale, "readLastStop", nil)
+}
+
+// BlockInspector says "Paragraph inspector"
+// in the language the app shows.
+//
+// Title of the dialog that shows one paragraph's text, cards and excerpts.
+func BlockInspector() string { return In(i18n.Locale()).BlockInspector() }
+
+// BlockInspector says "Paragraph inspector"
+// in the language of msgs.
+//
+// Title of the dialog that shows one paragraph's text, cards and excerpts.
+func (msgs Messages) BlockInspector() string {
+	return Catalog.Format(msgs.locale, "blockInspector", nil)
+}
+
+// InspectorText says "Text"
+// in the language the app shows.
+//
+// The inspector's section holding the paragraph itself, read-only.
+func InspectorText() string { return In(i18n.Locale()).InspectorText() }
+
+// InspectorText says "Text"
+// in the language of msgs.
+//
+// The inspector's section holding the paragraph itself, read-only.
+func (msgs Messages) InspectorText() string {
+	return Catalog.Format(msgs.locale, "inspectorText", nil)
+}
+
+// InspectorCards says "Cards ({count})"
+// in the language the app shows.
+//
+// The inspector's section heading: the cards that read this paragraph.
+func InspectorCards(count int) string { return In(i18n.Locale()).InspectorCards(count) }
+
+// InspectorCards says "Cards ({count})"
+// in the language of msgs.
+//
+// The inspector's section heading: the cards that read this paragraph.
+func (msgs Messages) InspectorCards(count int) string {
+	return Catalog.Format(msgs.locale, "inspectorCards", map[string]any{"count": count})
+}
+
+// InspectorExcerpts says "Excerpts ({count})"
+// in the language the app shows.
+//
+// The inspector's section heading: the notes taken out of this paragraph.
+func InspectorExcerpts(count int) string { return In(i18n.Locale()).InspectorExcerpts(count) }
+
+// InspectorExcerpts says "Excerpts ({count})"
+// in the language of msgs.
+//
+// The inspector's section heading: the notes taken out of this paragraph.
+func (msgs Messages) InspectorExcerpts(count int) string {
+	return Catalog.Format(msgs.locale, "inspectorExcerpts", map[string]any{"count": count})
+}
+
+// InspectorNoCards says "No card reads this paragraph yet."
+// in the language the app shows.
+//
+// The inspector's card section when the paragraph feeds no card.
+func InspectorNoCards() string { return In(i18n.Locale()).InspectorNoCards() }
+
+// InspectorNoCards says "No card reads this paragraph yet."
+// in the language of msgs.
+//
+// The inspector's card section when the paragraph feeds no card.
+func (msgs Messages) InspectorNoCards() string {
+	return Catalog.Format(msgs.locale, "inspectorNoCards", nil)
+}
+
+// InspectorNoExcerpts says "Nothing was excerpted from this paragraph."
+// in the language the app shows.
+//
+// The inspector's excerpt section when nothing quotes the paragraph.
+func InspectorNoExcerpts() string { return In(i18n.Locale()).InspectorNoExcerpts() }
+
+// InspectorNoExcerpts says "Nothing was excerpted from this paragraph."
+// in the language of msgs.
+//
+// The inspector's excerpt section when nothing quotes the paragraph.
+func (msgs Messages) InspectorNoExcerpts() string {
+	return Catalog.Format(msgs.locale, "inspectorNoExcerpts", nil)
+}
+
+// InspectorReadingPosition says "A reading session stopped here."
+// in the language the app shows.
+//
+// The inspector's note that the reading position is this paragraph.
+func InspectorReadingPosition() string { return In(i18n.Locale()).InspectorReadingPosition() }
+
+// InspectorReadingPosition says "A reading session stopped here."
+// in the language of msgs.
+//
+// The inspector's note that the reading position is this paragraph.
+func (msgs Messages) InspectorReadingPosition() string {
+	return Catalog.Format(msgs.locale, "inspectorReadingPosition", nil)
+}
+
+// InspectorLocateInNote says "Locate in the note"
+// in the language the app shows.
+//
+// The inspector's action that goes back to this paragraph in the note.
+func InspectorLocateInNote() string { return In(i18n.Locale()).InspectorLocateInNote() }
+
+// InspectorLocateInNote says "Locate in the note"
+// in the language of msgs.
+//
+// The inspector's action that goes back to this paragraph in the note.
+func (msgs Messages) InspectorLocateInNote() string {
+	return Catalog.Format(msgs.locale, "inspectorLocateInNote", nil)
+}
+
+// InspectorLocateOnBoard says "Locate on the board"
+// in the language the app shows.
+//
+// The inspector's action that opens the board page on this paragraph's
+// node; shown only when a board places it.
+func InspectorLocateOnBoard() string { return In(i18n.Locale()).InspectorLocateOnBoard() }
+
+// InspectorLocateOnBoard says "Locate on the board"
+// in the language of msgs.
+//
+// The inspector's action that opens the board page on this paragraph's
+// node; shown only when a board places it.
+func (msgs Messages) InspectorLocateOnBoard() string {
+	return Catalog.Format(msgs.locale, "inspectorLocateOnBoard", nil)
+}
+
+// BacklinksTab says "Backlinks ({count})"
+// in the language the app shows.
+//
+// The panel's backlinks tab, with how many notes point at this one.
+func BacklinksTab(count int) string { return In(i18n.Locale()).BacklinksTab(count) }
+
+// BacklinksTab says "Backlinks ({count})"
+// in the language of msgs.
+//
+// The panel's backlinks tab, with how many notes point at this one.
+func (msgs Messages) BacklinksTab(count int) string {
+	return Catalog.Format(msgs.locale, "backlinksTab", map[string]any{"count": count})
+}
+
+// BacklinkMeta says "{count, plural, one {# card} other {# cards}} · excerptable"
+// in the language the app shows.
+//
+// What a backlink row says of the linking paragraph: the cards it feeds,
+// and that it can still be excerpted.
+func BacklinkMeta(count int) string { return In(i18n.Locale()).BacklinkMeta(count) }
+
+// BacklinkMeta says "{count, plural, one {# card} other {# cards}} · excerptable"
+// in the language of msgs.
+//
+// What a backlink row says of the linking paragraph: the cards it feeds,
+// and that it can still be excerpted.
+func (msgs Messages) BacklinkMeta(count int) string {
+	return Catalog.Format(msgs.locale, "backlinkMeta", map[string]any{"count": count})
+}
+
+// NoteRetry says "Try again"
+// in the language the app shows.
+//
+// The document's action that writes the note again after a failed save.
+func NoteRetry() string { return In(i18n.Locale()).NoteRetry() }
+
+// NoteRetry says "Try again"
+// in the language of msgs.
+//
+// The document's action that writes the note again after a failed save.
+func (msgs Messages) NoteRetry() string {
+	return Catalog.Format(msgs.locale, "noteRetry", nil)
+}
+
+// OutlineEmptyHint says "Type / in a paragraph to start a section."
+// in the language the app shows.
+//
+// Under the outline's empty state: how a heading is made.
+func OutlineEmptyHint() string { return In(i18n.Locale()).OutlineEmptyHint() }
+
+// OutlineEmptyHint says "Type / in a paragraph to start a section."
+// in the language of msgs.
+//
+// Under the outline's empty state: how a heading is made.
+func (msgs Messages) OutlineEmptyHint() string {
+	return Catalog.Format(msgs.locale, "outlineEmptyHint", nil)
+}

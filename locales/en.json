@@ -4917,5 +4917,112 @@
   "recallPresetsResetConfirm": "Restore",
   "@recallPresetsResetConfirm": {
     "description": "The confirm button of the preset reset question."
+  },
+  "selectionActions": "Selection actions",
+  "@selectionActions": {
+    "description": "Accessible label of the bar that acts on a selection in the document."
+  },
+  "selectionCloze": "Cloze",
+  "@selectionCloze": {
+    "description": "The selection bar's action that turns the selected words into a cloze blank."
+  },
+  "excerptWholeBlock": "Excerpt the whole paragraph",
+  "@excerptWholeBlock": {
+    "description": "The selection bar's and the block menu's action that takes the whole paragraph out into a note of its own."
+  },
+  "openInspector": "Inspector…",
+  "@openInspector": {
+    "description": "The block menu's action that opens the paragraph inspector."
+  },
+  "lastBlockKept": "A note keeps its last paragraph.",
+  "@lastBlockKept": {
+    "description": "Shown in the block menu instead of a delete that cannot act: the note's last paragraph cannot be deleted."
+  },
+  "badgeDue": "due",
+  "@badgeDue": {
+    "description": "A card badge state: at least one of the paragraph's cards is due now."
+  },
+  "badgeNew": "new",
+  "@badgeNew": {
+    "description": "A card badge state: none of the paragraph's cards has been answered yet."
+  },
+  "badgeLater": "later",
+  "@badgeLater": {
+    "description": "A card badge state: the paragraph's cards are all scheduled ahead."
+  },
+  "badgeLost": "stopped following",
+  "@badgeLost": {
+    "description": "A card badge state: a card stopped following the paragraph, so its words are no longer the card's."
+  },
+  "readLastStop": "Last stop here",
+  "@readLastStop": {
+    "description": "The reading view's mark on the paragraph a reading session stopped at."
+  },
+  "blockInspector": "Paragraph inspector",
+  "@blockInspector": {
+    "description": "Title of the dialog that shows one paragraph's text, cards and excerpts."
+  },
+  "inspectorText": "Text",
+  "@inspectorText": {
+    "description": "The inspector's section holding the paragraph itself, read-only."
+  },
+  "inspectorCards": "Cards ({count})",
+  "@inspectorCards": {
+    "description": "The inspector's section heading: the cards that read this paragraph.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inspectorExcerpts": "Excerpts ({count})",
+  "@inspectorExcerpts": {
+    "description": "The inspector's section heading: the notes taken out of this paragraph.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inspectorNoCards": "No card reads this paragraph yet.",
+  "@inspectorNoCards": {
+    "description": "The inspector's card section when the paragraph feeds no card."
+  },
+  "inspectorNoExcerpts": "Nothing was excerpted from this paragraph.",
+  "@inspectorNoExcerpts": {
+    "description": "The inspector's excerpt section when nothing quotes the paragraph."
+  },
+  "inspectorReadingPosition": "A reading session stopped here.",
+  "@inspectorReadingPosition": {
+    "description": "The inspector's note that the reading position is this paragraph."
+  },
+  "inspectorLocateInNote": "Locate in the note",
+  "@inspectorLocateInNote": {
+    "description": "The inspector's action that goes back to this paragraph in the note."
+  },
+  "inspectorLocateOnBoard": "Locate on the board",
+  "@inspectorLocateOnBoard": {
+    "description": "The inspector's action that opens the board page on this paragraph's node; shown only when a board places it."
+  },
+  "backlinksTab": "Backlinks ({count})",
+  "@backlinksTab": {
+    "description": "The panel's backlinks tab, with how many notes point at this one.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backlinkMeta": "{count, plural, one {# card} other {# cards}} · excerptable",
+  "@backlinkMeta": {
+    "description": "What a backlink row says of the linking paragraph: the cards it feeds, and that it can still be excerpted."
+  },
+  "noteRetry": "Try again",
+  "@noteRetry": {
+    "description": "The document's action that writes the note again after a failed save."
+  },
+  "outlineEmptyHint": "Type / in a paragraph to start a section.",
+  "@outlineEmptyHint": {
+    "description": "Under the outline's empty state: how a heading is made."
   }
 }

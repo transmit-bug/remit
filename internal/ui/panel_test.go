@@ -8,7 +8,6 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
-	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -41,11 +40,9 @@ func TestOutlineJumpsToItsParagraph(t *testing.T) {
 	if err := tt.Click("The second part"); err != nil {
 		t.Fatalf("the outline does not offer the heading: %v", err)
 	}
-	text := notes.DocumentText(a.notes.Draft)
-	want := notes.ParagraphOffset(text, 3) // the heading's own paragraph
-	_, caret := a.notes.Doc.Selection()
-	if caret != want {
-		t.Errorf("the caret is at %d, want the second paragraph at %d", caret, want)
+	// The second heading is the note's third paragraph, and the caret is in it.
+	if at, ok := a.notes.ParagraphAtCaret(); !ok || at != 2 {
+		t.Errorf("the caret is in paragraph %d, want the heading's own", at+1)
 	}
 	if !tt.Focused("Note") {
 		t.Error("the document did not take the focus after the jump")
@@ -98,10 +95,8 @@ func TestBacklinkOpensTheSourceAtItsParagraph(t *testing.T) {
 	if a.notes.Loaded != string(source.ID) {
 		t.Fatalf("the editor holds %q, want the source note", a.notes.Loaded)
 	}
-	want := notes.ParagraphOffset(notes.DocumentText(a.notes.Draft), 2)
-	_, caret := a.notes.Doc.Selection()
-	if caret != want {
-		t.Errorf("the caret is at %d, want the linking paragraph at %d", caret, want)
+	if at, ok := a.notes.ParagraphAtCaret(); !ok || at != 1 {
+		t.Errorf("the caret is in paragraph %d, want the paragraph that links here", at+1)
 	}
 }
 

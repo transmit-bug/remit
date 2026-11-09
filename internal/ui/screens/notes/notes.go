@@ -25,22 +25,13 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/locales"
 )
 
 const (
-	// defaultNotesWidth is the notes column's width until the divider moves:
-	// the user's width is kept across frames and window resizes, and the split
-	// gives it back when the window has room again. On the smallest window the
-	// column keeps its room and the note shrinks, which is the divider's job.
-	defaultNotesWidth float32 = 260
-	// defaultEditorShare is the document's percentage of the note's room: the
-	// panel takes the rest, in proportion, so both follow the window.
-	defaultEditorShare float32 = 72
 	// defaultReadShare is the document's percentage when read beside its own
 	// source: half of the note, so two places can be compared.
 	defaultReadShare float32 = 50
-	// narrowWindow is the width below which the notebook drops its panel.
-	narrowWindow float32 = 900
 )
 
 // ViewMode is how the notebook shows the note: written in, written beside the
@@ -61,14 +52,89 @@ type Note struct {
 	Tags  []string
 }
 
-// Backlink is a note that points at the note open now, and the paragraph that
-// names it.
+// Backlink is a note that points at the note open now, the paragraph that
+// names it, and what that paragraph holds beside its link.
 type Backlink struct {
 	Note      core.ID
 	NoteTitle string
 	Block     core.ID
 	Paragraph int // counted from one, as the user counts paragraphs
 	Text      string
+	// Cards is how many cards the linking paragraph feeds, and Excerptable
+	// whether it has no excerpt yet: what the row says of the note it names.
+	Cards       int
+	Excerptable bool
+}
+
+// Mark is what read mode says beside one paragraph of the note: the cards it
+// feeds, whether something quotes it already, and whether a reading session
+// stopped there (S12).
+type Mark struct {
+	Cards     int
+	Excerpted bool
+	LastStop  bool
+}
+
+// BadgeState is the shape a paragraph's card badge draws, as the prototype's
+// four shapes read: a card due now, a card never answered, one that comes
+// later, and one that stopped following the paragraph.
+type BadgeState uint8
+
+const (
+	// BadgeDue is held by a paragraph at least one card of which is due now.
+	BadgeDue BadgeState = iota
+	// BadgeNew is held while every card of the paragraph is new.
+	BadgeNew
+	// BadgeLater is held while the paragraph's cards are all scheduled ahead.
+	BadgeLater
+	// BadgeLost is held when a card stopped following the paragraph, so the
+	// words on the paper are no longer the words on the card.
+	BadgeLost
+)
+
+// Badge is one paragraph's card badge: how many cards read it and the state
+// its shape draws. It takes the place the badge strip above the document had.
+type Badge struct {
+	Paragraph int // counted from one, as the user counts paragraphs
+	Cards     int
+	State     BadgeState
+}
+
+// BlockItem is one action a plugin contributed to the block menu and the block
+// inspector: what it says, already in the window's language, and what it runs.
+type BlockItem struct {
+	Label string
+	Run   func(*ui.Context)
+}
+
+// Inspector is what the block inspector shows of one paragraph (S20): the
+// paragraph itself, the cards that read it, the excerpts taken from it, whether
+// a reading session stopped at it, and whether a board places it.
+type Inspector struct {
+	Block    core.Block
+	Cards    []InspectorCard
+	Excerpts []InspectorExcerpt
+	// ReadingPosition says a reading session stopped at this paragraph.
+	ReadingPosition bool
+	// OnBoard says a contributed board places this paragraph, so the footer
+	// offers the way to it.
+	OnBoard bool
+}
+
+// InspectorCard is one card of the paragraph: the card, what it asks, and
+// where its text comes from now — a card that stopped following the paragraph
+// shows the words it was frozen at.
+type InspectorCard struct {
+	Card  core.Card
+	Title string // the card's prompt on one line
+	State core.LinkState
+}
+
+// InspectorExcerpt is one note taken out of the paragraph.
+type InspectorExcerpt struct {
+	Note  core.ID
+	Title string
+	Text  string // the excerpt's first line
 }
 
 // CardGroup is one paragraph of the note that feeds cards: the paragraph's place
@@ -125,6 +191,9 @@ type State struct {
 	SearchQuery string
 	// Doc is the note as one document, markers and all.
 	Doc *richtext.Document
+	// PanelToggle is the top bar's panel button, which takes the focus back
+	// when the panel closes.
+	PanelToggle ui.Handle
 	// readOptions is the reading views' Markdown options. Keeping one lets
 	// their image cache survive a frame; the asset URLs are content-addressed.
 	readOptions *markdown.Options
@@ -152,18 +221,29 @@ type State struct {
 	findQuery     string  // what the find bar looks for
 	findCurrent   int     // which match is shown
 	findJumped    string  // the query the selection was last put on
+	saveFailed    bool    // the last write did not reach the store
 	jumpTo        int     // a paragraph of the note to put the caret in, 1-based; 0 for none
 	focus         bool    // the title takes the caret in the next pass
-	editorShare   float32 // the document's percentage of the note's room
 	readShare     float32 // the document's percentage when written beside its source
 	panel         panelMode
 	panelTab      PanelTab
+	panelFocus    ui.Handle            // the panel itself, which takes the focus as it opens
+	panelWant     bool                 // the panel was just asked for: it takes the focus next pass
+	backlinks     ui.ListState         // the panel's backlink rows
+	backlinkChose int                  // the backlink row chosen, -1 for none
 	outline       ui.OutlineState[int] // the note's headings, as the panel lists them
 	outlineChosen int                  // the row the user chose in the outline, -1 for none
 	outlineFor    core.ID              // the note the outline was opened for
 	outlineShape  int                  // how many headings that note had
 	pendingJump   int                  // where a panel row asks the caret to go, -1 for none
 	blockHover    int                  // the visible paragraph under the pointer, -1 for none
+	selectOpen    bool                 // the selection's action bar is up
+	selectRange   [2]int               // the selection the bar acts on
+	selectBlock   core.ID              // the paragraph that selection is in
+	selectSkipped [2]int               // the selection whose bar was dismissed
+	inspect       *Inspector           // the paragraph the block inspector shows, nil while closed
+	inspectOpen   bool                 // the block inspector dialog is up
+	readBlock     int                  // the paragraph read mode is on, -1 before one is chosen
 	blockMenus    map[int]bool         // the visible paragraphs whose block menu is open
 	blockDelete   int                  // the paragraph a delete awaits confirmation for, -1 for none
 	blockLost     int                  // the cards that delete would leave without a source
@@ -191,15 +271,16 @@ func (s *State) ClearFilters() { s.Query, s.TagFilter, s.Filter = "", "", Filter
 // with.
 func New() State {
 	return State{
-		Width:          defaultNotesWidth,
-		editorShare:    defaultEditorShare,
+		Width:          design.NotesColumnWidth,
 		readShare:      defaultReadShare,
 		outlineChosen:  -1,
+		backlinkChose:  -1,
 		OutlineCurrent: -1,
 		pendingJump:    -1,
 		blockHover:     -1,
 		blockDelete:    -1,
 		slashChoice:    -1,
+		readBlock:      -1,
 	}
 }
 
@@ -213,9 +294,17 @@ type Deps struct {
 	Tags func() map[string]int
 	// Backlinks are the notes that point at the note open now.
 	Backlinks func() []Backlink
-	// Cards lists the note's card-bearing paragraphs, as the badge strip shows
-	// them.
+	// Cards lists the note's card-bearing paragraphs, as the block menu's
+	// delete warning counts them.
 	Cards func(core.Note) []CardGroup
+	// Badges are the paragraph gutter's card badges: how many cards each
+	// paragraph feeds and the state its shape draws.
+	Badges func(core.Note) []Badge
+	// Marks are what read mode says beside each paragraph of the note.
+	Marks func(core.Note) map[core.ID]Mark
+	// Inspector is what the block inspector shows of one paragraph, false when
+	// the note no longer holds it.
+	Inspector func(core.ID) (Inspector, bool)
 	// Due is how many cards today's queue holds.
 	Due func() int
 
@@ -247,6 +336,23 @@ type Deps struct {
 	ChooseImage func() (string, error)
 	// OpenCardEdit opens the field editor on a card.
 	OpenCardEdit func(*ui.Context, core.ID)
+	// OpenCardEditor opens the field editor on a block: the card it feeds, or
+	// the empty fields a card of the chosen type starts with.
+	OpenCardEditor func(*ui.Context, core.ID)
+	// OpenCardDetail shows a card's source and its schedule history.
+	OpenCardDetail func(*ui.Context, core.ID)
+	// ClozeSelection rewrites the selected words of a paragraph into a cloze
+	// blank and makes the cards the paragraph then asks for, answering whether
+	// the note was written (S15).
+	ClozeSelection func(*ui.Context, core.ID, core.ID, string) bool
+	// Excerpt takes one paragraph out into a note of its own.
+	Excerpt func(*ui.Context, core.ID, core.ID)
+	// LocateOnBoard opens the board page on a paragraph's node, when a board
+	// places it.
+	LocateOnBoard func(*ui.Context, core.ID)
+	// BlockItems are the actions plugins contributed to the block menu and the
+	// block inspector, in drawing order.
+	BlockItems func(*ui.Context) []BlockItem
 
 	// Rows is the notes page's rows — the query, tag, filters and order the
 	// state holds, answered by the store — and how many notes match in all.
@@ -284,9 +390,10 @@ type Deps struct {
 }
 
 // View draws the notebook: the notes on the left, and on the right the note
-// written in, read beside its own source, or read whole. Each edge is a pane the
-// user drags — a split remembers the width it was given — and a narrow window
-// drops the note's panel so that the document keeps room to be typed.
+// written in, read beside its own source, or read whole. The notes column is a
+// split's pane, so its width is the user's and a double click puts it back;
+// the panel is the note's second column, and a window too narrow for both
+// shows it floating over the paper instead.
 func View(c *ui.Context, s *State, d Deps) {
 	tk := design.NewTokens(c.Theme())
 	s.deps = &d
@@ -299,24 +406,18 @@ func View(c *ui.Context, s *State, d Deps) {
 			case Read:
 				s.readView(c, tk, d)
 			case Split:
+				// The note written beside the same note read: half the room each,
+				// so two places can be compared.
 				ui.SplitPercent(c, &s.readShare, func() {
 					s.editorView(c, tk, d)
 				}, func() {
 					s.secondPane(c, tk, d)
 				}).SplitReset(defaultReadShare).Fill()
 			default:
-				if !s.panelShown(w) {
-					s.editorView(c, tk, d)
-					return
-				}
-				ui.SplitPercent(c, &s.editorShare, func() {
-					s.editorView(c, tk, d)
-				}, func() {
-					s.notePanel(c, tk, d)
-				}).SplitReset(defaultEditorShare).Fill()
+				s.writeArea(c, tk, d, w)
 			}
 		})
-	}).SplitReset(defaultNotesWidth).Fill()
+	}).SplitReset(design.NotesColumnWidth).Fill()
 
 	// A row chosen in the panel moves the caret after the pass: the editor above
 	// keeps its own view state, and a jump made inside the build is written back
@@ -325,6 +426,54 @@ func View(c *ui.Context, s *State, d Deps) {
 		s.jumpInDocument(c, s.pendingJump)
 		s.pendingJump = -1
 	}
+	// The inspector is a dialog over everything else, so it is built last.
+	s.inspectorView(c, tk, d)
+}
+
+// writeArea is the note written in, with its panel beside it when the window
+// has room for both. The panel is a column of its own at PanelWidth, giving
+// way to the paper's floor rather than squeezing the writing out; a window too
+// narrow for the two shows it floating over the paper, which is the same panel
+// with the same rows (S21/S22).
+func (s *State) writeArea(c *ui.Context, tk design.Tokens, d Deps, w float32) {
+	if !s.panelShown(w) {
+		s.editorView(c, tk, d)
+		return
+	}
+	if w <= design.BreakpointNarrow {
+		s.editorView(c, tk, d)
+		s.panelOverlay(c, tk, d)
+		return
+	}
+	// The panel is a column of its own at the design's width, so its rows — the
+	// tabs and the close — fit at every window it shows in; the paper takes the
+	// rest and the notes column, which is a split, is how a narrow window gives
+	// the writing more room.
+	ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Stretch).Children(func() {
+		s.editorView(c, tk, d)
+		ui.Divider(c).Shrink(0).AlignSelf(ui.Stretch)
+		s.notePanel(c, tk, d)
+	})
+}
+
+// panelOverlay shows the note's panel over the paper on a window too narrow for
+// a second column: a drawer at the window's edge, dismissed with Escape or a
+// press beside it. The focus goes into it as it opens and back to the top bar's
+// button as it closes.
+func (s *State) panelOverlay(c *ui.Context, tk design.Tokens, d Deps) {
+	msgs := locales.In(c.Locale())
+	ui.Overlay(c, func() {
+		back := ui.Row(c).Absolute().Left(0).Top(0).Right(0).Bottom(0).
+			Justify(ui.End).Background(tk.Scrim).Modal()
+		back.Children(func() {
+			panel := ui.Column(c).Width(tk.PanelWidth).FillHeight().Shrink(0).
+				Background(tk.Surface).Role(ui.RoleDialog).Label(msgs.PanelTitle())
+			if panel.PressedOutside() || back.OverlayShortcut(0, ui.KeyEscape) {
+				s.closePanel(c)
+			}
+			s.panelBody(c, tk, d)
+		})
+	})
 }
 
 // Follow points the draft at the note the list chose, before that note is
@@ -359,6 +508,8 @@ func (s *State) hold(note core.Note) {
 	s.Doc, s.docNote, s.docText = nil, "", ""
 	s.blockHover, s.blockMenus = -1, nil
 	s.blockDelete, s.blockLost = -1, 0
+	s.readBlock, s.selectOpen, s.inspectOpen = -1, false, false
+	s.inspect = nil
 	s.resetSlash()
 }
 
@@ -436,17 +587,6 @@ func isAssetRef(url string) bool {
 	return strings.HasPrefix(url, "assets/") && !strings.Contains(url, "..")
 }
 
-// compact drops adjacent duplicates of a sorted list.
-func compact(refs []string) []string {
-	out := refs[:0]
-	for i, ref := range refs {
-		if i == 0 || ref != refs[i-1] {
-			out = append(out, ref)
-		}
-	}
-	return out
-}
-
 // ParagraphAtCaret is the paragraph the caret is in, counted from zero as the
 // note's blocks are; false when the notebook holds no note or the caret is past
 // its last paragraph.
@@ -454,16 +594,39 @@ func (s *State) ParagraphAtCaret() (int, bool) {
 	if s.Doc == nil || s.Draft.ID == "" {
 		return 0, false
 	}
-	text := s.Doc.Text().String()
 	_, caret := s.Doc.Selection()
-	start, _ := paragraphAt(text, caret)
-	// The paragraphs are the blocks, in order: the caret's place among the
-	// blank lines is the block it is in.
-	at := strings.Count(text[:start], "\n\n")
+	at := s.paragraphAt(caret)
 	return at, at >= 0 && at < len(s.Draft.Blocks)
 }
 
-// panelShown reports whether the note's panel takes a column this frame.
+// paragraphAt is the paragraph of the editor's own text an offset falls in,
+// counted from zero as the note's blocks are. The paragraphs are the document's
+// structure, not a split on characters: a blank line the user types is part of
+// the paragraph it is in until the editor starts another, and each paragraph's
+// newline belongs to it.
+func (s *State) paragraphAt(offset int) int {
+	if s.Doc == nil {
+		return -1
+	}
+	index, at := 0, 0
+	for _, paragraph := range s.Doc.Text().Paragraphs() {
+		length := 0
+		for _, run := range paragraph.Runs {
+			length += len([]rune(run.Text))
+		}
+		if offset <= at+length {
+			return index
+		}
+		at += length + 1
+		index++
+	}
+	return max(0, index-1)
+}
+
+// panelShown reports whether the note's panel shows this frame: a column on a
+// window wide enough for the paper and the panel, and the same panel floating
+// over the paper below that. A narrow window closes it until the user asks for
+// it, so the writing starts with the room the whole window gives.
 func (s *State) panelShown(w float32) bool {
 	switch s.panel {
 	case panelOpen:
@@ -471,22 +634,35 @@ func (s *State) panelShown(w float32) bool {
 	case panelClosed:
 		return false
 	}
-	return w >= narrowWindow
+	return w > design.BreakpointNarrow
 }
 
 // TogglePanel opens or closes the note's panel, whatever the window's width.
+// The panel takes the focus as it opens; closing it gives the focus back to the
+// top bar's button, which is what opened it from the keyboard.
 func (s *State) TogglePanel(c *ui.Context) {
 	w, _ := c.Size()
 	if s.panelShown(w) {
-		s.panel = panelClosed
+		s.closePanel(c)
 		return
 	}
-	s.panel = panelOpen
+	s.ShowPanel(s.panelTab)
+}
+
+// closePanel puts the panel away and hands the focus back to the control that
+// opens it, so the keyboard goes on from where it was.
+func (s *State) closePanel(c *ui.Context) {
+	s.panel, s.panelWant = panelClosed, false
+	s.PanelToggle.Focus(c)
 }
 
 // ShowPanel opens the note's panel on one of its views, from the keyboard.
-func (s *State) ShowPanel(tab PanelTab) { s.panel, s.panelTab = panelOpen, tab }
+func (s *State) ShowPanel(tab PanelTab) { s.panel, s.panelTab, s.panelWant = panelOpen, tab, true }
 
 // FocusTitle puts the caret in the note's title in the next pass, which is what
 // a note just written wants.
 func (s *State) FocusTitle() { s.focus = true }
+
+// PanelVisible reports whether the note's panel shows in a window this wide, so
+// the top bar's button can say so.
+func (s *State) PanelVisible(w float32) bool { return s.panelShown(w) }

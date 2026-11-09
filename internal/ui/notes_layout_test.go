@@ -200,7 +200,8 @@ func assertNotebookFills(t *testing.T, tt *ui.Tester, msgs locales.Messages, h i
 	if !ok {
 		t.Fatalf("the notes tree is missing; texts %q", tt.Texts())
 	}
-	if bottom := tree.Bounds.Y + tree.Bounds.H; bottom < float32(h)-1 {
-		t.Errorf("the notes tree ends at %v, want the %v-high window's bottom", bottom, h)
+	// The stage ends above the window's status line, which is the frame's.
+	if bottom := tree.Bounds.Y + tree.Bounds.H; bottom < float32(h)-design.StatusbarHeight-1 {
+		t.Errorf("the notes tree ends at %v, want the %v-high window's stage bottom", bottom, h)
 	}
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/egoist/mygo/ui/markdown"
 	"github.com/egoist/mygo/ui/richtext"
 
-	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
@@ -35,20 +34,19 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 		s.findBar(c)
 	}
 	if s.jumpTo > 0 {
-		// A backlink names a paragraph of this note: the caret goes there, which
-		// scrolls it into view.
-		if at := ParagraphOffset(DocumentText(s.Draft), s.jumpTo); at >= 0 {
-			s.Doc.SetSelection(at, at)
-			s.body.Focus(c)
-		}
+		// A backlink or a panel row names a paragraph of this note: the caret
+		// goes there, which scrolls it into view.
+		s.jumpInDocument(c, s.jumpTo)
 		s.jumpTo = 0
 	}
 
 	edited, retitled := false, false
 	var blockChange blockAction
-	// The band under the frame: the format bar, then the paper itself, then the
-	// status line. The paper is one centred measure; nothing else is boxed.
+	// The band under the frame: the format bar, then the paper itself. The
+	// paper is one centred measure; nothing else is boxed, and what the note
+	// holds is the window's status line rather than a foot inside the paper.
 	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
+		s.saveNotice(c, tk, msgs, d)
 		s.formatBar(c, tk)
 		ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Stretch).Justify(ui.Center).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(tk.PaperWidth).
@@ -97,6 +95,7 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 						edited = true
 					}
 					s.blockHandles(c, tk, msgs, d, &blockChange)
+					s.selectionBar(c, tk, msgs, d, boxes)
 					s.slashMenu(c, tk, msgs, boxes)
 				})
 				s.slashShortcuts(c, editor)
@@ -106,7 +105,6 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 				}
 			})
 		})
-		s.statusLine(c, tk, cardCount(s.Draft, library))
 	})
 	if s.applySlash(c, d) {
 		edited = true
@@ -123,44 +121,6 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 			s.Keep(saved)
 		}
 	}
-}
-
-// cardCount is how many cards a note feeds, as the app counted them for the
-// list.
-func cardCount(note core.Note, library []Note) int {
-	for _, row := range library {
-		if row.ID == note.ID {
-			return row.Cards
-		}
-	}
-	return 0
-}
-
-// statusLine is the paper's quiet foot: what the note holds. 11px, pencil, on
-// the same line as the writing, never a toolbar.
-func (s *State) statusLine(c *ui.Context, tk design.Tokens, cards int) {
-	msgs := locales.In(c.Locale())
-	text := s.Doc.Text().String()
-	words := len(strings.Fields(text))
-	paragraphs := s.Doc.Text().ParagraphCount()
-	ui.Row(c).Justify(ui.Center).Children(func() {
-		ui.Row(c).Grow(1).MaxWidth(tk.PaperWidth).AlignItems(ui.Center).Gap(tk.SpaceS).
-			Padding(tk.SpaceS, tk.Gutter).Children(func() {
-			ui.Text(c, msgs.WordCount(words)).
-				FontSize(tk.TypeCaption).TextColor(tk.TextMuted)
-			ui.Text(c, "·").FontSize(tk.TypeCaption).TextColor(tk.TextFaint)
-			ui.Text(c, msgs.ParagraphCount(paragraphs)).
-				FontSize(tk.TypeCaption).TextColor(tk.TextMuted)
-			if cards > 0 {
-				ui.Text(c, "·").FontSize(tk.TypeCaption).TextColor(tk.TextFaint)
-				ui.Text(c, msgs.CardCount(cards)).
-					FontSize(tk.TypeCaption).TextColor(tk.TextMuted)
-			}
-			ui.Spacer(c)
-			ui.Text(c, msgs.Saved()).
-				FontSize(tk.TypeCaption).TextColor(tk.TextFaint)
-		})
-	})
 }
 
 // findBar shows the in-document find bar: it counts the query in the note open
@@ -218,25 +178,6 @@ func (s *State) secondPane(c *ui.Context, tk design.Tokens, d Deps) {
 	}
 	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL).Children(func() {
 		markdown.View(c, DocumentText(s.Draft), s.imageOptions())
-	})
-}
-
-// readView is the note as it reads, whole: its title, then the document with its
-// headings, lists and links, and no control over it.
-func (s *State) readView(c *ui.Context, tk design.Tokens, d Deps) {
-	msgs := locales.In(c.Locale())
-	s.Follow(d.Notes())
-	if s.Draft.ID == "" {
-		kit.Empty(c, "file-text", msgs.NoNotes(), func() {
-			ui.Button(c, msgs.NewNote()).MinHeight(tk.Control).OnClick(func() { d.NewNote(c) })
-		})
-		return
-	}
-	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL).Children(func() {
-		ui.Column(c).MaxWidth(design.ReadingWidth).Gap(tk.SpaceM).Children(func() {
-			ui.Text(c, s.Draft.Title).FontSize(tk.TypeH2).Bold()
-			markdown.View(c, DocumentText(s.Draft), s.imageOptions())
-		})
 	})
 }
 
@@ -406,7 +347,39 @@ func (s *State) saveDocument(c *ui.Context, d Deps) {
 	}
 	s.Draft.Blocks = s.blocksFromLive(live)
 	s.docText = live
-	if saved, ok := d.SaveDocument(c, s.Draft); ok {
+	saved, ok := d.SaveDocument(c, s.Draft)
+	s.saveFailed = !ok
+	if ok {
+		s.Keep(saved)
+	}
+}
+
+// saveNotice is the in-place word that a write did not reach the store, with
+// the one action that tries it again on the paper the user still has: the toast
+// the app raises goes away, and the writing must not.
+func (s *State) saveNotice(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps) {
+	if !s.saveFailed {
+		return
+	}
+	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Padding(tk.SpaceS, tk.SpaceL).
+		Background(tk.Danger.Alpha(0.10)).Children(func() {
+		tk.Icon(c, "circle-alert", design.IconSmall).TextColor(tk.Danger)
+		ui.Text(c, msgs.SaveFailed()).FontSize(tk.TypeUI).TextColor(tk.Danger).Grow(1)
+		if ui.Button(c, msgs.NoteRetry()).MinHeight(tk.Control).Clicked() {
+			s.retrySave(c, d)
+		}
+	})
+}
+
+// retrySave writes the draft again after a failed save: the note on the paper
+// is what the store should hold, whether or not the text changed since.
+func (s *State) retrySave(c *ui.Context, d Deps) {
+	if s.Doc != nil {
+		s.Draft.Blocks = s.blocksFromLive(s.Doc.Text().Markdown())
+	}
+	saved, ok := d.SaveDocument(c, s.Draft)
+	s.saveFailed = !ok
+	if ok {
 		s.Keep(saved)
 	}
 }

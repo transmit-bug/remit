@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -24,6 +25,9 @@ func (a *App) notesDeps() notes.Deps {
 		Tags:       func() map[string]int { return a.data.tags },
 		Backlinks:  func() []notes.Backlink { return a.backlinks },
 		Cards:      a.cardGroups,
+		Badges:     a.blockBadges,
+		Marks:      a.readMarks,
+		Inspector:  a.blockInspector,
 		Due:        func() int { return a.review.Remaining() },
 		Reload:     a.reload,
 		OpenReview: func() { a.setMode(modeReview) },
@@ -32,12 +36,22 @@ func (a *App) notesDeps() notes.Deps {
 		NewFromTemplate: func(c *ui.Context, id core.ID) {
 			a.newNoteFromTemplate(c, id)
 		},
-		SaveNote:     a.saveNote,
-		SaveDocument: a.saveDocument,
-		PutAsset:     a.putAsset,
-		GetAsset:     a.getAsset,
-		ChooseImage:  a.pickImage,
-		OpenCardEdit: a.openCardEdit,
+		SaveNote:       a.saveNote,
+		SaveDocument:   a.saveDocument,
+		PutAsset:       a.putAsset,
+		GetAsset:       a.getAsset,
+		ChooseImage:    a.pickImage,
+		OpenCardEdit:   a.openCardEdit,
+		OpenCardEditor: a.openCardEditor,
+		OpenCardDetail: a.openCardDetail,
+		ClozeSelection: a.clozeSelection,
+		Excerpt: func(c *ui.Context, note, block core.ID) {
+			a.excerptBlock(c, note, block, false)
+		},
+		LocateOnBoard: a.LocateOnBoard,
+		BlockItems: func(c *ui.Context) []notes.BlockItem {
+			return a.blockMenuItems(c)
+		},
 
 		Rows:      func() ([]notes.Row, int) { return a.write.rows, a.write.total },
 		TagRows:   func() []notes.TagRow { return a.write.tags },
@@ -247,4 +261,256 @@ func (a *App) editNote(card core.Card) {
 	}
 	a.notes.Selected = string(note)
 	a.setMode(modeNotes)
+}
+
+// blockBadges is the paragraph gutter's badges: how many cards each paragraph
+// of the note feeds, and the state the badge's shape draws. A suspended card
+// feeds nothing, so it is not counted; a frozen one keeps its words while the
+// paragraph moves on, which is the `!` the badge shows.
+func (a *App) blockBadges(note core.Note) []notes.Badge {
+	byBlock := make(map[core.ID][]core.Card, len(note.Blocks))
+	for _, card := range a.data.cards {
+		if card.Status == core.StatusSuspended {
+			continue
+		}
+		byBlock[card.Ref.Block] = append(byBlock[card.Ref.Block], card)
+	}
+	due := make(map[core.ID]bool, len(a.due))
+	for _, id := range a.due {
+		due[id] = true
+	}
+	var out []notes.Badge
+	for i, block := range note.Blocks {
+		cards := byBlock[block.ID]
+		if len(cards) == 0 {
+			continue
+		}
+		out = append(out, notes.Badge{
+			Paragraph: i + 1,
+			Cards:     len(cards),
+			State:     badgeState(cards, due),
+		})
+	}
+	return out
+}
+
+// badgeState is the shape one paragraph's badge draws: a card that stopped
+// following it first, then whether every card is new, whether one is due now,
+// and otherwise that they come later.
+func badgeState(cards []core.Card, due map[core.ID]bool) notes.BadgeState {
+	fresh, now := true, false
+	for _, card := range cards {
+		if card.Ref.Frozen != nil {
+			return notes.BadgeLost
+		}
+		if card.Status != core.StatusNew {
+			fresh = false
+		}
+		if due[card.ID] {
+			now = true
+		}
+	}
+	switch {
+	case fresh:
+		return notes.BadgeNew
+	case now:
+		return notes.BadgeDue
+	}
+	return notes.BadgeLater
+}
+
+// readMarks is what read mode says beside each paragraph: the cards it feeds,
+// whether something already quotes it, and whether a reading session stopped
+// there. It is derived from the snapshot, so the reading view asks no store.
+func (a *App) readMarks(note core.Note) map[core.ID]notes.Mark {
+	out := make(map[core.ID]notes.Mark, len(note.Blocks))
+	position := a.readingPositions[note.ID]
+	for _, block := range note.Blocks {
+		mark := notes.Mark{
+			Cards:     a.data.cardsForBlock(block.ID),
+			Excerpted: a.excerpted[block.ID],
+			LastStop:  position != "" && block.ID == position,
+		}
+		if mark.Cards == 0 && !mark.Excerpted && !mark.LastStop {
+			continue
+		}
+		out[block.ID] = mark
+	}
+	return out
+}
+
+// blockInspector is what the block inspector shows of one paragraph (S20): the
+// paragraph, the cards that read it with what they ask now, the notes taken out
+// of it, whether a reading session stopped there, and whether a board places it.
+// It is derived once, as the dialog opens, so a frame walks nothing for it.
+func (a *App) blockInspector(blockID core.ID) (notes.Inspector, bool) {
+	note, ok := a.data.noteOfBlock(blockID)
+	if !ok {
+		return notes.Inspector{}, false
+	}
+	held, ok := a.data.note(note)
+	if !ok {
+		return notes.Inspector{}, false
+	}
+	block, ok := held.Block(blockID)
+	if !ok {
+		return notes.Inspector{}, false
+	}
+	out := notes.Inspector{
+		Block:           block,
+		ReadingPosition: a.readingPositions[note] == blockID,
+		OnBoard:         a.OnBoard(blockID),
+	}
+	for _, card := range a.data.cards {
+		if card.Ref.Block != blockID {
+			continue
+		}
+		prompt, _, state := a.faces(card)
+		out.Cards = append(out.Cards, notes.InspectorCard{
+			Card: card, Title: oneLine(prompt), State: state,
+		})
+	}
+	for _, excerpt := range a.excerptsOf(blockID) {
+		out.Excerpts = append(out.Excerpts, excerpt)
+	}
+	return out, true
+}
+
+// excerptsOf lists the notes taken out of one paragraph, newest first: an
+// excerpt is a note whose block links back to the paragraph it quotes, which is
+// the link the index reads too.
+func (a *App) excerptsOf(blockID core.ID) []notes.InspectorExcerpt {
+	var out []notes.InspectorExcerpt
+	for _, note := range a.data.notes {
+		for _, block := range note.Blocks {
+			quotes := false
+			for _, link := range core.Links(block.Text) {
+				if link.Block == blockID {
+					quotes = true
+					break
+				}
+			}
+			if !quotes {
+				continue
+			}
+			out = append(out, notes.InspectorExcerpt{
+				Note: note.ID, Title: note.Title, Text: excerptLine(block.Text),
+			})
+			break
+		}
+	}
+	return out
+}
+
+// excerptLine is an excerpt block's passage without the reference under it: the
+// line a reader recognizes the note by.
+func excerptLine(text string) string {
+	if i := strings.Index(text, "\n"); i >= 0 {
+		return oneLine(text[:i])
+	}
+	return oneLine(text)
+}
+
+// clozeSelection is the selection bar's cloze: the words the user selected become
+// a {{…}} blank in their paragraph, the note is stored, and the paragraph then
+// asks for the cards a blank makes. It answers whether the note was written, so
+// the screen keeps the selection when it was not.
+func (a *App) clozeSelection(c *ui.Context, noteID, blockID core.ID, selected string) bool {
+	if a.lib == nil || noteID == "" || blockID == "" {
+		return false
+	}
+	note, ok := a.data.note(noteID)
+	if !ok {
+		return false
+	}
+	block, ok := note.Block(blockID)
+	if !ok {
+		return false
+	}
+	rewritten := core.Cloze(block.Text, selected)
+	if rewritten == block.Text {
+		// The paragraph already holds exactly this blank: nothing to write, and
+		// the cards it asks for are already made.
+		return false
+	}
+	for i := range note.Blocks {
+		if note.Blocks[i].ID == blockID {
+			note.Blocks[i].Text = rewritten
+			break
+		}
+	}
+	saved, ok := a.writeNote(c, note)
+	if !ok {
+		return false
+	}
+	a.reload()
+	a.reconcileCards(c, saved)
+	return true
+}
+
+// blockMenuItems are the actions plugins contributed to a paragraph's menu and
+// its inspector, in drawing order, with the labels the window's language gives
+// them (ui.md §4, the note.block slot).
+func (a *App) blockMenuItems(c *ui.Context) []notes.BlockItem {
+	items := a.noteBlockItems()
+	if len(items) == 0 {
+		return nil
+	}
+	out := make([]notes.BlockItem, 0, len(items))
+	for _, item := range items {
+		ref := item.CommandRef
+		out = append(out, notes.BlockItem{
+			Label: a.pluginText(c, ref.Plugin, string(ref.Command.Title)),
+			Run:   func(c *ui.Context) { a.runContribution(c, ref) },
+		})
+	}
+	return out
+}
+
+// docStatus is the window's status line while a note is up: what the note holds,
+// where the reader is in it, and that it is stored, in the smallest type the
+// window has. Every other page leaves the line to the frame's own.
+func (a *App) docStatus(c *ui.Context) []string {
+	if a.area != areaWrite || a.sub != subNotes || a.notes.Draft.ID == "" {
+		return nil
+	}
+	msgs := m(c)
+	note := a.notes.Draft
+	text := ""
+	if a.notes.Doc != nil {
+		text = a.notes.Doc.Text().String()
+	}
+	out := []string{
+		msgs.WordCount(len(strings.Fields(text))),
+		msgs.ParagraphCount(len(note.Blocks)),
+		msgs.CardCount(a.data.cardsInNote(note)),
+	}
+	// Where the reader is: the caret's paragraph while writing, and the
+	// paragraph on screen while reading.
+	at := 0
+	if a.notes.View == notes.Read {
+		at = a.notes.ReadParagraph()
+	} else if caret, ok := a.notes.ParagraphAtCaret(); ok {
+		at = caret + 1
+	}
+	if at > 0 {
+		out = append(out, msgs.ReadingParagraph(at))
+	}
+	if tags := a.data.noteTags[note.ID]; len(tags) > 0 {
+		out = append(out, "#"+strings.Join(tags, " #"))
+	}
+	out = append(out, msgs.Saved())
+	return out
+}
+
+// excerptReadBlock is the read mode's excerpt key: it takes the paragraph on
+// screen out into a note of its own, through the same handler the reading
+// session and the selection bar use.
+func (a *App) excerptReadBlock(c *ui.Context) {
+	a.notes.Follow(a.notesRows)
+	_, block, ok := a.notes.CurrentReadBlock()
+	if !ok {
+		return
+	}
+	a.excerptBlock(c, a.notes.Draft.ID, block.ID, false)
 }

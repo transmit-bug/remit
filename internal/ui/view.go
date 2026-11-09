@@ -127,6 +127,7 @@ func (a *App) shellDeps(c *ui.Context) shell.Deps {
 		Actions:    a.contextActions,
 		OnPalette:  func() { a.openPalette(c) },
 		Overflow:   func(menu *ui.Menu) { a.overflowMenu(c, menu) },
+		Status:     a.docStatus(c),
 	}
 }
 

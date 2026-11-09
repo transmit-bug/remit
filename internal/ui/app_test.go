@@ -94,11 +94,13 @@ func TestMinimumSizeControls(t *testing.T) {
 		assertControl(t, tt, 720, 520, label)
 	}
 
-	// Making a card is a command now, reachable at the smallest window too.
+	// Making a card is a command now, reachable at the smallest window too. A
+	// note opens with the caret at its end, so the paragraph it is in is the
+	// last one.
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("make card")
 	tt.Key(0, ui.KeyEnter)
-	if !tt.HasText("Card made from block 1") {
+	if !tt.HasText("Card made from block 2") {
 		t.Fatalf("Make card did not run at the minimum; texts %q", tt.Texts())
 	}
 	tt.Advance(5 * time.Second) // let the toast go
