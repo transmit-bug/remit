@@ -131,6 +131,7 @@ type App struct {
 	export           exportState
 	relink           relink.State
 	cardEdit         cardEditState
+	cardDetail       cardDetailState
 	prefs            screensettings.State
 	prefsBack        areaID                                  // the area the settings page goes back to
 	prefsBackSub     subID                                   // and the page of it

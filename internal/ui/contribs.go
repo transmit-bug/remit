@@ -589,7 +589,31 @@ func (a *App) pluginPageView(c *ui.Context) {
 		Message: func(c *ui.Context, raw string) string { return a.pluginText(c, ref.Plugin, raw) },
 		Run:     func(c *ui.Context, command string) { a.runPageCommand(c, ref, command) },
 		Retry:   func(c *ui.Context) { a.loadPage(c, ref, true) },
+		Header:  a.pageHeaderActions(c),
+		Node:    a.boardNodeInfo,
+		OpenBlock: func(c *ui.Context, note, block string) {
+			a.openBoardBlock(c, note, block)
+		},
 	})
+}
+
+// pageHeaderActions is a page's own header actions: the page.header slot's items
+// for this window, in this frame's language, all read from the cache the library
+// load left. A frame asks no plugin for them (ui.md §9).
+func (a *App) pageHeaderActions(c *ui.Context) []pluginpage.Action {
+	items := a.pageHeaderItems()
+	if len(items) == 0 {
+		return nil
+	}
+	actions := make([]pluginpage.Action, 0, len(items))
+	for _, item := range items {
+		command := item.CommandRef
+		actions = append(actions, pluginpage.Action{
+			Label: a.pluginText(c, command.Plugin, string(command.Command.Title)),
+			Run:   func(c *ui.Context) { a.runContribution(c, command) },
+		})
+	}
+	return actions
 }
 
 // runPageCommand runs a command one of a page's actions names: its own plugin's

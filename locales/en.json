@@ -4219,5 +4219,89 @@
   "recallRelink": "Open the lost cards",
   "@recallRelink": {
     "description": "The Lost filter's one action: show the cards whose paragraph is gone, where each is pointed at another paragraph."
+  },
+  "boardCards": "{count, plural, one {# card} other {# cards}}",
+  "@boardCards": {
+    "description": "How many cards the block a board node stands for feeds."
+  },
+  "boardBlockGone": "This block is not in the note any more.",
+  "@boardBlockGone": {
+    "description": "A board node whose block a hand edit has taken out of its note."
+  },
+  "boardLocate": "Locate on board",
+  "@boardLocate": {
+    "description": "The block menu's and the inspector's entry that opens the board at this block's node."
+  },
+  "cardType": "Type",
+  "@cardType": {
+    "description": "The card editor's type selector: the card's type decides the fields under it."
+  },
+  "cardFieldsHint": "A field left empty follows the paragraph.",
+  "@cardFieldsHint": {
+    "description": "Under the card editor's fields: an empty field is not stored, so the card keeps reading its block."
+  },
+  "cardNotACard": "This paragraph is not a card yet.",
+  "@cardNotACard": {
+    "description": "The card editor opened on a block that feeds no card: delete has nothing to delete."
+  },
+  "cardDelete": "Delete card…",
+  "@cardDelete": {
+    "description": "The card editor's destructive action, and the answer that confirms it."
+  },
+  "cardDeleteTitle": "Delete this card?",
+  "@cardDeleteTitle": {
+    "description": "The card editor's confirmation before a card and its review history are deleted."
+  },
+  "cardDeleteBody": "Its review history goes with it. The paragraph stays.",
+  "@cardDeleteBody": {
+    "description": "What deleting a card costs: the reviews go, the note does not change."
+  },
+  "cardLinkLive": "Follows the paragraph",
+  "@cardLinkLive": {
+    "description": "The card's link badge while it reads its block as it is now."
+  },
+  "cardDetail": "Card details",
+  "@cardDetail": {
+    "description": "The dialog that shows one card's source and schedule history."
+  },
+  "cardSource": "Source",
+  "@cardSource": {
+    "description": "Heading of the paragraph a card reads."
+  },
+  "cardBackToSource": "Back to source",
+  "@cardBackToSource": {
+    "description": "The card detail's action that opens the note read at the card's block."
+  },
+  "cardHistory": "Schedule history",
+  "@cardHistory": {
+    "description": "Heading of the list of a card's reviews."
+  },
+  "cardHistoryEmpty": "No reviews yet.",
+  "@cardHistoryEmpty": {
+    "description": "The card detail's history list when the card has never been answered."
+  },
+  "cardHistoryInterval": "{count, plural, one {# day} other {# days}}",
+  "@cardHistoryInterval": {
+    "description": "How long one review scheduled the card for, in days."
+  },
+  "cardFreeze": "Freeze",
+  "@cardFreeze": {
+    "description": "The card detail's action that stops the card following its paragraph."
+  },
+  "cardThaw": "Thaw",
+  "@cardThaw": {
+    "description": "The card detail's action that lets a frozen card follow its paragraph again."
+  },
+  "pluginPageActions": "Page actions",
+  "@pluginPageActions": {
+    "description": "Accessible label of a contributed page's header actions."
+  },
+  "cardDeleteConfirm": "Delete",
+  "@cardDeleteConfirm": {
+    "description": "The answer that confirms deleting a card."
+  },
+  "cardFreezeHint": "A frozen card keeps the words it was made from.",
+  "@cardFreezeHint": {
+    "description": "Under the card editor's freeze switch: what freezing does to a card."
   }
 }

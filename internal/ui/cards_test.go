@@ -10,6 +10,8 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/schedule"
+	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -225,5 +227,249 @@ func TestMakeCard(t *testing.T) {
 	tt.Advance(320 * time.Millisecond) // the card's entry
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
+	}
+}
+
+// The editor's fields are its type's: choosing another type rebuilds them from
+// that type's template, what the fields hold is what the store keeps, and a
+// paragraph that is not a card yet says so instead of offering a delete. The
+// smallest window and the other language are the same dialog, because the panel
+// is a measure rather than a column.
+func TestCardEditorWritesTheFieldsOfItsType(t *testing.T) {
+	for _, size := range windowSizes {
+		t.Run(size.name, func(t *testing.T) {
+			locale := "en"
+			if size.name == "minimum" {
+				locale = "zh-Hans"
+			}
+			msgs := locales.In(locale)
+			a, seed := newTestApp(t)
+
+			// The badge and the block inspector open this dialog in the app; the
+			// test opens it the way they do, on the paragraph the card reads.
+			edit := openCardEditor(a, seed.memory.Blocks[0].ID)
+			tt := ui.NewTester(edit, size.w, size.h)
+			tt.SetLocale(locale)
+			settle(tt)
+
+			if !tt.HasText(msgs.EditCard()) {
+				t.Fatalf("the editor did not open; texts %q", tt.Texts())
+			}
+			// A basic card asks two things, so the editor holds two fields.
+			assertControl(t, tt, size.w, size.h, msgs.CardType())
+			for _, field := range []string{"Front", "Back"} {
+				assertControl(t, tt, size.w, size.h, field)
+			}
+
+			// The type decides the fields: a cloze card asks one, and the two the
+			// basic card asked are gone.
+			if err := tt.Click("Basic"); err != nil {
+				t.Fatalf("open the type selector: %v", err)
+			}
+			if err := tt.Click("Cloze"); err != nil {
+				t.Fatalf("choose a type: %v", err)
+			}
+			tt.Frame()
+			if _, ok := tt.Find("Front"); ok {
+				t.Fatalf("the old type's fields are still drawn; texts %q", tt.Texts())
+			}
+			assertControl(t, tt, size.w, size.h, "Text")
+
+			if err := tt.Click("Text"); err != nil {
+				t.Fatalf("the cloze field: %v", err)
+			}
+			tt.Type("Spacing beats cramming")
+			if err := tt.Click(msgs.Save()); err != nil {
+				t.Fatalf("save the card: %v", err)
+			}
+
+			card, ok := a.Library().Card(seed.spacing.ID)
+			if !ok {
+				t.Fatal("the card is gone")
+			}
+			if card.Type != core.TypeCloze {
+				t.Errorf("the card is %s, want the type the dialog chose", card.Type)
+			}
+			if card.Fields["Text"] != "Spacing beats cramming" {
+				t.Errorf("the card's fields are %v, want what the dialog took", card.Fields)
+			}
+			if tt.FramePending() {
+				t.Error("the window still asks for frames after the dialog closed")
+			}
+
+			// A paragraph that feeds no card has nothing to delete, and says so
+			// rather than leaving a control that does nothing.
+			plain := seed.habit.Blocks[1]
+			empty := openCardEditor(a, plain.ID)
+			bare := ui.NewTester(empty, size.w, size.h)
+			bare.SetLocale(locale)
+			bare.Frame()
+			if !bare.HasText(msgs.CardNotACard()) {
+				t.Fatalf("a paragraph without a card does not say so; texts %q", bare.Texts())
+			}
+			assertControl(t, bare, size.w, size.h, msgs.CardDelete())
+			// The delete is there and disabled: pressing it asks nothing.
+			if err := bare.Click(msgs.CardDelete()); err != nil {
+				t.Fatalf("the delete control: %v", err)
+			}
+			if a.cardEdit.asking {
+				t.Error("a delete was offered for a paragraph that is not a card")
+			}
+		})
+	}
+}
+
+// openCardEditor is a view that opens the card editor on a block before the
+// window draws, which is what the badge and the block inspector do from a
+// handler. A view is how a test reaches a dialog with no control of its own in
+// the frame it is opened from.
+func openCardEditor(a *App, block core.ID) func(*ui.Context) {
+	opened := false
+	return func(c *ui.Context) {
+		if !opened {
+			opened = true
+			a.openCardEditor(c, block)
+		}
+		a.View(c)
+	}
+}
+
+// flipSwitch turns a switch on by its accessible name: a switch carries no text
+// of its own, so its name is what the pointer is aimed through.
+func flipSwitch(t *testing.T, tt *ui.Tester, label string) {
+	t.Helper()
+	info, ok := tt.AccessByRole(ui.RoleSwitch, label)
+	if !ok {
+		t.Fatalf("no switch is named %q", label)
+	}
+	tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
+}
+
+// A card's detail is its source and its schedule history: every review it has
+// had, oldest first, with the answer it was given and the interval that answer
+// scheduled. A card nobody answered says so instead of showing an empty list.
+func TestCardDetailListsTheScheduleHistory(t *testing.T) {
+	for _, size := range windowSizes {
+		t.Run(size.name, func(t *testing.T) {
+			locale := "en"
+			if size.name == "minimum" {
+				locale = "zh-Hans"
+			}
+			msgs := locales.In(locale)
+			a, seed := newTestApp(t)
+			// The card table's row and the block inspector's card row open this
+			// dialog in the app; the test opens it the way they will.
+			answered := false
+			tt := ui.NewTester(func(c *ui.Context) {
+				if !answered {
+					answered = true
+					a.openCardDetail(c, seed.spacing.ID)
+				}
+				a.View(c)
+			}, size.w, size.h)
+			tt.SetLocale(locale)
+			settle(tt)
+
+			if !tt.HasText(msgs.CardDetail()) {
+				t.Fatalf("the card's detail did not open; texts %q", tt.Texts())
+			}
+			// The paragraph the card reads is shown before leaving for it.
+			first := seed.memory.Blocks[0].Text
+			if !tt.HasText(first) {
+				t.Errorf("the detail does not show the card's source; texts %q", tt.Texts())
+			}
+			assertControl(t, tt, size.w, size.h, msgs.CardBackToSource())
+
+			if len(a.cardDetail.rows) != 1 {
+				t.Fatalf("the history holds %d rows, want the one review", len(a.cardDetail.rows))
+			}
+			if a.cardDetail.rows[0].Rating != schedule.Again {
+				t.Errorf("the row says %v, want the answer that was given", a.cardDetail.rows[0].Rating)
+			}
+			if a.cardDetail.rows[0].Interval < 1 {
+				t.Errorf("the row schedules %d days, want the interval the answer set", a.cardDetail.rows[0].Interval)
+			}
+			if !tt.HasText(msgs.Again()) {
+				t.Errorf("the list does not name the answer; texts %q", tt.Texts())
+			}
+			if !tt.HasText(msgs.CardHistoryInterval(a.cardDetail.rows[0].Interval)) {
+				t.Errorf("the list does not say what the answer scheduled; texts %q", tt.Texts())
+			}
+
+			// Back to source leaves the dialog and shows the note read at the
+			// card's paragraph.
+			if err := tt.Click(msgs.CardBackToSource()); err != nil {
+				t.Fatalf("back to source: %v", err)
+			}
+			tt.Frame()
+			if a.notes.View != notes.Read || a.notes.At() != 1 || a.notes.Draft.ID != seed.memory.ID {
+				t.Errorf("the window is not on the card's paragraph: note %q, view %v, at %d",
+					a.notes.Draft.ID, a.notes.View, a.notes.At())
+			}
+			if a.cardDetail.open {
+				t.Error("the detail stayed open over the note")
+			}
+
+			// A card nobody answered yet says so, rather than showing an empty
+			// list and looking broken.
+			unanswered := false
+			fresh := ui.NewTester(func(c *ui.Context) {
+				if !unanswered {
+					unanswered = true
+					a.openCardDetail(c, seed.pending.ID)
+				}
+				a.View(c)
+			}, size.w, size.h)
+			fresh.SetLocale(locale)
+			fresh.Frame()
+			if !fresh.HasText(msgs.CardHistoryEmpty()) {
+				t.Errorf("an unanswered card shows no empty state; texts %q", fresh.Texts())
+			}
+		})
+	}
+}
+
+// The editor's other two controls write: the freeze switch stops the card
+// following its paragraph, and the delete asks before it takes the card — and
+// the history that goes with it — while the paragraph stays.
+func TestCardEditorFreezesAndDeletesTheCard(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed := newTestApp(t)
+	tt := ui.NewTester(openCardEditor(a, seed.memory.Blocks[0].ID), 1024, 720)
+	settle(tt)
+
+	flipSwitch(t, tt, msgs.Frozen())
+	tt.Frame()
+	frozen, ok := a.Library().Card(seed.spacing.ID)
+	if !ok || frozen.Ref.Frozen == nil {
+		t.Fatalf("the card did not freeze: %+v", frozen.Ref)
+	}
+	if !tt.HasText(msgs.Frozen()) {
+		t.Errorf("the editor does not say the card is frozen; texts %q", tt.Texts())
+	}
+
+	// The delete asks first, and a card that is not answered stays.
+	if err := tt.Click(msgs.CardDelete()); err != nil {
+		t.Fatalf("the delete: %v", err)
+	}
+	tt.Frame()
+	if !tt.HasText(msgs.CardDeleteTitle()) {
+		t.Fatalf("the delete did not ask; texts %q", tt.Texts())
+	}
+	if _, ok := a.Library().Card(seed.spacing.ID); !ok {
+		t.Fatal("the card went before the question was answered")
+	}
+	if err := tt.Click(msgs.CardDeleteConfirm()); err != nil {
+		t.Fatalf("the answer: %v", err)
+	}
+	tt.Frame()
+	if _, ok := a.Library().Card(seed.spacing.ID); ok {
+		t.Error("the card is still in the library after the answer")
+	}
+	if _, ok := a.Library().Note(seed.memory.ID); !ok {
+		t.Error("the paragraph's note went with the card")
+	}
+	if a.cardEdit.open {
+		t.Error("the editor stayed open over a card that is gone")
 	}
 }

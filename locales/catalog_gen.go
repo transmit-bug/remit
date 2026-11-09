@@ -11076,3 +11076,309 @@ func RecallRelink() string { return In(i18n.Locale()).RecallRelink() }
 func (msgs Messages) RecallRelink() string {
 	return Catalog.Format(msgs.locale, "recallRelink", nil)
 }
+
+// BoardCards says "{count, plural, one {# card} other {# cards}}"
+// in the language the app shows.
+//
+// How many cards the block a board node stands for feeds.
+func BoardCards(count int) string { return In(i18n.Locale()).BoardCards(count) }
+
+// BoardCards says "{count, plural, one {# card} other {# cards}}"
+// in the language of msgs.
+//
+// How many cards the block a board node stands for feeds.
+func (msgs Messages) BoardCards(count int) string {
+	return Catalog.Format(msgs.locale, "boardCards", map[string]any{"count": count})
+}
+
+// BoardBlockGone says "This block is not in the note any more."
+// in the language the app shows.
+//
+// A board node whose block a hand edit has taken out of its note.
+func BoardBlockGone() string { return In(i18n.Locale()).BoardBlockGone() }
+
+// BoardBlockGone says "This block is not in the note any more."
+// in the language of msgs.
+//
+// A board node whose block a hand edit has taken out of its note.
+func (msgs Messages) BoardBlockGone() string {
+	return Catalog.Format(msgs.locale, "boardBlockGone", nil)
+}
+
+// BoardLocate says "Locate on board"
+// in the language the app shows.
+//
+// The block menu's and the inspector's entry that opens the board at this
+// block's node.
+func BoardLocate() string { return In(i18n.Locale()).BoardLocate() }
+
+// BoardLocate says "Locate on board"
+// in the language of msgs.
+//
+// The block menu's and the inspector's entry that opens the board at this
+// block's node.
+func (msgs Messages) BoardLocate() string {
+	return Catalog.Format(msgs.locale, "boardLocate", nil)
+}
+
+// CardType says "Type"
+// in the language the app shows.
+//
+// The card editor's type selector: the card's type decides the fields under
+// it.
+func CardType() string { return In(i18n.Locale()).CardType() }
+
+// CardType says "Type"
+// in the language of msgs.
+//
+// The card editor's type selector: the card's type decides the fields under
+// it.
+func (msgs Messages) CardType() string {
+	return Catalog.Format(msgs.locale, "cardType", nil)
+}
+
+// CardFieldsHint says "A field left empty follows the paragraph."
+// in the language the app shows.
+//
+// Under the card editor's fields: an empty field is not stored, so the card
+// keeps reading its block.
+func CardFieldsHint() string { return In(i18n.Locale()).CardFieldsHint() }
+
+// CardFieldsHint says "A field left empty follows the paragraph."
+// in the language of msgs.
+//
+// Under the card editor's fields: an empty field is not stored, so the card
+// keeps reading its block.
+func (msgs Messages) CardFieldsHint() string {
+	return Catalog.Format(msgs.locale, "cardFieldsHint", nil)
+}
+
+// CardNotACard says "This paragraph is not a card yet."
+// in the language the app shows.
+//
+// The card editor opened on a block that feeds no card: delete has nothing
+// to delete.
+func CardNotACard() string { return In(i18n.Locale()).CardNotACard() }
+
+// CardNotACard says "This paragraph is not a card yet."
+// in the language of msgs.
+//
+// The card editor opened on a block that feeds no card: delete has nothing
+// to delete.
+func (msgs Messages) CardNotACard() string {
+	return Catalog.Format(msgs.locale, "cardNotACard", nil)
+}
+
+// CardDelete says "Delete card…"
+// in the language the app shows.
+//
+// The card editor's destructive action, and the answer that confirms it.
+func CardDelete() string { return In(i18n.Locale()).CardDelete() }
+
+// CardDelete says "Delete card…"
+// in the language of msgs.
+//
+// The card editor's destructive action, and the answer that confirms it.
+func (msgs Messages) CardDelete() string {
+	return Catalog.Format(msgs.locale, "cardDelete", nil)
+}
+
+// CardDeleteTitle says "Delete this card?"
+// in the language the app shows.
+//
+// The card editor's confirmation before a card and its review history are
+// deleted.
+func CardDeleteTitle() string { return In(i18n.Locale()).CardDeleteTitle() }
+
+// CardDeleteTitle says "Delete this card?"
+// in the language of msgs.
+//
+// The card editor's confirmation before a card and its review history are
+// deleted.
+func (msgs Messages) CardDeleteTitle() string {
+	return Catalog.Format(msgs.locale, "cardDeleteTitle", nil)
+}
+
+// CardDeleteBody says "Its review history goes with it. The paragraph stays."
+// in the language the app shows.
+//
+// What deleting a card costs: the reviews go, the note does not change.
+func CardDeleteBody() string { return In(i18n.Locale()).CardDeleteBody() }
+
+// CardDeleteBody says "Its review history goes with it. The paragraph stays."
+// in the language of msgs.
+//
+// What deleting a card costs: the reviews go, the note does not change.
+func (msgs Messages) CardDeleteBody() string {
+	return Catalog.Format(msgs.locale, "cardDeleteBody", nil)
+}
+
+// CardLinkLive says "Follows the paragraph"
+// in the language the app shows.
+//
+// The card's link badge while it reads its block as it is now.
+func CardLinkLive() string { return In(i18n.Locale()).CardLinkLive() }
+
+// CardLinkLive says "Follows the paragraph"
+// in the language of msgs.
+//
+// The card's link badge while it reads its block as it is now.
+func (msgs Messages) CardLinkLive() string {
+	return Catalog.Format(msgs.locale, "cardLinkLive", nil)
+}
+
+// CardDetail says "Card details"
+// in the language the app shows.
+//
+// The dialog that shows one card's source and schedule history.
+func CardDetail() string { return In(i18n.Locale()).CardDetail() }
+
+// CardDetail says "Card details"
+// in the language of msgs.
+//
+// The dialog that shows one card's source and schedule history.
+func (msgs Messages) CardDetail() string {
+	return Catalog.Format(msgs.locale, "cardDetail", nil)
+}
+
+// CardSource says "Source"
+// in the language the app shows.
+//
+// Heading of the paragraph a card reads.
+func CardSource() string { return In(i18n.Locale()).CardSource() }
+
+// CardSource says "Source"
+// in the language of msgs.
+//
+// Heading of the paragraph a card reads.
+func (msgs Messages) CardSource() string {
+	return Catalog.Format(msgs.locale, "cardSource", nil)
+}
+
+// CardBackToSource says "Back to source"
+// in the language the app shows.
+//
+// The card detail's action that opens the note read at the card's block.
+func CardBackToSource() string { return In(i18n.Locale()).CardBackToSource() }
+
+// CardBackToSource says "Back to source"
+// in the language of msgs.
+//
+// The card detail's action that opens the note read at the card's block.
+func (msgs Messages) CardBackToSource() string {
+	return Catalog.Format(msgs.locale, "cardBackToSource", nil)
+}
+
+// CardHistory says "Schedule history"
+// in the language the app shows.
+//
+// Heading of the list of a card's reviews.
+func CardHistory() string { return In(i18n.Locale()).CardHistory() }
+
+// CardHistory says "Schedule history"
+// in the language of msgs.
+//
+// Heading of the list of a card's reviews.
+func (msgs Messages) CardHistory() string {
+	return Catalog.Format(msgs.locale, "cardHistory", nil)
+}
+
+// CardHistoryEmpty says "No reviews yet."
+// in the language the app shows.
+//
+// The card detail's history list when the card has never been answered.
+func CardHistoryEmpty() string { return In(i18n.Locale()).CardHistoryEmpty() }
+
+// CardHistoryEmpty says "No reviews yet."
+// in the language of msgs.
+//
+// The card detail's history list when the card has never been answered.
+func (msgs Messages) CardHistoryEmpty() string {
+	return Catalog.Format(msgs.locale, "cardHistoryEmpty", nil)
+}
+
+// CardHistoryInterval says "{count, plural, one {# day} other {# days}}"
+// in the language the app shows.
+//
+// How long one review scheduled the card for, in days.
+func CardHistoryInterval(count int) string { return In(i18n.Locale()).CardHistoryInterval(count) }
+
+// CardHistoryInterval says "{count, plural, one {# day} other {# days}}"
+// in the language of msgs.
+//
+// How long one review scheduled the card for, in days.
+func (msgs Messages) CardHistoryInterval(count int) string {
+	return Catalog.Format(msgs.locale, "cardHistoryInterval", map[string]any{"count": count})
+}
+
+// CardFreeze says "Freeze"
+// in the language the app shows.
+//
+// The card detail's action that stops the card following its paragraph.
+func CardFreeze() string { return In(i18n.Locale()).CardFreeze() }
+
+// CardFreeze says "Freeze"
+// in the language of msgs.
+//
+// The card detail's action that stops the card following its paragraph.
+func (msgs Messages) CardFreeze() string {
+	return Catalog.Format(msgs.locale, "cardFreeze", nil)
+}
+
+// CardThaw says "Thaw"
+// in the language the app shows.
+//
+// The card detail's action that lets a frozen card follow its paragraph
+// again.
+func CardThaw() string { return In(i18n.Locale()).CardThaw() }
+
+// CardThaw says "Thaw"
+// in the language of msgs.
+//
+// The card detail's action that lets a frozen card follow its paragraph
+// again.
+func (msgs Messages) CardThaw() string {
+	return Catalog.Format(msgs.locale, "cardThaw", nil)
+}
+
+// PluginPageActions says "Page actions"
+// in the language the app shows.
+//
+// Accessible label of a contributed page's header actions.
+func PluginPageActions() string { return In(i18n.Locale()).PluginPageActions() }
+
+// PluginPageActions says "Page actions"
+// in the language of msgs.
+//
+// Accessible label of a contributed page's header actions.
+func (msgs Messages) PluginPageActions() string {
+	return Catalog.Format(msgs.locale, "pluginPageActions", nil)
+}
+
+// CardDeleteConfirm says "Delete"
+// in the language the app shows.
+//
+// The answer that confirms deleting a card.
+func CardDeleteConfirm() string { return In(i18n.Locale()).CardDeleteConfirm() }
+
+// CardDeleteConfirm says "Delete"
+// in the language of msgs.
+//
+// The answer that confirms deleting a card.
+func (msgs Messages) CardDeleteConfirm() string {
+	return Catalog.Format(msgs.locale, "cardDeleteConfirm", nil)
+}
+
+// CardFreezeHint says "A frozen card keeps the words it was made from."
+// in the language the app shows.
+//
+// Under the card editor's freeze switch: what freezing does to a card.
+func CardFreezeHint() string { return In(i18n.Locale()).CardFreezeHint() }
+
+// CardFreezeHint says "A frozen card keeps the words it was made from."
+// in the language of msgs.
+//
+// Under the card editor's freeze switch: what freezing does to a card.
+func (msgs Messages) CardFreezeHint() string {
+	return Catalog.Format(msgs.locale, "cardFreezeHint", nil)
+}

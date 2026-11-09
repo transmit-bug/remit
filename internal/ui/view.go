@@ -51,6 +51,7 @@ func (a *App) View(c *ui.Context) {
 		a.recallScopeView(c)
 		a.relinkView(c)
 		a.cardEditView(c, tk)
+		a.cardDetailView(c, tk)
 	})
 }
 
