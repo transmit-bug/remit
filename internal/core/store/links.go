@@ -37,6 +37,21 @@ func deleteLinksOfNote(e execer, note core.ID) error {
 	return err
 }
 
+// NoteOfBlock names the note a block lives in, so a card, a link or a search
+// hit can be followed back to the document it belongs to.
+func (l *Library) NoteOfBlock(id core.ID) (core.ID, bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return "", false
+	}
+	ref, ok := l.index.block(id)
+	if !ok {
+		return "", false
+	}
+	return ref.note, true
+}
+
 // Backlinks returns the paragraphs that name a note, by title, grouped by the
 // note they are in and in document order. A note does not link to itself.
 func (l *Library) Backlinks(note core.ID) []Backlink {
