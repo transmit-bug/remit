@@ -19,7 +19,7 @@ func hintFold(c *ui.Context, s *State, card Card) {
 	open := s.hintOpen
 	ui.Accordion(c, func() {
 		ui.AccordionItem(c, msgs.Hint(), &open, func() {
-			ui.Text(c, card.Hint).FontSize(design.TypeBody).TextColor(c.Theme().TextMuted)
+			ui.Text(c, card.Hint).FontSize(design.TypeUI).TextColor(c.Theme().TextMuted)
 		}).OnChange(s.ToggleHint)
 	})
 }
@@ -41,7 +41,7 @@ func typing(c *ui.Context, s *State, card Card) {
 			MinHeight(design.ControlHeight).
 			OnClick(func() { s.Submit(card.TypeAnswer) })
 		ui.Text(c, msgs.CheckHint()).
-			FontSize(design.TypeSmall).TextColor(c.Theme().TextMuted)
+			FontSize(design.TypeUI).TextColor(c.Theme().TextMuted)
 	})
 }
 
@@ -62,12 +62,12 @@ func comparison(c *ui.Context, s *State) {
 	kit.StateBadge(c, icon, word, colour).AlignSelf(ui.Start)
 	ui.Row(c).Gap(design.SpaceS).AlignItems(ui.Center).Children(func() {
 		ui.Text(c, msgs.TypedAnswer()).
-			FontSize(design.TypeSmall).TextColor(t.TextMuted)
+			FontSize(design.TypeUI).TextColor(t.TextMuted)
 		ui.RichText(c, styledSpans(c, s.verdict)...).FontSize(design.TypeBody)
 	})
 	if verdict != Correct {
 		ui.Text(c, msgs.CompareLegend()).
-			FontSize(design.TypeSmall).TextColor(design.PaletteOf(t.Dark).Faint)
+			FontSize(design.TypeUI).TextColor(design.PaletteOf(t.Dark).Faint)
 	}
 }
 

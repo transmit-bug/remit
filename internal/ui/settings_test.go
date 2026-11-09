@@ -436,6 +436,7 @@ func TestCountsReachAService(t *testing.T) {
 	a.OnCounts(func(c Counts) { got = append(got, c) })
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
+	recallQueue(tt)
 	if len(got) == 0 || got[len(got)-1].Cards != 4 {
 		t.Fatalf("a service was told %v, want the queue's 4 cards", got)
 	}
@@ -477,8 +478,8 @@ func TestSettingsWithoutALibrary(t *testing.T) {
 	}
 
 	tt.Key(0, ui.KeyEscape)
-	if !tt.HasText("Start your library") || a.mode != modeNotes {
-		t.Fatalf("Esc did not go back to the start view; texts %q", tt.Texts())
+	if !tt.HasText("Start your library") || a.area != areaToday {
+		t.Fatalf("Esc did not go back to the start view; area %v, texts %q", a.area, tt.Texts())
 	}
 }
 

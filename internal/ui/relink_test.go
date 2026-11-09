@@ -15,7 +15,7 @@ func lostCardInReview(t *testing.T, a *App, tt *ui.Tester) {
 	t.Helper()
 	tt.Frame()
 	tt.Advance(320 * time.Millisecond) // the opening card's entry
-	tt.Key(ui.Cmd, ui.Key3)
+	cardsPage(t, tt, "en")
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 	if err := tt.Click("Lost"); err != nil {
 		t.Fatal(err)
@@ -86,7 +86,7 @@ func TestRelinkFromBrowseRow(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Advance(320 * time.Millisecond) // the opening card's entry
-	tt.Key(ui.Cmd, ui.Key3)
+	cardsPage(t, tt, "en")
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("Lost"); err != nil {
@@ -126,7 +126,7 @@ func TestRelinkPickerAtMinimumInChinese(t *testing.T) {
 	tt.SetLocale("zh-Hans")
 	tt.Frame()
 	tt.Advance(320 * time.Millisecond) // the opening card's entry
-	tt.Key(ui.Cmd, ui.Key3)
+	cardsPage(t, tt, "zh-Hans")
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("已失联"); err != nil {

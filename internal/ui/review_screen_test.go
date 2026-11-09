@@ -46,7 +46,7 @@ func TestHintReachesTheScreen(t *testing.T) {
 	a := NewApp(Options{LibraryDir: dir})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 
 	const hint = "reviewing just before you forget strengthens recall."
 	if !tt.HasText("Spacing beats cramming") {
@@ -73,7 +73,7 @@ func TestTypedAnswerTakesTheKeys(t *testing.T) {
 	a := NewApp(Options{LibraryDir: dir})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 
 	msgs := locales.In("en")
 	if !tt.HasText(msgs.CheckAnswer()) {
@@ -129,31 +129,32 @@ func TestTypedAnswerTakesTheKeys(t *testing.T) {
 	}
 }
 
-// Review takes the window whole: no navigation and no notes list, only the dual
-// mode's switch, the card and its status bar — and Esc gives the notebook back.
-func TestReviewTakesTheWindow(t *testing.T) {
+// The recall queue is a page of the window: the rail, the bar and the queue's
+// own row stay around the card, and Esc still gives the notebook back.
+func TestTheReviewPageKeepsTheFrame(t *testing.T) {
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
 			a, _ := newTestApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
+			recallQueue(tt)
 
-			// The toolbar's words are gone, so are the notes list's; the switch
-			// between the two queues is all the navigation that is left.
-			for _, gone := range []string{"New note", "Notebook", "Browse", "Stats"} {
-				if tt.HasText(gone) {
-					t.Errorf("the taking-over screen still shows %q", gone)
+			// The frame is there, and the page inside it is the review's.
+			for _, want := range []string{"Recall", "Queue", "Show answer", "4 cards left"} {
+				if !tt.HasText(want) {
+					t.Fatalf("the page lost %q; texts %q", want, tt.Texts())
 				}
 			}
-			for _, want := range []string{"Review", "Reading", "Show answer", "4 cards left"} {
-				if !tt.HasText(want) {
-					t.Fatalf("the screen lost %q; texts %q", want, tt.Texts())
+			// The notebook's own controls are not: the rail switched pages.
+			for _, gone := range []string{"New note", "Notebook"} {
+				if tt.HasText(gone) {
+					t.Errorf("the recall page still shows %q", gone)
 				}
 			}
 
 			tt.Key(0, ui.KeyEscape)
 			tt.Advance(320 * time.Millisecond) // the screen's entrance
-			// The notebook is back, with its navigation.
+			// The notebook is back, with its own controls.
 			for _, want := range []string{"Notebook", "New note", "Memory and recall"} {
 				if !tt.HasText(want) {
 					t.Fatalf("Esc did not give the notebook back: missing %q; texts %q", want, tt.Texts())
@@ -174,6 +175,7 @@ func TestReviewStatusBarCarriesTheKeys(t *testing.T) {
 			a, _ := newTestApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
+			recallQueue(tt)
 
 			if _, ok := tt.Find("4 cards left"); !ok {
 				t.Fatalf("the status bar does not say what is left; texts %q", tt.Texts())
@@ -192,6 +194,7 @@ func TestReviewStatusBarCarriesTheKeys(t *testing.T) {
 // leave — with no pointer and nothing else on screen.
 func TestReviewIsKeyboardOnly(t *testing.T) {
 	_, _, tt := openApp(t)
+	recallQueue(tt)
 
 	// Reveal, grade, and take the grade back.
 	tt.Key(0, ui.KeySpace)
@@ -223,7 +226,7 @@ func TestReviewIsKeyboardOnly(t *testing.T) {
 	if !tt.HasText("Notebook") || !tt.HasText("Memory and recall") {
 		t.Fatalf("E did not open the note; texts %q", tt.Texts())
 	}
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 	tt.Advance(320 * time.Millisecond)
 	tt.Key(0, ui.KeyEscape)
 	tt.Advance(320 * time.Millisecond)
@@ -241,6 +244,7 @@ func TestReviewAtTheSmallestWindow(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 720, 520)
 	settle(tt)
+	recallQueue(tt)
 
 	if _, ok := tt.Find("Spacing beats cramming"); !ok {
 		t.Fatalf("the prompt is not on screen; texts %q", tt.Texts())
@@ -260,6 +264,7 @@ func TestReviewAtTheSmallestWindow(t *testing.T) {
 // says the answer would schedule, said on the key.
 func TestGradeKeysShowTheSchedulesIntervals(t *testing.T) {
 	a, _, tt := openApp(t)
+	recallQueue(tt)
 	tt.Key(0, ui.KeySpace)
 	tt.Advance(320 * time.Millisecond) // the answer unfolding
 
@@ -293,7 +298,7 @@ func TestGradeKeysShowTheSchedulesIntervals(t *testing.T) {
 // remaining count, on the real view over the real store.
 func TestReviewKeys(t *testing.T) {
 	a, seed, tt := openApp(t)
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 
 	answer := "reviewing just before you forget strengthens recall."
 	if !tt.HasText("Spacing beats cramming") {
@@ -386,7 +391,7 @@ func TestReviewPersists(t *testing.T) {
 	a := NewApp(Options{LibraryDir: dir})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 	tt.Key(0, ui.KeySpace)
 	tt.Key(0, ui.Key3) // Good
 	if !tt.HasText("3 cards left") {
@@ -407,7 +412,7 @@ func TestReviewPersists(t *testing.T) {
 	next := NewApp(Options{LibraryDir: dir})
 	tt = ui.NewTester(next.View, 1024, 720)
 	tt.Frame()
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 	for _, want := range []string{"A good card asks", "3 cards left"} {
 		if !tt.HasText(want) {
 			t.Fatalf("reopened review is missing %q; texts %q", want, tt.Texts())

@@ -225,7 +225,7 @@ func blockMenuRow(c *ui.Context, tk design.Tokens, key, label string, selected, 
 		row.Background(tk.SurfaceHover)
 	}
 	row.Children(func() {
-		ui.Text(c, label).FontSize(tk.TypeBody).TextColor(colour)
+		ui.Text(c, label).FontSize(tk.TypeUI).TextColor(colour)
 	})
 	return row
 }

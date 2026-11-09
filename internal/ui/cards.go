@@ -202,7 +202,7 @@ func (a *App) cardEditView(c *ui.Context, tk design.Tokens) {
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-				ui.Text(c, msgs.EditCard()).FontSize(tk.TypeHeading).Bold().Grow(1)
+				ui.Text(c, msgs.EditCard()).FontSize(tk.TypeH2).Bold().Grow(1)
 				ui.Button(c, "").Label(msgs.Close()).Tooltip(msgs.Close()).
 					Children(func() { tk.Icon(c, "x", design.IconSmall) }).
 					OnClick(func() { a.cardEdit.open = false })

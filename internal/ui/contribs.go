@@ -122,10 +122,10 @@ func (a *App) loadContributions() {
 	}
 	// A page on screen whose plugin went away, or whose page did: the window
 	// returns to the notes rather than drawing a page that no longer exists.
-	if a.mode == modePlugin {
+	if a.area == areaPlugin {
 		if _, ok := a.ui.index.Page(a.page.Plugin, a.page.Page.ID); !ok {
-			a.mode = modeNotes
 			a.page = contrib.PageRef{}
+			a.setArea(areaWrite, subNotes)
 		}
 	}
 }
@@ -465,11 +465,12 @@ func (a *App) openPage(c *ui.Context, ref contrib.PageRef) {
 	if ref.Page.ID == "" {
 		return
 	}
+	moved := pageArea(a.page) != pageArea(ref)
 	a.page = ref
-	if a.mode != modePlugin {
+	a.setArea(areaPlugin, subNone)
+	if moved {
 		a.anim.mode++
 	}
-	a.mode = modePlugin
 	a.loadPage(c, ref, false)
 }
 
@@ -535,8 +536,9 @@ func (a *App) pageFailed(ref contrib.PageRef, err error) {
 		return
 	}
 	slog.Warn("remit: a plugin page was hidden after three failures", "plugin", ref.Name, "page", ref.Page.ID)
-	if a.mode == modePlugin && a.page.Plugin == ref.Plugin && a.page.Page.ID == ref.Page.ID {
-		a.mode = modeNotes
+	if a.area == areaPlugin && a.page.Plugin == ref.Plugin && a.page.Page.ID == ref.Page.ID {
+		a.page = contrib.PageRef{}
+		a.setArea(areaWrite, subNotes)
 	}
 }
 

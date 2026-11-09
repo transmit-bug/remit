@@ -9,7 +9,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
-// The eight moments carry the durations the design spec's table gives them, and
+// The nine moments carry the durations the design spec's table gives them, and
 // nothing else: motion is spec, tuned here.
 func TestMomentDurations(t *testing.T) {
 	moments := []struct {
@@ -20,13 +20,14 @@ func TestMomentDurations(t *testing.T) {
 		// A spring's duration is its own field.
 		{"enter", design.Enter.Spring.Duration, 220 * time.Millisecond},
 		{"mode switch", design.ModeSwitch.Duration, 180 * time.Millisecond},
-		{"reveal", design.Reveal.Spring.Duration, 260 * time.Millisecond},
+		{"reveal", design.Reveal.Spring.Duration, 180 * time.Millisecond},
 		{"grade", design.Grade.Duration, 180 * time.Millisecond},
-		{"row", design.Row.Spring.Duration, 200 * time.Millisecond},
+		{"row", design.Row.Spring.Duration, 180 * time.Millisecond},
 		{"hover", design.Hover.Duration, 120 * time.Millisecond},
 		{"press", design.Press.Duration, 90 * time.Millisecond},
-		{"panel", design.Panel.Spring.Duration, 200 * time.Millisecond},
+		{"panel", design.Panel.Spring.Duration, 180 * time.Millisecond},
 		{"count", design.Count.Duration, 300 * time.Millisecond},
+		{"progress", design.Progress.Duration, 260 * time.Millisecond},
 	}
 	for _, m := range moments {
 		if m.got != m.want {
@@ -69,6 +70,12 @@ func TestMomentDistances(t *testing.T) {
 	}
 	if design.EnterStagger != 40*time.Millisecond {
 		t.Errorf("the entrance staggers by %v, want 40ms", design.EnterStagger)
+	}
+	if design.RowStagger != 24*time.Millisecond {
+		t.Errorf("a list staggers its rows by %v, want 24ms", design.RowStagger)
+	}
+	if design.MaxStaggerRows != 6 {
+		t.Errorf("a list staggers %d rows, want 6", design.MaxStaggerRows)
 	}
 }
 

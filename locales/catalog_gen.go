@@ -3053,13 +3053,13 @@ func (msgs Messages) ViewMode() string {
 	return Catalog.Format(msgs.locale, "viewMode", nil)
 }
 
-// ViewEdit says "Edit"
+// ViewEdit says "Editing"
 // in the language the app shows.
 //
 // View switch: write in the document alone.
 func ViewEdit() string { return In(i18n.Locale()).ViewEdit() }
 
-// ViewEdit says "Edit"
+// ViewEdit says "Editing"
 // in the language of msgs.
 //
 // View switch: write in the document alone.
@@ -3081,13 +3081,13 @@ func (msgs Messages) ViewSplit() string {
 	return Catalog.Format(msgs.locale, "viewSplit", nil)
 }
 
-// ViewRead says "Read"
+// ViewRead says "Reading"
 // in the language the app shows.
 //
 // View switch: the note as it reads, whole.
 func ViewRead() string { return In(i18n.Locale()).ViewRead() }
 
-// ViewRead says "Read"
+// ViewRead says "Reading"
 // in the language of msgs.
 //
 // View switch: the note as it reads, whole.
@@ -4653,4 +4653,258 @@ func PluginPageRefresh() string { return In(i18n.Locale()).PluginPageRefresh() }
 // The button that asks a plugin page's data command for its tree again.
 func (msgs Messages) PluginPageRefresh() string {
 	return Catalog.Format(msgs.locale, "pluginPageRefresh", nil)
+}
+
+// AreaNav says "Areas"
+// in the language the app shows.
+//
+// Accessible label of the navigation rail: the list of the workbench's
+// areas.
+func AreaNav() string { return In(i18n.Locale()).AreaNav() }
+
+// AreaNav says "Areas"
+// in the language of msgs.
+//
+// Accessible label of the navigation rail: the list of the workbench's
+// areas.
+func (msgs Messages) AreaNav() string {
+	return Catalog.Format(msgs.locale, "areaNav", nil)
+}
+
+// Subnav says "Pages"
+// in the language the app shows.
+//
+// Accessible label of the row of pages within the area on screen.
+func Subnav() string { return In(i18n.Locale()).Subnav() }
+
+// Subnav says "Pages"
+// in the language of msgs.
+//
+// Accessible label of the row of pages within the area on screen.
+func (msgs Messages) Subnav() string {
+	return Catalog.Format(msgs.locale, "subnav", nil)
+}
+
+// Path says "Path"
+// in the language the app shows.
+//
+// Accessible label of the breadcrumb trail in the top bar.
+func Path() string { return In(i18n.Locale()).Path() }
+
+// Path says "Path"
+// in the language of msgs.
+//
+// Accessible label of the breadcrumb trail in the top bar.
+func (msgs Messages) Path() string {
+	return Catalog.Format(msgs.locale, "path", nil)
+}
+
+// StatusLine says "Status"
+// in the language the app shows.
+//
+// Accessible label of the window's status line under the stage.
+func StatusLine() string { return In(i18n.Locale()).StatusLine() }
+
+// StatusLine says "Status"
+// in the language of msgs.
+//
+// Accessible label of the window's status line under the stage.
+func (msgs Messages) StatusLine() string {
+	return Catalog.Format(msgs.locale, "statusLine", nil)
+}
+
+// RailFold says "Fold the rail"
+// in the language the app shows.
+//
+// Button that folds the navigation rail to an icon strip.
+func RailFold() string { return In(i18n.Locale()).RailFold() }
+
+// RailFold says "Fold the rail"
+// in the language of msgs.
+//
+// Button that folds the navigation rail to an icon strip.
+func (msgs Messages) RailFold() string {
+	return Catalog.Format(msgs.locale, "railFold", nil)
+}
+
+// RailUnfold says "Unfold the rail"
+// in the language the app shows.
+//
+// Button that brings the folded navigation rail back with its labels.
+func RailUnfold() string { return In(i18n.Locale()).RailUnfold() }
+
+// RailUnfold says "Unfold the rail"
+// in the language of msgs.
+//
+// Button that brings the folded navigation rail back with its labels.
+func (msgs Messages) RailUnfold() string {
+	return Catalog.Format(msgs.locale, "railUnfold", nil)
+}
+
+// AreaToday says "Today"
+// in the language the app shows.
+//
+// Navigation area: today's mixed queue of what to read and what is due.
+func AreaToday() string { return In(i18n.Locale()).AreaToday() }
+
+// AreaToday says "Today"
+// in the language of msgs.
+//
+// Navigation area: today's mixed queue of what to read and what is due.
+func (msgs Messages) AreaToday() string {
+	return Catalog.Format(msgs.locale, "areaToday", nil)
+}
+
+// AreaWrite says "Write"
+// in the language the app shows.
+//
+// Navigation area: writing notes and searching them.
+func AreaWrite() string { return In(i18n.Locale()).AreaWrite() }
+
+// AreaWrite says "Write"
+// in the language of msgs.
+//
+// Navigation area: writing notes and searching them.
+func (msgs Messages) AreaWrite() string {
+	return Catalog.Format(msgs.locale, "areaWrite", nil)
+}
+
+// AreaRead says "Read"
+// in the language the app shows.
+//
+// Navigation area: the notes to read in incremental reading.
+func AreaRead() string { return In(i18n.Locale()).AreaRead() }
+
+// AreaRead says "Read"
+// in the language of msgs.
+//
+// Navigation area: the notes to read in incremental reading.
+func (msgs Messages) AreaRead() string {
+	return Catalog.Format(msgs.locale, "areaRead", nil)
+}
+
+// AreaRecall says "Recall"
+// in the language the app shows.
+//
+// Navigation area: the cards to review and the card table.
+func AreaRecall() string { return In(i18n.Locale()).AreaRecall() }
+
+// AreaRecall says "Recall"
+// in the language of msgs.
+//
+// Navigation area: the cards to review and the card table.
+func (msgs Messages) AreaRecall() string {
+	return Catalog.Format(msgs.locale, "areaRecall", nil)
+}
+
+// AreaStats says "Stats"
+// in the language the app shows.
+//
+// Navigation area: the statistics pages.
+func AreaStats() string { return In(i18n.Locale()).AreaStats() }
+
+// AreaStats says "Stats"
+// in the language of msgs.
+//
+// Navigation area: the statistics pages.
+func (msgs Messages) AreaStats() string {
+	return Catalog.Format(msgs.locale, "areaStats", nil)
+}
+
+// AreaSettings says "Settings"
+// in the language the app shows.
+//
+// Navigation area: the settings pages.
+func AreaSettings() string { return In(i18n.Locale()).AreaSettings() }
+
+// AreaSettings says "Settings"
+// in the language of msgs.
+//
+// Navigation area: the settings pages.
+func (msgs Messages) AreaSettings() string {
+	return Catalog.Format(msgs.locale, "areaSettings", nil)
+}
+
+// SearchPage says "Search"
+// in the language the app shows.
+//
+// Page of the write area: search across notes and cards.
+func SearchPage() string { return In(i18n.Locale()).SearchPage() }
+
+// SearchPage says "Search"
+// in the language of msgs.
+//
+// Page of the write area: search across notes and cards.
+func (msgs Messages) SearchPage() string {
+	return Catalog.Format(msgs.locale, "searchPage", nil)
+}
+
+// QueuePage says "Queue"
+// in the language the app shows.
+//
+// Page of the read and recall areas: the notes or cards due now.
+func QueuePage() string { return In(i18n.Locale()).QueuePage() }
+
+// QueuePage says "Queue"
+// in the language of msgs.
+//
+// Page of the read and recall areas: the notes or cards due now.
+func (msgs Messages) QueuePage() string {
+	return Catalog.Format(msgs.locale, "queuePage", nil)
+}
+
+// CardsPage says "Cards"
+// in the language the app shows.
+//
+// Page of the recall area: every card as a table.
+func CardsPage() string { return In(i18n.Locale()).CardsPage() }
+
+// CardsPage says "Cards"
+// in the language of msgs.
+//
+// Page of the recall area: every card as a table.
+func (msgs Messages) CardsPage() string {
+	return Catalog.Format(msgs.locale, "cardsPage", nil)
+}
+
+// OverviewPage says "Overview"
+// in the language the app shows.
+//
+// Page of the statistics area: the summary numbers.
+func OverviewPage() string { return In(i18n.Locale()).OverviewPage() }
+
+// OverviewPage says "Overview"
+// in the language of msgs.
+//
+// Page of the statistics area: the summary numbers.
+func (msgs Messages) OverviewPage() string {
+	return Catalog.Format(msgs.locale, "overviewPage", nil)
+}
+
+// AppearancePage says "Appearance"
+// in the language the app shows.
+//
+// Page of the settings area: theme, density and the paper's width.
+func AppearancePage() string { return In(i18n.Locale()).AppearancePage() }
+
+// AppearancePage says "Appearance"
+// in the language of msgs.
+//
+// Page of the settings area: theme, density and the paper's width.
+func (msgs Messages) AppearancePage() string {
+	return Catalog.Format(msgs.locale, "appearancePage", nil)
+}
+
+// TodayStub says "Today gathers what is due to read and to review."
+// in the language the app shows.
+//
+// The empty state of the today area until its queue is built.
+func TodayStub() string { return In(i18n.Locale()).TodayStub() }
+
+// TodayStub says "Today gathers what is due to read and to review."
+// in the language of msgs.
+//
+// The empty state of the today area until its queue is built.
+func (msgs Messages) TodayStub() string {
+	return Catalog.Format(msgs.locale, "todayStub", nil)
 }

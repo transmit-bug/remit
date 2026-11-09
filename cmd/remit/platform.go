@@ -29,6 +29,12 @@ func route(a *appui.App, raw string) {
 		a.ShowCard(r.ID)
 	case deeplink.KindQueue:
 		a.ShowQueue()
+	case deeplink.KindToday:
+		a.ShowToday()
+	case deeplink.KindRead:
+		a.ShowRead()
+	case deeplink.KindRecall:
+		a.ShowRecall()
 	case deeplink.KindSearch:
 		a.Search(r.Query)
 	}

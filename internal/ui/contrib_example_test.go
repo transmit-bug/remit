@@ -72,7 +72,7 @@ func exampleContribution(t *testing.T, locale string) (*App, *ui.Tester) {
 // drawn by the host: a stat row, a callout and a table of the notes.
 func TestTheExamplePluginContributesItsPage(t *testing.T) {
 	tt := exampleContributionApp(t, "")
-	openPage(t, tt, "Plugin pages", "Leeches")
+	openPage(t, tt, "Leeches")
 
 	for _, want := range []string{
 		"Leeches",
@@ -98,7 +98,7 @@ func TestTheExamplePluginContributesItsPage(t *testing.T) {
 // catalog is the plugin's, not the app's.
 func TestTheExamplePluginFollowsTheLocale(t *testing.T) {
 	tt := exampleContributionApp(t, "zh-Hans")
-	openPage(t, tt, "插件页面", "水蛭")
+	openPage(t, tt, "水蛭")
 
 	for _, want := range []string{"水蛭", "概览", "篇笔记", "水蛭是总也记不住的卡片", "笔记"} {
 		if !tt.HasText(want) {
@@ -128,7 +128,7 @@ func TestTheExamplePluginsCommandsRun(t *testing.T) {
 	// The command that navigates opens the plugin's page. Its when shows it in
 	// review and in browse, not in the notes, so the review is where it runs.
 	tt.Advance(6 * time.Second)
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 	tt.Advance(320 * time.Millisecond)
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("leech")
@@ -142,7 +142,7 @@ func TestTheExamplePluginsCommandsRun(t *testing.T) {
 // of showing the library it was loaded against (ui.md §9).
 func TestAnEventReloadsTheOpenPage(t *testing.T) {
 	a, tt := exampleContribution(t, "")
-	openPage(t, tt, "Plugin pages", "Leeches")
+	openPage(t, tt, "Leeches")
 	if !tt.HasText("Overview") {
 		t.Fatalf("the page did not load; texts %q", tt.Texts())
 	}
@@ -170,7 +170,7 @@ func TestAnEventReloadsTheOpenPage(t *testing.T) {
 func TestAMenuItemsWhenDecidesWhereItShows(t *testing.T) {
 	tt := exampleContributionApp(t, "")
 
-	tt.Key(ui.Cmd, ui.Key3) // browse: the toolbar is up, no note is open
+	cardsPage(t, tt, "en") // the card table: the toolbar is up, no note is open
 	tt.Advance(320 * time.Millisecond)
 	if err := tt.Click("More"); err != nil {
 		t.Fatalf("the window's overflow menu: %v", err)

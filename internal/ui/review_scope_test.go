@@ -40,7 +40,7 @@ func TestReviewScopePickerSitsBesideTheSwitch(t *testing.T) {
 			scopeSeed(t, a)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
-			tt.Key(ui.Cmd, ui.Key1)
+			recallQueue(tt)
 
 			if err := tt.Click(msgs.ReviewScopeMenu()); err != nil {
 				t.Fatalf("the scope menu did not open: %v; texts %q", err, tt.Texts())
@@ -78,7 +78,7 @@ func TestReviewScopeChoosesANoteAndGivesItBack(t *testing.T) {
 	note := scopeSeed(t, a)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 
 	if !tt.HasText("4 cards left") {
 		t.Fatalf("the whole-library queue is not four cards; texts %q", tt.Texts())
@@ -130,7 +130,7 @@ func TestReviewScopeChoosesATag(t *testing.T) {
 	scopeSeed(t, a)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 
 	if err := tt.Click(msgs.ReviewScopeMenu()); err != nil {
 		t.Fatal(err)

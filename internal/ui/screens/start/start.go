@@ -44,11 +44,11 @@ func View(c *ui.Context, s State, d Deps) {
 
 	ui.Column(c).Grow(1).Center().Gap(tk.SpaceM).Padding(tk.SpaceXXL).Children(func() {
 		tk.Icon(c, "book-open", design.IconLarge).TextColor(tk.TextMuted)
-		ui.Text(c, msgs.StartTitle()).FontSize(tk.TypeTitle).Bold()
+		ui.Text(c, msgs.StartTitle()).FontSize(tk.TypeH2).Bold()
 		ui.Text(c, msgs.StartBody()).
-			FontSize(tk.TypeBody).TextColor(tk.TextMuted).MaxWidth(design.MessageWidth)
+			FontSize(tk.TypeUI).TextColor(tk.TextMuted).MaxWidth(design.MessageWidth)
 		if dir != "" {
-			ui.Text(c, dir).FontSize(tk.TypeSmall).TextColor(tk.TextFaint).
+			ui.Text(c, dir).FontSize(tk.TypeUI).TextColor(tk.TextFaint).
 				MaxWidth(design.MessageWidth).SingleLine()
 		}
 		ui.Row(c).Gap(tk.SpaceM).Children(func() {

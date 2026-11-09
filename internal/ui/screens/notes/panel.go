@@ -44,7 +44,7 @@ func (s *State) backlinkList(c *ui.Context, tk design.Tokens, d Deps) {
 	msgs := locales.In(c.Locale())
 	links := d.Backlinks()
 	if len(links) == 0 {
-		ui.Text(c, msgs.BacklinksEmpty()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+		ui.Text(c, msgs.BacklinksEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 		return
 	}
 	for _, link := range links {
@@ -60,8 +60,8 @@ func (s *State) backlinkList(c *ui.Context, tk design.Tokens, d Deps) {
 			}).
 			Children(func() {
 				ui.Column(c).Gap(0).Children(func() {
-					ui.Text(c, label).FontSize(tk.TypeSmall).TextColor(tk.Text).SingleLine()
-					ui.Text(c, target.Text).FontSize(tk.TypeSmall).TextColor(tk.TextMuted).SingleLine()
+					ui.Text(c, label).FontSize(tk.TypeUI).TextColor(tk.Text).SingleLine()
+					ui.Text(c, target.Text).FontSize(tk.TypeUI).TextColor(tk.TextMuted).SingleLine()
 				})
 			})
 	}

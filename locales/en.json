@@ -1258,7 +1258,7 @@
   "@viewMode": {
     "description": "Accessible label of the notebook's view switch."
   },
-  "viewEdit": "Edit",
+  "viewEdit": "Editing",
   "@viewEdit": {
     "description": "View switch: write in the document alone."
   },
@@ -1266,7 +1266,7 @@
   "@viewSplit": {
     "description": "View switch: the document beside the same note as it reads."
   },
-  "viewRead": "Read",
+  "viewRead": "Reading",
   "@viewRead": {
     "description": "View switch: the note as it reads, whole."
   },
@@ -1901,5 +1901,78 @@
   "pluginPageRefresh": "Refresh",
   "@pluginPageRefresh": {
     "description": "The button that asks a plugin page's data command for its tree again."
+  }
+,
+  "areaNav": "Areas",
+  "@areaNav": {
+    "description": "Accessible label of the navigation rail: the list of the workbench's areas."
+  },
+  "subnav": "Pages",
+  "@subnav": {
+    "description": "Accessible label of the row of pages within the area on screen."
+  },
+  "path": "Path",
+  "@path": {
+    "description": "Accessible label of the breadcrumb trail in the top bar."
+  },
+  "statusLine": "Status",
+  "@statusLine": {
+    "description": "Accessible label of the window's status line under the stage."
+  },
+  "railFold": "Fold the rail",
+  "@railFold": {
+    "description": "Button that folds the navigation rail to an icon strip."
+  },
+  "railUnfold": "Unfold the rail",
+  "@railUnfold": {
+    "description": "Button that brings the folded navigation rail back with its labels."
+  },
+  "areaToday": "Today",
+  "@areaToday": {
+    "description": "Navigation area: today's mixed queue of what to read and what is due."
+  },
+  "areaWrite": "Write",
+  "@areaWrite": {
+    "description": "Navigation area: writing notes and searching them."
+  },
+  "areaRead": "Read",
+  "@areaRead": {
+    "description": "Navigation area: the notes to read in incremental reading."
+  },
+  "areaRecall": "Recall",
+  "@areaRecall": {
+    "description": "Navigation area: the cards to review and the card table."
+  },
+  "areaStats": "Stats",
+  "@areaStats": {
+    "description": "Navigation area: the statistics pages."
+  },
+  "areaSettings": "Settings",
+  "@areaSettings": {
+    "description": "Navigation area: the settings pages."
+  },
+  "searchPage": "Search",
+  "@searchPage": {
+    "description": "Page of the write area: search across notes and cards."
+  },
+  "queuePage": "Queue",
+  "@queuePage": {
+    "description": "Page of the read and recall areas: the notes or cards due now."
+  },
+  "cardsPage": "Cards",
+  "@cardsPage": {
+    "description": "Page of the recall area: every card as a table."
+  },
+  "overviewPage": "Overview",
+  "@overviewPage": {
+    "description": "Page of the statistics area: the summary numbers."
+  },
+  "appearancePage": "Appearance",
+  "@appearancePage": {
+    "description": "Page of the settings area: theme, density and the paper's width."
+  },
+  "todayStub": "Today gathers what is due to read and to review.",
+  "@todayStub": {
+    "description": "The empty state of the today area until its queue is built."
   }
 }

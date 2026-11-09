@@ -98,7 +98,7 @@ func (s *State) outlineList(c *ui.Context, tk design.Tokens) {
 	s.outline.List.Selected = &s.outlineChosen
 	s.outline.List.Label = func(row int) string { return entries[s.outline.Item(row)].label }
 	list := ui.Outline(c, &s.outline, roots, func(i int) []int { return children[i] }, func(i int) {
-		text := ui.Text(c, entries[i].label).FontSize(tk.TypeSmall).SingleLine()
+		text := ui.Text(c, entries[i].label).FontSize(tk.TypeUI).SingleLine()
 		if i == s.OutlineCurrent {
 			text.TextColor(tk.Accent)
 			return

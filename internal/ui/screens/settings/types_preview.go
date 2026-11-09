@@ -18,7 +18,7 @@ import (
 // content.
 func typePreview(c *ui.Context, s *State, msgs locales.Messages, tk design.Tokens) {
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		ui.Text(c, msgs.TypePreview()).FontSize(tk.TypeSmall).Bold()
+		ui.Text(c, msgs.TypePreview()).FontSize(tk.TypeUI).Bold()
 		previewFace(c, s, msgs, tk, msgs.TypePreviewFront(), s.Draft.Front, template.SideFront, &s.PreviewFront)
 		previewFace(c, s, msgs, tk, msgs.TypePreviewBack(), s.Draft.Back, template.SideBack, &s.PreviewBack)
 	})
@@ -27,10 +27,10 @@ func typePreview(c *ui.Context, s *State, msgs locales.Messages, tk design.Token
 // previewFace is one side of the preview: the face's label and the rendered
 // markdown, or the dialect's refusal with the offset it points at.
 func previewFace(c *ui.Context, s *State, msgs locales.Messages, tk design.Tokens, label, src string, side template.Side, opts **markdown.Options) {
-	ui.Text(c, label).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+	ui.Text(c, label).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 	text, err := renderPreview(src, s.Draft.Fields, side)
 	if err != nil {
-		ui.Text(c, msgs.TypeTemplateBroken(err.Error())).FontSize(tk.TypeSmall).TextColor(tk.Danger)
+		ui.Text(c, msgs.TypeTemplateBroken(err.Error())).FontSize(tk.TypeUI).TextColor(tk.Danger)
 		return
 	}
 	if strings.TrimSpace(text) == "" {

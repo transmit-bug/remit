@@ -39,6 +39,7 @@ func TestAppearanceFollowsTheDesktop(t *testing.T) {
 		got = c.Theme()
 	}, 1024, 720)
 	tt.Frame()
+	recallQueue(tt)
 
 	for _, c := range []struct {
 		name string
@@ -104,13 +105,14 @@ func TestEveryModeInBothAppearances(t *testing.T) {
 				tt.Frame()
 				tt.Advance(320 * time.Millisecond) // the first card's entry
 
-				// The review queue, then the notes, on the real mode keys.
+				// The recall queue, then the notes, on the real area keys.
+				recallQueue(tt)
 				assertShows(t, tt, "Show answer")
 				tt.Key(ui.Cmd, ui.Key2)
 				tt.Advance(320 * time.Millisecond) // the card's exit
 				assertShows(t, tt, "Notebook")
 
-				tt.Key(ui.Cmd, ui.Key3)
+				cardsPage(t, tt, "en")
 				assertShows(t, tt, "Browse cards")
 
 				// Statistics, from the command palette as a user reaches it.

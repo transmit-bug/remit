@@ -118,7 +118,7 @@ func (a *App) paletteView(c *ui.Context, tk design.Tokens) {
 			c.OnShortcut(0, ui.KeyUp, func() { a.movePalette(len(items), -1) })
 
 			if len(items) == 0 {
-				ui.Text(c, m(c).NoActions()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+				ui.Text(c, m(c).NoActions()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 				return
 			}
 			// The rows are a list's: the choice, the keys and what assistive
@@ -130,7 +130,7 @@ func (a *App) paletteView(c *ui.Context, tk design.Tokens) {
 			a.palette.list.Selected = &a.palette.sel
 			a.palette.list.Label = func(row int) string { return items[row].label }
 			rows := ui.List(c, &a.palette.list, len(items), func(i int) {
-				ui.Text(c, items[i].label).FontSize(tk.TypeBody).Padding(tk.SpaceXS, tk.SpaceS)
+				ui.Text(c, items[i].label).FontSize(tk.TypeUI).Padding(tk.SpaceXS, tk.SpaceS)
 			}).Grow(1).MaxHeight(tk.Control * 12).Label(m(c).CommandPalette())
 			if rows.Changed() || rows.Submitted() {
 				a.runPalette(items, a.palette.sel)

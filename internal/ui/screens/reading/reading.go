@@ -159,14 +159,14 @@ func statusBar(c *ui.Context, s *State, note Note) {
 	ui.Row(c).Height(design.SpaceXL+design.SpaceXS).Padding(design.SpaceXS, design.SpaceL).
 		AlignItems(ui.Center).Gap(design.SpaceS).Children(func() {
 		ui.Text(c, msgs.ReadingProgress(done, total)).
-			FontSize(design.TypeSmall).TextColor(t.TextMuted)
+			FontSize(design.TypeUI).TextColor(t.TextMuted)
 		if total > 0 {
 			ui.Progress(c, float64(done)/float64(total)).Grow(1)
 		}
 		ui.Spacer(c)
 		if at, total := s.At(note); total > 0 {
 			ui.Text(c, msgs.ReadingWhere(at, total)).
-				FontSize(design.TypeSmall).TextColor(t.TextMuted)
+				FontSize(design.TypeUI).TextColor(t.TextMuted)
 		}
 		ui.Row(c).Gap(design.SpaceXS).AlignItems(ui.Center).Children(func() {
 			for _, k := range []struct{ key, label string }{
@@ -189,7 +189,7 @@ func statusBar(c *ui.Context, s *State, note Note) {
 func noteBody(c *ui.Context, s *State, note Note, cursor core.ID) {
 	kit.StyleCard(c, ui.Column(c).Key(string(note.ID)).
 		Padding(design.SpaceXL).Gap(design.SpaceL)).Children(func() {
-		ui.Text(c, note.Title).FontSize(design.TypeTitle).Bold()
+		ui.Text(c, note.Title).FontSize(design.TypeH2).Bold()
 		ui.Divider(c)
 		ui.Column(c).Gap(design.SpaceXS).Children(func() {
 			for i, block := range note.Blocks {
@@ -237,7 +237,7 @@ func difficulties(c *ui.Context, d Deps, note Note, cursor core.ID) {
 				OnClick(func() { d.Read(note.ID, r, cursor) }).
 				Children(func() {
 					kit.Keycap(c, r.Key())
-					ui.Text(c, label).FontSize(design.TypeBody).TextColor(t.Text)
+					ui.Text(c, label).FontSize(design.TypeUI).TextColor(t.Text)
 				})
 			if key.Hovered() {
 				key.Background(t.Surface.Mix(face, 0.24)).
@@ -282,7 +282,7 @@ func reference(c *ui.Context, d Deps, note Note, cursor core.ID) {
 	}
 	msgs := locales.In(c.Locale())
 	ui.Row(c).Gap(design.SpaceS).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, msgs.ReadingReference()).FontSize(design.TypeSmall).
+		ui.Text(c, msgs.ReadingReference()).FontSize(design.TypeUI).
 			TextColor(c.Theme().TextMuted)
 		ui.Button(c, msgs.OpenSource()).MinHeight(design.ControlHeight).
 			OnClick(func() { d.Open(source) })

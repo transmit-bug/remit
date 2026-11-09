@@ -96,7 +96,7 @@ func View(c *ui.Context, s *State, d Deps) {
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-				ui.Text(c, msgs.RelinkTitle()).FontSize(tk.TypeHeading).Bold().Grow(1)
+				ui.Text(c, msgs.RelinkTitle()).FontSize(tk.TypeH2).Bold().Grow(1)
 				// An icon-only button carries its name for the pointer and for a
 				// screen reader, since the drawing says nothing on its own.
 				ui.Button(c, "").Label(msgs.Close()).Tooltip(msgs.Close()).
@@ -117,7 +117,7 @@ func View(c *ui.Context, s *State, d Deps) {
 			c.OnShortcut(0, ui.KeyUp, func() { s.move(len(s.rows), -1) })
 
 			if len(s.rows) == 0 {
-				ui.Text(c, msgs.NoBlocks()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+				ui.Text(c, msgs.NoBlocks()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 			}
 			ui.Scroll(c).Grow(1).Children(func() {
 				ui.Column(c).Gap(tk.SpaceXS).Children(func() {
@@ -152,8 +152,8 @@ func rowView(c *ui.Context, tk design.Tokens, row Row, chosen bool, choose func(
 	item.OnClick(choose)
 	item.Children(func() {
 		ui.Column(c).Gap(tk.SpaceXS).Children(func() {
-			ui.Text(c, row.Text).FontSize(tk.TypeBody).SingleLine()
-			ui.Text(c, row.Note).FontSize(tk.TypeSmall).TextColor(tk.TextMuted).SingleLine()
+			ui.Text(c, row.Text).FontSize(tk.TypeUI).SingleLine()
+			ui.Text(c, row.Note).FontSize(tk.TypeUI).TextColor(tk.TextMuted).SingleLine()
 		})
 	})
 }

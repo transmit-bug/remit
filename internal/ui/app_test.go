@@ -12,57 +12,62 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// A library opens on today's review queue, and the notes are one key away:
-// the two modes are one window, switched by the real keys.
-func TestModes(t *testing.T) {
+// The six areas are one key each, in rail order, and each key lands on that
+// area's page: its own first page, with its own name in the path.
+func TestAreaShortcutsSwitchAreas(t *testing.T) {
+	msgs := locales.In("en")
+	areas := []struct {
+		key  ui.Key
+		area string
+		page string
+		// want is what the area's first page shows.
+		want string
+	}{
+		{ui.Key1, msgs.AreaToday(), "", msgs.TodayStub()},
+		{ui.Key2, msgs.AreaWrite(), msgs.ModeNotes(), msgs.Notebook()},
+		{ui.Key3, msgs.AreaRead(), msgs.QueuePage(), msgs.NoReading()},
+		{ui.Key4, msgs.AreaRecall(), msgs.QueuePage(), "Spacing beats cramming"},
+		{ui.Key5, msgs.AreaStats(), msgs.OverviewPage(), msgs.StatsTitle()},
+		{ui.Key6, msgs.AreaSettings(), msgs.AppearancePage(), msgs.SettingsTitle()},
+	}
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
 			a, _ := newTestApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
 
-			// The first screen is the review queue (decision #11).
-			for _, want := range []string{"Show answer", "Spacing beats cramming", "4 cards left"} {
-				if !tt.HasText(want) {
-					t.Fatalf("review mode: missing %q; texts %q", want, tt.Texts())
-				}
-			}
-			for _, gone := range []string{"Notebook", "Make card", "A daily habit"} {
-				if tt.HasText(gone) {
-					t.Errorf("review mode shows %q", gone)
-				}
+			// A library opens on today, which is a page of its own.
+			if !tt.HasText(msgs.TodayStub()) {
+				t.Fatalf("the window did not open on today; texts %q", tt.Texts())
 			}
 
-			tt.Key(ui.Cmd, ui.Key2)
-			tt.Advance(320 * time.Millisecond) // the card's exit
-			for _, want := range []string{"Notebook", "Memory and recall", "Note title"} {
-				if !tt.HasText(want) {
-					t.Fatalf("notes mode: missing %q; texts %q", want, tt.Texts())
+			for _, area := range areas {
+				tt.Key(ui.Cmd, area.key)
+				tt.Advance(320 * time.Millisecond) // the page's entrance
+				if !tt.HasText(area.want) {
+					t.Fatalf("Cmd+%v did not show %s: missing %q; texts %q", area.key, area.area, area.want, tt.Texts())
 				}
-			}
-			if tt.HasText("Show answer") {
-				t.Error("review stayed up after Cmd+2")
-			}
-			if tt.FramePending() {
-				t.Error("view still requests frames after it should settle")
-			}
-
-			// Cmd+1 comes back, and Esc leaves review for the notes.
-			tt.Key(ui.Cmd, ui.Key1)
-			if !tt.HasText("Show answer") {
-				t.Fatalf("Cmd+1 did not return to review; texts %q", tt.Texts())
-			}
-			tt.Advance(320 * time.Millisecond) // the card's entry
-			tt.Key(0, ui.KeyEscape)
-			tt.Advance(320 * time.Millisecond) // the card's exit
-			if !tt.HasText("Notebook") {
-				t.Fatalf("Esc did not return to notes; texts %q", tt.Texts())
+				if got := a.railChoice(); string(got) != snake(area.area) && area.area != msgs.AreaToday() {
+					t.Fatalf("the rail is on %q after Cmd+%v, want %q", got, area.key, area.area)
+				}
+				if area.page != "" && !tt.HasText(area.page) {
+					t.Errorf("%s did not open on its %q page; texts %q", area.area, area.page, tt.Texts())
+				}
 			}
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
 		})
 	}
+}
+
+// snake is the id the rail holds for an area, from the label it shows: the
+// mapping is the app's, and this is the test's own reading of it.
+func snake(label string) string {
+	return map[string]string{
+		"Today": "today", "Write": "write", "Read": "read",
+		"Recall": "recall", "Stats": "stats", "Settings": "settings",
+	}[label]
 }
 
 // At the smallest window every control is on screen and clickable, not only
@@ -72,9 +77,16 @@ func TestMinimumSizeControls(t *testing.T) {
 	tt := ui.NewTester(a.View, 720, 520)
 	settle(tt)
 
-	// The queue the window opens on is usable at the smallest size.
+	// The frame fits: the rail's areas, the path and the page's own controls.
+	for _, label := range []string{"Today", "Write", "Read", "Recall", "Stats", "Settings", "Search actions", "More"} {
+		assertControl(t, tt, 720, 520, label)
+	}
+
+	// The recall queue the window opens on its key is usable at the smallest
+	// size.
+	recallQueue(tt)
+	tt.Advance(320 * time.Millisecond)
 	assertControl(t, tt, 720, 520, "Show answer")
-	tt.Advance(320 * time.Millisecond) // the card's entry
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
@@ -91,7 +103,7 @@ func TestMinimumSizeControls(t *testing.T) {
 	}
 	tt.Advance(5 * time.Second) // let the toast go
 
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 	assertControl(t, tt, 720, 520, "Show answer")
 	if err := tt.Click("Show answer"); err != nil {
 		t.Fatal(err)
@@ -112,7 +124,7 @@ func TestMinimumSizeControls(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Advance(320 * time.Millisecond) // the screen's change
-	if tt.HasText("Search actions") {
+	if tt.HasText("Review cards") {
 		t.Error("the palette stayed open after its row was clicked")
 	}
 	if !tt.HasText("Notebook") {
@@ -125,47 +137,52 @@ func TestMinimumSizeControls(t *testing.T) {
 	}
 }
 
-// The app bar's brand, primary rail and note view switch all fit the smallest
-// window, and the rail still switches pages by pointer there.
+// The frame fits the smallest window: the rail's areas, the bar's controls and
+// the page's, and the folded rail still switches areas by pointer.
 func TestAppBarAtMinimumSize(t *testing.T) {
 	a, _ := newTestApp(t)
 	tt := ui.NewTester(a.View, 720, 520)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(320 * time.Millisecond)
 
 	msgs := locales.In("en")
 	for _, label := range []string{
-		Name,
-		msgs.ModeNotes(), msgs.ModeReview(), msgs.ModeBrowse(), msgs.ModeStats(), msgs.ModeSettings(),
-		msgs.ViewEdit(), msgs.ViewSplit(), msgs.ViewRead(), msgs.PanelTitle(), msgs.More(),
+		Name, msgs.AreaToday(), msgs.AreaWrite(), msgs.AreaRead(), msgs.AreaRecall(),
+		msgs.AreaStats(), msgs.AreaSettings(), msgs.More(), msgs.Path(),
 	} {
 		assertControl(t, tt, 720, 520, label)
 	}
 
-	if err := tt.Click(msgs.ModeBrowse()); err != nil {
-		t.Fatal(err)
+	// Folded, an area shows no label: the pointer finds it by its accessible
+	// name, and choosing it still switches the area.
+	for _, area := range []struct {
+		name string
+		want string
+	}{
+		{msgs.AreaRecall(), "Spacing beats cramming"},
+		{msgs.AreaStats(), msgs.StatsTitle()},
+		{msgs.AreaSettings(), msgs.SettingsTitle()},
+		{msgs.AreaWrite(), msgs.Notebook()},
+	} {
+		info, ok := tt.Access(area.name)
+		if !ok {
+			t.Fatalf("%q is not on the rail; texts %q", area.name, tt.Texts())
+		}
+		tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
+		tt.Advance(320 * time.Millisecond) // the page's entrance
+		if !tt.HasText(area.want) {
+			t.Fatalf("the rail did not switch to %s: missing %q; texts %q", area.name, area.want, tt.Texts())
+		}
+		if info.Bounds.X+info.Bounds.W > 720 || info.Bounds.Y+info.Bounds.H > 520 {
+			t.Errorf("%q is outside the window: %+v", area.name, info.Bounds)
+		}
 	}
-	if !tt.HasText(msgs.BrowseTitle()) {
-		t.Fatalf("the rail did not switch to browse; texts %q", tt.Texts())
+
+	// The document's own controls are in the bar when the notebook is up.
+	for _, label := range []string{msgs.ViewEdit(), msgs.ViewSplit(), msgs.ViewRead(), msgs.PanelTitle(), msgs.More()} {
+		assertControl(t, tt, 720, 520, label)
 	}
-	if err := tt.Click(msgs.ModeStats()); err != nil {
-		t.Fatal(err)
-	}
-	if !tt.HasText(msgs.StatsTitle()) {
-		t.Fatalf("the rail did not switch to statistics; texts %q", tt.Texts())
-	}
-	if err := tt.Click(msgs.ModeSettings()); err != nil {
-		t.Fatal(err)
-	}
-	if !tt.HasText(msgs.SettingsTitle()) {
-		t.Fatalf("the rail did not switch to settings; texts %q", tt.Texts())
-	}
-	if err := tt.Click(msgs.ModeNotes()); err != nil {
-		t.Fatal(err)
-	}
-	if !tt.HasText(msgs.Notebook()) {
-		t.Fatalf("the rail did not return to notes; texts %q", tt.Texts())
+	if tt.FramePending() {
+		t.Error("view still requests frames after it should settle")
 	}
 }
 
@@ -175,6 +192,7 @@ func TestDark(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.SetDark(true)
 	tt.Frame()
+	recallQueue(tt)
 	if !tt.HasText("Show answer") {
 		t.Fatalf("dark review mode is incomplete; texts %q", tt.Texts())
 	}
@@ -185,7 +203,7 @@ func TestDark(t *testing.T) {
 		t.Fatalf("dark notes mode is incomplete; texts %q", tt.Texts())
 	}
 
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 	tt.Key(0, ui.KeySpace)
 	if !tt.HasText("reviewing just before you forget strengthens recall.") {
 		t.Fatalf("dark review mode lost its content; texts %q", tt.Texts())
@@ -205,6 +223,7 @@ func TestCorruptLibrary(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	msgs := locales.In("en")
 	a := NewApp(Options{LibraryDir: dir})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
@@ -222,7 +241,7 @@ func TestCorruptLibrary(t *testing.T) {
 	if err := tt.Click("Try again"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("Today's review") || tt.HasText("Remit could not open its library") {
+	if !tt.HasText(msgs.TodayStub()) || tt.HasText("Remit could not open its library") {
 		t.Fatalf("trying again did not open the repaired library; texts %q", tt.Texts())
 	}
 	tt.Advance(320 * time.Millisecond) // the screen's entrance
@@ -257,6 +276,8 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 
 	tt.SetLocale("zh-Hans")
 	tt.Frame()
+	tt.Key(ui.Cmd, ui.Key4)
+	tt.Advance(320 * time.Millisecond) // the page's entrance
 	for _, want := range []string{"显示答案", "撤销 (U)"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing Chinese text %q; texts %q", want, tt.Texts())
@@ -265,7 +286,7 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
-	for _, want := range []string{"笔记", "笔记本"} {
+	for _, want := range []string{"写", "笔记本"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing Chinese text %q in the notes; texts %q", want, tt.Texts())
 		}
@@ -273,7 +294,7 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 
 	tt.SetLocale("en")
 	tt.Frame()
-	for _, want := range []string{"Notes", "Notebook", "New note"} {
+	for _, want := range []string{"Write", "Notebook", "New note"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing English text %q after switching back; texts %q", want, tt.Texts())
 		}

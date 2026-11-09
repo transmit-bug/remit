@@ -218,7 +218,7 @@ func TestMakeCard(t *testing.T) {
 	}
 
 	tt.Advance(5 * time.Second) // past the toast
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 	if !tt.HasText("5 cards left") {
 		t.Fatalf("the card made now is not in today's queue; texts %q", tt.Texts())
 	}

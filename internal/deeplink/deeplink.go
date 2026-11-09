@@ -22,6 +22,11 @@ const (
 	KindCard
 	KindQueue
 	KindSearch
+	// The three areas a link may name: today, the reading queue and the recall
+	// queue. They take no argument, as queue does.
+	KindToday
+	KindRead
+	KindRecall
 )
 
 // Route is a parsed link.
@@ -47,11 +52,11 @@ func Parse(raw string) (Route, error) {
 	id := strings.TrimSpace(rest)
 
 	switch host {
-	case "queue":
+	case "queue", "today", "read", "recall":
 		if id != "" || u.RawQuery != "" {
-			return Route{}, fmt.Errorf("deeplink: queue takes no argument")
+			return Route{}, fmt.Errorf("deeplink: %s takes no argument", host)
 		}
-		return Route{Kind: KindQueue}, nil
+		return Route{Kind: areaKind(host)}, nil
 	case "search":
 		q := u.Query().Get("q")
 		if q == "" {
@@ -79,10 +84,29 @@ func Parse(raw string) (Route, error) {
 	return Route{}, fmt.Errorf("deeplink: unknown target %q", u.Host)
 }
 
+// areaKind is the route a host names, for the links that take no argument.
+func areaKind(host string) Kind {
+	switch host {
+	case "today":
+		return KindToday
+	case "read":
+		return KindRead
+	case "recall":
+		return KindRecall
+	}
+	return KindQueue
+}
+
 // String renders a route back into a URL, which is what the app registers and
 // what a test compares against.
 func (r Route) String() string {
 	switch r.Kind {
+	case KindToday:
+		return Scheme + "://today"
+	case KindRead:
+		return Scheme + "://read"
+	case KindRecall:
+		return Scheme + "://recall"
 	case KindQueue:
 		return Scheme + "://queue"
 	case KindSearch:

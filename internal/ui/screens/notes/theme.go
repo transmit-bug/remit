@@ -55,5 +55,5 @@ func noteTheme(tk design.Tokens) *richtext.Theme {
 // desktop's text scale and the paper's line height, so a CJK paragraph has the
 // leading it needs.
 func noteFont(tk design.Tokens) ui.Font {
-	return ui.Font{Size: tk.TypeBody * 1.2, LineHeight: design.TextLineHeight}
+	return ui.Font{Size: tk.TypeBody, LineHeight: design.TextLineHeight}
 }

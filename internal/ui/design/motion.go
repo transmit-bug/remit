@@ -6,25 +6,34 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// The eight moments the app moves in, each a named preset so that a screen
+// The nine moments the app moves in, each a named preset so that a screen
 // names a cause rather than a duration, and the whole vocabulary is tuned in one
 // place. Motion encodes cause only — where something came from, that it was
 // clicked, that the screen changed — never decoration.
 const (
-	enterDuration  = 220 * time.Millisecond // the first frame, coming down
-	modeDuration   = 180 * time.Millisecond // one mode leaving for another
-	revealDuration = 260 * time.Millisecond // the answer unfolding
-	gradeDuration  = 180 * time.Millisecond // one card out, the next in
-	rowDuration    = 200 * time.Millisecond // a row folding or unfolding
-	hoverDuration  = 120 * time.Millisecond // a face under the pointer
-	pressDuration  = 90 * time.Millisecond  // a control taking a press
-	panelDuration  = 200 * time.Millisecond // a panel or a dialog arriving
-	countDuration  = 300 * time.Millisecond // a count rolling to its number
+	enterDuration    = 220 * time.Millisecond // the first frame, coming down
+	modeDuration     = 180 * time.Millisecond // one mode leaving for another
+	revealDuration   = 180 * time.Millisecond // the answer unfolding
+	gradeDuration    = 180 * time.Millisecond // one card out, the next in
+	rowDuration      = 180 * time.Millisecond // a row folding or unfolding
+	hoverDuration    = 120 * time.Millisecond // a face under the pointer
+	pressDuration    = 90 * time.Millisecond  // a control taking a press
+	panelDuration    = 180 * time.Millisecond // a panel or a dialog arriving
+	countDuration    = 300 * time.Millisecond // a count rolling to its number
+	progressDuration = 260 * time.Millisecond // a bar filling to its value
 )
 
 // EnterStagger is how long the main area waits behind the toolbar on the first
 // frame, so that the two arrive one after the other rather than as one block.
 const EnterStagger = 40 * time.Millisecond
+
+// RowStagger delays each row behind the one above it as a list arrives, for at
+// most MaxStaggerRows rows: past that the last rows would wait too long for
+// content that is already there.
+const (
+	RowStagger     = 24 * time.Millisecond
+	MaxStaggerRows = 6
+)
 
 // The distances and scales the moments move by.
 const (
@@ -54,8 +63,11 @@ var (
 	// Grade sends the graded card up and fades it, and brings the next one up
 	// from below.
 	Grade = ui.Animation{Duration: gradeDuration, Ease: ui.EaseOut}
-	// Row folds or unfolds a row's height in a list.
+	// Row folds or unfolds a row's height in a list, and brings one in as the
+	// list arrives; RowStagger spaces the rows behind each other.
 	Row = ui.Animation{Spring: ui.SpringOptions{Duration: rowDuration}}
+	// Progress fills a bar to its value once, when it is mounted.
+	Progress = ui.Animation{Duration: progressDuration, Ease: ui.EaseOut}
 	// Hover eases a face's colour under the pointer.
 	Hover = ui.Animation{Duration: hoverDuration, Ease: ui.EaseOut}
 	// Press shrinks a control to PressScale for as long as it is held.
