@@ -95,10 +95,19 @@ const (
 	// Reviewed is a review: a card answered, or a note read. The rating says
 	// how it went, and a reading review names the block it stopped at.
 	Reviewed Kind = iota
-	// Queued puts a note in the reading queue.
+	// Queued puts a note in the reading queue, and takes it out of the archive.
 	Queued
 	// Dropped takes a note out of the reading queue. Its history stays.
 	Dropped
+	// Archived is a terminal state: the note is done reading, and leaves the
+	// queue for good. Only a queued event brings it back.
+	Archived
+	// Dismissed is the other terminal state: the note is not worth reading, and
+	// leaves the queue for good. Only a queued event brings it back.
+	Dismissed
+	// Postponed moves a note's due date without touching its membership or its
+	// rating history: the reader means to come back to it later.
+	Postponed
 )
 
 // String names the kind, for logs and for the review log format.
@@ -108,6 +117,12 @@ func (k Kind) String() string {
 		return "queued"
 	case Dropped:
 		return "dropped"
+	case Archived:
+		return "archived"
+	case Dismissed:
+		return "dismissed"
+	case Postponed:
+		return "postponed"
 	}
 	return "reviewed"
 }
@@ -121,9 +136,19 @@ func ParseKind(s string) (Kind, bool) {
 		return Queued, true
 	case "dropped":
 		return Dropped, true
+	case "archived":
+		return Archived, true
+	case "dismissed":
+		return Dismissed, true
+	case "postponed":
+		return Postponed, true
 	}
 	return Reviewed, false
 }
+
+// Terminal reports whether the kind ends a note's place in the reading queue.
+// The two terminal states exclude each other, and a queued event clears either.
+func (k Kind) Terminal() bool { return k == Archived || k == Dismissed }
 
 // Event is one line of the review log: a review (of a card, or of a note
 // read), a change to the reading queue, or a void naming the review it
@@ -139,8 +164,11 @@ type Event struct {
 	Rating Rating
 	// Position is where a reading session stopped: the block the reader was on.
 	Position core.ID
-	At       time.Time
-	Void     int64
+	// Until is when a postponed note comes due. It is set on a postponed event
+	// and nowhere else.
+	Until time.Time
+	At    time.Time
+	Void  int64
 	// Scheduler is what wrote this review: a family and its version, as the
 	// plugin that scheduled it named itself. Empty means the review was written
 	// before the log carried one.
@@ -179,6 +207,9 @@ type State struct {
 	// holds one card's state knows whether it is still being learned without
 	// reading the log.
 	LastRating Rating
+	// Lapses counts the live reviews answered Again: the hard card a preset
+	// compares against, and a column of the card table.
+	Lapses int
 }
 
 // Params configures the review schedule: the 21 FSRS weights and the recall
@@ -260,6 +291,15 @@ type Reading struct {
 	Position core.ID
 	// Queued reports whether the note is still in the queue now.
 	Queued bool
+	// Archived and Dismissed are the two terminal states. They exclude each
+	// other, and neither is set while the note is queued: a note leaves the
+	// queue for good, and a queued event takes it back.
+	Archived  bool
+	Dismissed bool
+	// Until is the time the newest live postpone asked for, as long as that
+	// postpone still governs the due date. A session or a fresh queueing
+	// schedules the note again and clears it.
+	Until time.Time
 }
 
 // Applier replays a log incrementally. It keeps each entry's live events, so a
@@ -268,15 +308,34 @@ type Reading struct {
 // once.
 type Applier struct {
 	fsrs    *fsrs.FSRS
+	reading *fsrs.FSRS
 	params  Params
-	reading Params
+	read    Params
 
-	states  map[core.ID]State
-	live    map[core.ID][]Event // per entry, in sequence order
-	entry   map[int64]core.ID   // sequence -> the entry it reviewed
-	seen    map[int64]bool      // every sequence applied, reviews and voids
-	members map[core.ID]bool    // notes in the reading queue
-	places  map[core.ID]core.ID // notes: the block their newest live session stopped at
+	states map[core.ID]State
+	live   map[core.ID][]Event // per entry, its live rating events, in sequence order
+	entry  map[int64]core.ID   // sequence -> the entry it reviewed
+	seen   map[int64]bool      // every sequence applied, reviews and voids
+	notes  map[core.ID]*readingEntry
+}
+
+// readingEntry is a note's live events and the place in the queue they derive.
+// A note carries few events, so a void replays them whole: which came first — a
+// postpone or the session it followed — is what answers the due date.
+type readingEntry struct {
+	state     State
+	position  core.ID
+	queued    bool
+	archived  bool
+	dismissed bool
+	until     time.Time
+	events    []Event
+}
+
+// reading is the note's place in the queue as the entry derives it.
+func (e *readingEntry) reading() Reading {
+	return Reading{State: e.state, Position: e.position, Queued: e.queued,
+		Archived: e.archived, Dismissed: e.dismissed, Until: e.until}
 }
 
 // NewApplier returns an applier with no history. Reading entries are scheduled
@@ -286,20 +345,21 @@ func NewApplier(params Params) *Applier {
 }
 
 // NewApplierFor returns an applier that schedules cards with params and reading
-// entries with reading.
-func NewApplierFor(params, reading Params) *Applier {
+// entries with read. The two carry their own FSRS parameters: a library whose
+// card weights a plugin changed keeps reading on the host's cadence.
+func NewApplierFor(params, read Params) *Applier {
 	params = params.Normalized()
-	reading = reading.Normalized()
+	read = read.Normalized()
 	return &Applier{
 		fsrs:    fsrs.NewFSRS(params.parameters()),
+		reading: fsrs.NewFSRS(read.parameters()),
 		params:  params,
-		reading: reading,
+		read:    read,
 		states:  make(map[core.ID]State),
 		live:    make(map[core.ID][]Event),
 		entry:   make(map[int64]core.ID),
 		seen:    make(map[int64]bool),
-		members: make(map[core.ID]bool),
-		places:  make(map[core.ID]core.ID),
+		notes:   make(map[core.ID]*readingEntry),
 	}
 }
 
@@ -328,20 +388,13 @@ func (a *Applier) Apply(events ...Event) error {
 		if ev.Card != "" && ev.Note != "" {
 			return fmt.Errorf("schedule: event %d: reviews a card and a note", ev.Seq)
 		}
+		if err := checkEvent(ev); err != nil {
+			return err
+		}
 
 		switch ev.Kind {
-		case Queued:
-			a.members[id] = true
-			state := a.states[id]
-			if state.Reviews == 0 {
-				// A note never read is due when it joined the queue, which is
-				// what puts the queue in the order it was filled in.
-				state.Due = ev.At.UTC()
-			}
-			a.states[id] = state
-			continue
-		case Dropped:
-			a.members[id] = false
+		case Queued, Dropped, Archived, Dismissed, Postponed:
+			a.change(ev)
 			continue
 		}
 
@@ -350,57 +403,166 @@ func (a *Applier) Apply(events ...Event) error {
 		}
 		a.entry[ev.Seq] = id
 		a.live[id] = append(a.live[id], ev)
-		a.states[id] = a.step(a.states[id], ev)
 		if ev.IsReading() {
 			// Reading a note puts it in the queue: it comes back on its own
 			// cadence even if it was never added by hand.
-			a.members[id] = true
-			if ev.Position != "" {
-				a.places[id] = ev.Position
-			}
+			a.record(ev)
+			continue
 		}
+		a.states[id] = a.step(a.states[id], ev)
 	}
 	return nil
 }
 
+// checkEvent refuses an event the log format would not write: a change to a
+// note's place in the queue names the note and carries neither a card nor a
+// rating, and only a postpone names an until.
+func checkEvent(ev Event) error {
+	if ev.Kind == Reviewed {
+		if !ev.Until.IsZero() {
+			return fmt.Errorf("schedule: event %d: a review carries an until", ev.Seq)
+		}
+		return nil
+	}
+	if ev.Card != "" || ev.Rating != 0 {
+		return fmt.Errorf("schedule: event %d: %s carries a card or a rating", ev.Seq, ev.Kind)
+	}
+	if ev.Kind != Postponed {
+		if !ev.Until.IsZero() {
+			return fmt.Errorf("schedule: event %d: %s carries an until", ev.Seq, ev.Kind)
+		}
+		return nil
+	}
+	if ev.Until.IsZero() {
+		return fmt.Errorf("schedule: event %d: postponed without an until", ev.Seq)
+	}
+	if ev.Until.Before(ev.At) {
+		return fmt.Errorf("schedule: event %d: postponed until %s, before it was postponed at %s",
+			ev.Seq, ev.Until.UTC().Format(time.RFC3339), ev.At.UTC().Format(time.RFC3339))
+	}
+	return nil
+}
+
+// change records a change to a note's place in the queue and derives the note
+// again from every live event it has.
+func (a *Applier) change(ev Event) {
+	entry := a.notes[ev.Note]
+	if entry == nil {
+		if ev.Kind != Queued {
+			// A membership event for a note the log never put in the queue:
+			// dropping, archiving or postponing nothing.
+			return
+		}
+		entry = &readingEntry{}
+		a.notes[ev.Note] = entry
+	}
+	a.record(ev)
+}
+
+// record appends one live reading event to its note and derives the note again.
+func (a *Applier) record(ev Event) {
+	entry := a.notes[ev.Note]
+	if entry == nil {
+		entry = &readingEntry{}
+		a.notes[ev.Note] = entry
+	}
+	entry.events = append(entry.events, ev)
+	a.derive(ev.Note)
+}
+
+// derive replays one note's live events in the order they were written. A
+// session brings the note into the queue and sets the place it stopped at; the
+// two terminal kinds take it out and replace each other; a postpone moves the
+// due date and leaves membership and the rating history alone.
+func (a *Applier) derive(note core.ID) {
+	entry := a.notes[note]
+	if entry == nil {
+		return
+	}
+	if len(entry.events) == 0 {
+		// Every event the note had is void: the live log does not know it.
+		delete(a.notes, note)
+		delete(a.states, note)
+		return
+	}
+	next := readingEntry{}
+	for _, ev := range entry.events {
+		switch ev.Kind {
+		case Queued:
+			next.queued, next.archived, next.dismissed = true, false, false
+			if next.state.Reviews == 0 {
+				// A note never read is due when it joined the queue, which is
+				// what fills the queue in the order notes were added to it.
+				next.state.Due = ev.At.UTC()
+				next.until = time.Time{}
+			}
+		case Dropped:
+			next.queued = false
+		case Archived:
+			next.queued, next.archived, next.dismissed = false, true, false
+		case Dismissed:
+			next.queued, next.archived, next.dismissed = false, false, true
+		case Postponed:
+			next.state.Due = ev.Until.UTC()
+			next.until = ev.Until.UTC()
+		default:
+			next.state = a.step(next.state, ev)
+			if ev.Position != "" {
+				next.position = ev.Position
+			}
+			next.queued, next.archived, next.dismissed = true, false, false
+			next.until = time.Time{}
+		}
+	}
+	entry.state, entry.position = next.state, next.position
+	entry.queued, entry.archived, entry.dismissed = next.queued, next.archived, next.dismissed
+	entry.until = next.until
+	a.states[note] = next.state
+}
+
 // void cancels a review and replays the one entry it belonged to, so the entry
-// reads exactly as if the review had never been written. Membership is not
-// touched: undoing an answer takes back the answer, not the reading.
+// reads exactly as if the review had never been written. Membership and the
+// terminal states are not touched: undoing an answer takes back the answer, not
+// the reading.
 func (a *Applier) void(void Event) {
 	id, ok := a.entry[void.Void]
 	if !ok {
 		return
 	}
 	delete(a.entry, void.Void)
+	a.live[id] = withoutSeq(a.live[id], void.Void)
 
-	kept := a.live[id][:0]
-	for _, ev := range a.live[id] {
-		if ev.Seq != void.Void {
-			kept = append(kept, ev)
-		}
-	}
-
-	if len(kept) == 0 {
-		delete(a.live, id)
-		delete(a.states, id)
-		delete(a.places, id)
+	if entry, ok := a.notes[id]; ok {
+		// A note is replayed whole, so a postpone written after the voided
+		// session still governs the due date.
+		entry.events = withoutSeq(entry.events, void.Void)
+		a.derive(id)
 		return
 	}
 
-	a.live[id] = kept
-	state, place := State{}, core.ID("")
+	kept := a.live[id]
+	if len(kept) == 0 {
+		delete(a.live, id)
+		delete(a.states, id)
+		return
+	}
+
+	state := State{}
 	for _, ev := range kept {
 		state = a.step(state, ev)
-		if ev.Position != "" {
-			place = ev.Position
-		}
 	}
 	a.states[id] = state
-	if place == "" {
-		delete(a.places, id)
-	} else {
-		a.places[id] = place
+}
+
+// withoutSeq copies events without one sequence: what a void leaves behind.
+func withoutSeq(events []Event, seq int64) []Event {
+	kept := make([]Event, 0, len(events))
+	for _, ev := range events {
+		if ev.Seq != seq {
+			kept = append(kept, ev)
+		}
 	}
+	return kept
 }
 
 // step applies one review to an entry's state, with the parameters that entry
@@ -408,7 +570,7 @@ func (a *Applier) void(void Event) {
 // host's own.
 func (a *Applier) step(state State, ev Event) State {
 	if ev.IsReading() {
-		return a.reading.step(a.fsrs.Parameters, state, ev)
+		return a.read.step(a.reading.Parameters, state, ev)
 	}
 	return a.params.step(a.fsrs.Parameters, state, ev)
 }
@@ -446,6 +608,9 @@ func (p Params) step(fsrsParameters fsrs.Parameters, state State, ev Event) Stat
 	state.Due = ev.At.Add(time.Duration(days * 24 * float64(time.Hour)))
 	state.Reviews++
 	state.LastRating = ev.Rating
+	if ev.Rating == Again {
+		state.Lapses++
+	}
 	return state
 }
 
@@ -477,22 +642,22 @@ func (a *Applier) States() map[core.ID]State {
 // Reading returns every note the log knows, with where it stands in the reading
 // queue. The result is a copy: changing it does not change the applier.
 func (a *Applier) Reading() map[core.ID]Reading {
-	queued := make(map[core.ID]Reading, len(a.states))
-	for id, state := range a.states {
-		queued[id] = Reading{State: state, Position: a.places[id], Queued: a.members[id]}
+	out := make(map[core.ID]Reading, len(a.notes))
+	for id, entry := range a.notes {
+		out[id] = entry.reading()
 	}
-	return queued
+	return out
 }
 
 // ReadingOf returns one note's place in the reading queue, and whether the log
-// knows it at all: a note that was queued and dropped again before it was ever
-// read is unknown, and not queued.
+// has any reading event for it at all: a note the log only dropped was never in
+// the queue, and is not queued now.
 func (a *Applier) ReadingOf(note core.ID) (Reading, bool) {
-	state, has := a.states[note]
-	if !has {
+	entry, ok := a.notes[note]
+	if !ok {
 		return Reading{}, false
 	}
-	return Reading{State: state, Position: a.places[note], Queued: a.members[note]}, true
+	return entry.reading(), true
 }
 
 // Outlook is what one answer would do to a card, for the interval a grade key

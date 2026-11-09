@@ -21,7 +21,7 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "10"
+const schemaVersion = "11"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -93,7 +93,8 @@ CREATE TABLE card_state (
 	last_review INTEGER NOT NULL,
 	reviews     INTEGER NOT NULL,
 	last_rating TEXT NOT NULL,
-	last_seq    INTEGER NOT NULL
+	last_seq    INTEGER NOT NULL,
+	lapses      INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE reading (
 	note        TEXT PRIMARY KEY,
@@ -105,7 +106,10 @@ CREATE TABLE reading (
 	last_rating TEXT NOT NULL,
 	last_seq    INTEGER NOT NULL,
 	position    TEXT NOT NULL,
-	queued      INTEGER NOT NULL
+	queued      INTEGER NOT NULL,
+	archived    INTEGER NOT NULL DEFAULT 0,
+	dismissed   INTEGER NOT NULL DEFAULT 0,
+	until       INTEGER NOT NULL DEFAULT 0
 );
 -- search is the full-text index: one row per note (its title and block text),
 -- one per card (the block it renders and the fields edited over it). The
@@ -427,7 +431,7 @@ const cardColumns = `
 	c.type, c.producer_id, c.producer_version, c.edited, c.fields, c.ordinal,
 	COALESCE(s.stability, 0), COALESCE(s.difficulty, 0), COALESCE(s.due, 0),
 	COALESCE(s.last_review, 0), COALESCE(s.reviews, 0), COALESCE(s.last_rating, ''),
-	COALESCE(s.last_seq, 0)`
+	COALESCE(s.last_seq, 0), COALESCE(s.lapses, 0)`
 
 // fromCards joins the schedule a card's log gives it, if it has one.
 const fromCards = ` FROM cards c LEFT JOIN card_state s ON s.card_id = c.id`
@@ -607,12 +611,13 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 			created, frozenAt, due, lastReview int64
 			frozen, live, ordinal, edited      int
 			stability, difficulty              float64
-			reviews                            int
+			reviews, lapses                    int
 		)
 		err := rows.Scan(&id, &block, &status, &stored, &created,
 			&frozen, &frozenText, &frozenAt, &live,
 			&typ, &producerID, &producerVersion, &edited, &fields, &ordinal,
-			&stability, &difficulty, &due, &lastReview, &reviews, &lastRating, &row.lastSeq)
+			&stability, &difficulty, &due, &lastReview, &reviews, &lastRating, &row.lastSeq,
+			&lapses)
 		if err != nil {
 			return nil, err
 		}
@@ -640,6 +645,7 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 				Due:        time.Unix(0, due).UTC(),
 				LastReview: time.Unix(0, lastReview).UTC(),
 				Reviews:    reviews,
+				Lapses:     lapses,
 			}
 			row.state.LastRating, _ = schedule.ParseRating(lastRating)
 		}
@@ -654,11 +660,11 @@ func scanCardRows(rows *sql.Rows) ([]cardRow, error) {
 func putState(e execer, card core.ID, state schedule.State, lastSeq int64) error {
 	_, err := e.Exec(
 		`INSERT OR REPLACE INTO card_state
-		 (card_id, stability, difficulty, due, last_review, reviews, last_rating, last_seq)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		 (card_id, stability, difficulty, due, last_review, reviews, last_rating, last_seq, lapses)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		string(card), state.Memory.Stability, state.Memory.Difficulty,
 		state.Due.UnixNano(), state.LastReview.UnixNano(), state.Reviews,
-		state.LastRating.String(), lastSeq)
+		state.LastRating.String(), lastSeq, state.Lapses)
 	return err
 }
 
@@ -671,28 +677,60 @@ func deleteState(e execer, card core.ID) error {
 // reading: a note's place in the reading queue, as replaying the log derived it.
 
 // readingRow is one note in the reading queue: its schedule, where the reader
-// stopped, and whether it is still queued.
+// stopped, whether it is still queued or has reached a terminal state, and when
+// a postpone said it comes back.
 type readingRow struct {
-	note     core.ID
-	state    schedule.State
-	position core.ID
-	queued   bool
-	lastSeq  int64
+	note      core.ID
+	state     schedule.State
+	position  core.ID
+	queued    bool
+	archived  bool
+	dismissed bool
+	until     time.Time
+	lastSeq   int64
 }
 
 func putReading(e execer, row readingRow) error {
-	queued := 0
-	if row.queued {
-		queued = 1
-	}
 	_, err := e.Exec(
 		`INSERT OR REPLACE INTO reading
-		 (note, stability, difficulty, due, last_review, reviews, last_rating, last_seq, position, queued)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 (note, stability, difficulty, due, last_review, reviews, last_rating, last_seq,
+		  position, queued, archived, dismissed, until)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		string(row.note), row.state.Memory.Stability, row.state.Memory.Difficulty,
-		row.state.Due.UnixNano(), row.state.LastReview.UnixNano(), row.state.Reviews,
-		row.state.LastRating.String(), row.lastSeq, string(row.position), queued)
+		unixNano(row.state.Due), unixNano(row.state.LastReview), row.state.Reviews,
+		row.state.LastRating.String(), row.lastSeq, string(row.position),
+		flag(row.queued), flag(row.archived), flag(row.dismissed), unixNano(row.until))
 	return err
+}
+
+func deleteReading(e execer, note core.ID) error {
+	_, err := e.Exec(`DELETE FROM reading WHERE note = ?`, string(note))
+	return err
+}
+
+// flag is a bool as the index stores it.
+func flag(on bool) int {
+	if on {
+		return 1
+	}
+	return 0
+}
+
+// unixNano is a moment as the index stores it, with the zero moment as 0 rather
+// than the negative number its Unix nanoseconds are.
+func unixNano(t time.Time) int64 {
+	if t.IsZero() {
+		return 0
+	}
+	return t.UnixNano()
+}
+
+// moment is a moment read back from the index, zero when the column holds 0.
+func moment(nanos int64) time.Time {
+	if nanos == 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, nanos).UTC()
 }
 
 func (x *index) readingRow(note core.ID) (readingRow, bool) {
@@ -718,7 +756,8 @@ func (x *index) readingRows() ([]readingRow, error) {
 	return scanReadingRows(rows)
 }
 
-const readingColumns = ` note, stability, difficulty, due, last_review, reviews, last_rating, last_seq, position, queued`
+const readingColumns = ` note, stability, difficulty, due, last_review, reviews, last_rating, last_seq,
+	position, queued, archived, dismissed, until`
 
 func scanReadingRows(rows *sql.Rows) ([]readingRow, error) {
 	var out []readingRow
@@ -726,19 +765,26 @@ func scanReadingRows(rows *sql.Rows) ([]readingRow, error) {
 		var (
 			row                     readingRow
 			note, lastRating, place string
-			due, lastReview         int64
-			queued                  int
+			due, lastReview, until  int64
+			queued, archived        int
+			dismissed               int
 		)
 		if err := rows.Scan(&note, &row.state.Memory.Stability, &row.state.Memory.Difficulty,
-			&due, &lastReview, &row.state.Reviews, &lastRating, &row.lastSeq, &place, &queued); err != nil {
+			&due, &lastReview, &row.state.Reviews, &lastRating, &row.lastSeq, &place,
+			&queued, &archived, &dismissed, &until); err != nil {
 			return nil, err
 		}
 		row.note = core.ID(note)
 		row.position = core.ID(place)
 		row.queued = queued == 1
+		row.archived = archived == 1
+		row.dismissed = dismissed == 1
+		row.until = moment(until)
+		// A note that was queued and never read is due when it joined the queue,
+		// so its due date is what orders the queue and what a postpone moved.
+		row.state.Due = moment(due)
+		row.state.LastReview = moment(lastReview)
 		if row.state.Reviews > 0 {
-			row.state.Due = time.Unix(0, due).UTC()
-			row.state.LastReview = time.Unix(0, lastReview).UTC()
 			row.state.LastRating, _ = schedule.ParseRating(lastRating)
 		}
 		out = append(out, row)

@@ -84,7 +84,9 @@ func sameState(a, b schedule.State) bool {
 	return a.Reviews == b.Reviews &&
 		a.Memory == b.Memory &&
 		a.Due.Equal(b.Due) &&
-		a.LastReview.Equal(b.LastReview)
+		a.LastReview.Equal(b.LastReview) &&
+		a.LastRating == b.LastRating &&
+		a.Lapses == b.Lapses
 }
 
 func ids(cards []core.Card) []core.ID {

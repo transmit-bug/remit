@@ -65,8 +65,13 @@ var (
 	// ErrNothingToAsk is a block whose text makes no card: a paragraph without
 	// a separator or a blank.
 	ErrNothingToAsk = errors.New("store: the block asks nothing")
-	// ErrNoReview is returned by UndoLast when a card has nothing to undo.
+	// ErrNoReview is returned by UndoLast when a card has nothing to undo, and
+	// by UndoReading when a note has no live session to take back. A terminal
+	// state is not a review, so it is not something an undo restores.
 	ErrNoReview = errors.New("store: no review to undo")
+	// ErrNoReading is returned when a note is not in the reading queue, so
+	// there is nothing to archive or dismiss.
+	ErrNoReading = errors.New("store: note is not in the reading queue")
 	// ErrEmptyExcerpt is returned by Excerpt when there is nothing to quote.
 	ErrEmptyExcerpt = errors.New("store: the excerpt is empty")
 	// ErrNotATemplate is returned by NoteFromTemplate when the named note is
@@ -471,10 +476,9 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 			}
 		}
 		for note, entry := range readings {
-			if err := putReading(e, readingRow{
-				note: note, state: entry.State, position: entry.Position,
-				queued: entry.Queued, lastSeq: lastSeq[note],
-			}); err != nil {
+			row := readingRowFrom(note, entry)
+			row.lastSeq = lastSeq[note]
+			if err := putReading(e, row); err != nil {
 				return err
 			}
 		}

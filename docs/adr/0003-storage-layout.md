@@ -6,6 +6,10 @@
   queued, read or dropped), so one replay answers cards and the reading queue
   (#156, `docs/specs/incremental-reading.md`); the file name and the format
   version stand
+- **Amended:** 2026-11-10 — a reading event also records a terminal state
+  (`archived`, `dismissed`) and a postpone (`postponed` with an `until`), and a
+  rating event counts the same card's `Again` answers as lapses; the file name
+  and the format version stand
 - **Amended:** 2026-11-08 — a library also holds `assets/<sha256>.<ext>`, the
   images notes reference (#151, #152); they are truth like the text files and
   travel in the archive
