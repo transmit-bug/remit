@@ -4,21 +4,45 @@ Remit 是开源、本地优先的桌面知识记忆应用：完整的 Markdown �
 
 ## Language
 
+**Today**（今日）:
+默认首屏；今日待读、读过未摘、今日到期卡片合成的一张队列，顺序与截断由预算决定。见 [`docs/specs/ui-redesign-v2.md`](docs/specs/ui-redesign-v2.md) §1.2。
+_Avoid_: 仪表盘, dashboard
+
+**Budget**（预算）:
+今日队列的时间上限与卡片张数上限，写在库配置 `presets.budget`；它不是提醒，是排序与截断的输入。
+_Avoid_: 目标, goal
+
 **Review Queue**（复习队列）:
-今日待复习卡片的序列，应用的默认首屏。
+今日待复习卡片的序列；默认首屏自 2026-11-10 起是 Today（见上），复习队列从「忆」区域进入。
 _Avoid_: 今日列表, study list, deck（已决定不引入：复习范围跟随笔记结构，见 Review Scope）
 
 **Reading Queue**（阅读队列）:
-今日待读的笔记序列，与复习队列并列在同一入口；成员是笔记本身，顺序按 FSRS 到期先进先出，节奏是宿主能力、不开插件面。见 `docs/specs/incremental-reading.md`。
+今日待读的笔记序列，与复习队列并列；入口在「读」区域。成员是笔记本身，顺序按 FSRS 到期先进先出，节奏是宿主能力、不开插件面。见 `docs/specs/incremental-reading.md`。
 _Avoid_: 待读列表, to-read, deck
 
 **Reading Position**（阅读位置）:
 一次阅读会话停下的块；打开待读笔记时回到这里。它是明文调度史的一部分，不是配置。
 _Avoid_: 滚动位置, 阅读进度
 
+**Archived**（归档）:
+读完收起的笔记：不再进队列，仍可搜索、仍可被引用、仍可制卡。由 `archived` 事件表示，见 [ADR 0011](docs/adr/0011-library-format-v3.md)。
+_Avoid_: done（暗示删除）, 完成
+
+**Dismissed**（不再出现）:
+明确不再排进今日的笔记；比归档更强，只能手动恢复。由 `dismissed` 事件表示。
+_Avoid_: 删除, drop（drop 是移出队列）
+
+**Postponed**（推后）:
+保持队列成员、把到期推到下一次的笔记；不改评分史。由 `postponed` 事件表示。
+_Avoid_: snooze, 延期
+
 **Excerpt**（摘录）:
 从某个块取出的文本：成为新笔记的首块，并在块内携带指向原块的 Reference 链接；可立即按卡片类型制卡，也可以只是一条笔记。
 _Avoid_: 高亮, 剪藏, clip
+
+**Excerpt Tree**（摘录树）:
+以摘录的「子笔记 → 源块」引用构成的层级视图；不是新实体。
+_Avoid_: 大纲（那是标题树）
 
 **Review Scope**（复习范围）:
 一次复习会话的取卡范围，三源：全库 / 某篇笔记 / 某个标签；会话内选择、不落库，组织由笔记与标签承担。

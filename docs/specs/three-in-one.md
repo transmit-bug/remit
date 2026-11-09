@@ -28,7 +28,9 @@ Remit 不做三个并列模块。三者在数据上共享 **Block**，在时间�
 - **Capture** = 把外部文章变成普通 Note / Block / Asset 的入口。
 
 > 注：Reading Item 是候选抽象（见地图「统一知识单元」），不是已定术语；今天的实现仍是
-> Note-level 阅读队列。统一 Today、priority/overload、选区摘录同样还是开放决策。
+> Note-level 阅读队列。统一 Today 已判为 1.0 内（混合队列 + 预算），口径见
+> [`docs/specs/ui-redesign-v2.md`](ui-redesign-v2.md) §1.2；priority 只做队列排序、不落字段（§1.3），
+> 选区摘录仍推迟（§1.4）。
 
 ## 3. 产品原则
 
@@ -94,7 +96,8 @@ SuperMemo 的完整增量阅读；选区级摘录、就地 cloze、priority/over
 - **阅读**：选区级摘录、就地 cloze、显式 read point、priority/overload、终态语义、
   摘录自动入队；阅读队列目前也不吃 Review Scope。
 - **捕获**：确定性 HTML/SingleFile MVP；URL/EPUB/AI 后置；PDF 不在 MVP。
-- **队列**：卡片与阅读是否合成一个 Today，仍是开放决策。
+- **队列**：卡片与阅读合成一个今日（混合队列 + 预算）已定，见
+  [`docs/specs/ui-redesign-v2.md`](ui-redesign-v2.md) §1.2/§5.1；本节其余缺口未变。
 
 ## 7. 明确不做
 

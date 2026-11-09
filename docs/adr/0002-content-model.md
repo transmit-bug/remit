@@ -1,6 +1,6 @@
 # ADR 0002 — Content model
 
-- **Status:** accepted — amended by ADR 0005 (block identity and the editing surface), ADR 0007 (a plugin derives a card) and ADR 0008 (the derive contract is typed; the host renders a type's templates)
+- **Status:** accepted — amended by ADR 0005 (block identity and the editing surface), ADR 0007 (a plugin derives a card), ADR 0008 (the derive contract is typed; the host renders a type's templates) and ADR 0011 (a note's terminal reading state is a log event; reading it never deletes the note)
 - **Date:** 2026-11-06
 - **Related:** #8, #7, ADR 0001
 
@@ -56,3 +56,10 @@ reading queue later therefore needs no sidecar migration.
 - The plaintext source carries ID markers, so a hand-edited note can orphan a
   card — the lost state is a normal, tested outcome, not corruption.
 - `internal/core` owns these rules; storage and UI only move values around.
+
+## Amended 2026-11-10
+
+**归档不删除源笔记。** 读完的终态（归档 / 不再出现 / 推后）是 `reviews.jsonl` 里的事件，不是文件
+操作：`notes/*.md` 不因「读完」被删、被截断或被移出库。归档的笔记仍可搜索、仍可被卡片引用、
+仍可制卡；源块被删时走既有的 lost 语义，与归档无关。所以「一个块、一条活引用」的规则不变——
+终态只决定阅读队列的成员资格（#216，ADR 0011，`docs/specs/ui-redesign-v2.md` §1.12/§5.2）。
