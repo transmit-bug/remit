@@ -82,10 +82,25 @@ func Keycap(c *ui.Context, key string) ui.Element {
 }
 
 // Stat is one number, and the name of what it counts.
+//
+// Composed rather than taken from a widget: ui.Meter reports one value inside
+// a range instead of naming a count, and ui.Badge carries a count but not the
+// label a tile needs. Checked against MyGo v0.8.1.
 func Stat(c *ui.Context, value, label string) ui.Element {
+	return StatDetail(c, value, label, "")
+}
+
+// StatDetail is Stat with the line a tile needs to qualify its number — what a
+// percentage is aiming at, or how many notes the cards came from. An empty
+// detail draws nothing.
+func StatDetail(c *ui.Context, value, label, detail string) ui.Element {
 	t := c.Theme()
+	p := design.PaletteOf(t.Dark)
 	return ui.Column(c).Gap(design.SpaceXS).Children(func() {
 		ui.Text(c, value).FontSize(design.TypeH2).Bold()
 		ui.Text(c, label).FontSize(design.TypeUI).TextColor(t.TextMuted)
+		if detail != "" {
+			ui.Text(c, detail).FontSize(design.TypeLabel).TextColor(p.Faint)
+		}
 	})
 }

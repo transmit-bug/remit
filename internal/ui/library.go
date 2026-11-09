@@ -439,9 +439,10 @@ func (a *App) loadBacklinks() {
 	}
 }
 
-// loadStats derives the statistics page's datasets: the review heatmap, the
-// retention picture and the forecast. It is a load path: the view reads what it
-// left, so no frame replays the review log.
+// loadStats derives the statistics area's data: the review calendar, the
+// retention picture and its weeks, the production, the time share, today's
+// numbers and the forecast. It is a load path: the pages read what it left, so
+// no frame replays the review log.
 func (a *App) loadStats() {
 	if a.lib == nil {
 		a.stats = screenstats.State{}
@@ -449,11 +450,24 @@ func (a *App) loadStats() {
 	}
 	now := time.Now()
 	from, to := screenstats.HeatRange(now)
-	a.stats = screenstats.Build(now,
-		stats.ReviewsPerDay(a.lib, from, to),
-		stats.RetentionOf(a.lib, schedule.DefaultParams()),
-		stats.ForecastAll(a.lib, now, screenstats.ForecastDays),
-	)
+	due, _ := queue.CountsOf(a.lib, now, queue.Options{})
+	reading, _ := a.lib.ReadingQueue()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	reviewed, _ := a.lib.CountReviewed(today, today.AddDate(0, 0, 1))
+	params := a.lib.ScheduleParams()
+	a.stats = screenstats.Build(screenstats.Input{
+		Now:        now,
+		Reviews:    stats.ReviewsPerDay(a.lib, from, to),
+		History:    stats.HistoryOf(a.lib, from, to).Events,
+		Retention:  stats.RetentionOf(a.lib, params),
+		Target:     params.DesiredRetention,
+		Forecast:   stats.ForecastAll(a.lib, now, screenstats.ForecastDays),
+		Production: stats.ProductionOf(a.lib),
+		TimeShare:  stats.TimeShareOf(a.lib, from, now),
+		Due:        due.Due + due.Learning,
+		Reading:    len(reading),
+		Reviewed:   reviewed,
+	})
 }
 
 // report logs a write that failed and says so where the action was, so a

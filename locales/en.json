@@ -390,11 +390,39 @@
   },
   "statsTitle": "Statistics",
   "@statsTitle": {
-    "description": "Heading of the statistics page, and the palette action that opens it."
+    "description": "Heading of the statistics overview, and the palette action that opens the area."
   },
-  "statsRetention": "Retention by predicted chance",
+  "statsOverviewSub": "How much the library holds, and how today looks.",
+  "@statsOverviewSub": {
+    "description": "The line under the overview's heading."
+  },
+  "statsNumber": "{value, number}",
+  "@statsNumber": {
+    "description": "A count, with the locale's grouping.",
+    "placeholders": {
+      "value": {
+        "type": "int",
+        "example": "1284"
+      }
+    }
+  },
+  "statsRetention": "Retention",
   "@statsRetention": {
-    "description": "Heading of the retention plot."
+    "description": "Heading of the retention section, its plot and the number that names it."
+  },
+  "statsRetentionLabel": "Remembered",
+  "@statsRetentionLabel": {
+    "description": "Label of the retention number: the share of reviews that were remembered."
+  },
+  "statsRetentionTarget": "target {target}",
+  "@statsRetentionTarget": {
+    "description": "What the retention number aims at, from the library's presets.",
+    "placeholders": {
+      "target": {
+        "type": "String",
+        "example": "90%"
+      }
+    }
   },
   "statsRetentionSummary": "{rate} remembered over {reviews, plural, one {# review} other {# reviews}}",
   "@statsRetentionSummary": {
@@ -412,43 +440,211 @@
   },
   "statsRetentionEmpty": "No reviews to compare yet.",
   "@statsRetentionEmpty": {
-    "description": "The retention plot's empty state: no review had a prediction."
+    "description": "The retention section's empty state: nothing in the log was remembered yet."
+  },
+  "statsTrendEmpty": "No reviews in these 26 weeks.",
+  "@statsTrendEmpty": {
+    "description": "The retention trend has no review in the calendar's range, though the log may hold older ones."
+  },
+  "statsDueToday": "Due today",
+  "@statsDueToday": {
+    "description": "Label of the cards due now."
+  },
+  "statsNotesToRead": "Notes to read",
+  "@statsNotesToRead": {
+    "description": "Label of the notes waiting in the reading queue."
+  },
+  "statsCardsToday": "Cards today",
+  "@statsCardsToday": {
+    "description": "Label of the cards the log says were answered today."
+  },
+  "statsProduction": "Production",
+  "@statsProduction": {
+    "description": "Heading of the section that counts what the library has made."
+  },
+  "statsCharacters": "characters",
+  "@statsCharacters": {
+    "description": "Label of the note text the library holds."
+  },
+  "statsExcerpts": "excerpts",
+  "@statsExcerpts": {
+    "description": "Label of the excerpt notes in the library."
+  },
+  "statsCards": "cards",
+  "@statsCards": {
+    "description": "Label of the cards in the library."
+  },
+  "statsCardsPerExcerpt": "{cards} cards per excerpt",
+  "@statsCardsPerExcerpt": {
+    "description": "Detail under the excerpt count: how many cards one excerpt turned into on average.",
+    "placeholders": {
+      "cards": {
+        "type": "String",
+        "example": "2.5"
+      }
+    }
+  },
+  "statsCardsFromNotes": "from {notes, plural, one {# note} other {# notes}}",
+  "@statsCardsFromNotes": {
+    "description": "Detail under the card count: how many notes the cards come from.",
+    "placeholders": {
+      "notes": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "statsProductionEmpty": "Nothing written yet.",
+  "@statsProductionEmpty": {
+    "description": "The production section's empty state."
+  },
+  "statsReviewsAndReading": "Reviews and reading",
+  "@statsReviewsAndReading": {
+    "description": "Heading of the overview's calendar strip: both card answers and reading sessions are on it."
+  },
+  "statsTimeShare": "Time share",
+  "@statsTimeShare": {
+    "description": "Heading of the section that divides the range's minutes between reading, reviewing and excerpting."
+  },
+  "statsShareRead": "Read",
+  "@statsShareRead": {
+    "description": "The time share's reading segment."
+  },
+  "statsShareReview": "Review",
+  "@statsShareReview": {
+    "description": "The time share's reviewing segment."
+  },
+  "statsShareExcerpt": "Excerpt",
+  "@statsShareExcerpt": {
+    "description": "The time share's excerpting segment."
+  },
+  "statsShareMinutes": "{name} · {minutes, number} min",
+  "@statsShareMinutes": {
+    "description": "One legend entry of the time share: its name and the minutes it is worth.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Read"
+      },
+      "minutes": {
+        "type": "int",
+        "example": "36"
+      }
+    }
+  },
+  "statsTimeShareNote": "Estimated from the log — the queue's pace for each sitting, not a stopwatch.",
+  "@statsTimeShareNote": {
+    "description": "How the time share is measured."
+  },
+  "statsTimeShareEmpty": "Nothing read or reviewed in these 26 weeks.",
+  "@statsTimeShareEmpty": {
+    "description": "The time share's empty state."
+  },
+  "statsWeeks": "{weeks, plural, one {# week} other {# weeks}}",
+  "@statsWeeks": {
+    "description": "How wide the calendar is, as \"26 weeks\".",
+    "placeholders": {
+      "weeks": {
+        "type": "int",
+        "example": "26"
+      }
+    }
+  },
+  "statsRange": "Range",
+  "@statsRange": {
+    "description": "Label of the number that says how wide the calendar is."
+  },
+  "statsRangeSpanTotal": "{from, date, short} – {to, date, short} · {count, plural, =0 {no reviews} one {# review} other {# reviews}}",
+  "@statsRangeSpanTotal": {
+    "description": "Detail under the calendar's range: its first and last day and how many reviews they hold.",
+    "placeholders": {
+      "from": {
+        "type": "DateTime",
+        "example": "2026-05-11"
+      },
+      "to": {
+        "type": "DateTime",
+        "example": "2026-11-08"
+      },
+      "count": {
+        "type": "int",
+        "example": "42"
+      }
+    }
+  },
+  "statsLongestStreak": "Longest streak",
+  "@statsLongestStreak": {
+    "description": "Label of the longest run of days with a review."
+  },
+  "statsDays": "{days, plural, one {# day} other {# days}}",
+  "@statsDays": {
+    "description": "A run of days, as \"12 days\".",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "statsHeatSub": "Every day you reviewed, from the log that keeps it.",
+  "@statsHeatSub": {
+    "description": "The line under the heatmap page's heading."
+  },
+  "statsHeatSource": "From reviews.jsonl, the append-only log: deleting the index and rebuilding it changes nothing here.",
+  "@statsHeatSource": {
+    "description": "Where the calendar's days come from: the plaintext log, not the derived index."
+  },
+  "statsForecastTitle": "Forecast",
+  "@statsForecastTitle": {
+    "description": "Heading of the forecast page, and the page's name in the sub-navigation."
+  },
+  "statsForecastSub": "What comes due, day by day, from one schedule.",
+  "@statsForecastSub": {
+    "description": "The line under the forecast page's heading."
   },
   "statsForecast": "Next 30 days",
   "@statsForecast": {
     "description": "Heading of the forecast plot."
   },
-  "statsForecastEmpty": "Nothing scheduled in the next 30 days.",
+  "statsForecastShort": "Next 14 days",
+  "@statsForecastShort": {
+    "description": "Heading of the overview's forecast plot, which is the month's first two weeks."
+  },
+  "statsForecastEmpty": "Nothing scheduled in the next {days, plural, one {# day} other {# days}}.",
   "@statsForecastEmpty": {
-    "description": "The forecast plot's empty state."
-  },
-  "statsBucket": "{low, number}–{high, number}%",
-  "@statsBucket": {
-    "description": "Label of a predicted-retention range, as \"70–80%\".",
+    "description": "The forecast plot's empty state.",
     "placeholders": {
-      "low": {
+      "days": {
         "type": "int",
-        "example": "70"
-      },
-      "high": {
-        "type": "int",
-        "example": "80"
+        "example": "30"
       }
     }
   },
-  "statsBucketReviews": "{bucket}: {reviews, plural, one {# review} other {# reviews}}",
-  "@statsBucketReviews": {
-    "description": "Tooltip of a retention bar: how many reviews its range holds.",
+  "statsForecastMerged": "Cards and reading notes share one forecast: one log, one schedule.",
+  "@statsForecastMerged": {
+    "description": "Why a reading note and a card stand on the same forecast."
+  },
+  "statsToday": "Today",
+  "@statsToday": {
+    "description": "The forecast's first day."
+  },
+  "statsPeak": "Peak",
+  "@statsPeak": {
+    "description": "The forecast's busiest day."
+  },
+  "statsPeakDay": "{date, date, short}",
+  "@statsPeakDay": {
+    "description": "Detail under the peak: which day it is.",
     "placeholders": {
-      "bucket": {
-        "type": "String",
-        "example": "70–80%"
-      },
-      "reviews": {
-        "type": "int",
-        "example": "12"
+      "date": {
+        "type": "DateTime",
+        "example": "2026-11-14"
       }
     }
+  },
+  "statsTomorrow": "Tomorrow",
+  "@statsTomorrow": {
+    "description": "The forecast's second day."
   },
   "statsPercent": "{value, number, percent}",
   "@statsPercent": {
@@ -472,7 +668,7 @@
   },
   "statsDayCount": "{date, date, medium}: {count, plural, one {# review} other {# reviews}}",
   "@statsDayCount": {
-    "description": "Tooltip of a reviews-per-day bar.",
+    "description": "Tooltip of one day of the calendar.",
     "placeholders": {
       "date": {
         "type": "DateTime",

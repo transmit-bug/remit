@@ -60,6 +60,14 @@ const (
 	// NotesColumnWidth is the notes column's width until its divider moves.
 	// A document's split starts here and the user's drag is remembered.
 	NotesColumnWidth float32 = 260
+
+	// The statistics calendar: one day's box in the overview's strip and on
+	// the heatmap page, the room between two boxes, and the column the
+	// weekday names get. The box is a square, so its side is both sizes.
+	HeatCell      float32 = 12
+	HeatCellLarge float32 = 20
+	HeatGap       float32 = 3
+	HeatWeekday   float32 = 34
 	// FilterPaneWidth is the filter rail the card table keeps on its left.
 	FilterPaneWidth float32 = 200
 	// MeterWidth is a row's paragraph progress bar: wide enough to read as a

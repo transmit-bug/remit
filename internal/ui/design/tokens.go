@@ -60,6 +60,10 @@ type Tokens struct {
 	NotesColumnWidth, FilterPaneWidth float32
 	// MeterWidth is a row's paragraph progress bar.
 	MeterWidth float32
+	// The statistics calendar: a day's box in the overview's strip and on the
+	// heatmap page's grid, the room between two, and the column the weekday
+	// names get.
+	HeatCell, HeatCellLarge, HeatGap, HeatWeekday float32
 }
 
 // NewTokens resolves Remit's appearance for this frame: the palette at the text
@@ -114,6 +118,8 @@ func NewTokens(base *ui.Theme) Tokens {
 		BrowseWidth: BrowseWidth, WelcomeWidth: WelcomeWidth,
 		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
 		MeterWidth: MeterWidth,
+		HeatCell: HeatCell, HeatCellLarge: HeatCellLarge,
+		HeatGap: HeatGap, HeatWeekday: HeatWeekday,
 	}
 }
 
