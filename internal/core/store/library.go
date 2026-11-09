@@ -44,10 +44,10 @@ const (
 	logName    = "reviews.jsonl"
 	indexDir   = ".remit"
 	indexName  = "index.sqlite"
-	// formatVersion is what this build writes and the only one it reads: a
+	// FormatVersion is what this build writes and the only one it reads: a
 	// library declaring anything else is refused, pre-1.0 with no released
-	// libraries to keep.
-	formatVersion = "remit/2"
+	// libraries to keep. It is the agent API's data format version too.
+	FormatVersion = "remit/2"
 
 	noteKind  = "note"
 	cardKind  = "card"
@@ -1625,7 +1625,7 @@ func slugify(title string) string {
 // encodeConfig renders remit.json, the library's declaration of how it
 // schedules, which extensions it runs and which plugin plays each role.
 func encodeConfig(params schedule.Params, extensions []string, roles map[string]string) ([]byte, error) {
-	data, err := json.MarshalIndent(configFile{Format: formatVersion, FSRS: params, Extensions: extensions, Roles: roles}, "", "  ")
+	data, err := json.MarshalIndent(configFile{Format: FormatVersion, FSRS: params, Extensions: extensions, Roles: roles}, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("store: %s: %w", configName, err)
 	}
@@ -1637,8 +1637,8 @@ func decodeConfig(data []byte) (configFile, error) {
 	if err := json.Unmarshal(data, &config); err != nil {
 		return configFile{}, fmt.Errorf("store: %s: %w", configName, err)
 	}
-	if config.Format != formatVersion {
-		return configFile{}, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, formatVersion)
+	if config.Format != FormatVersion {
+		return configFile{}, fmt.Errorf("store: %s: format %q, want %q", configName, config.Format, FormatVersion)
 	}
 	return config, nil
 }
