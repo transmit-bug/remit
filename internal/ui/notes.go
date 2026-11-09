@@ -7,6 +7,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
@@ -60,6 +61,8 @@ func (a *App) notesDeps() notes.Deps {
 		RowItems: func(c *ui.Context) []notes.BlockItem {
 			return a.slotMenuItems(c, a.sidebarNoteItems())
 		},
+		RenameNote: a.renameNote,
+		DeleteNote: a.deleteNote,
 
 		Rows:      func() ([]notes.Row, int) { return a.write.rows, a.write.total },
 		TagRows:   func() []notes.TagRow { return a.write.tags },
@@ -224,6 +227,47 @@ func (a *App) newNoteFromTemplate(c *ui.Context, templateID core.ID) {
 	a.notes.Selected = string(note.ID)
 	a.notes.FocusTitle()
 	a.setMode(modeNotes)
+}
+
+// renameNote writes a note's new title from its row. Nothing moves on disk: the
+// note's file was minted with it, so a link or a card still finds it, and the
+// cards the note feeds are untouched.
+func (a *App) renameNote(c *ui.Context, id core.ID, title string) bool {
+	if a.lib == nil {
+		return false
+	}
+	title = strings.TrimSpace(title)
+	if title == "" {
+		// A note with no name is not a name: the field said nothing, and the
+		// note keeps the title it had.
+		return false
+	}
+	if _, err := a.lib.RenameNote(id, title, time.Now()); err != nil {
+		a.report(c, "rename note", err)
+		return false
+	}
+	a.reload()
+	return true
+}
+
+// deleteNote removes a note from the library. The cards its paragraphs fed stay
+// where they are — lost, with every review they were given — which is the
+// re-link page's work, and the note the editor held open is dropped so a frame
+// never saves it back.
+func (a *App) deleteNote(c *ui.Context, id core.ID) bool {
+	if a.lib == nil {
+		return false
+	}
+	if err := a.lib.DeleteNote(id, time.Now(), store.CascadeLose); err != nil {
+		a.report(c, "delete note", err)
+		return false
+	}
+	if a.notes.Loaded == string(id) {
+		a.notes.Forget()
+	}
+	a.reload()
+	c.Toast(m(c).NoteDeleted())
+	return true
 }
 
 // dailyTitle is a day's note title: the date, which is also what its file is

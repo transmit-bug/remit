@@ -694,7 +694,7 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 - 批量动作条：选中数 + 「暂停」「改到期」「冻结」「加标签」。
 - 数据：`Cards func() ([]store.CardSummary, int)`、`Selection` 状态、`Deps.Bulk…`。
 - 空态：无命中 → 一句 + 语法提示；无卡片 → 「还没有卡片」+「在笔记里用 `::` 或选中文字制卡」。
-- 验收：`TestCardTableSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`。
+- 验收：`TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`。
 
 **S32 忆·类型**（从 `screens/settings/types.go` 迁出为 `internal/ui/screens/cardtypes`）
 - 主从：左 `ui.List`（类型名 + 卡数）；右：标题行（名 + 内置/插件 `ui.Badge` +「编辑模板」）、
@@ -1364,7 +1364,7 @@ S27 的 chip、S31 的侧栏与「重来」列、S31 搜索语法的 `is:hard`�
 | S28 | `TestScopeDialogNarrowsTheSession` |
 | S29 | `TestReviewShowsTheSourceOfTheCard`、`TestReviewExpandsTheContext` |
 | S30 | `TestSummaryGroupsFailedCardsByNote`、`TestSummaryCardIsCentered`（既有） |
-| S31 | `TestCardTableSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends` |
+| S31 | `TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends` |
 | S32 | `TestTypesPagePreviewsTheTemplate`、`TestTypesPageKeepsBuiltinsUndeletable` |
 | S33 | `TestPresetsWriteTheLibraryConfig`、`TestPresetsResetToDefaults` |
 | S34 | `TestHistoryListsTodaysReviews`、`TestHistoryCountsGrades` |

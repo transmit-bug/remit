@@ -856,3 +856,45 @@ func TestSummaryKeepsItsActionAtTheSmallestWindow(t *testing.T) {
 		t.Fatalf("the missed section is missing; texts %q", tt.Texts())
 	}
 }
+
+// Below BreakpointSmall the four grades take two columns instead of one row, so
+// the smallest window shows all four and each one still grades: a key pushed
+// under the fold is a grade the user does not have (spec §2.5 ④).
+func TestGradesTakeTwoColumnsAtTheMinimumSize(t *testing.T) {
+	msgs := locales.In("en")
+	f, state, _ := open(t, "c1")
+	withPreview(f, [4]time.Duration{10 * time.Minute, 6 * time.Hour, 3 * 24 * time.Hour, 120 * 24 * time.Hour})
+	state.Reveal()
+	deps := f.deps()
+	tt := at(t, func(c *ui.Context) { review.View(c, state, deps) }, 720, 520)
+
+	boxes := make([]ui.Rect, 4)
+	for i, label := range []string{msgs.Again(), msgs.Hard(), msgs.Good(), msgs.Easy()} {
+		box, ok := tt.Find(label)
+		if !ok || box.W <= 0 || box.H <= 0 {
+			t.Fatalf("the %q grade has no box; texts %q", label, tt.Texts())
+		}
+		if box.X < 0 || box.Y < 0 || box.X+box.W > 720 || box.Y+box.H > 520 {
+			t.Fatalf("the %q grade is outside the window: %+v", label, box)
+		}
+		boxes[i] = box
+	}
+	// Two rows of two, in the order the grades are ranked in.
+	if boxes[0].Y != boxes[1].Y || boxes[2].Y != boxes[3].Y {
+		t.Errorf("the grades are not two to a row: %+v", boxes)
+	}
+	if boxes[1].Y >= boxes[2].Y {
+		t.Errorf("the second row starts at %.1f, not under the first at %.1f", boxes[2].Y, boxes[1].Y)
+	}
+	if boxes[0].X != boxes[2].X || boxes[1].X != boxes[3].X || boxes[0].X >= boxes[1].X {
+		t.Errorf("the columns are not two across: %+v", boxes)
+	}
+
+	// Each one still grades the card on screen.
+	if err := tt.Click(msgs.Easy()); err != nil {
+		t.Fatalf("the narrow grade is not a control: %v", err)
+	}
+	if len(f.graded) != 1 || f.graded[0].r != review.Easy {
+		t.Errorf("clicking Easy graded %+v", f.graded)
+	}
+}

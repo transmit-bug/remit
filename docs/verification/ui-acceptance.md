@@ -1,7 +1,8 @@
-# UI 验收 · 逐屏（t23 part 1）
+# UI 验收 · 逐屏（t23 part 2）
 
 对象：`docs/specs/ui-redesign-v2.md` §3 的 52 个面（S01–S52），一屏一节。核对基准是 `master`
-`7b83d5f` 的代码与测试；本文件只记录**今天仓库里能用测试证明什么**，不改代码、不补测试。
+`7b83d5f` 的代码与测试；part 1 只记录**当时仓库里能用测试证明什么**，part 2 把点名的缺口补上：
+S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、两条组件闸门。
 每个测试名都用 `grep -q "^func <名字>(" --include='*_test.go' internal/` 核过，没核到的不写。
 
 状态三值：
@@ -36,7 +37,7 @@
 | ① | ≤980 轨道 64、label 传空、Tooltip 补名、Badge 仍显示 | `shell/rail.go` | 已实现，有测试 |
 | ② | ≤980 文档面板收起、顶栏面板按钮改开 `ui.Overlay` | `notes/notes.go` + `notes/panel.go` | 已实现（`TestPanelBecomesAnOverlayWhenNarrow`、`TestNarrowWindowDropsThePanel`） |
 | ③ | ≤760 纸面边距 48 → 20、`TypeDisplay 34 → 30` | 只有 `DisplayNarrow` 用在 `notes/read.go:166`；`GutterNarrow` 定义了但没有任何视图引用 | **部分未实现**（见缺口 #6） |
-| ④ | ≤760 复习评分改两列 `ui.Grid` | `grep BreakpointSmall internal/ui/screens/review` 为空，四档仍是单行 `ui.Row`（`review.go:499`） | **未实现**，无测试（缺口 #7） |
+| ④ | ≤760 复习评分改两列 `ui.Grid` | `grades`（`internal/ui/screens/review/review.go`）在 `BreakpointSmall` 及以下用 `ui.Grid` 两列，四档仍在 | 已实现，`TestGradesTakeTwoColumnsAtTheMinimumSize` |
 | ⑤ | ≤760 块沟槽从左侧 48 沟槽改为段落上方一行 | 代码保留 48 沟槽，改由 `TestPaperKeepsGutterAtMinimumSize` / `TestBlockHandlesAtMinimumSize` 守「最小窗仍可点」 | **口径改判**（缺口 #8） |
 
 ### 组件闸门（`docs/specs/ui-composition.md` §4 + §9.1）
@@ -45,19 +46,19 @@
 |---|---|---|---|
 | Split 拖动 | 拖分隔条 → 笔记列宽变；窗口变化后记住 | `TestSplitResizesTheNotesColumn`、`TestThreeColumnsAtTheDefaultSize`（`internal/ui/notes_layout_test.go`）、`TestPanelTakesAColumnOnAWideWindow`（`internal/ui/workbench_test.go`） | 有 |
 | Outline 当前节 | 光标进入某标题 → 大纲把它标为当前 | `TestOutlineFollowsTheCaret`、`TestOutlineJumpsToItsParagraph`（`internal/ui/panel_test.go`） | 有 |
-| Table 排序 | 点表头 → 行序变化，再点反向 | `TestCardTableSortsByColumn`（`internal/ui/recall_test.go`） | 有（spec 旧名 `TestBrowseSortsByColumn` 不存在，缺口 #4） |
+| Table 排序 | 点表头 → 行序变化，再点反向 | `TestBrowseSortsByColumn`（`internal/ui/recall_test.go`，闸门名） | 有 |
 | Autocomplete 收窄 | 输入收窄候选、Enter 选中、Esc 取消 | `TestRelinkNarrowsAsYouType`、`TestRelinkPickerAtMinimumInChinese`（`internal/ui/recall_test.go`、`internal/ui/relink_test.go`）；候选本身 `TestCandidates`/`TestQuery`/`TestChoose`/`TestClose`/`TestEmpty`（`internal/ui/screens/relink/relink_test.go`） | 有 |
 | ToggleGroup | 一组筛选里改一个 → 队列随之变化，且只留一个 | `TestNotesListFilterKeepsOnlyNotesWithCards`（`internal/ui/write_test.go`）、`TestRecallFilterNarrowsTheQueue`（`internal/ui/recall_test.go`）、`TestScopeDialogChoosesATag`（`internal/ui/review_scope_test.go`） | 有 |
 | 命令面板 | 输入收窄、键盘选中并执行、焦点还回 | `TestPalette`、`TestPaletteGroupsCommandsNotesAndCards`、`TestPaletteListsPluginCommandsLast`（`internal/ui/palette_test.go`） | 有 |
 | 最小窗控件可点 | 面板行在 720×520 可点且点了会执行 | `TestMinimumSizeControls`（`internal/ui/app_test.go`）、`TestOverlaysAtTheMinimumSizeInChinese`（`internal/ui/shortcuts_test.go`） | 有 |
-| 页只报卡数不报块数 | 页面数字不说实现词 | **不存在**（缺口 #5） | 缺 |
+| 页只报卡数不报块数 | 页面数字说笔记与卡，不说块；文档状态行报卡数 | `TestThePageCountsCardsNotBlocks`（`internal/ui/write_test.go`，闸门名） | 有 |
 | 纸面填满工作区 | 纸面填满，而非停在内容高度 | `TestNotebookFillsTheWindowHeight`（`internal/ui/notes_layout_test.go`） | 有 |
 
 ### i18n
 
 - 目录：`locales/en.json` + `locales/zh-Hans.json`，生成 `locales/catalog_gen.go`；`go tool mygo i18n check .` 是闸门。
 - 语言不得由第二条代码路径提供：`TestLocaleSwitchesTheLanguage`（`internal/ui/app_test.go`）、`TestNotesListDayFollowsTheFrameLanguage`（`internal/ui/write_test.go`）、`TestContributedPageFollowsTheLocale`（`internal/ui/contrib_test.go`）。
-- 最小窗 + zh-Hans 的分面覆盖：`TestChineseAtTheMinimumSize`（`internal/ui/screens/reading/reading_test.go`）、`TestReadAreaInChineseAtTheMinimumSize`（`internal/ui/reading_screen_test.go`）、`TestTodayInChineseAtTheMinimumWindow`（`internal/ui/today_test.go`）、`TestWritePagesInChinese`（`internal/ui/write_test.go`）、`TestRecallPagesAtMinimumInChinese`（`internal/ui/recall_test.go`）、`TestStatsPagesZhHansAtMinimum`（`internal/ui/stats_test.go`）、`TestSettingsPagesAtMinimumInChinese`（`internal/ui/screens/settings/settings_test.go`）、`TestTypesPageInChineseAtMinimum`（`internal/ui/screens/cardtypes/cardtypes_test.go`）、`TestPluginSurfacesAtTheMinimumSizeInChinese`（`internal/ui/receivers_test.go`）、`TestSummaryKeepsItsActionAtTheSmallestWindow`（`internal/ui/screens/review/review_test.go`）。
+- 最小窗 + zh-Hans 的分面覆盖：`TestWelcomeInChineseAtTheMinimumSize`（`internal/ui/screens/start/start_test.go`）、`TestChineseAtTheMinimumSize`（`internal/ui/screens/reading/reading_test.go`）、`TestReadAreaInChineseAtTheMinimumSize`（`internal/ui/reading_screen_test.go`）、`TestTodayInChineseAtTheMinimumWindow`（`internal/ui/today_test.go`）、`TestWritePagesInChinese`（`internal/ui/write_test.go`）、`TestRecallPagesAtMinimumInChinese`（`internal/ui/recall_test.go`）、`TestStatsPagesZhHansAtMinimum`（`internal/ui/stats_test.go`）、`TestSettingsPagesAtMinimumInChinese`（`internal/ui/screens/settings/settings_test.go`）、`TestTypesPageInChineseAtMinimum`（`internal/ui/screens/cardtypes/cardtypes_test.go`）、`TestPluginSurfacesAtTheMinimumSizeInChinese`（`internal/ui/receivers_test.go`）、`TestSummaryKeepsItsActionAtTheSmallestWindow`（`internal/ui/screens/review/review_test.go`）。
 
 ### 暗色
 
@@ -86,14 +87,14 @@
 
 ## S01 · 欢迎
 
-- 代码：`internal/ui/screens/start/start.go`、`internal/ui/library.go`（`startView`、`libraryErrorView`）。
-- 目的：没有库时的窗口——说清库会放哪，给开始的路。
-- 元素：图标 + 标题 + 一句 + 目录 + 两个按钮（新建库 / 打开库）。**缺**：导入门、最近库列表（`settings.recent` 字段）、卡内 danger callout、「零遥测」页脚、`WelcomeWidth` 卡（常量在 `design/scale.go:53`，仅注册进 Tokens）。
-- 动作：`Deps.Create` / `Deps.Choose`；库打不开时是**另一页** `libraryErrorView` 的「重试」，不是欢迎卡里的 banner。
+- 代码：`internal/ui/screens/start/start.go`、`internal/ui/library.go`（`startView`、`startDeps`、`openLibraryAt`、`importLibrary`、`libraryErrorView`）、`internal/settings/settings.go`（`RecentLibraries`、`WithRecent`、`ForgetRecent`）。
+- 目的：没有库时的窗口——说清库会放哪，给三条开始的路，并把打开过的库摆在手边。
+- 元素：`kit.Card` 内品牌块（方标 + `Remit` + 一句）、标题 + 一句 + 目录、**三道门**（新建库 / 打开库 / 导入，每道 `ui.ButtonBase` 高 `tk.Door`，图标 + 名 + 副行）、`ui.Divider`、「最近」`ui.List`（路径 + 缺目录时的 `Folder is gone` badge）、页脚 `Zero telemetry · zero network requests`；卡打不开时就地 `kit.Notice`（danger）写明路径与原因 +「换一个」。宽 `WelcomeWidth 640`。
+- 动作：新建 → `Deps.Create`；打开 → `Deps.Choose`；导入 → `Deps.Import`（先开出接收导入的库，再开 S02）；最近项 → `Deps.OpenAt(path)`。打开成功写 `settings.recent_libraries`（最多 5、去重、最新在前）；打不开时设 `App.welcome.Failed`，库不存在则同时从列表删掉（`ForgetRecent`）。
 - 键：无。
-- 尺寸：1024×720 居中 `MessageWidth`；720×520 与 zh-Hans 均无测试。
-- 守卫：`TestNoLibraryYet`、`TestPlaceComesFromTheApp`、`TestActionsGoToTheApp`（`internal/ui/screens/start/start_test.go`）；`TestFirstRun`、`TestOpenLibraryPicker`、`TestOpenLibraryPickerCancelled`、`TestStartViewWithNoSetting`（`internal/ui/onboarding_test.go`）。
-- 状态：**missing**。§9.1 的 `TestWelcomeOffersThreeDoors` / `TestWelcomeShowsWhyALibraryFailed` 都不存在，且 §4.1 的三门、最近库、卡内 callout 在代码里没有。
+- 尺寸：1024×720 居中 `WelcomeWidth`；720×520 与 zh-Hans 各有测试。
+- 守卫：`TestWelcomeOffersThreeDoors`（三门都在、都到 app）、`TestWelcomeShowsWhyALibraryFailed`（卡内 callout 有路径 + 原因 +「换一个」，且不吞掉三门）、`TestRecentLibrariesAreOneClick`、`TestNoRecentDrawsNoSection`、`TestWelcomeInChineseAtTheMinimumSize`（`internal/ui/screens/start/start_test.go`）；既有 `TestNoLibraryYet`、`TestPlaceComesFromTheApp`、`TestActionsGoToTheApp`；app 侧 `TestRecentLibraryThatIsGoneSaysWhy`（`internal/ui/onboarding_test.go`，记得住 → 标出缺目录 → 点击报原因 → 从列表删掉）；`TestRecentLibrariesKeepTheLastFive`、`TestForgetRecentDropsOnePath`（`internal/settings/settings_test.go`）。
+- 状态：**covered**。库文件损坏仍是另一页 `libraryErrorView`（`App.openErr`）；欢迎卡的 callout 只用于「用户刚点的那一个最近库打不开」。
 
 ## S02 · 导入向导
 
@@ -399,7 +400,7 @@
 - 元素：题面 → 答案（公式走 `maths.Render`）+ 比对（键入时）、来源行（「《标题》· 第 N 段 · 同块还有 M 张」+「回到原文」+「展开上下文」）、四档评分（`kit.Keycap` + 间隔预览）+ `review.card` 插件项 +「撤销」「编辑卡片」。
 - 动作：`Space` 显示答案、`1`–`4` 评分、`U` 撤销、`E` 编辑、回原文、展开上下文。
 - 键：§2.8 复习那一组。
-- 尺寸：`ReviewWidth 680`；720×520 **仍是单行四档**（§2.5 ④ 未实现，缺口 #7）。
+- 尺寸：`ReviewWidth 680`；720×520 评分两列（§2.5 ④，`TestGradesTakeTwoColumnsAtTheMinimumSize`），四档都在窗内且仍可点。
 - 守卫：`TestReviewShowsTheSourceOfTheCard`、`TestReviewExpandsTheContext`（`internal/ui/screens/review/review_test.go`）；屏级 `TestRevealAndGrade`、`TestGradeKeysShowIntervals`、`TestGradeKeysWithoutPreview`、`TestIntervalSitsInsideItsKey`、`TestFooterActions`、`TestReviewFooterDrawsTheReviewCardSlot`（`internal/ui/receivers_test.go`）。
 - 状态：**covered**。
 
@@ -422,7 +423,7 @@
 - 动作：点表头排序、右键批量、多选批量、语法筛选、开原笔记。
 - 键：表自己的（↑↓ / Home / End / 空格选中）。
 - 尺寸：`BrowseWidth 1080`；≤ 阈值切 `ui.Select`（`cards.go:504`），zh 最小窗由 `TestRecallPagesAtMinimumInChinese` 守。
-- 守卫：`TestCardTableSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`（`internal/ui/recall_test.go`）；另 `TestCardTableOpensTheNote`、`TestCardTableDrawsTheBrowseRowSlot`（`internal/ui/receivers_test.go`）。
+- 守卫：`TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`（`internal/ui/recall_test.go`）；另 `TestCardTableOpensTheNote`、`TestCardTableDrawsTheBrowseRowSlot`（`internal/ui/receivers_test.go`）。
 - 状态：**covered**。
 
 ## S32 · 忆 · 类型
@@ -647,45 +648,48 @@
 
 ## S52 · 笔记行菜单
 
-- 代码：`internal/ui/screens/notes/list.go:258`（行尾 `ui.ButtonBase` + `PopoverMenuButton`）。
+- 代码：`internal/ui/screens/notes/list.go`（行尾 `ui.ButtonBase` + `PopoverMenuButton`、`renameDialog`、`deleteDialog`）、`internal/core/store/library.go`（`RenameNote`、`DeleteNote`、`Cascade`）。
 - 目的：不打开笔记也能对它做事。
-- 元素：菜单里今天有「阅读」「加入阅读队列」+ 分隔线 + `sidebar.note` 插件项。**缺**：「重命名」「删除」（含 `ui.AlertDialog` 确认）；代码里没有 `RenameNote` / `DeleteNote`（`internal/ui/screens/notes/notes.go` 的 `Deps` 也没有这两个字段）。
-- 动作：阅读 / 加入队列 / 插件项。
-- 键：`Esc` 关。
-- 尺寸：随行；720×520 与 zh-Hans 都没有验证。
-- 守卫：`TestNoteRowMenuDrawsTheSidebarNoteSlot`（`internal/ui/receivers_test.go`，只守插件槽那一半）。
-- 状态：**missing**。§9.1 的 `TestNoteRowMenuOffersReadingAndThePluginSlot` 不存在；「阅读 / 加入队列」这两行没有任何测试守着。
+- 元素：菜单「阅读」「加入阅读队列」+ 分隔线 +「重命名」「删除笔记」（`MenuItem.Danger`）+ 分隔线 + `sidebar.note` 插件项；重命名是 `ui.DialogBase` + `ui.TextInput`（新标题，Enter 或按钮写入，Esc 取消）；删除是 `ui.AlertDialog`，正文写「N 张卡片断链、复习记录保留」。
+- 动作：阅读 → `Deps.OpenNoteRead`；加入队列 → `Deps.QueueReading`；重命名 → `Deps.RenameNote` → `Library.RenameNote(id, title, at)`（slug 不变，文件不动，块与卡不动）；删除 → `Deps.DeleteNote` → `Library.DeleteNote(id, at, CascadeLose)`（删文件与索引行，卡变 lost，日志不删；笔记若在队列里就写一条 `Dropped` 事件；编辑器若开着它就丢掉草稿）。
+- 键：`Esc` 关菜单 / 关对话框。
+- 尺寸：随行；720×520 与 zh-Hans 由既有 `TestPluginSurfacesAtTheMinimumSizeInChinese`（同一行菜单）与新增的三条 app 测试覆盖。
+- 守卫：`TestNoteRowMenuOffersReadingAndThePluginSlot`（`internal/ui/receivers_test.go`：四项 + 插件槽都在，加入队列与阅读都真的执行）、`TestNoteRowMenuRenamesTheNote`、`TestRenameRefusesAnEmptyTitle`、`TestNoteRowMenuDeletesTheNote`（`internal/ui/write_test.go`：重命名落盘且文件不动、空标题按钮等待并写原因；删除先问、写卡片数、取消不删、确认后卡 lost + toast）；核心 `TestRenameNoteKeepsItsFile`、`TestRenameNoteNeedsTheNote`、`TestDeleteNoteLeavesItsCardsLost`、`TestDeleteNoteLeavesTheReadingQueue`、`TestDeleteNoteRefusesAnUnknownCascade`（`internal/core/store/notedelete_test.go`）；既有 `TestNoteRowMenuDrawsTheSidebarNoteSlot`。
+- 状态：**covered**。重命名没用 `ui.EditableText`：它在列表里由行自己的 F2/Enter 或双击开始，菜单项无法打开它，而行的标题必须是打开笔记的按钮——理由写在 `beginRename` 的注释里。
 
 # 缺口
 
 ### §9.1 点名而不存在的测试
 
-| # | 名字 | 该红的 bug | 现状 / 替代 |
-|---|---|---|---|
-| 1 | `TestWelcomeOffersThreeDoors` | 少一个入口 | 不存在；S01 代码只有两道门 |
-| 2 | `TestWelcomeShowsWhyALibraryFailed` | 错误被吞 | 不存在；失败是另一页 `libraryErrorView`（`internal/ui/library.go:491`），没有覆盖 |
-| 3 | `TestNoteRowMenuOffersReadingAndThePluginSlot` | 行菜单少了「阅读」或插件槽 | 不存在；插件槽一半由 `TestNoteRowMenuDrawsTheSidebarNoteSlot` 守，「阅读 / 加入队列」无测试 |
-| 4 | `TestBrowseSortsByColumn`（`ui-composition.md` §4 闸门） | 点表头行序不变 | 不存在；表排序由 `TestCardTableSortsByColumn` 守（`internal/ui/recall_test.go`） |
-| 5 | `TestThePageCountsCardsNotBlocks`（`ui-composition.md` §4 闸门） | 页面报块数不报卡数 | 不存在；近一半由 `TestNotesListShowsSummaryAndCards` 守 |
+无：§9.1 的 100 个不重复测试名与 `ui-composition.md` §4 的 10 条闸门，今天全部在仓库里。
+这一轮补上的五个名字（前三条是 §9.1 点名的 S01 / S52 能力测试，后两条是 `ui-composition.md` §4 的闸门）：
+
+| 名字 | 该红的 bug | 现在守在哪 |
+|---|---|---|
+| `TestWelcomeOffersThreeDoors` | 少一个入口 | `internal/ui/screens/start/start_test.go` |
+| `TestWelcomeShowsWhyALibraryFailed` | 错误被吞 | `internal/ui/screens/start/start_test.go` |
+| `TestNoteRowMenuOffersReadingAndThePluginSlot` | 行菜单少了「阅读」「加入队列」或插件槽 | `internal/ui/receivers_test.go` |
+| `TestBrowseSortsByColumn` | 点表头行序不变 | `internal/ui/recall_test.go`（闸门名；spec §9.1 S31 与 `ui-composition.md` §4 同名） |
+| `TestThePageCountsCardsNotBlocks` | 页面报块数不报卡数 | `internal/ui/write_test.go` |
 
 ### spec 的面在代码里不存在或缺零件
 
-| # | 面 / 规则 | 缺什么 | 证据 |
-|---|---|---|---|
-| 6 | §2.5 ③ 纸面边距 48 → 20 | `GutterNarrow` 定义了但没有任何视图引用；`DisplayNarrow` 只在 `internal/ui/screens/notes/read.go:166` 用 | `grep -rn GutterNarrow internal/ui` 只有 `design/` |
-| 7 | §2.5 ④ ≤760 复习评分两列 | `internal/ui/screens/review` 里没有 `BreakpointSmall` 分支，四档仍是单行 `ui.Row`（`review.go:499`） | `grep -rn BreakpointSmall internal/ui/screens/review` 空 |
-| 8 | §2.5 ⑤ 沟槽改到段上一行 | 代码保留左侧 48 沟槽（口径改判，已由测试固定） | `TestPaperKeepsGutterAtMinimumSize`、`TestBlockHandlesAtMinimumSize` |
-| 9 | §4.1 S02 步骤 2 开关 | spec 写「保留现有笔记、导入后重建索引」，代码是「重建索引、加入阅读队列」 | `internal/ui/import.go:446-447` |
-| 10 | §4.1 S01 三件元素 | 导入门、最近库列表（`settings.recent`）、卡内 danger callout 全无 | `internal/ui/screens/start/start.go` |
-| 11 | §4.9 S52 | 重命名、删除（含确认）无实现，也没有对应 `Deps` | `grep -rnE 'Rename\|DeleteNote' internal/ui` 无命中 |
-| 12 | §3 状态行「只在文档面出现」 | 代码按内容判断（有话才画），不按面 | `internal/ui/shell/status.go:15`、`TestStatusLineOnlyWhenItSaysSomething` |
-| 13 | §4.14 `kit.GradeBar` | 没有这个 `kit` 组件；实现是 `internal/ui/screens/recall/history.go:160` 的局部 `gradeBar` | `grep -rn GradeBar internal/ui` 无命中 |
-| 14 | §4.10 把 S05–S10 全归 `ListWidth 860` | S08 在 §4.3 写的是 `BrowseWidth`，代码也是 `BrowseWidth 1080` | `internal/ui/screens/notes/assetspage.go:47` |
+| # | 面 / 规则 | 缺什么 | 证据 | 状态 |
+|---|---|---|---|---|
+| 6 | §2.5 ③ 纸面边距 48 → 20 | `GutterNarrow` 定义了但没有任何视图引用；`DisplayNarrow` 只在 `internal/ui/screens/notes/read.go:166` 用 | `grep -rn GutterNarrow internal/ui` 只有 `design/` | 未修 |
+| 7 | §2.5 ④ ≤760 复习评分两列 | `grades` 在 `BreakpointSmall` 及以下用 `ui.Grid` 两列 | `internal/ui/screens/review/review.go`、`TestGradesTakeTwoColumnsAtTheMinimumSize` | **已修** |
+| 8 | §2.5 ⑤ 沟槽改到段上一行 | 代码保留左侧 48 沟槽（口径改判，已由测试固定） | `TestPaperKeepsGutterAtMinimumSize`、`TestBlockHandlesAtMinimumSize` | 口径改判 |
+| 9 | §4.1 S02 步骤 2 开关 | spec 写「保留现有笔记、导入后重建索引」，代码是「重建索引、加入阅读队列」 | `internal/ui/import.go:446-447` | 未修 |
+| 10 | §4.1 S01 三件元素 | 导入门、最近库列表（`settings.RecentLibraries`）、卡内 danger callout | `internal/ui/screens/start/start.go`、`internal/ui/library.go` | **已修** |
+| 11 | §4.9 S52 | 重命名、删除（含确认）、对应 `Deps` 与 core 写入 | `internal/ui/screens/notes/list.go`、`internal/core/store/library.go` | **已修** |
+| 12 | §3 状态行「只在文档面出现」 | 代码按内容判断（有话才画），不按面 | `internal/ui/shell/status.go:15`、`TestStatusLineOnlyWhenItSaysSomething` | 未修 |
+| 13 | §4.14 `kit.GradeBar` | 没有这个 `kit` 组件；实现是 `internal/ui/screens/recall/history.go:160` 的局部 `gradeBar` | `grep -rn GradeBar internal/ui` 无命中 | 未修 |
+| 14 | §4.10 把 S05–S10 全归 `ListWidth 860` | S08 在 §4.3 写的是 `BrowseWidth`，代码也是 `BrowseWidth 1080` | `internal/ui/screens/notes/assetspage.go:47` | 口径差 |
 
 ### 无行为测试的屏
 
 13 个 `internal/ui/screens/` 下的包与 `internal/ui/shell`、`internal/ui/kit`、`internal/ui/design` 各有 `_test.go`，没有「整包零测试」的屏。
-逐面看，只有 S01 与 S52 两面没有守住自己行为的测试；S39 / S44 / S45 有测试但只证明 fake，按 `manual` 记。
+逐面看，52 面都有守住自己行为的测试；S39 / S44 / S45 有测试但只证明 fake，按 `manual` 记。
 
 ### 尺寸口径
 
@@ -693,5 +697,6 @@
 
 ### 计数
 
-52 个面：`covered` 47、`missing` 2（S01、S52）、`manual` 3（S39、S44、S45）。
-§9.1 表里出现 100 个不重复的测试名，97 个在仓库里存在，缺的 3 个就是上表 #1–#3；`ui-composition.md` §4 另有两个名字不存在（#4、#5）。
+52 个面：`covered` 49、`missing` 0、`manual` 3（S39、S44、S45）。
+§9.1 表里出现 100 个不重复的测试名，全部在仓库里存在；`ui-composition.md` §4 的 10 条闸门也全部有测试。
+未修的缺口只剩口径差（#6、#8、#9、#12、#13、#14），它们不是缺测试，是代码与 spec 的写法还没有对齐。

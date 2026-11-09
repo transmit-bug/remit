@@ -57,7 +57,8 @@ func TestRoundTrip(t *testing.T) {
 		UpdateCheck: true, LibraryDir: "/home/ada/Remit", AgentServer: true,
 		Notifications: true, Hotkey: "CmdOrCtrl+Shift+J", RemindedOn: "2026-11-06",
 		Appearance: AppearanceInk, PaperWidth: 700,
-		SavedFilters: []string{"new", "hard"},
+		SavedFilters:    []string{"new", "hard"},
+		RecentLibraries: []string{"/home/ada/Remit", "/home/ada/Work"},
 	}
 	if err := Save(dir, want); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -132,5 +133,43 @@ func TestHotkeyAccelerator(t *testing.T) {
 	}
 	if got := (Settings{Hotkey: "   "}).HotkeyAccelerator(); got != DefaultHotkey {
 		t.Errorf("blank hotkey = %q, want %q", got, DefaultHotkey)
+	}
+}
+
+// Opening a library moves it to the front of the list the welcome screen
+// offers, once: the sixth library is forgotten rather than the list growing,
+// and a library opened twice is not offered twice.
+func TestRecentLibrariesKeepTheLastFive(t *testing.T) {
+	var s Settings
+	for _, dir := range []string{"/a", "/b", "/c", "/d", "/e", "/f"} {
+		s = s.WithRecent(dir)
+	}
+	want := []string{"/f", "/e", "/d", "/c", "/b"}
+	if !reflect.DeepEqual(s.RecentLibraries, want) {
+		t.Fatalf("recent = %q, want %q", s.RecentLibraries, want)
+	}
+
+	s = s.WithRecent("/d")
+	want = []string{"/d", "/f", "/e", "/c", "/b"}
+	if !reflect.DeepEqual(s.RecentLibraries, want) {
+		t.Errorf("reopening a library gave %q, want %q", s.RecentLibraries, want)
+	}
+
+	s = s.WithRecent("")
+	if !reflect.DeepEqual(s.RecentLibraries, want) {
+		t.Errorf("an empty path changed the list to %q", s.RecentLibraries)
+	}
+}
+
+// A library that is not there any more is taken out of the list it was offered
+// in, and only that one.
+func TestForgetRecentDropsOnePath(t *testing.T) {
+	s := Settings{RecentLibraries: []string{"/a", "/b", "/c"}}
+	got := s.ForgetRecent("/b").RecentLibraries
+	if want := []string{"/a", "/c"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("forgetting /b gave %q, want %q", got, want)
+	}
+	if len(s.RecentLibraries) != 3 {
+		t.Errorf("ForgetRecent changed the value it was called on: %q", s.RecentLibraries)
 	}
 }

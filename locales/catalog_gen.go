@@ -1867,6 +1867,178 @@ func (msgs Messages) OpenLibrary() string {
 	return Catalog.Format(msgs.locale, "openLibrary", nil)
 }
 
+// StartBrand says "Remit"
+// in the language the app shows.
+//
+// The app's name in the welcome card's brand block.
+func StartBrand() string { return In(i18n.Locale()).StartBrand() }
+
+// StartBrand says "Remit"
+// in the language of msgs.
+//
+// The app's name in the welcome card's brand block.
+func (msgs Messages) StartBrand() string {
+	return Catalog.Format(msgs.locale, "startBrand", nil)
+}
+
+// StartTagline says "Local-first · plaintext library · no account"
+// in the language the app shows.
+//
+// What a Remit library is, under the name on the welcome screen.
+func StartTagline() string { return In(i18n.Locale()).StartTagline() }
+
+// StartTagline says "Local-first · plaintext library · no account"
+// in the language of msgs.
+//
+// What a Remit library is, under the name on the welcome screen.
+func (msgs Messages) StartTagline() string {
+	return Catalog.Format(msgs.locale, "startTagline", nil)
+}
+
+// StartCreateHint says "A new folder in Documents"
+// in the language the app shows.
+//
+// The line under the welcome screen's Create library door.
+func StartCreateHint() string { return In(i18n.Locale()).StartCreateHint() }
+
+// StartCreateHint says "A new folder in Documents"
+// in the language of msgs.
+//
+// The line under the welcome screen's Create library door.
+func (msgs Messages) StartCreateHint() string {
+	return Catalog.Format(msgs.locale, "startCreateHint", nil)
+}
+
+// StartOpenHint says "A folder that already holds one"
+// in the language the app shows.
+//
+// The line under the welcome screen's Open library door.
+func StartOpenHint() string { return In(i18n.Locale()).StartOpenHint() }
+
+// StartOpenHint says "A folder that already holds one"
+// in the language of msgs.
+//
+// The line under the welcome screen's Open library door.
+func (msgs Messages) StartOpenHint() string {
+	return Catalog.Format(msgs.locale, "startOpenHint", nil)
+}
+
+// StartImport says "Import a library"
+// in the language the app shows.
+//
+// Welcome screen door: bring a .remitlib archive or a folder of Markdown
+// in.
+func StartImport() string { return In(i18n.Locale()).StartImport() }
+
+// StartImport says "Import a library"
+// in the language of msgs.
+//
+// Welcome screen door: bring a .remitlib archive or a folder of Markdown
+// in.
+func (msgs Messages) StartImport() string {
+	return Catalog.Format(msgs.locale, "startImport", nil)
+}
+
+// StartImportHint says "A .remitlib archive or a folder of Markdown"
+// in the language the app shows.
+//
+// The line under the welcome screen's Import door.
+func StartImportHint() string { return In(i18n.Locale()).StartImportHint() }
+
+// StartImportHint says "A .remitlib archive or a folder of Markdown"
+// in the language of msgs.
+//
+// The line under the welcome screen's Import door.
+func (msgs Messages) StartImportHint() string {
+	return Catalog.Format(msgs.locale, "startImportHint", nil)
+}
+
+// StartRecent says "Recent"
+// in the language the app shows.
+//
+// Heading of the welcome screen's list of libraries opened before.
+func StartRecent() string { return In(i18n.Locale()).StartRecent() }
+
+// StartRecent says "Recent"
+// in the language of msgs.
+//
+// Heading of the welcome screen's list of libraries opened before.
+func (msgs Messages) StartRecent() string {
+	return Catalog.Format(msgs.locale, "startRecent", nil)
+}
+
+// StartRecentOpen says "Open {path}"
+// in the language the app shows.
+//
+// Accessible name of a recent library's row, which opens it.
+func StartRecentOpen(path string) string { return In(i18n.Locale()).StartRecentOpen(path) }
+
+// StartRecentOpen says "Open {path}"
+// in the language of msgs.
+//
+// Accessible name of a recent library's row, which opens it.
+func (msgs Messages) StartRecentOpen(path string) string {
+	return Catalog.Format(msgs.locale, "startRecentOpen", map[string]any{"path": path})
+}
+
+// StartRecentMissing says "Folder is gone"
+// in the language the app shows.
+//
+// Badge on a recent library whose folder is no longer on disk.
+func StartRecentMissing() string { return In(i18n.Locale()).StartRecentMissing() }
+
+// StartRecentMissing says "Folder is gone"
+// in the language of msgs.
+//
+// Badge on a recent library whose folder is no longer on disk.
+func (msgs Messages) StartRecentMissing() string {
+	return Catalog.Format(msgs.locale, "startRecentMissing", nil)
+}
+
+// StartFailed says "Remit could not open {path}: {reason}"
+// in the language the app shows.
+//
+// Callout in the welcome card when a library the user picked will not open.
+func StartFailed(path string, reason string) string {
+	return In(i18n.Locale()).StartFailed(path, reason)
+}
+
+// StartFailed says "Remit could not open {path}: {reason}"
+// in the language of msgs.
+//
+// Callout in the welcome card when a library the user picked will not open.
+func (msgs Messages) StartFailed(path string, reason string) string {
+	return Catalog.Format(msgs.locale, "startFailed", map[string]any{"path": path, "reason": reason})
+}
+
+// StartChooseAnother says "Choose another"
+// in the language the app shows.
+//
+// The welcome card's callout action: open the folder picker instead.
+func StartChooseAnother() string { return In(i18n.Locale()).StartChooseAnother() }
+
+// StartChooseAnother says "Choose another"
+// in the language of msgs.
+//
+// The welcome card's callout action: open the folder picker instead.
+func (msgs Messages) StartChooseAnother() string {
+	return Catalog.Format(msgs.locale, "startChooseAnother", nil)
+}
+
+// StartTelemetry says "Zero telemetry · zero network requests"
+// in the language the app shows.
+//
+// The welcome card's footer: what the app sends, which is nothing.
+func StartTelemetry() string { return In(i18n.Locale()).StartTelemetry() }
+
+// StartTelemetry says "Zero telemetry · zero network requests"
+// in the language of msgs.
+//
+// The welcome card's footer: what the app sends, which is nothing.
+func (msgs Messages) StartTelemetry() string {
+	return Catalog.Format(msgs.locale, "startTelemetry", nil)
+}
+
 // NoLibraryPlace says "Remit could not find a place for its library."
 // in the language the app shows.
 //
@@ -9541,6 +9713,134 @@ func WriteRowQueue() string { return In(i18n.Locale()).WriteRowQueue() }
 // A note row's action that puts the note in the reading queue.
 func (msgs Messages) WriteRowQueue() string {
 	return Catalog.Format(msgs.locale, "writeRowQueue", nil)
+}
+
+// WriteRowRename says "Rename"
+// in the language the app shows.
+//
+// A note row's menu action that renames the note.
+func WriteRowRename() string { return In(i18n.Locale()).WriteRowRename() }
+
+// WriteRowRename says "Rename"
+// in the language of msgs.
+//
+// A note row's menu action that renames the note.
+func (msgs Messages) WriteRowRename() string {
+	return Catalog.Format(msgs.locale, "writeRowRename", nil)
+}
+
+// WriteRowDelete says "Delete note"
+// in the language the app shows.
+//
+// A note row's menu action that deletes the note, after a confirmation.
+func WriteRowDelete() string { return In(i18n.Locale()).WriteRowDelete() }
+
+// WriteRowDelete says "Delete note"
+// in the language of msgs.
+//
+// A note row's menu action that deletes the note, after a confirmation.
+func (msgs Messages) WriteRowDelete() string {
+	return Catalog.Format(msgs.locale, "writeRowDelete", nil)
+}
+
+// RenameNoteTitle says "Rename note"
+// in the language the app shows.
+//
+// Title of the dialog that renames a note from its row.
+func RenameNoteTitle() string { return In(i18n.Locale()).RenameNoteTitle() }
+
+// RenameNoteTitle says "Rename note"
+// in the language of msgs.
+//
+// Title of the dialog that renames a note from its row.
+func (msgs Messages) RenameNoteTitle() string {
+	return Catalog.Format(msgs.locale, "renameNoteTitle", nil)
+}
+
+// RenameNoteField says "Note title"
+// in the language the app shows.
+//
+// Label of the field the note's new title is typed in.
+func RenameNoteField() string { return In(i18n.Locale()).RenameNoteField() }
+
+// RenameNoteField says "Note title"
+// in the language of msgs.
+//
+// Label of the field the note's new title is typed in.
+func (msgs Messages) RenameNoteField() string {
+	return Catalog.Format(msgs.locale, "renameNoteField", nil)
+}
+
+// RenameNoteSave says "Rename"
+// in the language the app shows.
+//
+// The rename dialog's action that writes the new title.
+func RenameNoteSave() string { return In(i18n.Locale()).RenameNoteSave() }
+
+// RenameNoteSave says "Rename"
+// in the language of msgs.
+//
+// The rename dialog's action that writes the new title.
+func (msgs Messages) RenameNoteSave() string {
+	return Catalog.Format(msgs.locale, "renameNoteSave", nil)
+}
+
+// RenameNoteEmpty says "A note needs a title."
+// in the language the app shows.
+//
+// Why the rename dialog's action waits: the field is empty.
+func RenameNoteEmpty() string { return In(i18n.Locale()).RenameNoteEmpty() }
+
+// RenameNoteEmpty says "A note needs a title."
+// in the language of msgs.
+//
+// Why the rename dialog's action waits: the field is empty.
+func (msgs Messages) RenameNoteEmpty() string {
+	return Catalog.Format(msgs.locale, "renameNoteEmpty", nil)
+}
+
+// DeleteNoteTitle says "Delete this note?"
+// in the language the app shows.
+//
+// Title of the alert shown before deleting a note.
+func DeleteNoteTitle() string { return In(i18n.Locale()).DeleteNoteTitle() }
+
+// DeleteNoteTitle says "Delete this note?"
+// in the language of msgs.
+//
+// Title of the alert shown before deleting a note.
+func (msgs Messages) DeleteNoteTitle() string {
+	return Catalog.Format(msgs.locale, "deleteNoteTitle", nil)
+}
+
+// DeleteNoteWarning says "{cards, plural, =0 {The note and its text go. It feeds no cards.} one {The note and its text go. # card points at it …"
+// in the language the app shows.
+//
+// What deleting a note does to the cards its paragraphs feed; their history
+// is kept.
+func DeleteNoteWarning(cards int) string { return In(i18n.Locale()).DeleteNoteWarning(cards) }
+
+// DeleteNoteWarning says "{cards, plural, =0 {The note and its text go. It feeds no cards.} one {The note and its text go. # card points at it …"
+// in the language of msgs.
+//
+// What deleting a note does to the cards its paragraphs feed; their history
+// is kept.
+func (msgs Messages) DeleteNoteWarning(cards int) string {
+	return Catalog.Format(msgs.locale, "deleteNoteWarning", map[string]any{"cards": cards})
+}
+
+// NoteDeleted says "Note deleted."
+// in the language the app shows.
+//
+// The toast after a note and its file are gone.
+func NoteDeleted() string { return In(i18n.Locale()).NoteDeleted() }
+
+// NoteDeleted says "Note deleted."
+// in the language of msgs.
+//
+// The toast after a note and its file are gone.
+func (msgs Messages) NoteDeleted() string {
+	return Catalog.Format(msgs.locale, "noteDeleted", nil)
 }
 
 // WriteRowProgress says "{at} of {blocks}"

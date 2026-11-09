@@ -18,6 +18,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
+	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
@@ -124,6 +125,7 @@ func (a *App) schedulerRole(name string) *schedulerPlugin {
 func (a *App) apply(lib *store.Library, dir string) {
 	a.lib, a.dir = lib, dir
 	a.openErr, a.start = nil, false
+	a.welcome.Failed = nil
 	a.page = contrib.PageRef{}
 	a.area, a.sub, a.session = areaToday, subNone, sessionNone
 	a.syncMode()
@@ -162,19 +164,22 @@ func openOrCreate(dir string) (*store.Library, error) {
 }
 
 // startView draws the window before a library is open: the screen itself lives
-// in its own package, and this hands it the place and the app's own actions
-// (ADR 0004).
+// in its own package, and this hands it the place, the libraries opened before
+// and the app's own actions (ADR 0004). The screen keeps its list's state
+// between frames, so it is drawn from the app's own value.
 func (a *App) startView(c *ui.Context) {
-	start.View(c, start.State{Dir: a.startDir()}, a.startDeps())
+	start.View(c, &a.welcome, a.startDeps())
 }
 
 // startDeps is what the screen asks of the app: where a library would go, and
-// the two ways to begin, each run here on the UI thread.
+// the three ways to begin, each run here on the UI thread.
 func (a *App) startDeps() start.Deps {
 	return start.Deps{
 		Dir:    a.startDir,
 		Create: a.createLibrary,
 		Choose: a.chooseLibrary,
+		Import: a.importLibrary,
+		OpenAt: a.openLibraryAt,
 	}
 }
 
@@ -211,6 +216,61 @@ func (a *App) chooseLibrary(c *ui.Context) {
 		return
 	}
 	a.install(c, dir)
+}
+
+// importLibrary is the welcome screen's third door: an import has to arrive in
+// a library, so the app opens the one it would have made here and then the
+// wizard that reads the source.
+func (a *App) importLibrary(c *ui.Context) {
+	if a.lib == nil {
+		dir := a.startDir()
+		if dir == "" {
+			slog.Error("remit: import library: no place for it")
+			c.Toast(m(c).NoLibraryPlace())
+			return
+		}
+		a.install(c, dir)
+		if a.lib == nil {
+			return // install said why
+		}
+	}
+	a.openImport(c)
+}
+
+// openLibraryAt opens a library the welcome screen remembers. One that is no
+// longer there is dropped from the list it was offered in and the card says
+// why: a recent row that cannot open is a state, not a click that did nothing.
+func (a *App) openLibraryAt(c *ui.Context, dir string) {
+	if dir == "" {
+		return
+	}
+	lib, err := store.Open(dir, a.storeOptions())
+	if err != nil {
+		slog.Error("remit: open recent library", "dir", dir, "err", err)
+		a.welcome.Failed = &start.Failure{Dir: dir, Err: err.Error()}
+		if errors.Is(err, fs.ErrNotExist) {
+			// The library is gone, not merely unreadable: a row that will not
+			// open is not offered again.
+			a.forgetLibrary(dir)
+		}
+		return
+	}
+	a.close()
+	a.welcome.Failed = nil
+	if err := a.remember(dir); err != nil {
+		a.report(c, "remember library", err)
+	}
+	a.apply(lib, dir)
+}
+
+// forgetLibrary takes a path out of the libraries the welcome screen lists. A
+// settings write that fails leaves the row where it was; the log keeps the
+// reason.
+func (a *App) forgetLibrary(dir string) {
+	err := a.UpdateSettings(func(s *settings.Settings) { *s = s.ForgetRecent(dir) })
+	if err != nil {
+		slog.Warn("remit: forget library", "dir", dir, "err", err)
+	}
 }
 
 // pickLibraryDir is the start view's folder picker: the system's, attached to

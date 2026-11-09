@@ -492,7 +492,9 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 		})
 }
 
-// grades is the four ratings, each in its own colour.
+// grades is the four ratings, each in its own colour. Below BreakpointSmall
+// they take two columns instead of one row, so a narrow window still shows all
+// four without scrolling the card (spec §2.5 ④).
 func grades(c *ui.Context, d Deps, id core.ID) {
 	msgs := locales.In(c.Locale())
 	t := c.Theme()
@@ -500,11 +502,17 @@ func grades(c *ui.Context, d Deps, id core.ID) {
 	if d.Preview != nil {
 		intervals, hasPreview = d.Preview()
 	}
-	ui.Row(c).Gap(design.SpaceM).Children(func() {
+	columns := 4
+	if w, _ := c.Size(); w <= design.BreakpointSmall {
+		columns = 2
+	}
+	ui.Grid(c).FillWidth().Columns(columns).Gap(design.SpaceM).Children(func() {
 		for r := Again; r <= Easy; r++ {
 			face := r.colour(t)
 			label := r.label(msgs)
-			key := ui.ButtonBase(c).Grow(1).MinHeight(design.ControlHeight).
+			// A grid cell measures its own content, so the key takes the track
+			// it is given rather than pushing the grid to one column.
+			key := ui.ButtonBase(c).FillWidth().MinWidth(0).MinHeight(design.ControlHeight).
 				Gap(design.SpaceS).Padding(design.SpaceXS, design.SpaceS).
 				Background(t.Surface.Mix(face, 0.16)).Border(design.Hairline, t.Border.Mix(face, 0.5)).
 				Radius(design.RadiusControl).Label(label).

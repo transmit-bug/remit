@@ -41,6 +41,9 @@ type Tokens struct {
 	// DisplayNarrow is the display size from BreakpointSmall down.
 	DisplayNarrow float32
 	Control       float32
+	// Door is one of the welcome screen's three ways in: taller than a control,
+	// so a name and the line under it sit on one face.
+	Door float32
 	// Hit is the smallest pointer target, a control plus its ring of room.
 	Hit      float32
 	Hairline float32
@@ -113,7 +116,7 @@ func NewTokens(base *ui.Theme) Tokens {
 		TypeCaption: TypeCaption * scale, TypeMono: TypeMono * scale,
 		DisplayNarrow: DisplayNarrow * scale,
 
-		Control: ControlHeight, Hit: Hit, Hairline: Hairline,
+		Control: ControlHeight, Door: DoorHeight, Hit: Hit, Hairline: Hairline,
 
 		PaperWidth: PaperWidth, Gutter: Gutter, GutterNarrow: GutterNarrow,
 		FrameHeight: FrameHeight, BarHeight: BarHeight,
