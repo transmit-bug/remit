@@ -21,7 +21,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/settings"
-	"github.com/transmit-bug/remit/internal/ui/screens/browse"
+	"github.com/transmit-bug/remit/internal/ui/screens/cardtypes"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/read"
 	"github.com/transmit-bug/remit/internal/ui/screens/reading"
@@ -121,9 +121,23 @@ type App struct {
 	readPages readPages
 	// excerpted are the blocks something already quotes, so that a paragraph can
 	// say it was excerpted without a frame reading the library's links.
-	excerpted        map[core.ID]bool
-	browse           browse.State
-	browseRows       []browse.Row // the cards browse lists, as loadBrowse derived them
+	excerpted map[core.ID]bool
+	// The recall area's pages over the card library: the table's own choice, the
+	// rows and facets it reads, the presets, the history, the types and the
+	// broken links. Each is derived on a load path, never in a frame.
+	cardTable        recall.CardsState
+	cardRows         []recall.CardRow
+	cardTotal        int
+	cardFacets       []recall.FacetGroup
+	presets          recall.PresetsState
+	history          recall.HistoryState
+	types            cardtypes.State
+	relinkPage       relink.PageState
+	relinkBlocks     []relink.BlockRow
+	relinkQuery      string
+	relinkLoaded     bool
+	lostCards        []relink.CardRow
+	frozenCards      []relink.CardRow
 	stats            screenstats.State
 	palette          paletteState
 	keys             keysState
@@ -164,12 +178,13 @@ type App struct {
 	// goroutine whose answer the next frame applies. A headless test runs it
 	// inline, where there is one thread.
 	runBackground func(*ui.Context, func() func(*ui.Context))
-	// pluginList, roleList and typeList are the settings page's snapshots,
-	// retaken when the page opens and after every write: no frame reads the
-	// plugins directory or the store for them.
+	// pluginList and roleList are the settings page's snapshots, retaken when
+	// the page opens and after every write; typeList is the card types page's,
+	// retaken with the library. No frame reads the plugins directory or the
+	// store for them.
 	pluginList     []screensettings.Plugin
 	roleList       map[string]string
-	typeList       []screensettings.Type
+	typeList       []cardtypes.Type
 	summaryWord    summaryAnswer    // what the scheduling plugin says about a session
 	summaryWordFor string           // the numbers that answer was given
 	resolver       *cards.Resolver  // what a paragraph asks and how a card reads, asked once per text
@@ -249,7 +264,10 @@ type App struct {
 // it never panics over a damaged library.
 func NewApp(opts ...Options) *App {
 	a := &App{
-		browse:      browse.State{Selected: -1},
+		cardTable:   recall.NewCards(),
+		history:     recall.NewHistory(),
+		types:       cardtypes.New(),
+		relinkPage:  relink.NewPage(),
 		notes:       notes.New(),
 		pickLibrary: pickLibraryDir,
 		pickAnki:    pickAnkiPackage,
@@ -257,7 +275,7 @@ func NewApp(opts ...Options) *App {
 		pickMd:      pickMarkdown,
 		pickFolder:  pickExportFolder,
 		pickImage:   pickNoteImage,
-		pickExport: pickLibraryArchive,
+		pickExport:  pickLibraryArchive,
 		checkUpdate: screensettings.CheckForUpdate,
 	}
 	// The importer reads the library open now, which a dropped archive can

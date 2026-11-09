@@ -292,7 +292,9 @@ func (a *App) OnLibraryOpen(fn func(*store.Library)) {
 // session's scope: the whole library, one note, or one tag. Browse's Due filter
 // shows the same answer, so a scoped session narrows both.
 func (a *App) dueToday() []core.ID {
-	cards, err := queue.Cards(a.lib, time.Now(), queue.Options{Scope: a.reviewScope})
+	options := queue.Limits(a.lib.Presets())
+	options.Scope = a.reviewScope
+	cards, err := queue.Cards(a.lib, time.Now(), options)
 	if err != nil {
 		slog.Error("remit: today's queue", "err", err)
 		return nil
@@ -325,6 +327,7 @@ func (a *App) reload() {
 	}
 	a.resolver = cards.New(runner, a.lib.Types())
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
+	a.loadTypes()
 	a.excerpted = a.excerptedBlocks()
 	a.notesRows = a.noteRows()
 	now := time.Now()
@@ -377,8 +380,8 @@ func (a *App) previewFor() ([]schedule.Outlook, bool) {
 }
 
 // loadCurrent derives what the page on screen reads beyond the snapshot: the
-// browse rows, the statistics replay, the settings page's lists, the card on
-// screen's outlook. It is the only path that asks the store for them, so no
+// card table's rows, the statistics replay, the settings page's lists, the card
+// on screen's outlook. It is the only path that asks the store for them, so no
 // frame does.
 func (a *App) loadCurrent() {
 	switch a.session {
@@ -407,11 +410,20 @@ func (a *App) loadCurrent() {
 		a.loadWrite()
 		a.loadBacklinks()
 	case areaRecall:
-		if a.sub == subRecallCards {
-			a.loadBrowse()
-			return
+		switch a.sub {
+		case subRecallCards:
+			a.loadCards()
+		case subRecallTypes:
+			// The type list is retaken with the library, so the page reads it.
+		case subRecallPresets:
+			a.loadPresets()
+		case subRecallHistory:
+			a.loadHistory()
+		case subRecallRelink:
+			a.loadRelink()
+		default:
+			a.loadRecall()
 		}
-		a.loadRecall()
 	case areaStats:
 		a.loadStats()
 	case areaSettings:

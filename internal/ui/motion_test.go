@@ -52,15 +52,18 @@ func TestReducedMotionSwitchesAtOnce(t *testing.T) {
 		return tt
 	}
 
+	// The search page rather than the card table: a table's first layout keeps
+	// a frame request of its own for a moment (MyGo v0.8.1), which would
+	// drown the screen change this test is about.
 	moving := open(false)
-	cardsPage(t, moving, "en") // notes to the card table
+	searchPage(t, moving, "en") // notes to the search page
 	moving.Frame()
 	if !moving.FramePending() {
 		t.Fatal("the screen change runs no motion at all: nothing to compare the reduced motion against")
 	}
 
 	still := open(true)
-	cardsPage(t, still, "en")
+	searchPage(t, still, "en")
 	still.Frame()
 	if still.FramePending() {
 		t.Error("a screen change still travels with reduced motion asked for")

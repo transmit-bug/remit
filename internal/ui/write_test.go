@@ -597,3 +597,32 @@ func TestNotesListDayFollowsTheFrameLanguage(t *testing.T) {
 		t.Fatalf("the rows' day is not Chinese; texts %q", tt.Texts())
 	}
 }
+
+// A search link from outside the window opens the write area's search page on
+// its query, its field ready for typing.
+func TestSearchLink(t *testing.T) {
+	a, _ := newTestApp(t)
+
+	// The link may arrive before the window is drawn: the focus request waits
+	// for the field's first build.
+	a.Search("question")
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	for _, want := range []string{"Search", "Writing cards"} {
+		if !tt.HasText(want) {
+			t.Fatalf("the search link is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+	if a.area != areaWrite || a.sub != subSearch {
+		t.Fatalf("the link went to %v/%v, want the search page", a.area, a.sub)
+	}
+
+	// Typing reaches the field the link focused.
+	tt.Type("zzz")
+	if !tt.HasText("No note or card matches.") {
+		t.Fatalf("the search field did not take the text; texts %q", tt.Texts())
+	}
+	if tt.FramePending() {
+		t.Error("view still requests frames after it should settle")
+	}
+}

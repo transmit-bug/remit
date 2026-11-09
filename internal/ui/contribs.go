@@ -145,7 +145,7 @@ func (a *App) contributionContext() contrib.Context {
 		ctx.PluginID, ctx.PageID = a.page.Plugin, a.page.Page.ID
 	}
 	if a.mode == modeBrowse {
-		ctx.BrowseSelection = a.browse.Selected >= 0 && a.browse.Selected < len(a.browseRows)
+		ctx.BrowseSelection = a.cardTable.Selected >= 0 && a.cardTable.Selected < len(a.cardRows)
 	}
 	if id, ok := a.currentCard(); ok {
 		if card, ok := a.data.card(id); ok {
@@ -184,14 +184,14 @@ func (a *App) modeName() string {
 }
 
 // currentCard is the card the window is about now: the one in review, or the row
-// browse has chosen. It is what a contributed command acts on.
+// the card table has chosen. It is what a contributed command acts on.
 func (a *App) currentCard() (core.ID, bool) {
 	switch a.mode {
 	case modeReview:
 		return a.review.Current()
 	case modeBrowse:
-		if a.browse.Selected >= 0 && a.browse.Selected < len(a.browseRows) {
-			return a.browseRows[a.browse.Selected].ID, true
+		if a.cardTable.Selected >= 0 && a.cardTable.Selected < len(a.cardRows) {
+			return a.cardRows[a.cardTable.Selected].ID, true
 		}
 	}
 	return "", false

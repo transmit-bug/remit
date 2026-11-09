@@ -12,7 +12,7 @@ import (
 // A lost card says it lost its source and offers exactly the two ways out: point
 // it at another block, or take it out of the queue.
 func TestLostCardOffersTwoActions(t *testing.T) {
-	a, _ := seedBrowseLibrary(t)
+	a, _ := seedRelinkLibrary(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	lostCardInReview(t, a, tt)
 
@@ -29,7 +29,7 @@ func TestLostCardOffersTwoActions(t *testing.T) {
 // Re-linking a lost card puts it back in the queue, and it grades like any other
 // card: one new review in the log, one more review on the card.
 func TestRelinkedCardGradesInReview(t *testing.T) {
-	a, seed := seedBrowseLibrary(t)
+	a, seed := seedRelinkLibrary(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	lostCardInReview(t, a, tt)
 
@@ -78,7 +78,7 @@ func TestRelinkedCardGradesInReview(t *testing.T) {
 // Suspending a lost card takes it out of the queue without touching its
 // history: the reviews stay, and the card does not come back.
 func TestSuspendedLostCardLeavesTheQueue(t *testing.T) {
-	a, seed := seedBrowseLibrary(t)
+	a, seed := seedRelinkLibrary(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	lostCardInReview(t, a, tt)
 

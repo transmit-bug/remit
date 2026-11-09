@@ -1,20 +1,14 @@
 package settings
 
-import (
-	"github.com/egoist/mygo/ui"
-	"github.com/egoist/mygo/ui/markdown"
-
-	"github.com/transmit-bug/remit/internal/core"
-)
+import "github.com/egoist/mygo/ui"
 
 // Page is which of the settings pages the window shows. It is the sub-navigation's
 // choice, held here as the page's own copy so a frame draws one page and never
 // the others.
 type Page string
 
-// The pages, in the order the sub-navigation lists them. PageTypes is not one of
-// them: it is the card-type editor W5 moves into its own package, kept whole and
-// testable here until that slice lands.
+// The pages, in the order the sub-navigation lists them. The card types are
+// not one of them: the recall area's types page owns that editor (S32).
 const (
 	PageAppearance Page = "appearance"
 	PageReview     Page = "review"
@@ -24,7 +18,6 @@ const (
 	PageAgent      Page = "agent"
 	PageUpdate     Page = "update"
 	PageAbout      Page = "about"
-	PageTypes      Page = "types"
 )
 
 // BudgetPreview is today's queue as the presets would build it: what the reading
@@ -110,21 +103,6 @@ type State struct {
 	Notes      int
 	Cards      int
 	DueNow     int
-
-	// TypeList is the type table's own state: the row the user chose. TypeRow
-	// repeats the choice, so the editor can tell the row it shows from one the
-	// user just chose.
-	TypeList ui.ListState
-	TypeRow  int
-	// Draft is the type being edited: the chosen type as the editor holds it,
-	// or a new one with no ID yet. Nothing typed here is written until Save.
-	Draft core.Type
-	// TypeErr is why the last type write was refused, "" when it was taken.
-	TypeErr string
-	// PreviewFront and PreviewBack keep the parsed previews between frames,
-	// so the markdown view reparses only what changed. Pointers because the
-	// options carry a cache the frame must not copy.
-	PreviewFront, PreviewBack *markdown.Options
 }
 
 // PluginPage is one page a plugin contributed, as the plugins page lists it.
@@ -139,7 +117,7 @@ type PluginPage struct {
 func (s *State) page() Page {
 	switch s.Page {
 	case PageAppearance, PageReview, PageBudget, PageKeys, PagePlugins,
-		PageAgent, PageUpdate, PageAbout, PageTypes:
+		PageAgent, PageUpdate, PageAbout:
 		return s.Page
 	}
 	return PageAppearance

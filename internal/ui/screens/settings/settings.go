@@ -13,7 +13,6 @@ package settings
 import (
 	"github.com/egoist/mygo/ui"
 
-	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
@@ -91,17 +90,6 @@ type Deps struct {
 
 	// OpenLicense opens the license the app is under.
 	OpenLicense func(*ui.Context)
-
-	// Types is this library's card types, with how many cards reference each.
-	// It is the card-type page's own service, which W5 moves with the page.
-	Types func() []Type
-	// SaveType writes a type, minting the ID of a new one and rewriting the
-	// references a field rename touches. It answers the type's ID, "" when the
-	// app refused the write and said why in the page's State.
-	SaveType func(*ui.Context, core.Type) core.ID
-	// DeleteType removes a type no card references, and says why in the page's
-	// State when one does.
-	DeleteType func(*ui.Context, core.ID)
 }
 
 // View draws the page the state names: the look, the review and budget presets,
@@ -132,8 +120,6 @@ func View(c *ui.Context, s *State, d Deps) {
 						updatePage(c, s, d, msgs, tk)
 					case PageAbout:
 						aboutPage(c, s, d, msgs, tk)
-					case PageTypes:
-						typesFieldset(c, s, d, msgs, tk)
 					default:
 						appearancePage(c, s, d, msgs, tk)
 					}
@@ -161,8 +147,6 @@ func pageTitle(msgs locales.Messages, page Page) string {
 		return msgs.UpdatePage()
 	case PageAbout:
 		return msgs.AboutPage()
-	case PageTypes:
-		return msgs.SettingsTypes()
 	}
 	return msgs.AppearancePage()
 }
@@ -185,8 +169,6 @@ func pageLead(msgs locales.Messages, page Page) string {
 		return msgs.SettingsUpdatesBody()
 	case PageAbout:
 		return msgs.SettingsAboutLead()
-	case PageTypes:
-		return msgs.SettingsTypesBody()
 	}
 	return msgs.SettingsAppearanceLead()
 }

@@ -442,7 +442,7 @@ func TestZhHansAtMinimum(t *testing.T) {
 	}
 
 	cardsPage(t, tt, "zh-Hans")
-	for _, label := range []string{"浏览卡片", "搜索卡片", "筛选卡片", "全部", "到期", "新卡", "已暂停", "已失联", "打开 (Enter)"} {
+	for _, label := range []string{"卡片", "语法", "筛选", "提示", "到期"} {
 		assertControl(t, tt, 720, 520, label)
 	}
 	assertControl(t, tt, 720, 520, "Spacing beats cramming")

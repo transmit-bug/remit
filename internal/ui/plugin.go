@@ -153,8 +153,8 @@ func (a *App) face(card core.Card) cards.Answer {
 	return a.resolver.Face(card, a.data.blocks)
 }
 
-// faces is what browse and re-link read of a card's answer: its two sides and
-// how its source stands.
+// faces is what the card table and re-link read of a card's answer: its two
+// sides and how its source stands.
 func (a *App) faces(card core.Card) (prompt, answer string, state core.LinkState) {
 	got := a.face(card)
 	return got.Front, got.Back, got.State

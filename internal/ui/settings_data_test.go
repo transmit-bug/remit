@@ -10,19 +10,8 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
-	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	"github.com/transmit-bug/remit/locales"
 )
-
-// typesPage draws the card-type editor. The page is not on the settings
-// sub-navigation: W5 moves it into its own package, and until then it is kept
-// whole and reachable here, with the same Deps the app hands it.
-func typesPage(a *App) *ui.Tester {
-	a.prefs.Page = screensettings.PageTypes
-	tt := ui.NewTester(func(c *ui.Context) { screensettings.View(c, &a.prefs, a.settingsDeps()) }, 1024, 720)
-	tt.Frame()
-	return tt
-}
 
 // configOf reads the library's remit.json as the file holds it.
 func configOf(t *testing.T, dir string) map[string]any {
@@ -81,14 +70,16 @@ func TestSettingsPluginAndRoleWritesReachTheLibrary(t *testing.T) {
 	}
 }
 
-// Saving a type from the page writes the type file the store owns, and the
-// app's own catalog shows it: the page asked the app, the app asked the store.
-func TestSettingsTypeWriteReachesTheLibrary(t *testing.T) {
+// Saving a type from the types page writes the type file the store owns, and
+// the app's own catalog shows it: the page asked the app, the app asked the
+// store.
+func TestTypesPageWritesTheType(t *testing.T) {
 	msgs := locales.In("en")
 	a := settingsApp(t, Options{})
-	a.openSettings()
-	settle(ui.NewTester(a.View, 1024, 720))
-	tt := typesPage(a)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	a.setArea(areaRecall, subRecallTypes)
+	settle(tt)
 
 	reveal(t, tt, 1024, 720, msgs.TypeFrontTemplate())
 	if err := tt.Click(msgs.TypeFrontTemplate()); err != nil {
@@ -120,9 +111,6 @@ func TestSettingsTypeWriteReachesTheLibrary(t *testing.T) {
 	if file.Front != "{{Back}}?" {
 		t.Errorf("types/remit.basic.json front = %q, want the saved template", file.Front)
 	}
-	if !a.prefs.HasLibrary {
-		t.Error("the page does not know a library is open")
-	}
 }
 
 // A library that names no roles reads the built-ins, and the settings page is
@@ -142,10 +130,10 @@ func TestSettingsRolesSnapshot(t *testing.T) {
 	}
 }
 
-// A refused write explains itself where it was made: the page's words for a
-// field a card holds come from the store's own refusal, not from the page
+// A refused write explains itself where it was made: the types page's words for
+// a field a card holds come from the store's own refusal, not from the page
 // guessing. The type keeps its field and its file.
-func TestSettingsTypeRefusalReachesThePage(t *testing.T) {
+func TestTypesPageShowsTheRefusal(t *testing.T) {
 	msgs := locales.In("en")
 	a := settingsApp(t, Options{})
 	typ := core.Type{ID: "type_vocab", Name: "Vocabulary", Fields: []string{"Term", "Meaning", "Extra"}, Front: "{{Term}}", Back: "{{Meaning}}", Version: 1}
@@ -172,8 +160,10 @@ func TestSettingsTypeRefusalReachesThePage(t *testing.T) {
 	}
 	a.reload()
 
-	a.openSettings()
-	tt := typesPage(a)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	a.setArea(areaRecall, subRecallTypes)
+	settle(tt)
 
 	reveal(t, tt, 1024, 720, typ.Name)
 	if err := tt.Click(typ.Name); err != nil {

@@ -40,9 +40,14 @@ const (
 	// The read area.
 	subReadQueue
 	subReadArchive
-	// The recall area.
+	// The recall area: the queue, the card table, the types, the presets, the
+	// history and the broken links.
 	subRecallQueue
 	subRecallCards
+	subRecallTypes
+	subRecallPresets
+	subRecallHistory
+	subRecallRelink
 	// The statistics area: the summary, the calendar and the forecast, each a
 	// page of its own.
 	subStatsOverview
@@ -85,7 +90,8 @@ func subsOf(area areaID) []subID {
 	case areaRead:
 		return []subID{subReadQueue, subReadArchive}
 	case areaRecall:
-		return []subID{subRecallQueue, subRecallCards}
+		return []subID{subRecallQueue, subRecallCards, subRecallTypes,
+			subRecallPresets, subRecallHistory, subRecallRelink}
 	case areaStats:
 		return []subID{subStatsOverview, subStatsHeatmap, subStatsForecast}
 	case areaSettings:
@@ -180,6 +186,14 @@ func subLabel(msgs locales.Messages, sub subID) string {
 		return msgs.ArchivePage()
 	case subRecallCards:
 		return msgs.CardsPage()
+	case subRecallTypes:
+		return msgs.TypesPage()
+	case subRecallPresets:
+		return msgs.PresetsPage()
+	case subRecallHistory:
+		return msgs.HistoryPage()
+	case subRecallRelink:
+		return msgs.RelinkPage()
 	case subStatsOverview:
 		return msgs.OverviewPage()
 	case subStatsHeatmap:
@@ -233,6 +247,14 @@ func subName(sub subID) string {
 		return "queue"
 	case subRecallCards:
 		return "cards"
+	case subRecallTypes:
+		return "types"
+	case subRecallPresets:
+		return "presets"
+	case subRecallHistory:
+		return "history"
+	case subRecallRelink:
+		return "relink"
 	case subStatsOverview:
 		return "overview"
 	case subStatsHeatmap:

@@ -266,7 +266,7 @@ func (s *State) Current() (core.ID, bool) {
 	return s.queue[0], true
 }
 
-// Only makes id the whole queue, as opening one card from browse does.
+// Only makes id the whole queue, as opening one card from the card table does.
 func (s *State) Only(id core.ID) {
 	s.queue = []core.ID{id}
 	s.forgetCard()
@@ -429,7 +429,8 @@ func statusBar(c *ui.Context, s *State, card Card) {
 // The lost branch is defensive: today's queue leaves a lost card out, because a
 // queue promises cards that can be reviewed now. It holds if a card's source
 // disappears between the queue being derived and the card being drawn, and a
-// card opened from browse lands here too. Re-linking is the repair, and
+// card opened from the card table lands here too. Re-linking is the repair,
+// and
 // suspending — the one action that never touches history — is the way out.
 func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 	msgs := locales.In(c.Locale())

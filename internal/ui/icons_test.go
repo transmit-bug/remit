@@ -7,8 +7,9 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// lostCardWindow opens the window on a card whose block was deleted, in browse,
-// with the Lost filter shown — the state whose repair is the re-link dialog.
+// lostCardWindow opens the window on a card whose block was deleted, in the card
+// table's Lost filter, and enters review on it — the state whose repair is the
+// re-link dialog.
 func lostCardWindow(t *testing.T) (*ui.Tester, testLibrary) {
 	t.Helper()
 	a, seed, tt := openApp(t)
@@ -30,6 +31,11 @@ func lostCardWindow(t *testing.T) (*ui.Tester, testLibrary) {
 	if err := tt.Click("Lost"); err != nil {
 		t.Fatalf("show the lost cards: %v", err)
 	}
+	if err := tt.Click("The note block this card came from is gone."); err != nil {
+		t.Fatalf("choose the lost card: %v", err)
+	}
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
 	return tt, seed
 }
 

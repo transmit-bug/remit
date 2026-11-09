@@ -70,6 +70,13 @@ const (
 	HeatWeekday   float32 = 34
 	// FilterPaneWidth is the filter rail the card table keeps on its left.
 	FilterPaneWidth float32 = 200
+	// The card table's fixed columns: the checkbox that chooses a row, the two
+	// counts read right-aligned, and the date and the name that are read as
+	// words. Every other column shares what the row leaves.
+	CheckColumnWidth float32 = 40
+	CountColumnWidth float32 = 76
+	DateColumnWidth  float32 = 112
+	NameColumnWidth  float32 = 150
 	// MeterWidth is a row's paragraph progress bar: wide enough to read as a
 	// fraction, narrow enough to leave the title the room it needs (spec §4.5).
 	MeterWidth float32 = 120

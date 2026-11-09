@@ -1,7 +1,6 @@
 package settings_test
 
 import (
-	"sort"
 	"testing"
 	"time"
 
@@ -14,24 +13,16 @@ import (
 
 var en = locales.In("en")
 
-// world is the app the plugins and types sections talk to: discovery's answer,
-// the roles the library plays, the types it holds, and every write it was
-// asked for. The refusals a real app gives — a field a card holds, a type in
-// use — are answered here the way the store answers them, so the page's
-// explanations are the ones the store's errors become.
+// world is the app the plugins section talks to: discovery's answer, the roles
+// the library plays, and every write it was asked for.
 type world struct {
 	plugins []settings.Plugin
 	roles   map[string]string
-	types   []settings.Type
 
 	enabled    []pluginChange
 	roleWrites []roleChange
 	reenabled  []string
-	saves      []core.Type
-	deletes    []core.ID
 
-	// held maps a type to the fields its cards store a non-empty value in.
-	held  map[core.ID]map[string]bool
 	state *settings.State
 }
 
@@ -50,7 +41,6 @@ func newWorld() *world {
 			core.RoleCardsDerive:    "cards",
 			core.RoleReviewSchedule: "scheduler",
 		},
-		held: map[core.ID]map[string]bool{},
 	}
 	w.plugins = []settings.Plugin{
 		{Name: "cards", ID: "remit.cards.standard", Version: "1.0.0", Roles: []string{core.RoleCardsDerive}, Builtin: true, Enabled: true},
@@ -58,16 +48,10 @@ func newWorld() *world {
 		{Name: "acme.cards", ID: "acme.cards", Version: "0.3.0", Capabilities: []string{"notes:read"}, Roles: []string{core.RoleCardsDerive}},
 		{Name: "acme.sched", ID: "acme.sched", Version: "0.2.0", Capabilities: []string{"review:read", "schedule:fsrs"}, Roles: []string{core.RoleReviewSchedule}},
 	}
-	w.types = []settings.Type{
-		{Type: core.Type{ID: core.TypeBasic, Name: "Basic", Fields: []string{"Front", "Back"}, Front: "**{{Front}}!**", Back: "{{Back}}", Version: 1}, Cards: 3},
-		{Type: core.Type{ID: "type_vocab", Name: "Vocabulary", Fields: []string{"Term", "Meaning", "Extra"}, Front: "{{Term}}", Back: "{{Meaning}}", Version: 1}, Cards: 1},
-	}
-	w.held["type_vocab"] = map[string]bool{"Extra": true}
 	return w
 }
 
 func (w *world) deps() settings.Deps {
-	msgs := en
 	return settings.Deps{
 		Plugins: func() []settings.Plugin { return w.plugins },
 		SetEnabled: func(_ *ui.Context, name string, on bool) {
@@ -92,99 +76,7 @@ func (w *world) deps() settings.Deps {
 			w.roleWrites = append(w.roleWrites, roleChange{role, name})
 			w.roles[role] = name
 		},
-		Types: func() []settings.Type { return w.types },
-		SaveType: func(_ *ui.Context, typ core.Type) core.ID {
-			if field, held := w.refusedRemoval(typ); held {
-				w.state.TypeErr = msgs.TypeFieldHeld(field, 1)
-				return ""
-			}
-			if typ.ID == "" {
-				typ.ID = core.NewID("type")
-			}
-			if typ.Version == 0 {
-				typ.Version = 1
-			}
-			w.saves = append(w.saves, typ)
-			w.upsert(typ)
-			return typ.ID
-		},
-		DeleteType: func(_ *ui.Context, id core.ID) {
-			if w.builtin(id) {
-				w.state.TypeErr = msgs.TypeBuiltinDelete()
-				return
-			}
-			for _, typ := range w.types {
-				if typ.ID != id {
-					continue
-				}
-				if typ.Cards > 0 {
-					w.state.TypeErr = msgs.TypeInUse(typ.Cards)
-					return
-				}
-			}
-			w.deletes = append(w.deletes, id)
-			w.remove(id)
-		},
 	}
-}
-
-// refusedRemoval stands in for the store's guard: a field the type no longer
-// has, which a card still holds a value in.
-func (w *world) refusedRemoval(next core.Type) (string, bool) {
-	old, ok := w.typeOf(next.ID)
-	if !ok {
-		return "", false
-	}
-	kept := make(map[string]bool, len(next.Fields))
-	for _, field := range next.Fields {
-		kept[field] = true
-	}
-	for _, field := range old.Fields {
-		if !kept[field] && w.held[next.ID][field] {
-			return field, true
-		}
-	}
-	return "", false
-}
-
-func (w *world) typeOf(id core.ID) (settings.Type, bool) {
-	for _, typ := range w.types {
-		if typ.ID == id {
-			return typ, true
-		}
-	}
-	return settings.Type{}, false
-}
-
-func (w *world) upsert(typ core.Type) {
-	for i := range w.types {
-		if w.types[i].ID == typ.ID {
-			w.types[i].Type = typ
-			sort.Slice(w.types, func(i, j int) bool { return w.types[i].ID < w.types[j].ID })
-			return
-		}
-	}
-	w.types = append(w.types, settings.Type{Type: typ})
-	sort.Slice(w.types, func(i, j int) bool { return w.types[i].ID < w.types[j].ID })
-}
-
-func (w *world) remove(id core.ID) {
-	kept := make([]settings.Type, 0, len(w.types))
-	for _, typ := range w.types {
-		if typ.ID != id {
-			kept = append(kept, typ)
-		}
-	}
-	w.types = kept
-}
-
-func (w *world) builtin(id core.ID) bool {
-	for _, typ := range core.BuiltinTypes() {
-		if typ.ID == id {
-			return true
-		}
-	}
-	return false
 }
 
 // atWorld draws the page over the world's own state, so a fake app's refusal,
@@ -383,15 +275,5 @@ func TestPluginsDegradeToAStatedEmptyState(t *testing.T) {
 	reveal(t, tt, 1024, 720, msgs.SettingsPluginsNeedsLibrary())
 	if !tt.HasText(msgs.SettingsPluginsNeedsLibrary()) {
 		t.Error("the plugins page did not ask for a library")
-	}
-
-	// The card types are kept whole, off the sub-navigation until W5 moves
-	// them: the page still says which library it needs.
-	types := settings.State{Page: settings.PageTypes}
-	tt = ui.NewTester(func(c *ui.Context) { settings.View(c, &types, empty) }, 1024, 720)
-	tt.Frame()
-	reveal(t, tt, 1024, 720, msgs.SettingsTypesNeedsLibrary())
-	if !tt.HasText(msgs.SettingsTypesNeedsLibrary()) {
-		t.Error("the types page did not ask for a library")
 	}
 }
