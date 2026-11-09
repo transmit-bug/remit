@@ -71,6 +71,9 @@ type animState struct {
 	mode    uint64 // the screen the window shows
 	palette uint64 // the command palette
 	relink  uint64 // the re-link picker
+	keys    uint64 // the keyboard help
+	wizard  uint64 // the import wizard
+	export  uint64 // the export dialog
 }
 
 // App is the state the window shows. The view rebuilds the interface from it
@@ -109,6 +112,9 @@ type App struct {
 	browseRows       []browse.Row // the cards browse lists, as loadBrowse derived them
 	stats            screenstats.State
 	palette          paletteState
+	keys             keysState
+	wizard           importWizard
+	export           exportState
 	relink           relink.State
 	cardEdit         cardEditState
 	prefs            screensettings.State
@@ -184,6 +190,9 @@ type App struct {
 	checkUpdate func(context.Context, settings.Settings) (update.Result, error)
 	pickAnki    func() (string, error)
 	importAnki  func(path string) (importanki.Report, error)
+	// pickArchive is the .remitlib picker the import wizard's archive source
+	// opens; a test replaces it.
+	pickArchive func() (string, error)
 	// The Markdown import's seams, shaped like the Anki ones: a test replaces
 	// the picker and the importer; a nil importer leaves the actions quiet.
 	pickMd     func() ([]string, error)
@@ -220,6 +229,7 @@ func NewApp(opts ...Options) *App {
 		notes:       notes.New(),
 		pickLibrary: pickLibraryDir,
 		pickAnki:    pickAnkiPackage,
+		pickArchive: pickRemitlib,
 		pickMd:      pickMarkdown,
 		pickFolder:  pickExportFolder,
 		pickImage:   pickNoteImage,
@@ -241,6 +251,9 @@ func NewApp(opts ...Options) *App {
 		}
 		if o.ChooseAnki != nil {
 			a.pickAnki = o.ChooseAnki
+		}
+		if o.ChooseArchive != nil {
+			a.pickArchive = o.ChooseArchive
 		}
 		if o.ImportAnki != nil {
 			a.importAnki = o.ImportAnki

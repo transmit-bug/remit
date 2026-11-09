@@ -15,6 +15,8 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core/importanki"
+	"github.com/transmit-bug/remit/internal/core/transfer"
+	"github.com/transmit-bug/remit/locales"
 
 	_ "modernc.org/sqlite" // the importer's driver: the fixture is a real collection
 )
@@ -147,19 +149,28 @@ func buildAPKG(t *testing.T) string {
 	return path
 }
 
-// The palette's import action opens a package and imports it into the library
-// on screen: the notes and cards grow, the window reloads onto them, and the
-// report says what was written while the warnings go to the log.
-func TestImportAnkiFromThePalette(t *testing.T) {
+// wizardFromPalette opens the import wizard the way a user reaches it: the
+// palette's import command, found by typing its name.
+func wizardFromPalette(t *testing.T, tt *ui.Tester, msgs locales.Messages) {
+	t.Helper()
+	tt.Frame()
+	tt.Key(ui.Cmd, ui.KeyK)
+	tt.Type(msgs.ImportTitle())
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+}
+
+// The wizard walks its three steps: a source, a preview of what it holds, and
+// the report of what the run wrote. The package's notes and cards grow the
+// library on screen, its warnings go to the log, and the closing page says what
+// was written.
+func TestImportWizardWalksThreeSteps(t *testing.T) {
+	msgs := locales.In("en")
 	dir := t.TempDir()
 	seedLibrary(t, dir)
 	pkg := buildAPKG(t)
 
-	chosen := 0
-	a := NewApp(Options{LibraryDir: dir, ChooseAnki: func() (string, error) {
-		chosen++
-		return pkg, nil
-	}})
+	a := NewApp(Options{LibraryDir: dir, ChooseAnki: func() (string, error) { return pkg, nil }})
 	notes, cards := len(a.Library().Notes()), len(a.Library().Cards())
 
 	var logged bytes.Buffer
@@ -169,30 +180,74 @@ func TestImportAnkiFromThePalette(t *testing.T) {
 
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(320 * time.Millisecond) // the review card's exit
+	wizardFromPalette(t, tt, msgs)
 
-	tt.Key(ui.Cmd, ui.KeyK)
-	tt.Type("anki")
-	tt.Key(0, ui.KeyEnter)
-
-	if chosen != 1 {
-		t.Fatalf("the package picker ran %d times", chosen)
+	// The first step: the three sources, and the reason Next is not live.
+	if !tt.HasText(msgs.ImportTitle()) {
+		t.Fatalf("the wizard did not open; texts %q", tt.Texts())
 	}
+	for _, source := range []string{msgs.ImportFromArchive(), msgs.ImportFromMarkdown(), msgs.ImportFromAnki()} {
+		if !tt.HasText(source) {
+			t.Errorf("the wizard offers no %q source; texts %q", source, tt.Texts())
+		}
+	}
+	if !tt.HasText(msgs.ImportChooseFirst()) {
+		t.Errorf("the step does not say why Next is disabled; texts %q", tt.Texts())
+	}
+
+	// The second step: what the package holds and where the run writes.
+	if err := tt.Click(msgs.ImportFromAnki()); err != nil {
+		t.Fatalf("the Anki source is not clickable: %v", err)
+	}
+	tt.Frame()
+	for _, row := range []string{msgs.ImportRowSource(), msgs.ImportRowFiles(), msgs.ImportRowDestination()} {
+		if !tt.HasText(row) {
+			t.Errorf("the preview reports no %q; texts %q", row, tt.Texts())
+		}
+	}
+	if !tt.HasText(msgs.ImportFromAnki()) {
+		t.Errorf("the preview does not name the source chosen; texts %q", tt.Texts())
+	}
+	for _, option := range []string{msgs.ImportRebuild(), msgs.ImportQueue()} {
+		if !tt.HasText(option) {
+			t.Errorf("the preview offers no %q option; texts %q", option, tt.Texts())
+		}
+	}
+
+	// The third step: the write, and what it wrote.
+	if err := tt.Click(msgs.ImportRun()); err != nil {
+		t.Fatalf("the preview has no import button: %v", err)
+	}
+	tt.Frame()
 	if got := len(a.Library().Notes()); got != notes+1 {
 		t.Fatalf("the library holds %d notes, want %d", got, notes+1)
 	}
 	if got := len(a.Library().Cards()); got != cards+1 {
 		t.Fatalf("the library holds %d cards, want %d", got, cards+1)
 	}
-	if !tt.HasText("Imported 1 notes, 1 cards, 0 reviews, skipped 0 rows.") {
+	if !tt.HasText(msgs.ImportReport(1, 1, 0, 0)) {
 		t.Fatalf("the report is not on the window; texts %q", tt.Texts())
 	}
-	if !tt.HasText("Capital of France?") {
-		t.Fatalf("the window did not reload onto the imported note; texts %q", tt.Texts())
+	// The reading option is on by default, and it is a switch the run obeys: the
+	// note that arrived is in the queue the read area draws.
+	queued, err := a.Library().ReadingQueue()
+	if err != nil {
+		t.Fatalf("the reading queue: %v", err)
+	}
+	if len(queued) != 1 {
+		t.Errorf("the reading queue holds %d notes, want the imported one", len(queued))
 	}
 	if !strings.Contains(logged.String(), "no GUID") {
 		t.Errorf("the import's warning is not in the log: %s", logged.String())
+	}
+
+	// The close gives the window back.
+	if err := tt.Click(msgs.Close()); err != nil {
+		t.Fatalf("the last step has no close button: %v", err)
+	}
+	tt.Frame()
+	if tt.HasText(msgs.ImportTitle()) {
+		t.Errorf("the wizard stayed open after its last step; texts %q", tt.Texts())
 	}
 	tt.Advance(5 * time.Second) // past the toast
 	if tt.FramePending() {
@@ -200,33 +255,56 @@ func TestImportAnkiFromThePalette(t *testing.T) {
 	}
 }
 
-// A canceled dialog imports nothing and says nothing: a click that was taken
-// back is not an outcome.
-func TestImportAnkiCanceled(t *testing.T) {
+// A wizard with no source advances to nothing: Next is disabled, and the step
+// says why. A picker that answers nothing leaves the wizard where it was — a
+// click taken back is not a source, and an import of nothing writes nothing.
+func TestImportWizardRefusesAnEmptySource(t *testing.T) {
+	msgs := locales.In("en")
 	dir := t.TempDir()
 	seedLibrary(t, dir)
-	a := NewApp(Options{LibraryDir: dir, ChooseAnki: func() (string, error) { return "", nil }})
+	picked := 0
+	a := NewApp(Options{
+		LibraryDir:     dir,
+		ChooseMarkdown: func() ([]string, error) { picked++; return nil, nil },
+	})
 	notes := len(a.Library().Notes())
 
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(320 * time.Millisecond) // the review card's exit
-	tt.Key(ui.Cmd, ui.KeyK)
-	tt.Type("anki")
-	tt.Key(0, ui.KeyEnter)
+	wizardFromPalette(t, tt, msgs)
 
-	if got := len(a.Library().Notes()); got != notes {
-		t.Errorf("a canceled import wrote %d notes", got-notes)
+	if !tt.HasText(msgs.ImportChooseFirst()) {
+		t.Fatalf("the empty step says no reason; texts %q", tt.Texts())
 	}
-	if tt.HasText("Imported") {
-		t.Errorf("a canceled import reported one; texts %q", tt.Texts())
+	// Next is disabled: clicking it leaves the wizard on its first step.
+	if err := tt.Click(msgs.ImportNext()); err != nil {
+		t.Fatalf("the first step has no Next: %v", err)
+	}
+	tt.Frame()
+	if !tt.HasText(msgs.ImportChooseFirst()) {
+		t.Fatalf("a disabled Next moved the wizard on; texts %q", tt.Texts())
+	}
+	// A canceled picker is not a source either.
+	if err := tt.Click(msgs.ImportFromMarkdown()); err != nil {
+		t.Fatalf("the Markdown source is not clickable: %v", err)
+	}
+	tt.Frame()
+	if picked != 1 {
+		t.Fatalf("the file picker ran %d times", picked)
+	}
+	if !tt.HasText(msgs.ImportChooseFirst()) {
+		t.Errorf("a canceled picker advanced the wizard; texts %q", tt.Texts())
+	}
+	if got := len(a.Library().Notes()); got != notes {
+		t.Errorf("a refused source wrote %d notes", got-notes)
 	}
 }
 
-// A package that will not import says why where the action was, and leaves the
-// library as it was.
-func TestImportAnkiFailure(t *testing.T) {
+// A source that will not import says why where the run was started, and the
+// wizard stays open with the library as it was: the dialog closes on a write,
+// not on an error.
+func TestImportWizardReportsAFailure(t *testing.T) {
+	msgs := locales.In("en")
 	dir := t.TempDir()
 	seedLibrary(t, dir)
 	a := NewApp(Options{
@@ -240,16 +318,69 @@ func TestImportAnkiFailure(t *testing.T) {
 
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.Key2)
-	tt.Advance(320 * time.Millisecond) // the review card's exit
-	tt.Key(ui.Cmd, ui.KeyK)
-	tt.Type("anki")
-	tt.Key(0, ui.KeyEnter)
-
-	if !tt.HasText("The import failed: not a zip archive") {
+	wizardFromPalette(t, tt, msgs)
+	if err := tt.Click(msgs.ImportFromAnki()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.ImportRun()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !tt.HasText("not a zip archive") {
 		t.Fatalf("the failure is not on the window; texts %q", tt.Texts())
+	}
+	if !tt.HasText(msgs.ImportTitle()) {
+		t.Error("the wizard closed on a failure")
 	}
 	if got := len(a.Library().Notes()); got != notes {
 		t.Errorf("a failed import wrote %d notes", got-notes)
+	}
+}
+
+// A .remitlib is a library, not notes in the one open: the archive unpacks into
+// a folder of its own and the window opens it.
+func TestImportWizardUnpacksAnArchive(t *testing.T) {
+	msgs := locales.In("en")
+	// The archive is a library of its own, written the way an export writes it.
+	source := t.TempDir()
+	seedLibrary(t, source)
+	backup := filepath.Join(t.TempDir(), "backup.remitlib")
+	file, err := os.Create(backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := transfer.Write(source, file); err != nil {
+		t.Fatalf("write the archive: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	seedLibrary(t, dir)
+	a := NewApp(Options{LibraryDir: dir, ChooseArchive: func() (string, error) { return backup, nil }})
+
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	wizardFromPalette(t, tt, msgs)
+	if err := tt.Click(msgs.ImportFromArchive()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.ImportRun()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+
+	unpacked := strings.TrimSuffix(backup, ".remitlib")
+	if a.dir != unpacked {
+		t.Fatalf("the window opened %q, want %q", a.dir, unpacked)
+	}
+	if _, err := os.Stat(filepath.Join(unpacked, "remit.json")); err != nil {
+		t.Fatalf("the archive did not unpack a library: %v", err)
+	}
+	if !tt.HasText(msgs.ImportArchiveDone(shortPath(unpacked))) {
+		t.Errorf("the write is not reported; texts %q", tt.Texts())
 	}
 }

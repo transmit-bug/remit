@@ -1286,14 +1286,6 @@
   "@importMarkdown": {
     "description": "Command palette: import whole Markdown files as notes."
   },
-  "exportNote": "Export note as Markdown…",
-  "@exportNote": {
-    "description": "Command palette: write the open note's Markdown file."
-  },
-  "exportAllNotes": "Export all notes as Markdown…",
-  "@exportAllNotes": {
-    "description": "Command palette: write every note's Markdown file into a folder."
-  },
   "chooseExportFolder": "Export to folder",
   "@chooseExportFolder": {
     "description": "The folder picker's button when exporting notes as files."
@@ -1410,9 +1402,323 @@
       }
     }
   },
-  "exportNothingOpen": "Open a note first, then export it.",
-  "@exportNothingOpen": {
-    "description": "Exporting a note with no note open."
+  "exportTitle": "Export",
+  "@exportTitle": {
+    "description": "The export dialog's title, and the command and menu item that opens it."
+  },
+  "exportMarkdown": "A Markdown folder",
+  "@exportMarkdown": {
+    "description": "Export format: one Markdown file per note."
+  },
+  "exportMarkdownHint": "One .md file per note, with the markers its cards point at.",
+  "@exportMarkdownHint": {
+    "description": "What the Markdown export writes, under its choice."
+  },
+  "exportArchive": "A .remitlib archive",
+  "@exportArchive": {
+    "description": "Export format: the whole library as one archive."
+  },
+  "exportArchiveHint": "The whole library in one file, readable as a zip.",
+  "@exportArchiveHint": {
+    "description": "What the .remitlib export writes, under its choice."
+  },
+  "exportCards": "A card CSV",
+  "@exportCards": {
+    "description": "Export format: a card table as CSV, which this version does not write."
+  },
+  "exportCardsHint": "The card table as a spreadsheet.",
+  "@exportCardsHint": {
+    "description": "What the card CSV export would write, under its choice."
+  },
+  "exportNoCSV": "Card CSV is not in 1.0. The card table waits for its own slice.",
+  "@exportNoCSV": {
+    "description": "Why the card CSV export is disabled, shown beside the choices."
+  },
+  "exportEmptyLibrary": "The library has no notes yet.",
+  "@exportEmptyLibrary": {
+    "description": "Why an export is disabled: the library holds nothing to write."
+  },
+  "exportCancel": "Cancel",
+  "@exportCancel": {
+    "description": "The export dialog's cancel button."
+  },
+  "exportRun": "Export…",
+  "@exportRun": {
+    "description": "The export dialog's main button."
+  },
+  "exportArchiveReport": "Wrote {name}.",
+  "@exportArchiveReport": {
+    "description": "What a .remitlib export wrote: the file's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Remit.remitlib"
+      }
+    }
+  },
+  "exportOpenFolder": "Open folder",
+  "@exportOpenFolder": {
+    "description": "The action a finished export offers: show the files it wrote."
+  },
+  "remitlibArchive": "Remit library archive",
+  "@remitlibArchive": {
+    "description": "File dialog filter for .remitlib archives."
+  },
+  "importTitle": "Import into your library",
+  "@importTitle": {
+    "description": "The import wizard's title, and the command and menu item that opens it."
+  },
+  "importClose": "Close the import",
+  "@importClose": {
+    "description": "The import wizard's close button, read by the pointer and the screen reader."
+  },
+  "importStepSource": "Source",
+  "@importStepSource": {
+    "description": "First step of the import wizard: which source to read."
+  },
+  "importStepPreview": "Preview",
+  "@importStepPreview": {
+    "description": "Second step of the import wizard: what the source holds."
+  },
+  "importStepDone": "Done",
+  "@importStepDone": {
+    "description": "Third step of the import wizard: what the run wrote."
+  },
+  "importFromArchive": "A Remit library",
+  "@importFromArchive": {
+    "description": "Import source: a .remitlib archive."
+  },
+  "importFromArchiveHint": "A .remitlib archive, unpacked into a folder of its own.",
+  "@importFromArchiveHint": {
+    "description": "What the archive import reads, under its row."
+  },
+  "importFromMarkdown": "Markdown files",
+  "@importFromMarkdown": {
+    "description": "Import source: one or more .md files."
+  },
+  "importFromMarkdownHint": "One or more .md files, each one note.",
+  "@importFromMarkdownHint": {
+    "description": "What the Markdown import reads, under its row."
+  },
+  "importFromAnki": "An Anki package",
+  "@importFromAnki": {
+    "description": "Import source: an Anki .apkg package."
+  },
+  "importFromAnkiHint": "A .apkg with its notes, cards and review history.",
+  "@importFromAnkiHint": {
+    "description": "What the Anki import reads, under its row."
+  },
+  "importChooseFirst": "Choose a source first.",
+  "@importChooseFirst": {
+    "description": "Why the import wizard's Next is disabled: no source has been chosen yet."
+  },
+  "importNext": "Next",
+  "@importNext": {
+    "description": "The import wizard's first step's button."
+  },
+  "importBack": "Back",
+  "@importBack": {
+    "description": "The import wizard's return to its first step."
+  },
+  "importRun": "Import",
+  "@importRun": {
+    "description": "The import wizard's button that writes the source."
+  },
+  "importEmptySource": "There is nothing in this source to import.",
+  "@importEmptySource": {
+    "description": "Why the import wizard cannot write: the source holds nothing."
+  },
+  "importRebuild": "Rebuild the index when the import is done",
+  "@importRebuild": {
+    "description": "An import option: index the library again once the write finishes."
+  },
+  "importQueue": "Add the imported notes to the reading queue",
+  "@importQueue": {
+    "description": "An import option: queue the notes the import brought for reading."
+  },
+  "importRowItem": "Item",
+  "@importRowItem": {
+    "description": "The import preview's table: the column naming what a row is."
+  },
+  "importRowValue": "Value",
+  "@importRowValue": {
+    "description": "The import preview's table: the column holding the row's value."
+  },
+  "importRowSource": "Source",
+  "@importRowSource": {
+    "description": "The import preview's row naming the source chosen."
+  },
+  "importRowFiles": "Files",
+  "@importRowFiles": {
+    "description": "The import preview's row counting the files the source holds."
+  },
+  "importRowDestination": "Destination",
+  "@importRowDestination": {
+    "description": "The import preview's row naming where the run writes."
+  },
+  "importArchiveUnreadable": "The archive unpacked into {path}, but the library in it did not open.",
+  "@importArchiveUnreadable": {
+    "description": "An archive import that unpacked but whose library would not open.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "~/Documents/Remit-backup"
+      }
+    }
+  },
+  "importArchiveDone": "Opened the library unpacked into {path}.",
+  "@importArchiveDone": {
+    "description": "What an archive import did: it unpacked a library and opened it.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "~/Documents/Remit-backup"
+      }
+    }
+  },
+  "paletteCommands": "Commands",
+  "@paletteCommands": {
+    "description": "The command palette's first group: what the app can do."
+  },
+  "paletteNotes": "Notes",
+  "@paletteNotes": {
+    "description": "The command palette's second group: the notes whose titles match."
+  },
+  "paletteCards": "Cards",
+  "@paletteCards": {
+    "description": "The command palette's third group: the cards whose prompts match."
+  },
+  "paletteSearch": "Search commands, notes and cards",
+  "@paletteSearch": {
+    "description": "The command palette's field, as its placeholder and its name for assistive technology."
+  },
+  "paletteEmpty": "No matching item.",
+  "@paletteEmpty": {
+    "description": "The command palette with nothing matching the query."
+  },
+  "keysTitle": "Keyboard shortcuts",
+  "@keysTitle": {
+    "description": "The keyboard help's title, and the key that opens it."
+  },
+  "keysGroupGlobal": "Global",
+  "@keysGroupGlobal": {
+    "description": "Keyboard help group: keys that work anywhere in the window."
+  },
+  "keysGroupDocument": "Document",
+  "@keysGroupDocument": {
+    "description": "Keyboard help group: keys of the note on screen."
+  },
+  "keysGroupReading": "Reading",
+  "@keysGroupReading": {
+    "description": "Keyboard help group: keys of a reading session."
+  },
+  "keysGroupReview": "Review",
+  "@keysGroupReview": {
+    "description": "Keyboard help group: keys of a review session."
+  },
+  "keysPalette": "Command palette",
+  "@keysPalette": {
+    "description": "Keyboard help: what the palette's key does."
+  },
+  "keysHelp": "This list of keys",
+  "@keysHelp": {
+    "description": "Keyboard help: what the keyboard help's own key does."
+  },
+  "keysSettings": "Settings",
+  "@keysSettings": {
+    "description": "Keyboard help: what the settings key does."
+  },
+  "keysNewNote": "New note",
+  "@keysNewNote": {
+    "description": "Keyboard help: what the new-note key does."
+  },
+  "keysDailyNote": "Today's note",
+  "@keysDailyNote": {
+    "description": "Keyboard help: what the daily-note key does."
+  },
+  "keysSearch": "Search the library",
+  "@keysSearch": {
+    "description": "Keyboard help: what the search key does outside a note."
+  },
+  "keysAreas": "Today, Write, Read, Recall, Stats, Settings",
+  "@keysAreas": {
+    "description": "Keyboard help: what the number keys of the six areas do."
+  },
+  "keysEscape": "Close the overlay, then leave the session",
+  "@keysEscape": {
+    "description": "Keyboard help: what Escape does, one layer at a time."
+  },
+  "keysFindInNote": "Find in this note",
+  "@keysFindInNote": {
+    "description": "Keyboard help: what the find key does in a note."
+  },
+  "keysOutline": "Outline panel",
+  "@keysOutline": {
+    "description": "Keyboard help: what the outline key does."
+  },
+  "keysBacklinks": "Backlinks panel",
+  "@keysBacklinks": {
+    "description": "Keyboard help: what the backlinks key does."
+  },
+  "keysNextParagraph": "Next paragraph",
+  "@keysNextParagraph": {
+    "description": "Keyboard help: what moving down in a reading session does."
+  },
+  "keysPrevParagraph": "Previous paragraph",
+  "@keysPrevParagraph": {
+    "description": "Keyboard help: what moving up in a reading session does."
+  },
+  "keysTooHard": "Too hard",
+  "@keysTooHard": {
+    "description": "Keyboard help: what the first reading key records."
+  },
+  "keysJustRight": "Just right",
+  "@keysJustRight": {
+    "description": "Keyboard help: what the second reading key records."
+  },
+  "keysTooShallow": "Too shallow",
+  "@keysTooShallow": {
+    "description": "Keyboard help: what the third reading key records."
+  },
+  "keysExcerpt": "Excerpt this paragraph",
+  "@keysExcerpt": {
+    "description": "Keyboard help: what the excerpt key does, in reading and in review."
+  },
+  "keysSkip": "Skip this note",
+  "@keysSkip": {
+    "description": "Keyboard help: what the skip key does in reading and in review."
+  },
+  "keysDropFromQueue": "Take this note out of the queue",
+  "@keysDropFromQueue": {
+    "description": "Keyboard help: what the dismiss key does in a reading session."
+  },
+  "keysOpenInLibrary": "Open this note in the library",
+  "@keysOpenInLibrary": {
+    "description": "Keyboard help: what the open key does in a reading session."
+  },
+  "keysLeaveSession": "Leave the session",
+  "@keysLeaveSession": {
+    "description": "Keyboard help: what Escape does inside a reading or review session."
+  },
+  "keysReveal": "Show the answer",
+  "@keysReveal": {
+    "description": "Keyboard help: what Space does in a review session."
+  },
+  "keysGrade": "Grade: again, hard, good, easy",
+  "@keysGrade": {
+    "description": "Keyboard help: what the digit keys do once a card's answer shows."
+  },
+  "keysUndo": "Undo the last grade",
+  "@keysUndo": {
+    "description": "Keyboard help: what the undo key does in a review session."
+  },
+  "keysSuspend": "Suspend this card",
+  "@keysSuspend": {
+    "description": "Keyboard help: what the suspend key does in a review session."
+  },
+  "keysEditNote": "Edit the note it came from",
+  "@keysEditNote": {
+    "description": "Keyboard help: what the edit key does in a review session."
   },
   "importReport": "Imported {notes} notes, {cards} cards, {reviews} reviews, skipped {skipped} rows.",
   "@importReport": {

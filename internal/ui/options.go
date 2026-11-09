@@ -39,12 +39,15 @@ type Options struct {
 	// folder picker unless a test replaces it: a native dialog cannot be
 	// answered headlessly.
 	ChooseLibrary func() (string, error)
-	// ChooseAnki picks the Anki package the palette's import action reads,
-	// mygo.Dialog's file picker unless a test replaces it.
+	// ChooseAnki picks the Anki package the import wizard's package source
+	// reads, mygo.Dialog's file picker unless a test replaces it.
 	ChooseAnki func() (string, error)
 	// ImportAnki imports the package at path into the open library. It is
 	// importanki.Import unless a test replaces it.
 	ImportAnki func(path string) (importanki.Report, error)
+	// ChooseArchive picks the .remitlib the import wizard's archive source
+	// reads, mygo.Dialog's file picker unless a test replaces it.
+	ChooseArchive func() (string, error)
 	// ChooseMarkdown picks the Markdown files the import action reads,
 	// mygo.Dialog's file picker (multi-select) unless a test replaces it.
 	ChooseMarkdown func() ([]string, error)

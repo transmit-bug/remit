@@ -18,17 +18,11 @@ import (
 // and note slots (docs/specs/plugins/ui.md §4).
 func (a *App) overflowMenu(c *ui.Context, menu *ui.Menu) {
 	msgs := m(c)
-	if menu.Item(msgs.ImportAnki()).Chosen() {
-		a.importAnkiPackage(c)
+	if menu.Item(msgs.ImportTitle()).Chosen() {
+		a.openImport(c)
 	}
-	if menu.Item(msgs.ImportMarkdown()).Chosen() {
-		a.importMarkdownFiles(c)
-	}
-	if menu.Item(msgs.ExportNote()).Chosen() {
-		a.exportNoteMarkdown(c)
-	}
-	if menu.Item(msgs.ExportAllNotes()).Chosen() {
-		a.exportAllMarkdown(c)
+	if menu.Item(msgs.ExportTitle()).Chosen() {
+		a.openExport(c)
 	}
 	if menu.Item(msgs.MakeCard()).Chosen() {
 		a.makeCardAtCaret(c)
@@ -146,6 +140,9 @@ func weight(chosen bool, on, off int) int {
 // rail is with the pointer.
 func (a *App) shortcuts(c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.KeyComma, func() { a.openSettings() })
+	// The keyboard map is the app's, not the library's: it works before one is
+	// open, and it is how a user finds the key that does.
+	c.OnShortcut(ui.Cmd, ui.KeySlash, func() { a.openKeys(c) })
 	if a.area == areaSettings {
 		c.OnShortcut(0, ui.KeyEscape, func() { a.closeSettings() })
 	}

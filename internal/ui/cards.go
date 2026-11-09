@@ -198,7 +198,7 @@ func (a *App) cardEditView(c *ui.Context, tk design.Tokens) {
 
 	ui.DialogBase(c, &a.cardEdit.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.Scrim)
-		panel = kit.StylePanel(c, panel.Width(paletteWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
+		panel = kit.StylePanel(c, panel.Width(tk.SummaryWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
 
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
