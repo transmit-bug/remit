@@ -19,6 +19,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/internal/ui/screens/read"
 	"github.com/transmit-bug/remit/internal/ui/screens/start"
@@ -489,10 +490,12 @@ func (a *App) report(c *ui.Context, what string, err error) {
 // libraryErrorView is the window when the library could not be opened: what
 // went wrong, and the one action that tries again.
 func (a *App) libraryErrorView(c *ui.Context, tk design.Tokens) {
-	ui.Column(c).Grow(1).Center().Gap(tk.SpaceM).Padding(tk.SpaceXXL).Children(func() {
-		ui.Text(c, m(c).LibraryError(a.openErr.Error())).
-			FontSize(tk.TypeUI).TextColor(tk.TextMuted).MaxWidth(design.MessageWidth)
-		ui.Button(c, m(c).RetryLibrary()).MinHeight(tk.Control).
-			OnClick(func() { a.open() })
+	ui.Column(c).Grow(1).Center().Padding(tk.SpaceXXL).Children(func() {
+		ui.Column(c).MaxWidth(design.MessageWidth).Children(func() {
+			kit.Notice(c, "circle-alert", m(c).LibraryError(a.openErr.Error()), tk.Danger, func() {
+				ui.Button(c, m(c).RetryLibrary()).MinHeight(tk.Control).
+					OnClick(func() { a.open() })
+			})
+		})
 	})
 }

@@ -58,13 +58,13 @@ func railItems(c *ui.Context, tk design.Tokens, d Deps, folded bool) {
 	chosen := string(d.Current)
 	sidebar := ui.Sidebar(c, &chosen, func() {
 		for _, item := range d.Areas {
-			railItem(c, tk, item, folded)
+			railItem(c, tk, item, folded, item.ID == d.Current)
 		}
 		if len(d.Pages) > 0 {
 			ui.Divider(c)
 			ui.SidebarSection(c, msgs.PluginPages(), nil, func() {
 				for _, page := range d.Pages {
-					railItem(c, tk, page, folded)
+					railItem(c, tk, page, folded, page.ID == d.Current)
 				}
 			})
 		}
@@ -77,7 +77,12 @@ func railItems(c *ui.Context, tk design.Tokens, d Deps, folded bool) {
 // railItem is one area: its icon, its label, and its count when there is one.
 // Folded, the label is the tooltip and the accessible name, and the badge keeps
 // one digit so that the strip stays a strip.
-func railItem(c *ui.Context, tk design.Tokens, item Item, folded bool) {
+//
+// The current area takes the mark's wash and the mark's ink rather than the
+// sidebar's solid choice: the rail is a list of places, and a bar of accent down
+// it would out-shout the page. The sidebar still reports the keyboard with the
+// ring it draws while it has the focus.
+func railItem(c *ui.Context, tk design.Tokens, item Item, folded, current bool) {
 	label := item.Label
 	if folded {
 		label = ""
@@ -87,6 +92,9 @@ func railItem(c *ui.Context, tk design.Tokens, item Item, folded bool) {
 		icon = design.Icon(item.Icon)
 	}
 	row := ui.SidebarItem(c, string(item.ID), icon, label).Label(item.Label)
+	if current {
+		row.Background(tk.Accent.Alpha(0.10)).TextColor(tk.Accent)
+	}
 	if folded {
 		row.Tooltip(item.Label)
 	}

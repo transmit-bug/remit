@@ -856,6 +856,9 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 | `kit.ProgressRatio` | 新/学习中/复习三段占比条 | `ui.Meter`（单值）、`ui/chart`（无堆叠条 mark） | 组合；`chart` 的 stack 只对 column/area 有效 |
 | `kit.GradeBar` | 四项评分分布条 | `ui/chart` 条形 | 组合；四项用图表过重 |
 | `kit.Paper` | 纸面（居中 measure + gutter） | `ui.Scroll` + `ui.Column` | 组合保留（`ui-layout-rules.md` 已定） |
+| `kit.PageHead` | 页头：H1 标题 + Label 副行 + 页级动作 | `ui.Toolbar`（窗口条，一个 tab stop 与 overflow）、`ui.Fieldset`（表单组，无自用标题） | 组合保留（v0.8.1 无页头组件）；§4.10 的 measure 由调用方给 |
+| `kit.SectionHead` | 节头：UI 13/600 名 + Label 提示 + 右侧动作 | `ui.Fieldset`（无计数与动作）、`ui.TabsBase`（选页而非标题） | 组合保留；替代屏内自绘的 H2 节标题 |
+| `kit.Notice` | 就地提示：图标 + 一句 + 可选动作，语义色 12% 底 | `ui.Badge`（计数）、`ui.AlertDialog`（提问） | 组合保留（v0.8.1 无 callout/banner）；错误与"写不进去"共用一处 |
 | `kit.Board` | 白板节点网格 | `ui.NewCanvas`/`Draw`（自由画布）、`ui.GridView` | v1 用 `ui.Grid` + `ui.List` 语义行；自由画布（坐标 + 连线）推迟（§10） |
 
 ---

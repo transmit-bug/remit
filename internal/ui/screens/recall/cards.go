@@ -274,67 +274,69 @@ func CardsView(c *ui.Context, s *CardsState, d CardsDeps) {
 	before := s.Sort
 	reload, open, picked := false, -1, pick{}
 	chosen := chosenRows(rows, s)
-	wide := stageWidth(c, tk) >= design.ListWidth+tk.FilterPaneWidth
+	wide := stageWidth(c, tk) >= design.FilterPaneWidth+tk.TableFloor
 	if s.pane <= 0 {
 		s.pane = tk.FilterPaneWidth
 	}
 
-	ui.Column(c).Grow(1).FillWidth().Padding(tk.SpaceXL).Gap(tk.SpaceM).Children(func() {
-		pageHead(c, tk, msgs.RecallCardsTitle(), msgs.RecallCardsBody(), d.Total())
+	ui.Column(c).Grow(1).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
+		ui.Column(c).FillWidth().MaxWidth(tk.BrowseWidth).Grow(1).Gap(tk.SpaceM).Children(func() {
+			pageHead(c, tk, msgs.RecallCardsTitle(), msgs.RecallCardsBody(), d.Total())
 
-		ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-			field := ui.SearchField(c, &s.Query).
-				Placeholder(msgs.RecallCardsSearch()).Label(msgs.RecallCardsSearch()).
-				MinHeight(tk.Control).Grow(1).Bind(&s.field)
-			if field.Changed() {
-				reload = true
-			}
-			if ui.Button(c, msgs.RecallCardsSyntax()).MinHeight(tk.Control).
-				Tooltip(msgs.RecallCardsSyntaxHelp()).Clicked() {
-				s.syntax = !s.syntax
-			}
-			columnsMenu(c, s, tk, msgs)
-			pluginActions(c, d, tk, msgs)
-		})
-
-		if s.syntax {
-			kit.Card(c, func() {
-				ui.Column(c).Padding(tk.SpaceM).Gap(tk.SpaceXS).Children(func() {
-					ui.Text(c, msgs.RecallCardsSyntaxHelp()).FontSize(tk.TypeLabel).
-						TextColor(tk.TextMuted)
-				})
-			}).FillWidth()
-		}
-
-		if len(chosen) > 0 {
-			bulkBar(c, s, d, tk, msgs, chosen)
-		}
-
-		groups := d.Facets()
-		if !wide {
-			narrowFilter(c, s, tk, msgs, groups, d.FacetLabel, &picked)
-		}
-		cards := func() {
-			ui.Column(c).Grow(1).MinWidth(0).Children(func() {
-				if len(rows) == 0 {
-					emptyCards(c, tk, msgs, s.Query != "")
-					return
+			ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
+				field := ui.SearchField(c, &s.Query).
+					Placeholder(msgs.RecallCardsSearch()).Label(msgs.RecallCardsSearch()).
+					MinHeight(tk.Control).Grow(1).Bind(&s.field)
+				if field.Changed() {
+					reload = true
 				}
-				table(c, s, tk, msgs, rows, d, &open)
+				if ui.Button(c, msgs.RecallCardsSyntax()).MinHeight(tk.Control).
+					Tooltip(msgs.RecallCardsSyntaxHelp()).Clicked() {
+					s.syntax = !s.syntax
+				}
+				columnsMenu(c, s, tk, msgs)
+				pluginActions(c, d, tk, msgs)
 			})
-		}
-		if wide {
-			// The pane is the split's first side: the user sets its width once
-			// and the table keeps the rest, which is what a table needs.
-			ui.Split(c, &s.pane, func() {
-				ui.Column(c).Fill().Padding(tk.SpaceM).Background(tk.Surface).
-					Children(func() {
-						filterPane(c, s, tk, msgs, groups, d.FacetLabel, &picked)
+
+			if s.syntax {
+				kit.Card(c, func() {
+					ui.Column(c).Padding(tk.SpaceM).Gap(tk.SpaceXS).Children(func() {
+						ui.Text(c, msgs.RecallCardsSyntaxHelp()).FontSize(tk.TypeLabel).
+							TextColor(tk.TextMuted)
 					})
-			}, cards).Grow(1).Label(msgs.RecallCardsFilters())
-		} else {
-			cards()
-		}
+				}).FillWidth()
+			}
+
+			if len(chosen) > 0 {
+				bulkBar(c, s, d, tk, msgs, chosen)
+			}
+
+			groups := d.Facets()
+			if !wide {
+				narrowFilter(c, s, tk, msgs, groups, d.FacetLabel, &picked)
+			}
+			cards := func() {
+				ui.Column(c).Grow(1).MinWidth(0).Children(func() {
+					if len(rows) == 0 {
+						emptyCards(c, tk, msgs, s.Query != "")
+						return
+					}
+					table(c, s, tk, msgs, rows, d, &open, tableRoom(c, wide, tk))
+				})
+			}
+			if wide {
+				// The pane is the split's first side: the user sets its width once
+				// and the table keeps the rest, which is what a table needs.
+				ui.Split(c, &s.pane, func() {
+					ui.Column(c).Fill().Padding(tk.SpaceM).Background(tk.Surface).
+						Children(func() {
+							filterPane(c, s, tk, msgs, groups, d.FacetLabel, &picked)
+						})
+				}, cards).Grow(1).Label(msgs.RecallCardsFilters())
+			} else {
+				cards()
+			}
+		})
 	})
 
 	// The effects of this pass, once the fields have taken what was typed.
@@ -362,7 +364,7 @@ func pageHead(c *ui.Context, tk design.Tokens, title, body string, count int) {
 		ui.Column(c).Gap(tk.SpaceXS).Grow(1).Children(func() {
 			ui.Text(c, title).FontSize(tk.TypeH1).Bold()
 			if body != "" {
-				ui.Text(c, body).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+				ui.Text(c, body).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 			}
 		})
 		if count >= 0 {
@@ -601,25 +603,73 @@ func dueOptions(msgs locales.Messages) []dueOption {
 // cardColumns is every column the table can show, in its order, whether or not
 // the user switched it off.
 func cardColumns(tk design.Tokens, msgs locales.Messages) []ui.TableColumn {
+	// The fixed columns are sized in controls, as narrow as their content
+	// reads: what is left is the prompt's and the note's, which is what the
+	// table is for. The check column is named by its boxes rather than by a
+	// header a reader cannot use.
 	return []ui.TableColumn{
-		{Title: msgs.RecallCardsSelectColumn(), ID: columnCheck, Width: tk.CheckColumnWidth, Fixed: true},
+		{ID: columnCheck, Width: tk.Control, Fixed: true},
 		{Title: msgs.RecallColumnPrompt(), ID: columnPrompt, Sortable: true},
 		{Title: msgs.RecallColumnNote(), ID: columnNote},
-		{Title: msgs.RecallColumnType(), ID: columnType, Width: tk.NameColumnWidth},
-		{Title: msgs.RecallColumnStatus(), ID: columnStatus, Width: tk.CountColumnWidth},
-		{Title: msgs.RecallColumnInterval(), ID: columnInterval, Width: tk.CountColumnWidth, Align: ui.End, Sortable: true},
-		{Title: msgs.RecallColumnLapses(), ID: columnLapses, Width: tk.CountColumnWidth, Align: ui.End, Sortable: true},
-		{Title: msgs.RecallColumnDue(), ID: columnDue, Width: tk.DateColumnWidth, Sortable: true},
+		{Title: msgs.RecallColumnType(), ID: columnType, Width: tk.Control * 3},
+		{Title: msgs.RecallColumnStatus(), ID: columnStatus, Width: tk.Control * 2.5},
+		{Title: msgs.RecallColumnInterval(), ID: columnInterval, Width: tk.Control * 2.5, Align: ui.End, Sortable: true},
+		{Title: msgs.RecallColumnLapses(), ID: columnLapses, Width: tk.Control*2 + tk.SpaceS, Align: ui.End, Sortable: true},
+		{Title: msgs.RecallColumnDue(), ID: columnDue, Width: tk.Control * 3, Sortable: true},
 	}
 }
 
-// visibleColumns is the columns the table builds: the ones the user left on.
-func (s *CardsState) visibleColumns(tk design.Tokens, msgs locales.Messages) ([]ui.TableColumn, []string) {
+// visibleColumns is the columns the table builds: the ones the user left on,
+// and — on a stage too narrow for all of them — only those a card can be read
+// without. What a card asks keeps its room first; the columns that only
+// annotate it fold in this order, the note it came from first because the card's
+// own page names it, and the lapse count last because it is what "hard" means.
+var foldOrder = []string{columnNote, columnInterval, columnStatus, columnType, columnLapses}
+
+// tableRoom is the width the table itself gets: what the window holds beside
+// the rail, less the page's padding and, when it stands as a column, the filter
+// rail beside it.
+func tableRoom(c *ui.Context, wide bool, tk design.Tokens) float32 {
+	w, _ := c.Size()
+	room := w - 2*tk.SpaceXL
+	if w > design.BreakpointNarrow {
+		room -= tk.RailWidth
+	} else {
+		room -= tk.RailCollapsed
+	}
+	if wide {
+		room -= tk.FilterPaneWidth
+	}
+	return min(room, tk.BrowseWidth)
+}
+
+func (s *CardsState) visibleColumns(tk design.Tokens, msgs locales.Messages, room float32) ([]ui.TableColumn, []string) {
 	all := cardColumns(tk, msgs)
+	hidden := make(map[string]bool, len(s.hidden))
+	for id, off := range s.hidden {
+		hidden[id] = off
+	}
+	for _, id := range foldOrder {
+		var fixed float32
+		for _, col := range all {
+			if hidden[col.ID] || col.ID == columnPrompt || col.ID == columnNote {
+				continue
+			}
+			fixed += col.Width
+		}
+		need := float32(minPromptRoom)
+		if !hidden[columnNote] {
+			need += minNoteRoom
+		}
+		if fixed+need <= room {
+			break
+		}
+		hidden[id] = true
+	}
 	cols := make([]ui.TableColumn, 0, len(all))
 	ids := make([]string, 0, len(all))
 	for _, col := range all {
-		if s.hidden[col.ID] && col.ID != columnCheck && col.ID != columnPrompt {
+		if hidden[col.ID] && col.ID != columnCheck && col.ID != columnPrompt {
 			continue
 		}
 		cols = append(cols, col)
@@ -628,11 +678,18 @@ func (s *CardsState) visibleColumns(tk design.Tokens, msgs locales.Messages) ([]
 	return cols, ids
 }
 
+// minPromptRoom and minNoteRoom are the room a card's prompt and the note it
+// came from are read in before another column is folded away.
+const (
+	minPromptRoom float32 = 220
+	minNoteRoom   float32 = 130
+)
+
 // table draws the cards and reports the row the keys asked for. The table's own
 // sort is the app's: a click on a header writes the order into the state, and
 // the rows come back in it.
-func table(c *ui.Context, s *CardsState, tk design.Tokens, msgs locales.Messages, rows []CardRow, d CardsDeps, open *int) {
-	cols, ids := s.visibleColumns(tk, msgs)
+func table(c *ui.Context, s *CardsState, tk design.Tokens, msgs locales.Messages, rows []CardRow, d CardsDeps, open *int, room float32) {
+	cols, ids := s.visibleColumns(tk, msgs, room)
 	s.list.Key = func(row int) any { return rows[row].ID }
 	s.list.Selected = &s.Selected
 	s.list.Sort = &s.Sort

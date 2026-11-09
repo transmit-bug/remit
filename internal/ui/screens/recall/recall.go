@@ -253,13 +253,10 @@ func body(c *ui.Context, s *State, tk design.Tokens, msgs locales.Messages, d De
 		heat(c, tk, msgs, s, d)
 		return
 	}
-	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-		ui.Text(c, msgs.RecallByNote()).FontSize(tk.TypeH2).Bold()
-		ui.Text(c, msgs.RecallByNoteHint()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-		ui.Spacer(c)
-	})
+	kit.SectionHead(c, tk, msgs.RecallByNote(), msgs.RecallByNoteHint(), nil)
 	s.list.Key = func(row int) any { return rows[row].Note }
 	s.list.Label = func(row int) string { return rows[row].Title }
+	ui.Divider(c)
 	ui.List(c, &s.list, len(rows), func(i int) {
 		rowView(c, tk, msgs, rows[i], d)
 	}).Grow(1).Label(msgs.RecallByNote())
@@ -273,7 +270,7 @@ func loadCard(c *ui.Context, tk design.Tokens, msgs locales.Messages, counts que
 	minutes := int(minutesOf(counts.Remaining) + 0.5)
 	kit.Card(c, func() {
 		ui.Column(c).FillWidth().Padding(tk.SpaceL).Gap(tk.SpaceM).Children(func() {
-			ui.Text(c, msgs.TodayMinutes(minutes)).FontSize(tk.TypeDisplay).Bold()
+			ui.Text(c, msgs.TodayMinutes(minutes)).FontSize(tk.TypeH1).Bold()
 			ui.Text(c, msgs.RecallLoad()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 			kit.StackBar(c, []kit.StackPart{
 				{Value: float32(counts.New), Colour: tk.Accent},
@@ -391,7 +388,9 @@ func lost(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps) {
 // a note is reviewed without leaving the page for a dialog.
 func rowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, row NoteRow, d Deps) {
 	rowButton := ui.Button(c, "").FillWidth().MinHeight(tk.Control*2).
-		Padding(tk.SpaceS, tk.SpaceM).Label(msgs.RecallRowOpen(row.Title))
+		Padding(tk.SpaceM, tk.SpaceS).Radius(0).
+		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).
+		Label(msgs.RecallRowOpen(row.Title))
 	rowButton.Children(func() {
 		ui.Row(c).Grow(1).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
 			tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.TextMuted)
@@ -414,7 +413,7 @@ func rowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, row NoteRow
 func heat(c *ui.Context, tk design.Tokens, msgs locales.Messages, s *State, d Deps) {
 	weeks, most := HeatWeeks(s.Day, d.History())
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		ui.Text(c, msgs.RecallHeat()).FontSize(tk.TypeH2).Bold()
+		kit.SectionHead(c, tk, msgs.RecallHeat(), "", nil)
 		kit.Heatmap(c, weeks, most, kit.HeatmapOptions{
 			Cell:  design.HeatCell,
 			Gap:   design.HeatGap,
@@ -439,10 +438,7 @@ func loading(c *ui.Context, tk design.Tokens, msgs locales.Messages) {
 // failed is a queue that could not be built: what went wrong, and the one
 // action that asks again.
 func failed(c *ui.Context, tk design.Tokens, msgs locales.Messages, reason string, d Deps) {
-	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
-		tk.Icon(c, "circle-alert", design.IconSmall).TextColor(tk.Danger)
-		ui.Text(c, msgs.RecallLoadFailed(reason)).FontSize(tk.TypeUI).
-			TextColor(tk.Danger)
+	kit.Notice(c, "circle-alert", msgs.RecallLoadFailed(reason), tk.Danger, func() {
 		if d.Reload != nil {
 			ui.Button(c, msgs.RecallRetry()).MinHeight(tk.Control).OnClick(d.Reload)
 		}

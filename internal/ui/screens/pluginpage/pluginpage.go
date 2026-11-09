@@ -102,7 +102,7 @@ func View(c *ui.Context, s *State, d Deps) {
 			ui.Column(c).FillWidth().MaxWidth(tk.PaperWidth).Gap(tk.SpaceL).Label(d.message(c, s.Title)).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
 					Label(msgs.PluginPageActions()).Children(func() {
-					ui.Text(c, d.message(c, s.Title)).FontSize(tk.TypeH2).Bold()
+					ui.Text(c, d.message(c, s.Title)).FontSize(tk.TypeH1).Bold()
 					ui.Spacer(c)
 					// The page's own actions, then the host's refresh: a page's data
 					// is asked for on entering, on an explicit refresh and on an

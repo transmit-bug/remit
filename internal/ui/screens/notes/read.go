@@ -42,7 +42,7 @@ func (s *State) readView(c *ui.Context, tk design.Tokens, d Deps) {
 
 	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL, 0).Children(func() {
 		ui.Column(c).Grow(1).MaxWidth(tk.PaperWidth).AlignSelf(ui.Center).
-			Padding(0, tk.Gutter).Gap(tk.SpaceS).Children(func() {
+			Padding(0, paperGutter(tk, w)).Gap(tk.SpaceS).Children(func() {
 			ui.Text(c, s.Draft.Title).FontSize(displaySize(tk, w)).Bold().
 				Padding(0, tk.SpaceS, tk.SpaceM, tk.SpaceS)
 			for i, block := range s.Draft.Blocks {
@@ -166,4 +166,15 @@ func displaySize(tk design.Tokens, w float32) float32 {
 		return tk.DisplayNarrow
 	}
 	return tk.TypeDisplay
+}
+
+// paperGutter is the room beside the paper's text: the paper's own gutter, the
+// narrow one on a small window, where the notes column has already taken its
+// share and a 48 DIP margin would leave the paragraph a handful of words. Only
+// reading tightens it: the writing mode hangs the block handles in its margin.
+func paperGutter(tk design.Tokens, w float32) float32 {
+	if w <= design.BreakpointSmall {
+		return tk.GutterNarrow
+	}
+	return tk.Gutter
 }

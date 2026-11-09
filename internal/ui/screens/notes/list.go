@@ -197,6 +197,7 @@ func listToolbar(c *ui.Context, s *State, tk design.Tokens, msgs locales.Message
 func (s *State) listRows(c *ui.Context, tk design.Tokens, msgs locales.Messages, rows []Row, d Deps) {
 	s.list.Key = func(row int) any { return rows[row].ID }
 	s.list.Label = func(row int) string { return rows[row].Title }
+	ui.Divider(c)
 	ui.List(c, &s.list, len(rows), func(row int) {
 		listRow(c, tk, msgs, rows[row], d)
 	}).Grow(1).Label(msgs.ModeNotes())
@@ -211,8 +212,11 @@ func (s *State) listRows(c *ui.Context, tk design.Tokens, msgs locales.Messages,
 // control that exists only under the pointer is out of the keyboard's reach.
 func listRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, d Deps) {
 	func() {
+		// A row is a line of the list, not a card: the hairline is what
+		// separates it from its neighbours, and the hover only tints the line.
 		face := ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
-			Padding(tk.SpaceS, tk.SpaceM).Radius(tk.RadiusControl)
+			Padding(tk.SpaceM, tk.SpaceS).
+			BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border)
 		if face.Hovered() {
 			face.Background(tk.SurfaceHover)
 		}
@@ -245,15 +249,16 @@ func listRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, d 
 			}
 			ui.Text(c, when(c, row.Updated, nowOf(d))).
 				FontSize(tk.TypeLabel).TextColor(tk.TextFaint).SingleLine()
-			read := ui.Button(c, "").Label(msgs.WriteRowRead() + " " + row.Title).
-				MinHeight(tk.Control).Tooltip(msgs.WriteRowRead()).TextColor(tk.TextMuted)
+			read := ui.Button(c, "").Label(msgs.WriteRowRead()+" "+row.Title).
+				MinHeight(tk.Control).Tooltip(msgs.WriteRowRead()).
+				Border(0, tk.Border).TextColor(actionInk(face, tk))
 			read.Children(func() { tk.Icon(c, "book-open", design.IconSmall) })
 			if read.Clicked() && d.OpenNoteRead != nil {
 				d.OpenNoteRead(row.ID)
 			}
 			menu := ui.ButtonBase(c).Label(msgs.WriteRowActions() + " " + row.Title).
 				MinHeight(tk.Control).MinWidth(tk.Control).Justify(ui.Center).
-				Radius(tk.RadiusControl).TextColor(tk.TextMuted)
+				Radius(tk.RadiusControl).TextColor(actionInk(face, tk))
 			menu.Children(func() { tk.Icon(c, "ellipsis", design.IconSmall) })
 			menu.PopoverMenuButton(func(m *ui.Menu) {
 				if m.Item(msgs.WriteRowRead()).Chosen() && d.OpenNoteRead != nil {
@@ -277,6 +282,16 @@ func listRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, d 
 			})
 		})
 	}()
+}
+
+// actionInk is the colour of a row's own controls: drawn at all times, so the
+// keyboard can reach them, but quiet enough that the row's title is what reads
+// until the pointer is on it.
+func actionInk(face ui.Element, tk design.Tokens) ui.Color {
+	if face.Hovered() {
+		return tk.TextMuted
+	}
+	return tk.TextFaint
 }
 
 // rowItems are the actions plugins contributed to a note row's menu. A screen

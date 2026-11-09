@@ -46,6 +46,7 @@ func TagsView(c *ui.Context, s *State, d Deps) {
 			}
 			s.tagList.Key = func(row int) any { return tags[row].Tag }
 			s.tagList.Label = func(row int) string { return "#" + tags[row].Tag }
+			ui.Divider(c)
 			ui.List(c, &s.tagList, len(tags), func(row int) {
 				tagRow(c, tk, msgs, tags[row], d)
 			}).Grow(1).Label(msgs.WriteTagsTitle())
@@ -57,7 +58,8 @@ func TagsView(c *ui.Context, s *State, d Deps) {
 // many there are. The whole row opens the notes page narrowed to it.
 func tagRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, tag TagRow, d Deps) {
 	ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
-		Padding(tk.SpaceS, tk.SpaceM).Radius(tk.RadiusControl).Children(func() {
+		Padding(tk.SpaceM, tk.SpaceS).
+		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).Children(func() {
 		open := ui.Button(c, "").Label("#"+tag.Tag).Grow(1).MinWidth(0).
 			MinHeight(tk.Hit).Padding(0).Radius(0).
 			Background(ui.Color{}).Border(0, tk.Border)

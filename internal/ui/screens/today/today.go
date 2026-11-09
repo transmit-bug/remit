@@ -99,7 +99,7 @@ func head(c *ui.Context, tk design.Tokens, msgs locales.Messages, s *State, day 
 func budgetCard(c *ui.Context, tk design.Tokens, msgs locales.Messages, day queue.Today) {
 	kit.Card(c, func() {
 		ui.Column(c).FillWidth().Padding(tk.SpaceL).Gap(tk.SpaceM).Children(func() {
-			ui.Text(c, msgs.TodayMinutes(day.TotalMinutes)).FontSize(tk.TypeDisplay).Bold()
+			ui.Text(c, msgs.TodayMinutes(day.TotalMinutes)).FontSize(tk.TypeH1).Bold()
 			ui.Text(c, msgs.TodayBudgetCaption(day.ReadMinutes, day.ReviewMinutes)).
 				FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 			// A library with no budget shows what the day costs and no meter:
@@ -126,16 +126,17 @@ func dailyRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, s *State, 
 		}
 	}
 	ui.Button(c, "").FillWidth().MinHeight(rowHeight).Padding(tk.SpaceS, tk.SpaceM).
-		Label(title).Children(func() {
-		ui.Row(c).Grow(1).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
-			tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.TextMuted)
-			ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {
-				ui.Text(c, title).FontSize(tk.TypeUI).SingleLine()
-				ui.Text(c, summary).FontSize(tk.TypeLabel).TextColor(tk.TextMuted).SingleLine()
+		Label(title).Radius(tk.RadiusCard).Border(tk.Hairline, tk.Border).
+		Children(func() {
+			ui.Row(c).Grow(1).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
+				tk.Icon(c, "notebook-pen", design.IconSmall).TextColor(tk.TextMuted)
+				ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {
+					ui.Text(c, title).FontSize(tk.TypeUI).SingleLine()
+					ui.Text(c, summary).FontSize(tk.TypeLabel).TextColor(tk.TextMuted).SingleLine()
+				})
+				ui.Text(c, msgs.TodayOpen()).FontSize(tk.TypeUI).TextColor(tk.Accent)
 			})
-			ui.Text(c, msgs.TodayOpen()).FontSize(tk.TypeUI).TextColor(tk.Accent)
-		})
-	}).OnClick(d.OpenDaily)
+		}).OnClick(d.OpenDaily)
 }
 
 // counts is the day in three numbers: the notes to read, the cards to recall,
@@ -168,13 +169,11 @@ func stat(c *ui.Context, tk design.Tokens, label string, n int) {
 func queueSection(c *ui.Context, s *State, tk design.Tokens, msgs locales.Messages, entries []queue.Entry, d Deps) {
 	s.list.Key = entryKey(entries)
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-			ui.Text(c, msgs.TodayQueue()).FontSize(tk.TypeH2).Bold()
-			ui.Text(c, msgs.TodayQueueHint()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-			ui.Spacer(c)
+		kit.SectionHead(c, tk, msgs.TodayQueue(), msgs.TodayQueueHint(), func() {
 			ui.Button(c, msgs.TodayStart()).MinHeight(tk.Control).
 				OnClick(func() { open(entries[0], d) })
 		})
+		ui.Divider(c)
 		ui.List(c, &s.list, len(entries), func(row int) {
 			rowView(c, tk, msgs, entries[row], d)
 		}).Label(msgs.TodayQueue())
@@ -186,7 +185,9 @@ func queueSection(c *ui.Context, s *State, tk design.Tokens, msgs locales.Messag
 // budget — that it is being postponed rather than dropped.
 func rowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, entry queue.Entry, d Deps) {
 	title := entryTitle(msgs, entry)
-	ui.Button(c, "").FillWidth().MinHeight(rowHeight).Padding(tk.SpaceS, tk.SpaceM).
+	ui.Button(c, "").FillWidth().MinHeight(rowHeight).
+		Padding(tk.SpaceM-tk.SpaceXS, tk.SpaceS).Radius(0).
+		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).
 		Label(title).Children(func() {
 		ui.Row(c).Grow(1).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
 			kindMark(c, tk, entry.Kind)
@@ -243,15 +244,15 @@ func excerptSection(c *ui.Context, tk design.Tokens, msgs locales.Messages, entr
 		return
 	}
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-			ui.Text(c, msgs.TodayExcerpts()).FontSize(tk.TypeH2).Bold()
-			ui.Text(c, msgs.TodayExcerptsHint()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
-		})
-		ui.Column(c).Gap(tk.SpaceXS).Children(func() {
+		kit.SectionHead(c, tk, msgs.TodayExcerpts(), msgs.TodayExcerptsHint(), nil)
+		ui.Divider(c)
+		ui.Column(c).Children(func() {
 			for _, entry := range owed {
 				entry := entry
 				ui.Button(c, "").FillWidth().MinHeight(tk.Control*1.5).
-					Padding(tk.SpaceXS, tk.SpaceM).Label(entryTitle(msgs, entry)).
+					Padding(tk.SpaceXS, tk.SpaceS).Radius(0).
+					BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).
+					Label(entryTitle(msgs, entry)).
 					Children(func() {
 						ui.Row(c).Grow(1).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
 							tk.Icon(c, "quote", design.IconSmall).TextColor(tk.TextMuted)
@@ -289,7 +290,7 @@ func widgetSections(c *ui.Context, tk design.Tokens, d Deps) {
 	for _, plugin := range plugins {
 		refs := byPlugin[plugin]
 		ui.Column(c).Gap(tk.SpaceS).Children(func() {
-			ui.Text(c, d.WidgetText(plugin, refs[0].Name)).FontSize(tk.TypeH2).Bold()
+			kit.SectionHead(c, tk, d.WidgetText(plugin, refs[0].Name), "", nil)
 			kit.Card(c, func() {
 				ui.Row(c).FillWidth().Padding(tk.SpaceL).Gap(tk.SpaceS).Children(func() {
 					for _, ref := range refs {
@@ -308,9 +309,7 @@ func widgetSections(c *ui.Context, tk design.Tokens, d Deps) {
 // statistics page plots: today's leftover is not a debt, it is tomorrow's work.
 func tomorrowLine(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps) {
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
-		ui.Text(c, msgs.TodayTomorrowTitle()).FontSize(tk.TypeH2).Bold()
-		ui.Text(c, msgs.TodayTomorrow(d.Tomorrow())).
-			FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+		kit.SectionHead(c, tk, msgs.TodayTomorrowTitle(), msgs.TodayTomorrow(d.Tomorrow()), nil)
 	})
 }
 
@@ -319,9 +318,7 @@ func tomorrowLine(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps
 // notice, banner or callout), so it is an icon and a line in the danger colour,
 // as the plugin page and the window's library error draw the same thing.
 func failed(c *ui.Context, tk design.Tokens, msgs locales.Messages, reason string, d Deps) {
-	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
-		tk.Icon(c, "circle-alert", design.IconSmall).TextColor(tk.Danger)
-		ui.Text(c, msgs.TodayLoadFailed(reason)).FontSize(tk.TypeUI).TextColor(tk.Danger)
+	kit.Notice(c, "circle-alert", msgs.TodayLoadFailed(reason), tk.Danger, func() {
 		ui.Button(c, msgs.TodayRetry()).MinHeight(tk.Control).OnClick(d.Reload)
 	})
 }

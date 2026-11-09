@@ -25,7 +25,7 @@ type Palette struct {
 	Border     ui.Color
 	Text       ui.Color
 	Muted      ui.Color // secondary text
-	Faint      ui.Color // hints and disabled text
+	Faint      ui.Color // hints and captions, quieter than Muted
 	Accent     ui.Color
 	AccentText ui.Color // text and icons on the accent
 
@@ -48,7 +48,8 @@ func Light() Palette {
 		Sunken:  ui.Hex("#F2F0EB"),
 		Border:  ui.Hex("#E7E4DD"),
 		Text:    ui.Hex("#1B1B19"),
-		Muted:   ui.Hex("#6E6B64"),
+		Muted:   ui.Hex("#57544D"),
+		Faint:   ui.Hex("#74716A"),
 		Accent:  ui.Hex("#2C5282"),
 		Success: ui.Hex("#1F6B3A"),
 		Warning: ui.Hex("#8A5B00"),
@@ -70,7 +71,8 @@ func Dark() Palette {
 		Sunken:  ui.Hex("#131416"),
 		Border:  ui.Hex("#2E3034"),
 		Text:    ui.Hex("#F1F0EC"),
-		Muted:   ui.Hex("#9A9993"),
+		Muted:   ui.Hex("#A6A49D"),
+		Faint:   ui.Hex("#8B8983"),
 		Accent:  ui.Hex("#7AA2D4"),
 		Success: ui.Hex("#7BD88F"),
 		Warning: ui.Hex("#E9B949"),
@@ -94,7 +96,6 @@ func PaletteOf(dark bool) Palette {
 // derived fills in the colours that follow from an appearance's own, so that
 // the two palettes above name only what is chosen by hand.
 func derived(p Palette) Palette {
-	p.Faint = p.Muted.Mix(p.Page, 0.35)
 	p.BorderStrong = p.Border.Mix(p.Text, 0.22)
 	p.AccentText = inkOn(p.Accent, p.Page)
 	return p

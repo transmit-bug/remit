@@ -112,7 +112,9 @@ func limitsFieldset(c *ui.Context, s *PresetsState, tk design.Tokens, msgs local
 	ui.Fieldset(c, msgs.RecallPresetsLimits(), func() {
 		ui.Field(c, msgs.RecallPresetsNewCards(), func() {
 			value := float64(s.Presets.Review.NewPerDay)
-			ui.StepSlider(c, &value, 0, 50, 1).Label(msgs.RecallPresetsNewCards())
+			presetSlider(c, tk, &value, 0, 50, 1, msgs.RecallPresetsNewCards(), func() string {
+				return msgs.RecallPresetsCardValue(int(value))
+			})
 			if int(value) != s.Presets.Review.NewPerDay {
 				s.Presets.Review.NewPerDay = int(value)
 				write = true
@@ -120,7 +122,9 @@ func limitsFieldset(c *ui.Context, s *PresetsState, tk design.Tokens, msgs local
 		}).Description(msgs.RecallPresetsNewCardsBody())
 		ui.Field(c, msgs.RecallPresetsDayCards(), func() {
 			value := float64(s.Presets.Budget.Cards)
-			ui.StepSlider(c, &value, 0, 200, 10).Label(msgs.RecallPresetsDayCards())
+			presetSlider(c, tk, &value, 0, 200, 10, msgs.RecallPresetsDayCards(), func() string {
+				return msgs.RecallPresetsCardValue(int(value))
+			})
 			if int(value) != s.Presets.Budget.Cards {
 				s.Presets.Budget.Cards = int(value)
 				write = true
@@ -128,7 +132,9 @@ func limitsFieldset(c *ui.Context, s *PresetsState, tk design.Tokens, msgs local
 		})
 		ui.Field(c, msgs.RecallPresetsMinutes(), func() {
 			value := float64(s.Presets.Budget.Minutes)
-			ui.StepSlider(c, &value, 0, 120, 5).Label(msgs.RecallPresetsMinutes())
+			presetSlider(c, tk, &value, 0, 120, 5, msgs.RecallPresetsMinutes(), func() string {
+				return msgs.RecallPresetsMinuteValue(int(value))
+			})
 			if int(value) != s.Presets.Budget.Minutes {
 				s.Presets.Budget.Minutes = int(value)
 				write = true
@@ -160,7 +166,9 @@ func failureFieldset(c *ui.Context, s *PresetsState, tk design.Tokens, msgs loca
 		}).Description(msgs.RecallPresetsMaxIntervalBody())
 		ui.Field(c, msgs.RecallPresetsHard(), func() {
 			value := float64(s.Presets.Hard.Lapses)
-			ui.StepSlider(c, &value, 1, 10, 1).Label(msgs.RecallPresetsHard())
+			presetSlider(c, tk, &value, 1, 10, 1, msgs.RecallPresetsHard(), func() string {
+				return msgs.RecallPresetsLapseValue(int(value))
+			})
 			if int(value) != s.Presets.Hard.Lapses {
 				s.Presets.Hard.Lapses = int(value)
 				write = true
@@ -192,6 +200,17 @@ func brokenFieldset(c *ui.Context, s *PresetsState, tk design.Tokens, msgs local
 		}).Description(msgs.RecallPresetsBrokenBody())
 	})
 	return write
+}
+
+// presetSlider is a preset's slider and the number it holds beside it: a slider
+// shows where its value sits, not what it is, and a preset nobody can read back
+// is not a preset.
+func presetSlider(c *ui.Context, tk design.Tokens, value *float64, lo, hi, step float64,
+	label string, text func() string) {
+	ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
+		ui.StepSlider(c, value, lo, hi, step).Label(label).Grow(1)
+		ui.Text(c, text()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted).SingleLine()
+	})
 }
 
 // resetDialog asks before the rhythm goes back to the defaults, since the

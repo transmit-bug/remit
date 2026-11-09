@@ -947,5 +947,8 @@
   "backlinksTab": "反链（{count}）",
   "backlinkMeta": "{count} 张卡 · 可再摘",
   "noteRetry": "重试",
-  "outlineEmptyHint": "在新段落里输入 / 可以插入标题。"
+  "outlineEmptyHint": "在新段落里输入 / 可以插入标题。",
+  "recallPresetsCardValue": "{count, plural, other {# 张}}",
+  "recallPresetsMinuteValue": "{count, plural, other {# 分钟}}",
+  "recallPresetsLapseValue": "{count, plural, other {# 次}}"
 }

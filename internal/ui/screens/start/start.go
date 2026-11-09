@@ -43,15 +43,20 @@ func View(c *ui.Context, s State, d Deps) {
 	}
 
 	ui.Column(c).Grow(1).Center().Gap(tk.SpaceM).Padding(tk.SpaceXXL).Children(func() {
-		tk.Icon(c, "book-open", design.IconLarge).TextColor(tk.TextMuted)
-		ui.Text(c, msgs.StartTitle()).FontSize(tk.TypeH2).Bold()
+		// The mark over the sentence, as the rail carries it: a place to begin,
+		// not a control.
+		ui.Box(c).Size(tk.SpaceXXL+tk.SpaceS, tk.SpaceXXL+tk.SpaceS).
+			Radius(tk.SpaceM).Background(tk.Sunken).Center().Children(func() {
+			tk.Icon(c, "book-open", design.IconMedium).TextColor(tk.TextMuted)
+		})
+		ui.Text(c, msgs.StartTitle()).FontSize(tk.TypeH1).Bold()
 		ui.Text(c, msgs.StartBody()).
 			FontSize(tk.TypeUI).TextColor(tk.TextMuted).MaxWidth(design.MessageWidth)
 		if dir != "" {
-			ui.Text(c, dir).FontSize(tk.TypeUI).TextColor(tk.TextFaint).
+			ui.Text(c, dir).FontSize(tk.TypeMono).TextColor(tk.TextFaint).
 				MaxWidth(design.MessageWidth).SingleLine()
 		}
-		ui.Row(c).Gap(tk.SpaceM).Children(func() {
+		ui.Row(c).Gap(tk.SpaceM).Padding(tk.SpaceS, 0, 0, 0).Children(func() {
 			ui.PrimaryButton(c, msgs.CreateLibrary()).MinHeight(tk.Control).
 				OnClick(func() { d.Create(c) })
 			ui.Button(c, msgs.OpenLibrary()).MinHeight(tk.Control).

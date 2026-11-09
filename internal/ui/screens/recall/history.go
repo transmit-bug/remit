@@ -277,13 +277,13 @@ func weekTable(c *ui.Context, s *HistoryState, tk design.Tokens, msgs locales.Me
 
 // sectionTitle is one section's heading on the page.
 func sectionTitle(c *ui.Context, tk design.Tokens, title string) {
-	ui.Text(c, title).FontSize(tk.TypeH2).Bold()
+	kit.SectionHead(c, tk, title, "", nil)
 }
 
 // emptyHistory is a day with nothing recorded: one sentence and what fills it.
 func emptyHistory(c *ui.Context, tk design.Tokens, msgs locales.Messages) {
 	kit.Empty(c, "history", msgs.RecallHistoryEmpty(), func() {
-		ui.Text(c, msgs.RecallHistoryEmptyBody()).FontSize(tk.TypeUI).
+		ui.Text(c, msgs.RecallHistoryEmptyBody()).FontSize(tk.TypeLabel).
 			TextColor(tk.TextMuted).MaxWidth(tk.SummaryWidth)
 	})
 }
