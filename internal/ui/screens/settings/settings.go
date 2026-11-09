@@ -76,7 +76,7 @@ func View(c *ui.Context, s *State, d Deps) {
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
 			ui.Column(c).FillWidth().MaxWidth(design.SettingsWidth).Gap(tk.SpaceL).Children(func() {
-				ui.Text(c, msgs.SettingsTitle()).FontSize(tk.TypeTitle).Bold()
+				ui.Text(c, msgs.SettingsTitle()).FontSize(tk.TypeH2).Bold()
 				ui.Form(c, func() {
 					agentFieldset(c, s, d, msgs, tk)
 					updateFieldset(c, s, d, msgs, tk)
@@ -102,14 +102,14 @@ func agentFieldset(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk de
 				toggled = ui.Switch(c, &s.AgentOn).Changed()
 				ui.Column(c).Gap(tk.SpaceXS).Children(func() {
 					if s.Agent.Address == "" {
-						ui.Text(c, msgs.SettingsAgentStopped()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+						ui.Text(c, msgs.SettingsAgentStopped()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 					} else {
 						ui.Text(c, msgs.SettingsAgentAddress(s.Agent.Address)).
-							FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+							FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 					}
 					if s.Agent.TokenPath != "" {
 						ui.Text(c, msgs.SettingsTokenPath(s.Agent.TokenPath)).
-							FontSize(tk.TypeSmall).TextColor(tk.TextFaint).SingleLine()
+							FontSize(tk.TypeUI).TextColor(tk.TextFaint).SingleLine()
 					}
 				})
 				ui.Button(c, msgs.RotateToken()).MinHeight(tk.Control).AlignSelf(ui.Start).
@@ -134,7 +134,7 @@ func updateFieldset(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk d
 					ui.Button(c, msgs.CheckNow()).MinHeight(tk.Control).
 						OnClick(func() { d.CheckNow(c) })
 					if s.UpdateMsg != "" {
-						ui.Text(c, s.UpdateMsg).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+						ui.Text(c, s.UpdateMsg).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 					}
 				})
 			})

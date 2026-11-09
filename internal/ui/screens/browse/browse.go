@@ -82,7 +82,7 @@ func View(c *ui.Context, s *State, d Deps) {
 	ui.Column(c).Grow(1).AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
 		ui.Column(c).FillWidth().MaxWidth(design.BrowseWidth).Gap(tk.SpaceL).Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Children(func() {
-				ui.Text(c, msgs.BrowseTitle()).FontSize(tk.TypeTitle).Bold()
+				ui.Text(c, msgs.BrowseTitle()).FontSize(tk.TypeH2).Bold()
 				ui.Spacer(c)
 				ui.Badge(c, msgs.CardCount(len(rows)))
 			})
@@ -112,7 +112,7 @@ func View(c *ui.Context, s *State, d Deps) {
 					open = s.Selected
 				}
 				if len(rows) == 0 {
-					ui.Text(c, msgs.BrowseEmpty()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+					ui.Text(c, msgs.BrowseEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 				}
 			})
 		})
@@ -158,9 +158,9 @@ func rowView(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, re
 			if row.State == core.LinkLost {
 				text, colour = msgs.LostBody(), tk.TextMuted
 			}
-			ui.Text(c, text).FontSize(tk.TypeBody).TextColor(colour).SingleLine()
+			ui.Text(c, text).FontSize(tk.TypeUI).TextColor(colour).SingleLine()
 			if row.Note != "" {
-				ui.Text(c, row.Note).FontSize(tk.TypeSmall).TextColor(tk.TextMuted).SingleLine()
+				ui.Text(c, row.Note).FontSize(tk.TypeUI).TextColor(tk.TextMuted).SingleLine()
 			}
 		})
 		switch {

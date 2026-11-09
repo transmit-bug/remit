@@ -9,6 +9,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // windowSizes are the sizes every mode has to hold at: the one the window
@@ -157,4 +158,29 @@ func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
 		return core.Card{}, err
 	}
 	return cards[0], nil
+}
+
+// recallQueue puts the window on the recall area's queue, where the review
+// screen lives: the digit keys name the areas in rail order, so it is Cmd+4.
+func recallQueue(tt *ui.Tester) { tt.Key(ui.Cmd, ui.Key4) }
+
+// cardsPage puts the window on the recall area's card table, where the browse
+// screen lives, in the language the window is showing.
+func cardsPage(t *testing.T, tt *ui.Tester, loc string) {
+	t.Helper()
+	recallQueue(tt)
+	tt.Frame()
+	if err := tt.Click(locales.In(loc).CardsPage()); err != nil {
+		t.Fatalf("the recall area has no card page: %v", err)
+	}
+}
+
+// searchPage puts the window on the write area's search page.
+func searchPage(t *testing.T, tt *ui.Tester, loc string) {
+	t.Helper()
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Frame()
+	if err := tt.Click(locales.In(loc).SearchPage()); err != nil {
+		t.Fatalf("the write area has no search page: %v", err)
+	}
 }

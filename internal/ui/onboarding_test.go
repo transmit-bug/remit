@@ -11,6 +11,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/settings"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // The start view's other action opens a library already on disk, through the
@@ -43,9 +44,14 @@ func TestOpenLibraryPicker(t *testing.T) {
 	if calls != 1 {
 		t.Fatalf("the picker ran %d times", calls)
 	}
+	if !tt.HasText(locales.In("en").TodayStub()) {
+		t.Fatalf("the picked library did not open on today; texts %q", tt.Texts())
+	}
+	// The queue it found is on the rail, one key away.
+	recallQueue(tt)
 	for _, want := range []string{"Show answer", "Spacing beats cramming", "4 cards left"} {
 		if !tt.HasText(want) {
-			t.Fatalf("the picked library did not open on its queue: missing %q; texts %q", want, tt.Texts())
+			t.Fatalf("the recall queue lost %q; texts %q", want, tt.Texts())
 		}
 	}
 	// Opening another library is not a reason to make the default one too.
@@ -71,7 +77,7 @@ func TestOpenLibraryPicker(t *testing.T) {
 	})
 	tt = ui.NewTester(next.View, 1024, 720)
 	settle(tt)
-	if !tt.HasText("4 cards left") || tt.HasText("Start your library") {
+	if !tt.HasText(locales.In("en").TodayStub()) || tt.HasText("Start your library") {
 		t.Fatalf("the remembered library did not open; texts %q", tt.Texts())
 	}
 	if calls != 0 {
@@ -142,9 +148,13 @@ func TestFirstRun(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "remit.json")); err != nil {
 		t.Fatalf("Create library did not make one: %v", err)
 	}
-	// A finished queue reports the session, not a bare "nothing here".
-	if !tt.HasText("Today's review") || !tt.HasText("Back to notes") {
-		t.Fatalf("a new library did not open on its empty queue; texts %q", tt.Texts())
+	if !tt.HasText(locales.In("en").TodayStub()) {
+		t.Fatalf("a new library did not open on today; texts %q", tt.Texts())
+	}
+	// Its queue is empty, and the queue page says so.
+	recallQueue(tt)
+	if !tt.HasText("Back to notes") {
+		t.Fatalf("a new library's queue is not empty and quiet; texts %q", tt.Texts())
 	}
 
 	// The choice is in the settings for the next start.
@@ -163,10 +173,12 @@ func TestFirstRun(t *testing.T) {
 	if tt.HasText("Start your library") {
 		t.Fatalf("the remembered library was not opened; texts %q", tt.Texts())
 	}
-	if !tt.HasText("Today's review") {
-		t.Fatalf("the remembered library's queue is not up; texts %q", tt.Texts())
+	if !tt.HasText(locales.In("en").TodayStub()) {
+		t.Fatalf("the remembered library did not open on today; texts %q", tt.Texts())
 	}
 
+	// The empty queue offers the notebook, and the notebook says it is empty.
+	recallQueue(tt)
 	if err := tt.Click("Back to notes"); err != nil {
 		t.Fatal(err)
 	}

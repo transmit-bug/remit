@@ -273,20 +273,23 @@ func openContrib(t *testing.T, name, contributes string, runner *fakeRunner) (*A
 // way a reader reaches a contributed page, in the language the window speaks.
 func openReportPage(t *testing.T, tt *ui.Tester) {
 	t.Helper()
-	openPage(t, tt, "Plugin pages", "Leeches")
+	openPage(t, tt, "Leeches")
 }
 
 // openPage reaches one contributed page from the window's navigation.
-func openPage(t *testing.T, tt *ui.Tester, nav, page string) {
+func openPage(t *testing.T, tt *ui.Tester, page string) {
 	t.Helper()
-	tt.Key(ui.Cmd, ui.Key2) // notes: the toolbar is up outside review
+	tt.Key(ui.Cmd, ui.Key2) // the notebook: the frame is up outside a session
 	tt.Advance(320 * time.Millisecond)
-	if err := tt.Click(nav); err != nil {
-		t.Fatalf("the plugin pages button: %v", err)
+	if err := tt.Click(page); err == nil {
+		return
 	}
-	if err := tt.ChooseMenuItem(page); err != nil {
-		t.Fatalf("the page's menu item: %v", err)
+	// A folded rail shows no label: the item is found by its accessible name.
+	info, ok := tt.Access(page)
+	if !ok {
+		t.Fatalf("the rail has no %q page", page)
 	}
+	tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
 }
 
 // A contributed command is in the palette and in the menu slot it declared, and
@@ -512,7 +515,7 @@ func TestContributedPageFollowsTheLocale(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	tt.SetLocale("zh-Hans")
 	settle(tt)
-	openPage(t, tt, "插件页面", "水蛭")
+	openPage(t, tt, "水蛭")
 
 	for _, want := range []string{"水蛭", "概览", "篇笔记", "笔记", "概要", "运行报告"} {
 		if !tt.HasText(want) {
@@ -693,10 +696,7 @@ func TestFrameNeverCallsAPlugin(t *testing.T) {
 
 	// Opening the page starts the load off the frame and returns at once: the
 	// page draws its skeleton while the plugin is still working.
-	if err := tt.Click("Plugin pages"); err != nil {
-		t.Fatal(err)
-	}
-	if err := tt.ChooseMenuItem("Leeches"); err != nil {
+	if err := tt.Click("Leeches"); err != nil {
 		t.Fatal(err)
 	}
 	if !tt.HasText("Loading…") {

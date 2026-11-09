@@ -9,6 +9,7 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -55,15 +56,17 @@ func TestThreeColumnsAtTheDefaultSize(t *testing.T) {
 func TestSplitResizesTheNotesColumn(t *testing.T) {
 	a, tt, _ := notesOnTheNotebook(t, 1024, 720)
 
-	drag := a.notes.Width
+	// The split's divider sits after the rail and the notes column.
+	before := a.notes.Width
+	drag := design.RailWidth + before
 	tt.Press(drag, 300)
 	tt.Move(drag+30, 300)
 	tt.Move(drag+80, 300)
 	tt.Release(drag+80, 300)
 	tt.Frame()
 
-	if a.notes.Width < drag+40 {
-		t.Fatalf("the notes column is %v wide after dragging to %v, want it resized", a.notes.Width, drag+80)
+	if a.notes.Width < before+40 {
+		t.Fatalf("the notes column is %v wide after dragging it 80 DIP, want it resized", a.notes.Width)
 	}
 	if _, ok := tt.Find("Notebook"); !ok {
 		t.Fatalf("the notes column is missing; texts %q", tt.Texts())
@@ -193,7 +196,7 @@ func assertNotebookFills(t *testing.T, tt *ui.Tester, msgs locales.Messages, h i
 		t.Errorf("the document ends at %v, want it to take the %v-high window it is given", bottom, h)
 	}
 
-	tree, ok := tt.AccessByRole(ui.RoleTree, "")
+	tree, ok := tt.AccessByRole(ui.RoleTree, msgs.Notebook())
 	if !ok {
 		t.Fatalf("the notes tree is missing; texts %q", tt.Texts())
 	}

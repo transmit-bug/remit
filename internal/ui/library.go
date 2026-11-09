@@ -116,13 +116,15 @@ func (a *App) schedulerRole(name string) *schedulerPlugin {
 	return openScheduler(runner, false)
 }
 
-// apply makes lib the open library and shows the review queue, which is the
-// window's first screen once a library is open (decision #11). Notes are one
-// key away.
+// apply makes lib the open library and opens the window on today, the first
+// screen a library earns: what is due to be read and reviewed today, against
+// its budget (spec §1.2). Every other area is one key or one click away.
 func (a *App) apply(lib *store.Library, dir string) {
 	a.lib, a.dir = lib, dir
 	a.openErr, a.start = nil, false
-	a.mode, a.page = modeReview, contrib.PageRef{}
+	a.page = contrib.PageRef{}
+	a.area, a.sub, a.session = areaToday, subNone, sessionNone
+	a.syncMode()
 	a.review.Reset()
 	a.loadContributions()
 	a.reload()
@@ -372,34 +374,56 @@ func (a *App) previewFor() ([]schedule.Outlook, bool) {
 	return a.lib.Preview(id, time.Now())
 }
 
-// loadCurrent derives what the mode on screen reads beyond the snapshot: the
-// browse rows and the statistics replay. It is the only path that asks the
-// store for them, so no frame does.
+// loadCurrent derives what the page on screen reads beyond the snapshot: the
+// browse rows, the statistics replay, the settings page's lists, the card on
+// screen's outlook. It is the only path that asks the store for them, so no
+// frame does.
 func (a *App) loadCurrent() {
-	switch a.mode {
-	case modeBrowse:
-		a.loadBrowse()
-	case modeStats:
-		a.loadStats()
-	case modeReading:
-		// The reading screen reads the queue reload derived; it has nothing else
-		// to load, and a frame never asks the store.
-	case modeNotes:
-		a.backlinks = nil
-		if a.lib != nil && a.notes.Draft.ID != "" {
-			for _, link := range a.lib.Backlinks(a.notes.Draft.ID) {
-				a.backlinks = append(a.backlinks, notes.Backlink{
-					Note:      link.Note,
-					NoteTitle: link.NoteTitle,
-					Block:     link.Block,
-					Paragraph: link.Paragraph,
-					Text:      link.Text,
-				})
-			}
-		}
-	case modeReview:
+	switch a.session {
+	case sessionReview:
 		a.preview, a.hasPreview = a.previewFor()
 		a.summary, a.hasSummary = a.summaryFor()
+		return
+	case sessionReading:
+		// The reading screen reads the queue reload derived; it has nothing
+		// else to load, and a frame never asks the store.
+		return
+	}
+	switch a.area {
+	case areaWrite:
+		if a.sub == subSearch {
+			a.loadBrowse()
+			return
+		}
+		a.loadBacklinks()
+	case areaRecall:
+		if a.sub == subRecallCards {
+			a.loadBrowse()
+			return
+		}
+		a.preview, a.hasPreview = a.previewFor()
+		a.summary, a.hasSummary = a.summaryFor()
+	case areaStats:
+		a.loadStats()
+	case areaSettings:
+		a.syncPrefs()
+	}
+}
+
+// loadBacklinks derives what points at the note the notebook has open.
+func (a *App) loadBacklinks() {
+	a.backlinks = nil
+	if a.lib == nil || a.notes.Draft.ID == "" {
+		return
+	}
+	for _, link := range a.lib.Backlinks(a.notes.Draft.ID) {
+		a.backlinks = append(a.backlinks, notes.Backlink{
+			Note:      link.Note,
+			NoteTitle: link.NoteTitle,
+			Block:     link.Block,
+			Paragraph: link.Paragraph,
+			Text:      link.Text,
+		})
 	}
 }
 
@@ -432,7 +456,7 @@ func (a *App) report(c *ui.Context, what string, err error) {
 func (a *App) libraryErrorView(c *ui.Context, tk design.Tokens) {
 	ui.Column(c).Grow(1).Center().Gap(tk.SpaceM).Padding(tk.SpaceXXL).Children(func() {
 		ui.Text(c, m(c).LibraryError(a.openErr.Error())).
-			FontSize(tk.TypeBody).TextColor(tk.TextMuted).MaxWidth(design.MessageWidth)
+			FontSize(tk.TypeUI).TextColor(tk.TextMuted).MaxWidth(design.MessageWidth)
 		ui.Button(c, m(c).RetryLibrary()).MinHeight(tk.Control).
 			OnClick(func() { a.open() })
 	})

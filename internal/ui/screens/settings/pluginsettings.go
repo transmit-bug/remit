@@ -92,16 +92,16 @@ func numberStep(value float64) float64 {
 // use, and how many of its entries failed and were hidden.
 func pluginProblems(c *ui.Context, d Deps, msgs locales.Messages, tk design.Tokens, p Plugin) {
 	if len(p.Problems) > 0 {
-		ui.Text(c, msgs.PluginProblems()).FontSize(tk.TypeSmall).TextColor(tk.Danger)
+		ui.Text(c, msgs.PluginProblems()).FontSize(tk.TypeUI).TextColor(tk.Danger)
 		for _, problem := range p.Problems {
-			ui.Text(c, problem).FontSize(tk.TypeSmall).TextColor(tk.Danger).SingleLine()
+			ui.Text(c, problem).FontSize(tk.TypeUI).TextColor(tk.Danger).SingleLine()
 		}
 	}
 	if p.Failures == 0 {
 		return
 	}
 	ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, msgs.PluginFailures(p.Failures)).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+		ui.Text(c, msgs.PluginFailures(p.Failures)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 		ui.Button(c, msgs.PluginReenable()).MinHeight(tk.Control).
 			OnClick(func() { d.reenable(c, p.Name) })
 	})

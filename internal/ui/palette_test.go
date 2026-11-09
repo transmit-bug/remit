@@ -40,7 +40,7 @@ func TestPalette(t *testing.T) {
 	}
 
 	tt.Key(0, ui.KeyEscape)
-	for _, gone := range []string{"Search actions", "Review cards", "Edit notes"} {
+	for _, gone := range []string{"Review cards", "Edit notes"} {
 		if tt.HasText(gone) {
 			t.Errorf("palette stayed open after Esc: %q", gone)
 		}
@@ -53,7 +53,7 @@ func TestPalette(t *testing.T) {
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("new")
 	tt.Key(0, ui.KeyEnter)
-	if tt.HasText("Search actions") {
+	if tt.HasText("Review cards") {
 		t.Error("the palette stayed open after running its action")
 	}
 	if !tt.HasText("Untitled note") {

@@ -48,7 +48,7 @@ func Empty(c *ui.Context, icon, text string, action func()) ui.Element {
 		ui.Icon(c, design.Icon(icon)).
 			Width(design.IconLarge).Height(design.IconLarge).
 			TextColor(t.TextMuted)
-		ui.Text(c, text).FontSize(design.TypeHeading).TextColor(t.TextMuted)
+		ui.Text(c, text).FontSize(design.TypeH2).TextColor(t.TextMuted)
 		if action != nil {
 			action()
 		}
@@ -76,7 +76,7 @@ func StateBadge(c *ui.Context, icon, text string, colour ui.Color) ui.Element {
 func Keycap(c *ui.Context, key string) ui.Element {
 	t := c.Theme()
 	p := design.PaletteOf(t.Dark)
-	return ui.Text(c, key).FontSize(design.TypeSmall).TextColor(t.TextMuted).
+	return ui.Text(c, key).FontSize(design.TypeUI).TextColor(t.TextMuted).
 		Background(p.Sunken).Radius(design.RadiusControl/2).
 		Padding(0, design.SpaceXS).MinWidth(design.SpaceL + design.SpaceXS)
 }
@@ -85,7 +85,7 @@ func Keycap(c *ui.Context, key string) ui.Element {
 func Stat(c *ui.Context, value, label string) ui.Element {
 	t := c.Theme()
 	return ui.Column(c).Gap(design.SpaceXS).Children(func() {
-		ui.Text(c, value).FontSize(design.TypeTitle).Bold()
-		ui.Text(c, label).FontSize(design.TypeSmall).TextColor(t.TextMuted)
+		ui.Text(c, value).FontSize(design.TypeH2).Bold()
+		ui.Text(c, label).FontSize(design.TypeUI).TextColor(t.TextMuted)
 	})
 }

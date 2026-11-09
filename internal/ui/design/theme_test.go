@@ -157,15 +157,18 @@ func TestThemeIsComplete(t *testing.T) {
 	}
 }
 
-// The scale is one density, three radii and four type sizes, each larger than
-// the last.
+// The scale is one density, three radii and the type scale, each size larger
+// than the one after it.
 func TestScale(t *testing.T) {
 	radii := []float32{design.RadiusControl, design.RadiusCard, design.RadiusPanel}
 	if want := []float32{6, 10, 14}; !equal(radii, want) {
 		t.Errorf("radii are %v, want %v", radii, want)
 	}
-	types := []float32{design.TypeSmall, design.TypeBody, design.TypeHeading, design.TypeTitle}
-	if want := []float32{13, 15, 17, 22}; !equal(types, want) {
+	types := []float32{
+		design.TypeDisplay, design.TypeH1, design.TypeH2, design.TypeBody,
+		design.TypeUI, design.TypeLabel, design.TypeCaption,
+	}
+	if want := []float32{34, 27, 22, 18, 13, 12, 11}; !equal(types, want) {
 		t.Errorf("type sizes are %v, want %v", types, want)
 	}
 	spaces := []float32{design.SpaceXS, design.SpaceS, design.SpaceM, design.SpaceL, design.SpaceXL, design.SpaceXXL}
@@ -174,8 +177,8 @@ func TestScale(t *testing.T) {
 			t.Errorf("spaces are not ascending: %v", spaces)
 		}
 	}
-	if design.LineHeight != 1.5 {
-		t.Errorf("line height is %v, want 1.5", design.LineHeight)
+	if design.LineHeight != 1.45 {
+		t.Errorf("line height is %v, want 1.45", design.LineHeight)
 	}
 }
 

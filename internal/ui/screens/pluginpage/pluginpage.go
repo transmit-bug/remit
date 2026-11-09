@@ -72,7 +72,7 @@ func View(c *ui.Context, s *State, d Deps) {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
 			ui.Column(c).FillWidth().MaxWidth(tk.PaperWidth).Gap(tk.SpaceL).Label(d.message(c, s.Title)).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-					ui.Text(c, d.message(c, s.Title)).FontSize(tk.TypeTitle).Bold()
+					ui.Text(c, d.message(c, s.Title)).FontSize(tk.TypeH2).Bold()
 					ui.Spacer(c)
 					// A page's data is asked for on entering, on an explicit
 					// refresh and on an event — never every frame — so the
@@ -99,7 +99,7 @@ func View(c *ui.Context, s *State, d Deps) {
 // action that asks again. It is never a blank page.
 func failed(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design.Tokens) {
 	ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, msgs.PluginPageFailed(s.Err)).FontSize(tk.TypeBody).TextColor(tk.Danger)
+		ui.Text(c, msgs.PluginPageFailed(s.Err)).FontSize(tk.TypeUI).TextColor(tk.Danger)
 		ui.Button(c, msgs.PluginPageRetry()).MinHeight(tk.Control).
 			OnClick(func() { d.retry(c) })
 	})
@@ -110,7 +110,7 @@ func failed(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design.To
 func loading(c *ui.Context, msgs locales.Messages, tk design.Tokens) {
 	ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
 		ui.Spinner(c)
-		ui.Text(c, msgs.PluginPageLoading()).FontSize(tk.TypeBody).TextColor(tk.TextMuted)
+		ui.Text(c, msgs.PluginPageLoading()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 	})
 }
 
@@ -126,9 +126,9 @@ func draw(c *ui.Context, s *State, d Deps, n contrib.Node, path string, tk desig
 	case contrib.KindSection:
 		ui.Column(c).FillWidth().Gap(gap).Children(func() {
 			ui.Column(c).Gap(tk.SpaceXS).Children(func() {
-				ui.Text(c, d.message(c, n.Title)).FontSize(tk.TypeHeading).Bold()
+				ui.Text(c, d.message(c, n.Title)).FontSize(tk.TypeH1).Bold()
 				if n.Description != "" {
-					ui.Text(c, d.message(c, n.Description)).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+					ui.Text(c, d.message(c, n.Description)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 				}
 			})
 			drawChildren(c, s, d, n.Children, path, tk, narrow)
@@ -190,7 +190,7 @@ func draw(c *ui.Context, s *State, d Deps, n contrib.Node, path string, tk desig
 		kit.Card(c, func() {
 			ui.Column(c).FillWidth().Padding(tk.SpaceL).Gap(tk.SpaceS).Children(func() {
 				if n.Title != "" {
-					ui.Text(c, d.message(c, n.Title)).FontSize(tk.TypeHeading).Bold()
+					ui.Text(c, d.message(c, n.Title)).FontSize(tk.TypeH1).Bold()
 				}
 				drawChildren(c, s, d, n.Children, path, tk, narrow)
 			})
@@ -198,22 +198,22 @@ func draw(c *ui.Context, s *State, d Deps, n contrib.Node, path string, tk desig
 	case contrib.KindMarkdown:
 		markdown.View(c, d.message(c, n.Text), s.markdown(path))
 	case contrib.KindText:
-		ui.Text(c, d.message(c, n.Text)).FontSize(tk.TypeBody).TextColor(toneColor(tk, n.Tone))
+		ui.Text(c, d.message(c, n.Text)).FontSize(tk.TypeUI).TextColor(toneColor(tk, n.Tone))
 	case contrib.KindStat:
 		kit.Stat(c, d.message(c, n.Value), d.message(c, n.Label))
 	case contrib.KindTable:
 		drawTable(c, d, n, tk)
 	case contrib.KindList:
 		if len(n.Items) == 0 {
-			ui.Text(c, d.message(c, n.Text)).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+			ui.Text(c, d.message(c, n.Text)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 			return
 		}
 		ui.List(c, nil, len(n.Items), func(i int) {
 			ui.Row(c).FillWidth().Gap(tk.SpaceS).AlignItems(ui.Center).Padding(tk.SpaceXS, 0).Children(func() {
-				ui.Text(c, d.message(c, n.Items[i].Label)).FontSize(tk.TypeBody)
+				ui.Text(c, d.message(c, n.Items[i].Label)).FontSize(tk.TypeUI)
 				ui.Spacer(c)
 				if value := d.message(c, n.Items[i].Value); value != "" {
-					ui.Text(c, value).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+					ui.Text(c, value).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 				}
 			})
 		}).Label(d.message(c, n.Title))
@@ -228,7 +228,7 @@ func draw(c *ui.Context, s *State, d Deps, n contrib.Node, path string, tk desig
 		ui.Form(c, func() {
 			for _, field := range n.Fields {
 				ui.Field(c, d.message(c, field.Label), func() {
-					ui.Text(c, d.message(c, field.Value)).FontSize(tk.TypeBody).TextColor(tk.TextMuted)
+					ui.Text(c, d.message(c, field.Value)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 				})
 			}
 		})
@@ -241,7 +241,7 @@ func draw(c *ui.Context, s *State, d Deps, n contrib.Node, path string, tk desig
 				if n.Title != "" {
 					ui.Text(c, d.message(c, n.Title)).Bold()
 				}
-				ui.Text(c, d.message(c, n.Text)).FontSize(tk.TypeBody)
+				ui.Text(c, d.message(c, n.Text)).FontSize(tk.TypeUI)
 			})
 	case contrib.KindActions:
 		ui.Row(c).Wrap().Gap(tk.SpaceS).Children(func() {
@@ -259,7 +259,7 @@ func draw(c *ui.Context, s *State, d Deps, n contrib.Node, path string, tk desig
 // place, so the page says what it could not show and renders the rest.
 func unknown(c *ui.Context, n contrib.Node, tk design.Tokens) {
 	ui.Text(c, locales.In(c.Locale()).PluginPageUnknownNode(string(n.Kind))).
-		FontSize(tk.TypeSmall).TextColor(tk.TextMuted).
+		FontSize(tk.TypeUI).TextColor(tk.TextMuted).
 		Padding(tk.SpaceS).Radius(tk.RadiusControl).
 		Border(tk.Hairline, tk.Border)
 }
@@ -279,7 +279,7 @@ func drawTable(c *ui.Context, d Deps, n contrib.Node, tk design.Tokens) {
 		columns[i] = ui.TableColumn{Title: d.message(c, heading)}
 	}
 	ui.Table(c, nil, columns, len(n.Rows), func(row, col int) {
-		ui.Text(c, d.message(c, n.Rows[row][col])).FontSize(tk.TypeBody).SingleLine()
+		ui.Text(c, d.message(c, n.Rows[row][col])).FontSize(tk.TypeUI).SingleLine()
 	}).Label(d.message(c, n.Title))
 }
 
@@ -293,10 +293,10 @@ func drawTree(c *ui.Context, s *State, d Deps, items []contrib.Item, path string
 			open := s.branch(key)
 			ui.TreeItem(c, d.message(c, item.Label), open, func() {
 				drawTree(c, s, d, item.Items, key, tk)
-			}).FontSize(tk.TypeBody)
+			}).FontSize(tk.TypeUI)
 			continue
 		}
-		ui.TreeItem(c, d.message(c, item.Label), nil, nil).FontSize(tk.TypeBody)
+		ui.TreeItem(c, d.message(c, item.Label), nil, nil).FontSize(tk.TypeUI)
 	}
 }
 

@@ -87,22 +87,23 @@ func (a *App) remember(dir string) error {
 	return a.UpdateSettings(func(s *settings.Settings) { s.LibraryDir = dir })
 }
 
-// openSettings shows the settings page, remembering the face to come back to.
+// openSettings shows the settings area, remembering where the user was so that
+// Esc comes back to it. The page itself is loaded by loadCurrent, so opening it
+// is the same navigation as any other.
 func (a *App) openSettings() {
-	if a.mode != modeSettings {
-		a.prefsBack = a.mode
+	if a.area != areaSettings {
+		a.prefsBack, a.prefsBackSub = a.area, a.sub
 	}
-	a.mode = modeSettings
-	a.syncPrefs()
+	a.setArea(areaSettings, subSettingsAppearance)
 }
 
-// closeSettings returns to the face the page was opened from.
+// closeSettings returns to the area the page was opened from.
 func (a *App) closeSettings() {
-	back := a.prefsBack
-	if back == modeSettings {
-		back = modeNotes
+	area, sub := a.prefsBack, a.prefsBackSub
+	if area == areaSettings {
+		area, sub = areaToday, subNone
 	}
-	a.setMode(back)
+	a.setArea(area, sub)
 }
 
 // syncPrefs copies the settings, and the agent API's own report, into what the

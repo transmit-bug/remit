@@ -38,8 +38,8 @@ func View(c *ui.Context, s State, _ Deps) {
 	c.SetTheme(tk.Theme)
 
 	ui.Column(c).Fill().Center().Gap(tk.SpaceS).Padding(tk.SpaceXXL).Children(func() {
-		ui.Text(c, s.Name).FontSize(tk.TypeTitle).Bold()
-		ui.Text(c, msgs.Version(s.Version)).FontSize(tk.TypeBody).TextColor(tk.TextMuted)
+		ui.Text(c, s.Name).FontSize(tk.TypeH2).Bold()
+		ui.Text(c, msgs.Version(s.Version)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 		ui.Link(c.Key("license"), msgs.LicenseLink(), LicenseURL)
 	})
 }

@@ -195,7 +195,7 @@ func (s *State) slashMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 			Shadow(0, 8, 24, 0, ui.RGBA(0, 0, 0, 0.18))
 		panel.Children(func() {
 			if len(s.slashMatches) == 0 {
-				ui.Text(c, msgs.NoSlashMatches()).FontSize(tk.TypeSmall).
+				ui.Text(c, msgs.NoSlashMatches()).FontSize(tk.TypeUI).
 					TextColor(tk.TextMuted).Padding(tk.SpaceS)
 				return
 			}
@@ -215,7 +215,7 @@ func (s *State) slashMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 							row.Background(tk.SurfaceHover)
 						}
 						row.Children(func() {
-							ui.Text(c, command.label).FontSize(tk.TypeBody).
+							ui.Text(c, command.label).FontSize(tk.TypeUI).
 								TextColor(colour)
 						})
 						if row.Hovered() {

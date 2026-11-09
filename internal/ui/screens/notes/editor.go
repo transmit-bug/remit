@@ -234,7 +234,7 @@ func (s *State) readView(c *ui.Context, tk design.Tokens, d Deps) {
 	}
 	ui.Scroll(c).Grow(1).MinWidth(0).Padding(tk.SpaceXL).Children(func() {
 		ui.Column(c).MaxWidth(design.ReadingWidth).Gap(tk.SpaceM).Children(func() {
-			ui.Text(c, s.Draft.Title).FontSize(tk.TypeTitle).Bold()
+			ui.Text(c, s.Draft.Title).FontSize(tk.TypeH2).Bold()
 			markdown.View(c, DocumentText(s.Draft), s.imageOptions())
 		})
 	})
@@ -375,7 +375,7 @@ func (s *State) formatBar(c *ui.Context, tk design.Tokens) {
 // formatRule is the hairline between two groups of the format bar: a line, not
 // a gap, so the groups read as groups.
 func formatRule(c *ui.Context, tk design.Tokens) {
-	ui.Divider(c).Height(tk.TypeBody).AlignSelf(ui.Center)
+	ui.Divider(c).Height(tk.TypeUI).AlignSelf(ui.Center)
 }
 
 // formatToggle is one control of the format bar: the glyph that names the

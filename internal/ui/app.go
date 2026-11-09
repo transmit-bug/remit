@@ -27,6 +27,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
+	"github.com/transmit-bug/remit/internal/ui/shell"
 	"github.com/transmit-bug/remit/internal/update"
 )
 
@@ -38,13 +39,18 @@ const (
 	Version = "0.1.0"
 )
 
-// mode is which of Remit's faces the window shows: editing notes, reviewing
-// the queue pulled from them, reading the notes they came from, browsing every
-// card, the statistics page, or the settings page.
+// mode is the screen a plugin's when expression reads: the legacy five-screen
+// vocabulary the contract has always had (notes, review, browse, stats,
+// settings, or empty where no legacy screen answers). It is derived, not set: the
+// window's own state is the area, its page and the session over them, and
+// syncMode is the one place the two are reconciled.
 type mode uint8
 
 const (
-	modeNotes mode = iota
+	// modeNone is where no legacy screen answers: Today, the reading queue and
+	// a page a plugin contributed. A when expression reads it as empty.
+	modeNone mode = iota
+	modeNotes
 	modeReview
 	modeReading
 	modeBrowse
@@ -55,14 +61,6 @@ const (
 	// page.id names it instead.
 	modePlugin
 )
-
-// takingOver reports whether the screen takes the window whole: review and
-// reading hide the navigation, so that the card or the note and its status bar
-// are all the user sees.
-func (a *App) takingOver() bool {
-	return a.lib != nil && !a.start && a.openErr == nil &&
-		(a.mode == modeReview || a.mode == modeReading)
-}
 
 // animState counts the moments the window's own motion replays by: a screen
 // changing, a panel opening. The count is the run of a preset, so when it moves
@@ -84,7 +82,10 @@ type App struct {
 	due     []core.ID      // today's queue, as the last reload derived it
 
 	mode             mode
-	page             contrib.PageRef // the contributed page on screen, when mode is modePlugin
+	area             areaID          // which area the rail shows as chosen
+	sub              subID           // which of its pages; subNone when it has none
+	session          sessionKind     // the session over the stage, when one is open; none until the session screens land
+	page             contrib.PageRef // the contributed page on screen, when area is areaPlugin
 	review           review.State
 	reviewScope      queue.Scope   // what the review session draws from; within the session only, never stored
 	reading          reading.State // the reading session: the queue's order and where the reader is
@@ -99,7 +100,8 @@ type App struct {
 	relink           relink.State
 	cardEdit         cardEditState
 	prefs            screensettings.State
-	prefsBack        mode                                    // the face the settings page goes back to
+	prefsBack        areaID                                  // the area the settings page goes back to
+	prefsBackSub     subID                                   // and the page of it
 	cards            *cardPlugin                             // what a paragraph asks and how a card reads
 	scheduler        *schedulerPlugin                        // what schedules a review, and what a session is worth
 	cardsChoice      *ext.JSRunner                           // the runner Options.Cards named, nil for the app's own
@@ -151,6 +153,9 @@ type App struct {
 	// anim counts how often each moment played: a screen change, a panel
 	// opening. A counter that moves replays its preset.
 	anim animState
+	// shell is the frame's own state: what the user folded, which survives the
+	// page behind it changing.
+	shell shell.State
 
 	// settingsDir is where settings.json lives, empty when the app keeps no
 	// settings; defaultLibrary is <Documents>/Remit, resolved once.
@@ -192,7 +197,7 @@ type App struct {
 }
 
 // NewApp returns an app on the library in opts.LibraryDir, or on the one a
-// previous run remembered in its settings, in review mode. With no library at
+// previous run remembered in its settings, opened on today. With no library at
 // either place it shows the start view — Create library or Open library… —
 // rather than creating one the user did not ask for. A library that cannot be
 // opened leaves the window showing that, with the one action that tries again;

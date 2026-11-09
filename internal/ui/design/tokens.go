@@ -31,16 +31,33 @@ type Tokens struct {
 
 	// Metrics, from the design language's scale.
 	SpaceXS, SpaceS, SpaceM, SpaceL, SpaceXL, SpaceXXL float32
-	RadiusControl, RadiusCard, RadiusPanel             float32
-	// RadiusBar is a heat cell's or a chart bar's corner: half a control's,
-	// so the smallest square still reads as rounded.
-	RadiusBar                                   float32
-	TypeTitle, TypeHeading, TypeBody, TypeSmall float32
-	TypeMono                                    float32
-	Control, Hairline                           float32
-	// The document's scale and the paper it sits on.
-	TypeDisplay, TypeChrome, TypeLabel, TypeCaption float32
-	PaperWidth, Gutter, FrameHeight, BarHeight      float32
+	RadiusControl, RadiusCard, RadiusPanel, RadiusBar  float32
+	// The type scale: the document's display, a page's heading and a panel's,
+	// the paper's body, the chrome's UI, then label and caption. Mono is for
+	// paths, templates and logs.
+	TypeDisplay, TypeH1, TypeH2, TypeBody float32
+	TypeUI, TypeLabel, TypeCaption        float32
+	TypeMono                              float32
+	// DisplayNarrow is the display size from BreakpointSmall down.
+	DisplayNarrow float32
+	Control       float32
+	// Hit is the smallest pointer target, a control plus its ring of room.
+	Hit      float32
+	Hairline float32
+
+	// The paper and the frame around it.
+	PaperWidth, Gutter, GutterNarrow, FrameHeight, BarHeight float32
+	// SubnavHeight and StatusbarHeight are the two rows the frame adds under
+	// the top bar and below the stage.
+	SubnavHeight, StatusbarHeight float32
+	// RailWidth is the navigation rail open, RailCollapsed the strip it folds
+	// to; PanelWidth is a document's side panel.
+	RailWidth, RailCollapsed, PanelWidth float32
+	// The page measures the full-window screens share.
+	ListWidth, SettingsWidth, BrowseWidth, WelcomeWidth float32
+	// NotesColumnWidth and FilterPaneWidth are the two working columns: a
+	// document's notes list, and the card table's filters.
+	NotesColumnWidth, FilterPaneWidth float32
 }
 
 // NewTokens resolves Remit's appearance for this frame: the palette at the text
@@ -56,7 +73,7 @@ func NewTokens(base *ui.Theme) Tokens {
 	t.FontSize = base.FontSize
 	p := PaletteOf(base.Dark)
 
-	scale := t.FontSize / TypeSmall
+	scale := t.FontSize / TypeUI
 	if scale <= 0 {
 		scale = 1
 	}
@@ -77,16 +94,23 @@ func NewTokens(base *ui.Theme) Tokens {
 		SpaceXS: SpaceXS, SpaceS: SpaceS, SpaceM: SpaceM,
 		SpaceL: SpaceL, SpaceXL: SpaceXL, SpaceXXL: SpaceXXL,
 		RadiusControl: RadiusControl, RadiusCard: RadiusCard,
-		RadiusPanel: RadiusPanel, RadiusBar: RadiusControl / 2,
-		TypeTitle: TypeTitle * scale, TypeHeading: TypeHeading * scale,
-		TypeBody: TypeBody * scale, TypeSmall: TypeSmall * scale,
-		TypeMono: TypeMono * scale,
-		Control:  ControlHeight, Hairline: Hairline,
+		RadiusPanel: RadiusPanel, RadiusBar: RadiusBar,
 
-		TypeDisplay: TypeDisplay * scale, TypeChrome: TypeChrome * scale,
-		TypeLabel: TypeLabel * scale, TypeCaption: TypeCaption * scale,
-		PaperWidth: PaperWidth, Gutter: Gutter,
+		TypeDisplay: TypeDisplay * scale, TypeH1: TypeH1 * scale,
+		TypeH2: TypeH2 * scale, TypeBody: TypeBody * scale,
+		TypeUI: TypeUI * scale, TypeLabel: TypeLabel * scale,
+		TypeCaption: TypeCaption * scale, TypeMono: TypeMono * scale,
+		DisplayNarrow: DisplayNarrow * scale,
+
+		Control: ControlHeight, Hit: Hit, Hairline: Hairline,
+
+		PaperWidth: PaperWidth, Gutter: Gutter, GutterNarrow: GutterNarrow,
 		FrameHeight: FrameHeight, BarHeight: BarHeight,
+		SubnavHeight: SubnavHeight, StatusbarHeight: StatusbarHeight,
+		RailWidth: RailWidth, RailCollapsed: RailCollapsed, PanelWidth: PanelWidth,
+		ListWidth: ListWidth, SettingsWidth: SettingsWidth,
+		BrowseWidth: BrowseWidth, WelcomeWidth: WelcomeWidth,
+		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
 	}
 }
 

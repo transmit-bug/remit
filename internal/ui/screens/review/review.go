@@ -338,7 +338,7 @@ func statusBar(c *ui.Context, s *State, card Card) {
 			Padding(design.SpaceXS, design.SpaceL).AlignItems(ui.Center).
 			Gap(design.SpaceS).Children(func() {
 			ui.Text(c, msgs.Remaining(s.Remaining())).
-				FontSize(design.TypeSmall).TextColor(t.TextMuted)
+				FontSize(design.TypeUI).TextColor(t.TextMuted)
 			if total > 0 {
 				ui.Progress(c, float64(done)/float64(total)).Grow(1)
 			}
@@ -382,7 +382,7 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 			case core.LinkLost:
 				kit.StateBadge(c, "unlink", msgs.Lost(), c.Theme().Danger).AlignSelf(ui.Start)
 				ui.Text(c, msgs.LostBody()).
-					FontSize(design.TypeBody).TextColor(c.Theme().TextMuted)
+					FontSize(design.TypeUI).TextColor(c.Theme().TextMuted)
 				ui.Row(c).Gap(design.SpaceS).AlignSelf(ui.Start).Children(func() {
 					ui.PrimaryButton(c, msgs.Relink()).MinHeight(design.ControlHeight).
 						OnClick(func() { d.Relink(card.ID) })
@@ -394,14 +394,14 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 				ui.Row(c).AlignSelf(ui.Start).AlignItems(ui.Center).Gap(design.SpaceS).Children(func() {
 					kit.StateBadge(c, "snowflake", msgs.Frozen(), c.Theme().Warning)
 					ui.Text(c, msgs.SnapshotTaken(card.Frozen.Format("2 January 2006"))).
-						FontSize(design.TypeSmall).TextColor(c.Theme().TextMuted)
+						FontSize(design.TypeUI).TextColor(c.Theme().TextMuted)
 				})
 			}
 
 			// A card's faces arrive already rendered: the type's templates
 			// turned its fields into markdown, the host turns markdown into text.
 			front, back := card.Prompt, card.Answer
-			ui.Text(c, maths.Render(front)).FontSize(design.TypeHeading).Bold()
+			ui.Text(c, maths.Render(front)).FontSize(design.TypeH1).Bold()
 			ui.Divider(c)
 			if card.Hint != "" && !s.Answered() {
 				hintFold(c, s, card)
@@ -412,7 +412,7 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 			}
 			if !s.Answered() {
 				ui.Text(c, msgs.RevealHint()).
-					FontSize(design.TypeSmall).TextColor(c.Theme().TextMuted)
+					FontSize(design.TypeUI).TextColor(c.Theme().TextMuted)
 				ui.PrimaryButton(c, msgs.ShowAnswer()).AlignSelf(ui.Start).
 					PaddingX(design.SpaceL).MinHeight(design.ControlHeight).
 					OnClick(s.Reveal)
@@ -423,7 +423,7 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 			}
 			if card.Answer == "" {
 				ui.Text(c, msgs.EmptyAnswer()).
-					FontSize(design.TypeBody).TextColor(c.Theme().TextMuted)
+					FontSize(design.TypeUI).TextColor(c.Theme().TextMuted)
 				return
 			}
 			// The answer's formulas are set for reading; the note keeps the
@@ -451,11 +451,11 @@ func grades(c *ui.Context, d Deps, id core.ID) {
 				OnClick(func() { d.Grade(id, r) }).
 				Children(func() {
 					kit.Keycap(c, r.Key())
-					ui.Text(c, label).FontSize(design.TypeBody).TextColor(t.Text)
+					ui.Text(c, label).FontSize(design.TypeUI).TextColor(t.Text)
 					if hasPreview {
 						if wait := formatWait(msgs, intervals[r].Wait); wait != "" {
 							ui.Spacer(c)
-							ui.Text(c, wait).FontSize(design.TypeSmall).TextColor(t.TextMuted)
+							ui.Text(c, wait).FontSize(design.TypeUI).TextColor(t.TextMuted)
 						}
 					}
 				})
@@ -548,7 +548,7 @@ func empty(c *ui.Context, d Deps) {
 					ui.Icon(c, design.Icon("coffee")).
 						Width(design.IconMedium).Height(design.IconMedium).
 						TextColor(t.Accent)
-					ui.Text(c, msgs.SummaryTitle()).FontSize(design.TypeTitle).Bold()
+					ui.Text(c, msgs.SummaryTitle()).FontSize(design.TypeH2).Bold()
 				})
 				ui.Row(c).Gap(design.SpaceXXL).Children(func() {
 					kit.Stat(c, strconv.Itoa(summary.Reviewed), msgs.StatReviewed())
@@ -562,7 +562,7 @@ func empty(c *ui.Context, d Deps) {
 					// A plugin's line is markdown; the screen renders it as one
 					// line of text with its formulas set.
 					ui.Text(c, maths.Render(line)).
-						FontSize(design.TypeBody).TextColor(t.TextMuted)
+						FontSize(design.TypeUI).TextColor(t.TextMuted)
 				}
 				// Leaving is never blocked, whatever the tone, and it is the one
 				// filled button on the screen.

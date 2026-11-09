@@ -46,6 +46,8 @@ func TestFormatBarBoldsTheSelection(t *testing.T) {
 func TestViewModesSwitchPanes(t *testing.T) {
 	msgs := locales.In("en")
 	a, tt, _ := headedNote(t, 1024, 720)
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Frame()
 
 	if err := tt.Click(msgs.ViewRead()); err != nil {
 		t.Fatalf("the view switch has no reading mode: %v", err)

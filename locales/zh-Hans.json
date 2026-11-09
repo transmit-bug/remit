@@ -325,4 +325,23 @@
   "readingWaiting": "{count, plural, =0 {没有待读} other {# 篇待读}}",
   "trayTitleReading": "Remit · {cards} · {reading}",
   "trayTooltipQueues": "{cards, plural, =0 {没有卡片到期} other {# 张卡片到期}} · {reading, plural, =0 {没有待读} other {# 篇待读}}"
+,
+  "areaNav": "区域",
+  "subnav": "页面",
+  "path": "路径",
+  "statusLine": "状态",
+  "railFold": "收起导航轨",
+  "railUnfold": "展开导航轨",
+  "areaToday": "今日",
+  "areaWrite": "写",
+  "areaRead": "读",
+  "areaRecall": "忆",
+  "areaStats": "统计",
+  "areaSettings": "设置",
+  "searchPage": "搜索",
+  "queuePage": "队列",
+  "cardsPage": "卡片",
+  "overviewPage": "总览",
+  "appearancePage": "外观",
+  "todayStub": "今日把要读的和到期的收在一张队列里。"
 }

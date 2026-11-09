@@ -53,14 +53,14 @@ func TestReducedMotionSwitchesAtOnce(t *testing.T) {
 	}
 
 	moving := open(false)
-	moving.Key(ui.Cmd, ui.Key3) // notes to browse
+	cardsPage(t, moving, "en") // notes to the card table
 	moving.Frame()
 	if !moving.FramePending() {
 		t.Fatal("the screen change runs no motion at all: nothing to compare the reduced motion against")
 	}
 
 	still := open(true)
-	still.Key(ui.Cmd, ui.Key3)
+	cardsPage(t, still, "en")
 	still.Frame()
 	if still.FramePending() {
 		t.Error("a screen change still travels with reduced motion asked for")
@@ -71,6 +71,7 @@ func TestReducedMotionSwitchesAtOnce(t *testing.T) {
 // the same size before, under the pointer, and pressed.
 func TestHoverAndPressKeepTheLayout(t *testing.T) {
 	_, _, tt := openApp(t)
+	recallQueue(tt)
 
 	// The grades are up only once the answer is.
 	tt.Key(0, ui.KeySpace)

@@ -32,7 +32,7 @@ func (s *State) cardsStrip(c *ui.Context, tk design.Tokens, d Deps) {
 					badge.Children(func() {
 						tk.Icon(c, cardIcon(card), design.IconSmall).
 							TextColor(cardColour(tk, card))
-						ui.Text(c, label).FontSize(tk.TypeSmall).TextColor(tk.Text)
+						ui.Text(c, label).FontSize(tk.TypeUI).TextColor(tk.Text)
 					})
 				}
 			}

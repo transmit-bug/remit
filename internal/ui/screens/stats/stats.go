@@ -46,7 +46,7 @@ func View(c *ui.Context, s State, _ Deps) {
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
 			ui.Column(c).FillWidth().MaxWidth(tk.PaperWidth).Gap(tk.SpaceXL).Children(func() {
-				ui.Text(c, msgs.StatsTitle()).FontSize(tk.TypeTitle).Bold()
+				ui.Text(c, msgs.StatsTitle()).FontSize(tk.TypeH2).Bold()
 				heatmapSection(c, s, msgs, tk)
 				retentionSection(c, s, msgs, tk)
 				forecastSection(c, s, msgs, tk)
@@ -63,7 +63,7 @@ func heatmapSection(c *ui.Context, s State, msgs locales.Messages, tk design.Tok
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
 		if s.HeatTotal == 0 {
 			statsHeading(c, tk, msgs.StatsHeat(), "")
-			ui.Text(c, msgs.StatsHeatEmpty()).FontSize(tk.TypeBody).TextColor(tk.TextMuted)
+			ui.Text(c, msgs.StatsHeatEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 			return
 		}
 		statsHeading(c, tk, msgs.StatsHeat(),
@@ -74,7 +74,7 @@ func heatmapSection(c *ui.Context, s State, msgs locales.Messages, tk design.Tok
 				for _, day := range s.Heat[0] {
 					ui.Text(c, msgs.StatsHeatWeekday(day.Day)).NoWrap().
 						Width(heatWeekdayWidth).Height(heatCell).LineHeight(1).
-						FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+						FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 				}
 			})
 			for _, week := range s.Heat {
@@ -109,12 +109,12 @@ func heatCellBox(c *ui.Context, tk design.Tokens, msgs locales.Messages, day Hea
 // counts rather than decoration.
 func heatLegend(c *ui.Context, tk design.Tokens, msgs locales.Messages) {
 	ui.Row(c).Gap(heatGap).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, msgs.StatsHeatLess()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+		ui.Text(c, msgs.StatsHeatLess()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 		for level := 0; level <= 4; level++ {
 			ui.Box(c).Width(heatCell).Height(heatCell).Radius(tk.RadiusBar).
 				Background(tk.HeatFill(level))
 		}
-		ui.Text(c, msgs.StatsHeatMore()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+		ui.Text(c, msgs.StatsHeatMore()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 	})
 }
 
@@ -125,7 +125,7 @@ func retentionSection(c *ui.Context, s State, msgs locales.Messages, tk design.T
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
 		if r.Reviews == 0 {
 			statsHeading(c, tk, msgs.StatsRetention(), "")
-			ui.Text(c, msgs.StatsRetentionEmpty()).FontSize(tk.TypeBody).TextColor(tk.TextMuted)
+			ui.Text(c, msgs.StatsRetentionEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 			return
 		}
 		statsHeading(c, tk, msgs.StatsRetention(),
@@ -163,7 +163,7 @@ func forecastSection(c *ui.Context, s State, msgs locales.Messages, tk design.To
 	ui.Column(c).Gap(tk.SpaceS).Children(func() {
 		if total == 0 {
 			statsHeading(c, tk, msgs.StatsForecast(), "")
-			ui.Text(c, msgs.StatsForecastEmpty()).FontSize(tk.TypeBody).TextColor(tk.TextMuted)
+			ui.Text(c, msgs.StatsForecastEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 			return
 		}
 		statsHeading(c, tk, msgs.StatsForecast(), msgs.CardCount(total))
@@ -203,19 +203,19 @@ func dayPlot(c *ui.Context, tk design.Tokens, msgs locales.Messages, days []DayC
 // data to summarise.
 func statsHeading(c *ui.Context, tk design.Tokens, title, summary string) {
 	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
-		ui.Text(c, title).FontSize(tk.TypeHeading).Bold()
+		ui.Text(c, title).FontSize(tk.TypeH2).Bold()
 		if summary == "" {
 			return
 		}
 		ui.Spacer(c)
-		ui.Text(c, summary).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+		ui.Text(c, summary).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 	})
 }
 
 // mutedAxis labels a plot's ticks in the small muted type.
 func mutedAxis(c *ui.Context, tk design.Tokens) func(chart.Side, chart.Tick) {
 	return func(_ chart.Side, tick chart.Tick) {
-		ui.Text(c, tick.Label).NoWrap().FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+		ui.Text(c, tick.Label).NoWrap().FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 	}
 }
 

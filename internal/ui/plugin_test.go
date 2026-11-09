@@ -50,6 +50,7 @@ export function deriveBlock(block) {
 `)
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
+	recallQueue(tt)
 	tt.Key(0, ui.KeySpace)
 	tt.Advance(320 * time.Millisecond) // the answer unfolding
 
@@ -73,6 +74,7 @@ func TestBrokenPluginFallsBackToTheParagraph(t *testing.T) {
 			a, _ := withPlugin(t, "", tc.source)
 			tt := ui.NewTester(a.View, 1024, 720)
 			settle(tt)
+			recallQueue(tt)
 			tt.Key(0, ui.KeySpace)
 			tt.Advance(320 * time.Millisecond)
 
@@ -100,6 +102,7 @@ func TestLibraryWithoutACardPlugin(t *testing.T) {
 	a := NewApp(Options{LibraryDir: dir, WithoutCards: true})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
+	recallQueue(tt)
 
 	// The review works, reading the paragraph's own words.
 	tt.Key(0, ui.KeySpace)
@@ -200,6 +203,7 @@ export function summary(session) {
 	a.reload()
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
+	recallQueue(tt)
 
 	if !tt.HasText("you reviewed 0 cards") {
 		t.Fatalf("the summary does not carry the plugin's line; texts %q", tt.Texts())

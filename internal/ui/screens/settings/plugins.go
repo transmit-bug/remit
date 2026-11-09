@@ -70,7 +70,7 @@ func pluginsFieldset(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk 
 		roleField(c, msgs, tk, plugins, roles, core.RoleCardsDerive, msgs.PluginRoleCards(), msgs.PluginRoleCardsBody(), &role)
 		roleField(c, msgs, tk, plugins, roles, core.RoleReviewSchedule, msgs.PluginRoleSchedule(), msgs.PluginRoleScheduleBody(), &role)
 		if s.PluginErr != "" {
-			ui.Text(c, s.PluginErr).FontSize(tk.TypeSmall).TextColor(tk.Danger)
+			ui.Text(c, s.PluginErr).FontSize(tk.TypeUI).TextColor(tk.Danger)
 		}
 	})
 
@@ -94,13 +94,13 @@ func pluginField(c *ui.Context, d Deps, tk design.Tokens, msgs locales.Messages,
 				ui.Badge(c, msgs.PluginBuiltin())
 			}
 			ui.Spacer(c)
-			ui.Text(c, p.Version+" · "+p.ID).FontSize(tk.TypeSmall).TextColor(tk.TextFaint)
+			ui.Text(c, p.Version+" · "+p.ID).FontSize(tk.TypeUI).TextColor(tk.TextFaint)
 			if !p.Builtin && ui.Switch(c, &on).Label(msgs.PluginEnable(p.Name)).Changed() {
 				enable.name, enable.on = p.Name, on
 			}
 		})
 		if len(p.Capabilities) == 0 {
-			ui.Text(c, msgs.PluginNoCapabilities()).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+			ui.Text(c, msgs.PluginNoCapabilities()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 		} else {
 			ui.Row(c).Gap(tk.SpaceXS).Children(func() {
 				for _, capability := range p.Capabilities {
@@ -150,5 +150,5 @@ func optionLabel(p Plugin) string {
 
 // muted is one quiet line, the page's way of stating what is not there.
 func muted(c *ui.Context, tk design.Tokens, text string) {
-	ui.Text(c, text).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+	ui.Text(c, text).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 }

@@ -5,21 +5,21 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/screens/browse"
 )
 
-// ShowNote opens the editor at a note the library holds, and does nothing when
+// ShowNote opens the notebook at a note the library holds, and does nothing when
 // it does not: a link from outside is a request, not a command.
 func (a *App) ShowNote(id core.ID) {
 	a.reload()
 	for _, note := range a.data.notes {
 		if note.ID == id {
 			a.notes.Selected = string(id)
-			a.mode = modeNotes
+			a.setArea(areaWrite, subNotes)
 			return
 		}
 	}
 }
 
-// ShowCard opens review with one card first, so a link to a card shows that
-// card rather than the start of the queue.
+// ShowCard opens the recall queue with one card first, so a link to a card shows
+// that card rather than the start of the queue.
 func (a *App) ShowCard(id core.ID) {
 	a.reload()
 	if _, ok := a.data.byID[id]; !ok {
@@ -27,28 +27,45 @@ func (a *App) ShowCard(id core.ID) {
 	}
 	a.review.Reset()
 	a.review.Only(id)
-	a.mode = modeReview
+	a.setArea(areaRecall, subRecallQueue)
 }
 
-// ShowQueue enters review with today's queue.
+// ShowToday opens the window on today.
+func (a *App) ShowToday() {
+	a.reload()
+	a.setArea(areaToday, subNone)
+}
+
+// ShowRead opens the read area's queue: the notes that are due now.
+func (a *App) ShowRead() {
+	a.reload()
+	a.setArea(areaRead, subReadQueue)
+}
+
+// ShowRecall opens the recall area's queue: today's cards.
+func (a *App) ShowRecall() {
+	a.reload()
+	a.setArea(areaRecall, subRecallQueue)
+}
+
+// ShowQueue enters the recall queue, the link remit://queue has always named.
 func (a *App) ShowQueue() {
 	a.reload()
-	a.mode = modeReview
+	a.setArea(areaRecall, subRecallQueue)
 }
 
-// ShowReading enters the reading queue: the other side of the dual mode, with
-// the notes that are due now.
+// ShowReading enters the reading queue, with the notes that are due now.
 func (a *App) ShowReading() {
 	a.reload()
-	a.mode = modeReading
+	a.setArea(areaRead, subReadQueue)
 }
 
-// Search shows browse on a query from outside the window and puts the caret in
-// its field. A query that finds nothing leaves its empty state up, which says
-// the search ran.
+// Search shows the search page on a query from outside the window and puts the
+// caret in its field. A query that finds nothing leaves its empty state up,
+// which says the search ran.
 func (a *App) Search(query string) {
 	a.browse.Query, a.browse.Filter, a.browse.Selected = query, browse.All, -1
-	a.mode = modeBrowse
+	a.setArea(areaWrite, subSearch)
 	a.reload()
 	a.browse.Focus()
 }

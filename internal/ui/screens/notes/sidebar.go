@@ -52,9 +52,9 @@ func (s *State) tagFilterBar(c *ui.Context, tk design.Tokens, d Deps) {
 					s.TagFilter = tag
 				})
 				chip.Children(func() {
-					ui.Text(c, label).FontSize(tk.TypeSmall).TextColor(tk.Text)
+					ui.Text(c, label).FontSize(tk.TypeUI).TextColor(tk.Text)
 					if n := tags[tag]; n > 1 {
-						ui.Text(c, fmt.Sprint(n)).FontSize(tk.TypeSmall).TextColor(tk.TextMuted)
+						ui.Text(c, fmt.Sprint(n)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 					}
 				})
 			}
@@ -124,7 +124,7 @@ func (s *State) notesList(c *ui.Context, tk design.Tokens, d Deps) {
 					}
 				}
 			})
-		}).Grow(1)
+		}).Grow(1).Label(msgs.Notebook())
 	})
 }
 

@@ -75,7 +75,7 @@ func typesFieldset(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk de
 				}
 			})
 			if s.TypeErr != "" {
-				ui.Text(c, s.TypeErr).FontSize(tk.TypeSmall).TextColor(tk.Danger).Grow(1)
+				ui.Text(c, s.TypeErr).FontSize(tk.TypeUI).TextColor(tk.Danger).Grow(1)
 			}
 		})
 		typePreview(c, s, msgs, tk)

@@ -11,7 +11,7 @@ import (
 func TestGradingAnnouncesWhatIsLeft(t *testing.T) {
 	a, _, tt := openApp(t)
 
-	tt.Key(ui.Cmd, ui.Key1)
+	recallQueue(tt)
 	tt.Key(0, ui.KeySpace)
 	tt.Key(0, ui.Key3)
 

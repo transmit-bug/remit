@@ -20,12 +20,17 @@ func TestParse(t *testing.T) {
 		{name: "note", raw: "remit://note/" + string(note), want: Route{Kind: KindNote, ID: note}},
 		{name: "card", raw: "remit://card/" + string(card), want: Route{Kind: KindCard, ID: card}},
 		{name: "queue", raw: "remit://queue", want: Route{Kind: KindQueue}},
+		{name: "today", raw: "remit://today", want: Route{Kind: KindToday}},
+		{name: "read", raw: "remit://read", want: Route{Kind: KindRead}},
+		{name: "recall", raw: "remit://recall", want: Route{Kind: KindRecall}},
 		{name: "search", raw: "remit://search?q=spacing%20effect", want: Route{Kind: KindSearch, Query: "spacing effect", Search: true}},
 		{name: "wrong scheme", raw: "elsewhere://note/" + string(note), wantErr: true},
 		{name: "unknown host", raw: "remit://library/" + string(note), wantErr: true},
 		{name: "bad id", raw: "remit://note/not-an-id", wantErr: true},
 		{name: "path in note", raw: "remit://note/../../etc/passwd", wantErr: true},
 		{name: "queue with argument", raw: "remit://queue/now", wantErr: true},
+		{name: "today with argument", raw: "remit://today/2026-11-10", wantErr: true},
+		{name: "read with query", raw: "remit://read?queue=1", wantErr: true},
 		{name: "search without q", raw: "remit://search", wantErr: true},
 		{name: "empty", raw: "", wantErr: true},
 	}
@@ -53,6 +58,9 @@ func TestStringRoundTrips(t *testing.T) {
 		{Kind: KindNote, ID: core.NewID("note")},
 		{Kind: KindCard, ID: core.NewID("card")},
 		{Kind: KindQueue},
+		{Kind: KindToday},
+		{Kind: KindRead},
+		{Kind: KindRecall},
 		{Kind: KindSearch, Query: "spacing effect", Search: true},
 	}
 	for _, want := range routes {

@@ -38,38 +38,42 @@ func openReading(t *testing.T, a *App, w, h int) *ui.Tester {
 	return tt
 }
 
-// The two queues are one entry: the switch between them is the window's top
-// line, and how many notes wait to be read is in sight from both sides.
-func TestReadingQueueOnTheReviewScreen(t *testing.T) {
+// The reading queue is its own area: choosing Read shows the notes that wait,
+// with the review queue one area over.
+func TestTheReadingQueueIsItsOwnArea(t *testing.T) {
 	msgs := locales.In("en")
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
 			a, _ := readingApp(t)
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
+			tt.Key(ui.Cmd, ui.Key3)
+			tt.Advance(320 * time.Millisecond) // the page's entrance
 
-			// Review is the default side, and the reading queue's size is
-			// beside the switch.
-			if !tt.HasText(msgs.ModeReview()) || !tt.HasText(msgs.ModeReading()) {
-				t.Fatalf("the mode switch lost a side; texts %q", tt.Texts())
-			}
-			if !tt.HasText(msgs.ReadingWaiting(2)) {
-				t.Fatalf("the review side does not say how much there is to read; texts %q", tt.Texts())
-			}
-
-			if err := tt.Click(msgs.ModeReading()); err != nil {
-				t.Fatal(err)
-			}
-			tt.Advance(320 * time.Millisecond) // the screen's entrance
 			for _, want := range []string{"Memory and recall", "Spacing beats cramming", msgs.Excerpt(), msgs.Skip()} {
 				if !tt.HasText(want) {
-					t.Fatalf("the reading screen lost %q; texts %q", want, tt.Texts())
+					t.Fatalf("the reading page lost %q; texts %q", want, tt.Texts())
 				}
 			}
-			assertControl(t, tt, size.w, size.h, msgs.Excerpt())
-			assertControl(t, tt, size.w, size.h, msgs.ReadingJustRight())
+			// The review queue is the other area: nothing of it is on this page.
+			if tt.HasText("Show answer") {
+				t.Error("the review page is up on the read area")
+			}
 		})
 	}
+
+	// At the size the window opens at the reader's actions are on screen; a
+	// smaller window scrolls the page, which is the paper's own behaviour.
+	t.Run("actions", func(t *testing.T) {
+		msgs := locales.In("en")
+		a, _ := readingApp(t)
+		tt := ui.NewTester(a.View, 1024, 720)
+		settle(tt)
+		tt.Key(ui.Cmd, ui.Key3)
+		tt.Advance(320 * time.Millisecond)
+		assertControl(t, tt, 1024, 720, msgs.Excerpt())
+		assertControl(t, tt, 1024, 720, msgs.ReadingJustRight())
+	})
 }
 
 // A session records what it read and how hard it was: the note leaves the screen,

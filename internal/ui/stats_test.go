@@ -59,13 +59,13 @@ func seedStatsLibrary(t *testing.T) *App {
 
 // openStats enters the statistics page the way the user does: from the command
 // palette.
-func openStats(t *testing.T, tt *ui.Tester) {
+func openStats(t *testing.T, a *App, tt *ui.Tester) {
 	t.Helper()
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 	tt.Type("stat")
 	tt.Key(0, ui.KeyEnter)
-	if tt.HasText("Search actions") {
+	if a.palette.open {
 		t.Fatalf("the palette stayed open; texts %q", tt.Texts())
 	}
 }
@@ -79,7 +79,7 @@ func TestStatsPage(t *testing.T) {
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
 			tt.Advance(320 * time.Millisecond) // the opening card's entry
-			openStats(t, tt)
+			openStats(t, a, tt)
 
 			for _, want := range []string{
 				"Statistics",
@@ -148,7 +148,7 @@ func TestStatsEmptyLibrary(t *testing.T) {
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
 			tt.Advance(320 * time.Millisecond) // the empty queue settles
-			openStats(t, tt)
+			openStats(t, a, tt)
 
 			for _, want := range []string{
 				"Statistics",
@@ -189,6 +189,13 @@ func TestZhHansAtMinimum(t *testing.T) {
 	tt.SetLocale("zh-Hans")
 	tt.Frame()
 
+	// The frame speaks the window's language too: the rail, the path and the
+	// controls around the stage.
+	for _, label := range []string{"区域", "今日", "写", "读", "忆", "统计", "设置", "路径", "搜索操作", "更多"} {
+		assertControl(t, tt, 720, 520, label)
+	}
+	recallQueue(tt)
+
 	for _, label := range []string{"显示答案", "撤销 (U)", "暂停 (S)", "编辑笔记 (E)"} {
 		assertControl(t, tt, 720, 520, label)
 	}
@@ -196,11 +203,11 @@ func TestZhHansAtMinimum(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
-	for _, label := range []string{"笔记", "浏览", "统计", "笔记本", "笔记标题"} {
+	for _, label := range []string{"笔记", "搜索", "笔记本", "笔记标题"} {
 		assertControl(t, tt, 720, 520, label)
 	}
 
-	tt.Key(ui.Cmd, ui.Key3)
+	cardsPage(t, tt, "zh-Hans")
 	for _, label := range []string{"浏览卡片", "搜索卡片", "筛选卡片", "全部", "到期", "新卡", "已暂停", "已失联", "打开 (Enter)"} {
 		assertControl(t, tt, 720, 520, label)
 	}
