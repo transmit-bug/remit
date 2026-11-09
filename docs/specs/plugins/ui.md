@@ -102,6 +102,8 @@
 | Key | Values |
 |---|---|
 | `mode` | `notes` / `review` / `browse` / `stats` / `settings`（插件页面及其它状态为空串） |
+| `area` | `today` / `write` / `read` / `recall` / `stats` / `settings` / `plugin`（窗口的哪一部分；`notes` 一屏含三个 area，所以 `mode` 说不了） |
+| `sub` | 子页的稳定 id（`queue`、`cards`…），单屏 area 为空串 |
 | `library.open` | bool |
 | `note.open` | bool |
 | `note.selection` | bool |
@@ -120,15 +122,18 @@
 槽位由宿主拥有，插件不能新建：
 
 `toolbar.overflow` · `note.overflow` · `note.block` · `editor.slash` · `review.card` ·
-`browse.row` · `sidebar.note` · `page.header`
+`browse.row` · `sidebar.note` · `page.header` · `today.widget` · `stats.block`
+
+`status.item`（状态行）**预留**：声明它通过校验、槽项也保留，但本版宿主不画它，所以它出现在
+插件设置页的「问题」里，而不是界面上；接收方随一次 `apiVersion` 升级到来。
 
 每项是 `{command, group, order, when}`。`group` 取宿主组（`primary` / `secondary`）或
 `plugin`；同组按 `order` 升序。位置、分隔线与溢出行为由 #129 定，契约只保证槽位存在。
 
 今天有接收方的槽位：`toolbar.overflow` 与 `note.overflow`，都落在窗口的 `⋯` 菜单里（两条
 槽位在这一个菜单位置上合并，同一命令只出现一次）。其余槽位校验通过、但不显示：`review.card`、
-`note.block`、`editor.slash`、`browse.row`、`sidebar.note`、`page.header` 的宿主位置属于 #129，
-本票不替它决定。
+`note.block`、`editor.slash`、`browse.row`、`sidebar.note`、`page.header`、`today.widget`、
+`stats.block` 的宿主位置属于 #129，本票不替它决定。
 
 ## 5. 页面：语义块 + 布局节点
 

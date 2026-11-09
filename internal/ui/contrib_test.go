@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 )
 
 // reportContributes is the manifest a test's plugin declares: one command in the
@@ -551,7 +553,7 @@ func TestContributedPageFailsWithARetry(t *testing.T) {
 	// Three failures hide the page from navigation: the window keeps working
 	// and the plugin's command is untouched.
 	runner.setFailure("data", errThrown)
-	for i := 0; i < contributionErrorLimit; i++ {
+	for i := 0; i < contrib.FailureLimit; i++ {
 		if err := tt.Click("Refresh"); err != nil {
 			t.Fatalf("refresh %d: %v", i+1, err)
 		}
@@ -731,5 +733,204 @@ func TestFrameNeverCallsAPlugin(t *testing.T) {
 	}
 	if got := runner.calls(); got != 1 {
 		t.Errorf("drawing the answer called the plugin again: %d calls", got)
+	}
+}
+
+// everySlot declares one item in each slot the window has a receiver for, so a
+// test can ask each accessor for its own: the docked panels' actions are not the
+// review card's, and the today widget is not the stats block.
+const everySlot = `{
+  "commands": [
+    {"id": "acme.report.toolbar", "title": "%toolbar%", "action": "command:toolbar"},
+    {"id": "acme.report.note", "title": "%note%", "action": "command:note"},
+    {"id": "acme.report.block", "title": "%block%", "action": "command:block"},
+    {"id": "acme.report.slash", "title": "%slash%", "action": "command:slash"},
+    {"id": "acme.report.card", "title": "%card%", "action": "command:card"},
+    {"id": "acme.report.row", "title": "%row%", "action": "command:row"},
+    {"id": "acme.report.side", "title": "%side%", "action": "command:side"},
+    {"id": "acme.report.header", "title": "%header%", "action": "command:header"},
+    {"id": "acme.report.today", "title": "%today%", "action": "command:today"},
+    {"id": "acme.report.stats", "title": "%stats%", "action": "command:stats"}
+  ],
+  "menus": {
+    "toolbar.overflow": [
+      {"command": "acme.report.toolbar", "group": "plugin"}
+    ],
+    "note.overflow": [
+      {"command": "acme.report.toolbar", "group": "plugin"},
+      {"command": "acme.report.note", "group": "plugin", "when": "sub == cards"}
+    ],
+    "note.block": [{"command": "acme.report.block", "group": "plugin", "when": "area == write"}],
+    "editor.slash": [{"command": "acme.report.slash", "group": "plugin", "when": "area == write"}],
+    "review.card": [{"command": "acme.report.card", "group": "plugin", "when": "mode == review"}],
+    "browse.row": [{"command": "acme.report.row", "group": "plugin", "when": "mode == browse"}],
+    "sidebar.note": [{"command": "acme.report.side", "group": "secondary"}],
+    "page.header": [{"command": "acme.report.header", "group": "secondary"}],
+    "today.widget": [{"command": "acme.report.today", "group": "plugin", "when": "area == today"}],
+    "stats.block": [{"command": "acme.report.stats", "group": "plugin", "when": "area == stats && sub == overview"}]
+  },
+  "locales": {
+    "en": {
+      "toolbar": "Toolbar action",
+      "note": "Note action",
+      "block": "Block action",
+      "slash": "Slash action",
+      "card": "Card action",
+      "row": "Row action",
+      "side": "Sidebar action",
+      "header": "Header action",
+      "today": "Today's widget",
+      "stats": "Stats block"
+    }
+  }
+}`
+
+// slotIDs is the commands a slot's accessor answers, in the order it answers them.
+func slotIDs(items []contrib.MenuRef) []string {
+	ids := make([]string, len(items))
+	for i, item := range items {
+		ids[i] = item.Command.ID
+	}
+	return ids
+}
+
+// Each slot has its own accessor, and each answers what the library load cached:
+// a frame that draws a receiver asks the index and its when expressions, and never
+// enters a plugin.
+func TestSlotAccessorsAnswerFromTheCache(t *testing.T) {
+	runner := &fakeRunner{}
+	a, _ := contribApp(t, "report", everySlot, runner)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+
+	// A receiver in the write area, on its cards sub-page.
+	a.setContributionArea("write", "cards")
+	for _, tc := range []struct {
+		slot string
+		got  []contrib.MenuRef
+		want []string
+	}{
+		{"toolbar.overflow and note.overflow", a.overflowItems(), []string{"acme.report.toolbar", "acme.report.note"}},
+		{"note.block", a.noteBlockItems(), []string{"acme.report.block"}},
+		{"editor.slash", a.slashItems(), []string{"acme.report.slash"}},
+		{"sidebar.note", a.sidebarNoteItems(), []string{"acme.report.side"}},
+		{"page.header", a.pageHeaderItems(), []string{"acme.report.header"}},
+		{"today.widget outside its area", a.todayWidgetItems(), nil},
+		{"stats.block outside its area", a.statsBlockItems(), nil},
+	} {
+		if got := slotIDs(tc.got); !slices.Equal(got, tc.want) {
+			t.Errorf("%s = %v, want %v", tc.slot, got, tc.want)
+		}
+	}
+	if got := runner.calls(); got != 0 {
+		t.Fatalf("drawing the notes entered the plugin %d times", got)
+	}
+
+	// One command in two slots is one item, and a sub-page the receiver is not on
+	// hides the item that asks for it.
+	a.setContributionArea("write", "")
+	if got := slotIDs(a.overflowItems()); !slices.Equal(got, []string{"acme.report.toolbar"}) {
+		t.Errorf("overflow = %v, want the toolbar's item alone", got)
+	}
+	// The window's own menu path is the same list as command refs.
+	if got := len(a.contributionMenuItems("toolbar.overflow", "note.overflow")); got != 1 {
+		t.Errorf("the window's overflow = %d items, want 1", got)
+	}
+
+	// The review card's and the browse row's items follow the screen.
+	a.mode = modeReview
+	if got := slotIDs(a.reviewCardItems()); !slices.Equal(got, []string{"acme.report.card"}) {
+		t.Errorf("review.card = %v", got)
+	}
+	if got := slotIDs(a.browseRowItems()); len(got) != 0 {
+		t.Errorf("browse.row answered away from browse: %v", got)
+	}
+	a.mode = modeBrowse
+	if got := slotIDs(a.browseRowItems()); !slices.Equal(got, []string{"acme.report.row"}) {
+		t.Errorf("browse.row = %v", got)
+	}
+	a.mode = modeNotes
+
+	// The today and stats blocks belong to their areas, sub-page and all.
+	a.setContributionArea("today", "")
+	if got := slotIDs(a.todayWidgetItems()); !slices.Equal(got, []string{"acme.report.today"}) {
+		t.Errorf("today.widget = %v", got)
+	}
+	if got := slotIDs(a.noteBlockItems()); len(got) != 0 {
+		t.Errorf("note.block answered off the write area: %v", got)
+	}
+	a.setContributionArea("stats", "overview")
+	if got := slotIDs(a.statsBlockItems()); !slices.Equal(got, []string{"acme.report.stats"}) {
+		t.Errorf("stats.block = %v", got)
+	}
+	a.setContributionArea("stats", "forecast")
+	if got := slotIDs(a.statsBlockItems()); len(got) != 0 {
+		t.Errorf("stats.block answered on another sub-page: %v", got)
+	}
+
+	// Three failures take one contribution out of its slot, and only that one.
+	a.setContributionArea("write", "")
+	for i := 0; i < contrib.FailureLimit; i++ {
+		a.ui.failures.Failed("acme.report", "acme.report.block", "the plugin threw")
+	}
+	if got := slotIDs(a.noteBlockItems()); len(got) != 0 {
+		t.Errorf("a hidden contribution is still in its slot: %v", got)
+	}
+	if got := slotIDs(a.slashItems()); !slices.Equal(got, []string{"acme.report.slash"}) {
+		t.Errorf("one contribution's failures took its sibling: %v", got)
+	}
+
+	if got := runner.calls(); got != 0 {
+		t.Errorf("the accessors entered the plugin %d times", got)
+	}
+}
+
+// The settings page's snapshot names the plugin by its manifest id and holds both
+// rows it lists: a declaration the manifest lost, and a contribution three
+// failures took out — which is which is the Hidden flag.
+func TestContributionIssuesListDropsAndHidden(t *testing.T) {
+	contributes := `{
+	  "commands": [
+	    {"id": "acme.report.show", "title": "%show%", "action": "command:show"},
+	    {"id": "acme.report.bad", "title": "%bad%", "icon": "no-such-icon", "action": "command:show"}
+	  ],
+	  "locales": {"en": {"show": "Leech report", "bad": "Bad command"}}
+	}`
+	runner := &fakeRunner{failed: map[string]error{"show": errThrown}}
+	a, tt := openContrib(t, "report", contributes, runner)
+
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(320 * time.Millisecond)
+
+	issues := a.contributionIssues()
+	if len(issues) != 1 {
+		t.Fatalf("issues = %+v, want the dropped declaration alone", issues)
+	}
+	if dropped := issues[0]; dropped.Plugin != "acme.report" || dropped.Contribution != "" || dropped.Hidden {
+		t.Errorf("the dropped declaration reads as %+v", dropped)
+	} else if !strings.Contains(dropped.Reason, "no-such-icon") {
+		t.Errorf("the drop's reason does not say what the host could not use: %q", dropped.Reason)
+	}
+
+	for i := 0; i < contrib.FailureLimit; i++ {
+		tt.Key(ui.Cmd, ui.KeyK)
+		tt.Type("leech")
+		tt.Key(0, ui.KeyEnter)
+	}
+	issues = a.contributionIssues()
+	if len(issues) != 2 {
+		t.Fatalf("issues = %+v, want the drop and the hidden command", issues)
+	}
+	hidden := issues[1]
+	if hidden.Plugin != "acme.report" || hidden.Contribution != "acme.report.show" || !hidden.Hidden {
+		t.Errorf("the hidden command reads as %+v", hidden)
+	}
+	if !strings.Contains(hidden.Reason, "the plugin threw") {
+		t.Errorf("the hidden command's reason = %q", hidden.Reason)
+	}
+	tt.Advance(6 * time.Second) // the last failure's toast goes
+	tt.Key(ui.Cmd, ui.KeyK)
+	if tt.HasText("Leech report") {
+		t.Error("the hidden command is still in the palette")
 	}
 }

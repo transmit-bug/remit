@@ -70,7 +70,7 @@ export type Message = string;
 export type When = string;
 
 /** A menu slot the host owns; a plugin cannot invent a place in the window. */
-export type MenuSlot = "toolbar.overflow" | "note.overflow" | "note.block" | "editor.slash" | "review.card" | "browse.row" | "sidebar.note" | "page.header";
+export type MenuSlot = "toolbar.overflow" | "note.overflow" | "note.block" | "editor.slash" | "review.card" | "browse.row" | "sidebar.note" | "page.header" | "today.widget" | "stats.block";
 
 /** Where a page appears: the host's plugin pages, or nowhere (a command opens it). */
 export type Nav = "plugins" | "hidden";
@@ -143,15 +143,20 @@ export interface Setting {
 // ─── the window a when expression reads ────────────────────────────────────
 
 /** A key a when expression may read. An unknown key reads false, with a warning. */
-export type ContextKey = "mode" | "library.open" | "note.open" | "note.selection" | "card.present" | "card.status" | "browse.selection" | "scope.active" | "page.id" | "plugin.id";
+export type ContextKey = "mode" | "area" | "sub" | "library.open" | "note.open" | "note.selection" | "card.present" | "card.status" | "browse.selection" | "scope.active" | "page.id" | "plugin.id";
 
 export type Mode = "notes" | "review" | "browse" | "stats" | "settings" | "";
+
+/** The part of the window a contribution sits in; mode is the screen, area its part. */
+export type Area = "today" | "write" | "read" | "recall" | "stats" | "settings" | "plugin";
 
 /** A card's standing. A lost reference is a LinkState, not a status. */
 export type CardStatus = "new" | "learning" | "review" | "suspended" | "reading";
 
 export interface Context {
   "mode": Mode;
+  "area": Area;
+  "sub": string;
   "library.open": boolean;
   "note.open": boolean;
   "note.selection": boolean;

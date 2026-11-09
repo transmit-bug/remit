@@ -166,13 +166,16 @@ export type ContextKey = %s;
 
 export type Mode = "notes" | "review" | "browse" | "stats" | "settings" | "";
 
+/** The part of the window a contribution sits in; mode is the screen, area its part. */
+export type Area = %s;
+
 /** A card's standing. A lost reference is a LinkState, not a status. */
 export type CardStatus = "new" | "learning" | "review" | "suspended" | "reading";
 
 export interface Context {
 %s}
 
-`, union(contrib.ContextKeys), contextFields())
+`, union(contrib.ContextKeys), union(contrib.Areas), contextFields())
 
 	fmt.Fprintf(&b, `// ─── a page's tree ─────────────────────────────────────────────────────────
 
@@ -467,6 +470,8 @@ func contextFields() string {
 // contextTypes is what each when key answers, as the host's Context documents.
 var contextTypes = map[string]string{
 	"mode":             "Mode",
+	"area":             "Area",
+	"sub":              "string",
 	"library.open":     "boolean",
 	"note.open":        "boolean",
 	"note.selection":   "boolean",
