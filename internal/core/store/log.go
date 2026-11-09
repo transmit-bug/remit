@@ -18,8 +18,8 @@ import (
 
 // logRecord is one line of reviews.jsonl. A review names its card — or the note
 // it read — its rating and its moment; a reading event may also name where the
-// reader stopped and what it did to the queue; a void names only the sequence it
-// cancels.
+// reader stopped, what it did to the queue and when a postponed note comes back;
+// a void names only the sequence it cancels.
 type logRecord struct {
 	Seq      int64   `json:"seq"`
 	Card     core.ID `json:"card,omitempty"`
@@ -27,6 +27,7 @@ type logRecord struct {
 	Kind     string  `json:"kind,omitempty"`
 	Rating   string  `json:"rating,omitempty"`
 	Position core.ID `json:"position,omitempty"`
+	Until    string  `json:"until,omitempty"`
 	At       string  `json:"at,omitempty"`
 	Void     int64   `json:"void,omitempty"`
 	// Scheduler names what wrote this review, once logs carried the name.
@@ -70,6 +71,15 @@ func marshalRecord(event schedule.Event) ([]byte, error) {
 		Position: event.Position, At: formatTime(event.At), Scheduler: event.Scheduler}
 	if event.Kind == schedule.Reviewed {
 		rec.Rating = event.Rating.String()
+	}
+	if event.Kind == schedule.Postponed {
+		// A line postponing a note to the past is one the reader refuses, and a
+		// library holding it does not open: refuse to write it in the first place.
+		if event.Until.IsZero() || event.Until.Before(event.At) {
+			return nil, fmt.Errorf("store: encode review %d: postponed until %v, not after %v",
+				event.Seq, event.Until, event.At)
+		}
+		rec.Until = formatTime(event.Until)
 	}
 	if event.IsVoid() {
 		rec = logRecord{Seq: event.Seq, Void: event.Void}
@@ -116,10 +126,25 @@ func DecodeLogLine(line []byte) (schedule.Event, bool, error) {
 		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: %w", rec.Seq, err)
 	}
 	if kind != schedule.Reviewed {
-		if rec.Note == "" {
-			return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: no note to %s", rec.Seq, kind)
+		if rec.Note == "" || rec.Card != "" {
+			return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: %s names a note and no card", rec.Seq, kind)
 		}
-		return schedule.Event{Seq: rec.Seq, Note: rec.Note, Kind: kind, At: at}, true, nil
+		if rec.Rating != "" {
+			return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: %s carries a rating", rec.Seq, kind)
+		}
+		event := schedule.Event{Seq: rec.Seq, Note: rec.Note, Kind: kind, At: at}
+		if kind != schedule.Postponed {
+			if rec.Until != "" {
+				return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: a %s carries an until, which only a postpone has", rec.Seq, kind)
+			}
+			return event, true, nil
+		}
+		until, err := postponedUntil(rec, at)
+		if err != nil {
+			return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: %w", rec.Seq, err)
+		}
+		event.Until = until
+		return event, true, nil
 	}
 	rating, ok := schedule.ParseRating(rec.Rating)
 	if !ok {
@@ -128,8 +153,29 @@ func DecodeLogLine(line []byte) (schedule.Event, bool, error) {
 	if (rec.Card == "") == (rec.Note == "") {
 		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: names a card or a note, not both", rec.Seq)
 	}
+	if rec.Until != "" {
+		return schedule.Event{}, false, fmt.Errorf("store: review log: event %d: a review carries an until, which only a postpone has", rec.Seq)
+	}
 	return schedule.Event{Seq: rec.Seq, Card: rec.Card, Note: rec.Note, Rating: rating,
 		Position: rec.Position, At: at, Scheduler: rec.Scheduler}, true, nil
+}
+
+// postponedUntil reads the time a postponed note comes back, which has to be
+// there and has to be after the moment it was postponed: a line that postpones a
+// note to the past schedules nothing.
+func postponedUntil(rec logRecord, at time.Time) (time.Time, error) {
+	if rec.Until == "" {
+		return time.Time{}, fmt.Errorf("postponed without an until")
+	}
+	until, err := parseTime(rec.Until)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if until.Before(at) {
+		return time.Time{}, fmt.Errorf("postponed until %s, before it was postponed at %s",
+			until.UTC().Format(time.RFC3339), at.UTC().Format(time.RFC3339))
+	}
+	return until, nil
 }
 
 // streamLog calls fn for every event from byte offset to the end of the log,
@@ -245,6 +291,12 @@ func (l *Library) entryHistory(id core.ID) ([]schedule.Event, error) {
 	if l.index == nil {
 		return nil, ErrClosed
 	}
+	return l.entryEvents(id)
+}
+
+// entryEvents returns one entry's live events, oldest first, from a log read.
+// The lock is the caller's.
+func (l *Library) entryEvents(id core.ID) ([]schedule.Event, error) {
 	events, _, err := l.readLogFrom(0)
 	if err != nil {
 		return nil, err
