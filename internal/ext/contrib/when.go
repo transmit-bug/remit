@@ -14,6 +14,14 @@ type Context struct {
 	// settings. A plugin page is none of those, so it is empty there and
 	// PageID says which page it is.
 	Mode string
+	// Area is the part of the window a contribution sits in: today, write,
+	// read, recall, stats, settings or plugin. Mode says which screen, which
+	// leaves three areas inside notes; area is the one a slot's receiver knows.
+	// The host fills it as its route changes, and leaves it empty until it does.
+	Area string
+	// Sub is the stable id of the sub-page inside that area (queue, cards, …),
+	// empty where the area has a single screen.
+	Sub string
 	// LibraryOpen is a library read into the window.
 	LibraryOpen bool
 	// NoteOpen is a note in the editor.
@@ -42,11 +50,18 @@ type Context struct {
 // hide a contribution by accident.
 func (c Context) value(key string) (any, bool) { return contextValue(key, c) }
 
+// Areas are what the area key answers: the window's parts, as the contract
+// names them (ui.md §3). Mode stays the five screens it has always been, so a
+// when expression written against it keeps its meaning.
+var Areas = []string{"today", "write", "read", "recall", "stats", "settings", "plugin"}
+
 // ContextKeys are the keys a when expression may read, in the order the
 // contract lists them (docs/specs/plugins/ui.md §3). This is the one list the
 // host's parser reads and the one remit.d.ts is generated from.
 var ContextKeys = []string{
 	"mode",
+	"area",
+	"sub",
 	"library.open",
 	"note.open",
 	"note.selection",
@@ -61,6 +76,8 @@ var ContextKeys = []string{
 // contextReads is the frozen key table, one reader per key ContextKeys names.
 var contextReads = map[string]func(Context) any{
 	"mode":             func(c Context) any { return c.Mode },
+	"area":             func(c Context) any { return c.Area },
+	"sub":              func(c Context) any { return c.Sub },
 	"library.open":     func(c Context) any { return c.LibraryOpen },
 	"note.open":        func(c Context) any { return c.NoteOpen },
 	"note.selection":   func(c Context) any { return c.NoteSelection },

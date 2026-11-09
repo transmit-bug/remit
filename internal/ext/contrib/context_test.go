@@ -25,9 +25,9 @@ func TestContextKeysMatchTheTable(t *testing.T) {
 // the wrong contribution.
 func TestContextKeysReadTheirField(t *testing.T) {
 	ctx := Context{
-		Mode: "review", LibraryOpen: true, NoteOpen: true, NoteSelection: true,
-		CardPresent: true, CardStatus: "review", BrowseSelection: true,
-		ScopeActive: true, PageID: "acme.leeches", PluginID: "acme",
+		Mode: "review", Area: "recall", Sub: "queue", LibraryOpen: true, NoteOpen: true,
+		NoteSelection: true, CardPresent: true, CardStatus: "review",
+		BrowseSelection: true, ScopeActive: true, PageID: "acme.leeches", PluginID: "acme",
 	}
 	for _, key := range ContextKeys {
 		value, ok := ctx.value(key)

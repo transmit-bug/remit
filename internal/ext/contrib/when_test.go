@@ -10,8 +10,10 @@ import (
 // A when expression reads the frozen context keys, and only those: a key this
 // host does not know hides the contribution rather than showing it everywhere.
 func TestWhen(t *testing.T) {
-	review := contrib.Context{Mode: "review", LibraryOpen: true, CardPresent: true, CardStatus: "review"}
+	review := contrib.Context{Mode: "review", Area: "recall", LibraryOpen: true, CardPresent: true, CardStatus: "review"}
 	browsing := contrib.Context{Mode: "browse", LibraryOpen: true, BrowseSelection: true}
+	writing := contrib.Context{Mode: "notes", Area: "write", Sub: "cards", LibraryOpen: true}
+	today := contrib.Context{Mode: "notes", Area: "today", LibraryOpen: true}
 	empty := contrib.Context{}
 
 	for _, tc := range []struct {
@@ -35,6 +37,15 @@ func TestWhen(t *testing.T) {
 		{"selection", "browse.selection", browsing, true},
 		{"inequality", `mode != review`, browsing, true},
 		{"a page", `page.id == acme.leeches`, contrib.Context{PageID: "acme.leeches"}, true},
+		{"an area", "area == today", today, true},
+		{"another area", "area == stats", today, false},
+		{"an area and its sub-page", "area == write && sub == cards", writing, true},
+		{"a sub-page that differs", "sub == queue", writing, false},
+		{"a bare area is a value", "area == write", writing, true},
+		{"an area is not a mode", "mode == today", today, false},
+		{"a mode is not an area", "area == review", review, false},
+		{"the mode table is unchanged", `mode == write`, writing, false},
+		{"an unknown sub key reads false", "sub.page == cards", writing, false},
 		{"an unknown key reads false", "newer.thing", review, false},
 		{"an unknown key is not a value", "mode == newer.thing", review, false},
 		{"a number", "mode == 3", review, false},

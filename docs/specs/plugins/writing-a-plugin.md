@@ -296,8 +296,11 @@ The rules, in one place:
   action.
 - `menus` puts a command in one of the host's slots — `toolbar.overflow`,
   `note.overflow`, `note.block`, `editor.slash`, `review.card`, `browse.row`,
-  `sidebar.note`, `page.header`. A slot the host has no place for yet is
-  accepted and not shown.
+  `sidebar.note`, `page.header`, `today.widget`, `stats.block` — and the `when`
+  it is shown under reads `area` (`today` / `write` / `read` / `recall` / `stats` /
+  `settings` / `plugin`) and `sub` (a sub-page's stable id) as well as `mode`.
+  `status.item` is reserved: a manifest declaring it validates, and nothing draws
+  it. A known slot the host has no receiver for yet is accepted and not shown.
 - `pages` adds a page in the host's plugin group (`"nav": "plugins"`) or one a
   command opens (`"hidden"`).
 - `settings` are edited by the host's form and written to `store:own` under

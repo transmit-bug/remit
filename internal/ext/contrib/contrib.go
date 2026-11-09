@@ -22,11 +22,48 @@ import (
 	"github.com/transmit-bug/remit/internal/ext"
 )
 
-// Slots are the menu slots the host owns. A manifest may put an item in one of
-// them and nowhere else: a plugin cannot invent a place in the window.
+// The menu slots the host owns. A manifest may put an item in one of them and
+// nowhere else: a slot is a place in the window, and a plugin cannot invent one.
+const (
+	SlotToolbarOverflow = "toolbar.overflow"
+	SlotNoteOverflow    = "note.overflow"
+	SlotNoteBlock       = "note.block"
+	SlotEditorSlash     = "editor.slash"
+	SlotReviewCard      = "review.card"
+	SlotBrowseRow       = "browse.row"
+	SlotSidebarNote     = "sidebar.note"
+	SlotPageHeader      = "page.header"
+	SlotTodayWidget     = "today.widget"
+	SlotStatsBlock      = "stats.block"
+	// SlotStatusItem is the status line's slot. It is reserved: the contract
+	// names it and a manifest declaring it validates, but this host draws no
+	// status item until an apiVersion says where (ui.md §4).
+	SlotStatusItem = "status.item"
+)
+
+// Slots are the menu slots the host draws: its own controls and the plugin
+// panels the window has a receiver for today.
 var Slots = []string{
-	"toolbar.overflow", "note.overflow", "note.block", "editor.slash",
-	"review.card", "browse.row", "sidebar.note", "page.header",
+	SlotToolbarOverflow, SlotNoteOverflow, SlotNoteBlock, SlotEditorSlash,
+	SlotReviewCard, SlotBrowseRow, SlotSidebarNote, SlotPageHeader,
+	SlotTodayWidget, SlotStatsBlock,
+}
+
+// ReservedSlots are the slots the contract names for a later apiVersion. A
+// manifest's items there validate and are kept — a host that draws them reads
+// the same manifest — but this one draws nothing in them, so the declaration is
+// a problem the settings page lists rather than a contribution anyone sees.
+var ReservedSlots = []string{SlotStatusItem}
+
+// SlotReserved reports whether slot is one the contract reserves: a place a
+// manifest may name, and this host shows nowhere.
+func SlotReserved(slot string) bool {
+	for _, reserved := range ReservedSlots {
+		if reserved == slot {
+			return true
+		}
+	}
+	return false
 }
 
 // Nav is where a contributed page appears in the window.
@@ -492,7 +529,12 @@ func (p *parser) menus(raw json.RawMessage) map[string][]MenuItem {
 		return menus
 	}
 	for _, slot := range sortedRawKeys(slots) {
-		if !knownSlot(slot) {
+		switch {
+		case SlotReserved(slot):
+			// Kept, not dropped: the items are what a later apiVersion draws,
+			// and this host validates them now so that day surfaces nothing new.
+			p.problem("contributes.menus.%s: the slot is reserved for a later apiVersion; nothing shows it here", slot)
+		case !knownSlot(slot):
 			p.problem("contributes.menus.%s: the host has no such slot", slot)
 			continue
 		}

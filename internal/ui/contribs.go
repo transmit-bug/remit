@@ -34,11 +34,6 @@ type CommandRunner interface {
 // the loader, the checker and the window cannot drift apart.
 const CommandHook = ext.CommandHook
 
-// contributionErrorLimit is how many times one contribution may fail in a row
-// before the window stops showing it. The count is per contribution, not per
-// plugin: a broken page never costs the plugin its commands (ui.md §8).
-const contributionErrorLimit = 3
-
 // pluginUI is the plugins' declared UI as the window uses it: parsed once when
 // the library opens, so a frame only reads it. Nothing here is a plugin call —
 // the runners are only reached from a handler, off the frame.
@@ -57,16 +52,20 @@ type pluginUI struct {
 	// loading marks the pages whose data is in flight, so a second entry asks
 	// once.
 	loading map[string]bool
-	// failures counts each contribution's consecutive failures by "plugin/id",
-	// and hidden is what the third one took out.
-	failures map[string]int
-	hidden   map[string]bool
+	// failures counts each contribution's consecutive failures and remembers
+	// what the third took out: the counts and the hidden set are one value, so
+	// the settings page cannot read a count that disagrees with what shows.
+	failures *contrib.Failures
 	// problems is what each plugin's manifest declared that this host cannot
-	// use, by manifest name, for the log and the settings page.
+	// use, by manifest id, for the log and the settings page.
 	problems map[string][]string
 	// names is each plugin's manifest id to its name, for the settings page's
 	// per-plugin counts.
 	names map[string]string
+	// area and sub are the part of the window the route shows, which is what the
+	// area and sub context keys answer. The route sets them: notes covers three
+	// areas — today, write, read — so mode cannot say which one a receiver is in.
+	area, sub string
 }
 
 // pageKey names a page's state. Ids cannot hold a slash or a control byte, so
@@ -78,15 +77,17 @@ func pageKey(plugin, id string) string { return plugin + "/" + id }
 // `ext check` runs, and a broken entry is a log line and a settings-page row
 // rather than a plugin that will not enable.
 func (a *App) loadContributions() {
+	area, sub := a.ui.area, a.ui.sub
 	a.ui = pluginUI{
 		runners:  map[string]CommandRunner{},
 		pages:    map[string]*pluginpage.State{},
 		pagesFor: map[string]string{},
 		loading:  map[string]bool{},
-		failures: map[string]int{},
-		hidden:   map[string]bool{},
+		failures: contrib.NewFailures(),
 		problems: map[string][]string{},
 		names:    map[string]string{},
+		area:     area,
+		sub:      sub,
 	}
 	if a.lib == nil || a.manifests == nil {
 		return
@@ -107,7 +108,7 @@ func (a *App) loadContributions() {
 		parsed, problems := contrib.Parse(extension, contrib.Options{Icon: design.HasIcon})
 		for _, problem := range problems {
 			slog.Warn("remit: a plugin's contribution was dropped", "plugin", extension.Manifest.Name, "problem", problem)
-			a.ui.problems[extension.Manifest.Name] = append(a.ui.problems[extension.Manifest.Name], problem.Error())
+			a.ui.problems[extension.Manifest.ID] = append(a.ui.problems[extension.Manifest.ID], problem.Error())
 		}
 		plugins = append(plugins, parsed)
 	}
@@ -135,6 +136,8 @@ func (a *App) loadContributions() {
 func (a *App) contributionContext() contrib.Context {
 	ctx := contrib.Context{
 		Mode:        a.modeName(),
+		Area:        a.ui.area,
+		Sub:         a.ui.sub,
 		LibraryOpen: a.lib != nil && !a.start && a.openErr == nil,
 		NoteOpen:    a.notes.Draft.ID != "",
 	}
@@ -151,6 +154,14 @@ func (a *App) contributionContext() contrib.Context {
 		}
 	}
 	return ctx
+}
+
+// setContributionArea records the part of the window the route is showing, which
+// is what the area and sub context keys answer: a slot's items can ask about the
+// area they sit in, which mode cannot say for the three areas inside notes. The
+// route calls it; no other caller changes it.
+func (a *App) setContributionArea(area, sub string) {
+	a.ui.area, a.ui.sub = area, sub
 }
 
 // modeName is the screen a when expression reads as mode. A plugin page is not
@@ -202,7 +213,7 @@ func (a *App) visiblePages() []contrib.PageRef {
 	ctx := a.contributionContext()
 	var out []contrib.PageRef
 	for _, ref := range a.ui.index.Pages() {
-		if ref.Page.Nav != contrib.NavPlugins || a.ui.hidden[pageKey(ref.Plugin, ref.Page.ID)] {
+		if ref.Page.Nav != contrib.NavPlugins || a.ui.failures.Hidden(ref.Plugin, ref.Page.ID) {
 			continue
 		}
 		if !ref.Page.When.Eval(ctx) {
@@ -219,7 +230,7 @@ func (a *App) visibleCommands() []contrib.CommandRef {
 	ctx := a.contributionContext()
 	var out []contrib.CommandRef
 	for _, ref := range a.ui.index.Commands() {
-		if a.ui.hidden[commandKey(ref.Plugin, ref.Command.ID)] || !ref.Command.When.Eval(ctx) {
+		if a.ui.failures.Hidden(ref.Plugin, ref.Command.ID) || !ref.Command.When.Eval(ctx) {
 			continue
 		}
 		out = append(out, ref)
@@ -227,20 +238,18 @@ func (a *App) visibleCommands() []contrib.CommandRef {
 	return out
 }
 
-// commandKey names a command's failure count.
-func commandKey(plugin, id string) string { return plugin + "/" + id }
-
-// contributionMenuItems lists the contributed commands the given slots hold
-// now, in drawing order and once each: the toolbar's overflow and a note's are
-// one menu in this window.
-func (a *App) contributionMenuItems(slots ...string) []contrib.CommandRef {
-	var out []contrib.CommandRef
+// slotItems lists the contributed items the given slots hold now, in drawing
+// order and once each: what a receiver draws. It reads the index the library load
+// left and evaluates the cached when expressions — a frame never asks a plugin
+// for a menu item (ui.md §9).
+func (a *App) slotItems(slots ...string) []contrib.MenuRef {
+	var out []contrib.MenuRef
 	seen := map[string]bool{}
 	ctx := a.contributionContext()
 	for _, slot := range slots {
 		for _, item := range a.ui.index.Menu(slot) {
 			ref := item.CommandRef
-			if seen[ref.Command.ID] || a.ui.hidden[commandKey(ref.Plugin, ref.Command.ID)] {
+			if seen[ref.Command.ID] || a.ui.failures.Hidden(ref.Plugin, ref.Command.ID) {
 				continue
 			}
 			// The item's when and the command's both decide: a plugin can put
@@ -249,11 +258,57 @@ func (a *App) contributionMenuItems(slots ...string) []contrib.CommandRef {
 				continue
 			}
 			seen[ref.Command.ID] = true
-			out = append(out, ref)
+			out = append(out, item)
 		}
 	}
 	return out
 }
+
+// contributionMenuItems lists the contributed commands the given slots hold now,
+// in drawing order and once each: the toolbar's overflow and a note's are one menu
+// in this window, so a caller names both slots and gets one list.
+func (a *App) contributionMenuItems(slots ...string) []contrib.CommandRef {
+	items := a.slotItems(slots...)
+	if len(items) == 0 {
+		return nil
+	}
+	out := make([]contrib.CommandRef, len(items))
+	for i, item := range items {
+		out[i] = item.CommandRef
+	}
+	return out
+}
+
+// overflowItems is the window's `⋯` menu: the toolbar's overflow and a note's,
+// merged, one command once.
+func (a *App) overflowItems() []contrib.MenuRef {
+	return a.slotItems(contrib.SlotToolbarOverflow, contrib.SlotNoteOverflow)
+}
+
+// noteBlockItems is the block menu's and the block inspector's plugin section.
+func (a *App) noteBlockItems() []contrib.MenuRef { return a.slotItems(contrib.SlotNoteBlock) }
+
+// slashItems is the `/` insert menu's plugin section.
+func (a *App) slashItems() []contrib.MenuRef { return a.slotItems(contrib.SlotEditorSlash) }
+
+// reviewCardItems is the review session's plugin actions, for the card on screen.
+func (a *App) reviewCardItems() []contrib.MenuRef { return a.slotItems(contrib.SlotReviewCard) }
+
+// browseRowItems is the card table's plugin actions, for the chosen rows.
+func (a *App) browseRowItems() []contrib.MenuRef { return a.slotItems(contrib.SlotBrowseRow) }
+
+// sidebarNoteItems is a note row's menu in the sidebar.
+func (a *App) sidebarNoteItems() []contrib.MenuRef { return a.slotItems(contrib.SlotSidebarNote) }
+
+// pageHeaderItems is a contributed page's header actions.
+func (a *App) pageHeaderItems() []contrib.MenuRef { return a.slotItems(contrib.SlotPageHeader) }
+
+// todayWidgetItems is the today screen's plugin block: one section per plugin
+// with items here.
+func (a *App) todayWidgetItems() []contrib.MenuRef { return a.slotItems(contrib.SlotTodayWidget) }
+
+// statsBlockItems is the stats overview's plugin block.
+func (a *App) statsBlockItems() []contrib.MenuRef { return a.slotItems(contrib.SlotStatsBlock) }
 
 // pluginPaletteActions appends the contributed commands the window shows now to
 // the palette's own.
@@ -283,20 +338,19 @@ func (a *App) runContribution(c *ui.Context, ref contrib.CommandRef) {
 	}
 	runner, err := a.runnerFor(ref.Name)
 	if err != nil {
-		a.contributionFailed(c, commandKey(ref.Plugin, ref.Command.ID), m(c).PluginCommandFailed(a.pluginText(c, ref.Plugin, string(ref.Command.Title)), err.Error()))
+		a.contributionFailed(c, ref.Plugin, ref.Command.ID, m(c).PluginCommandFailed(a.pluginText(c, ref.Plugin, string(ref.Command.Title)), err.Error()))
 		return
 	}
 	input := map[string]any{"name": ref.Command.Action.Name, "context": a.contributionPayload()}
-	key := commandKey(ref.Plugin, ref.Command.ID)
 	a.background(c, func() func(*ui.Context) {
 		var answer commandAnswer
 		err := runner.Call(CommandHook, input, &answer)
 		return func(c *ui.Context) {
 			if err != nil {
-				a.contributionFailed(c, key, m(c).PluginCommandFailed(a.pluginText(c, ref.Plugin, string(ref.Command.Title)), err.Error()))
+				a.contributionFailed(c, ref.Plugin, ref.Command.ID, m(c).PluginCommandFailed(a.pluginText(c, ref.Plugin, string(ref.Command.Title)), err.Error()))
 				return
 			}
-			a.ui.failures[key] = 0
+			a.ui.failures.Succeeded(ref.Plugin, ref.Command.ID)
 			a.applyCommandAnswer(c, ref, answer)
 		}
 	})
@@ -388,6 +442,12 @@ func (a *App) contributionPayload() map[string]any {
 		"page.id":      ctx.PageID,
 		"plugin.id":    ctx.PluginID,
 	}
+	if ctx.Area != "" {
+		payload["area"] = ctx.Area
+	}
+	if ctx.Sub != "" {
+		payload["sub"] = ctx.Sub
+	}
 	if ctx.CardStatus != "" {
 		payload["card.status"] = ctx.CardStatus
 	}
@@ -418,7 +478,7 @@ func (a *App) openPage(c *ui.Context, ref contrib.PageRef) {
 // what a retry and a refresh result do.
 func (a *App) loadPage(c *ui.Context, ref contrib.PageRef, force bool) {
 	key := pageKey(ref.Plugin, ref.Page.ID)
-	if a.ui.hidden[key] {
+	if a.ui.failures.Hidden(ref.Plugin, ref.Page.ID) {
 		return
 	}
 	state := a.pageState(ref)
@@ -434,7 +494,7 @@ func (a *App) loadPage(c *ui.Context, ref contrib.PageRef, force bool) {
 	if err != nil {
 		state.Err = err.Error()
 		state.Loading = false
-		a.pageFailed(ref, key, err)
+		a.pageFailed(ref, err)
 		return
 	}
 	state.Loading = true
@@ -450,16 +510,16 @@ func (a *App) loadPage(c *ui.Context, ref contrib.PageRef, force bool) {
 			state.Loading = false
 			if err != nil {
 				state.Err = err.Error()
-				a.pageFailed(ref, key, err)
+				a.pageFailed(ref, err)
 				return
 			}
 			tree, err := contrib.ParsePage(raw)
 			if err != nil {
 				state.Err = err.Error()
-				a.pageFailed(ref, key, err)
+				a.pageFailed(ref, err)
 				return
 			}
-			a.ui.failures[key] = 0
+			a.ui.failures.Succeeded(ref.Plugin, ref.Page.ID)
 			a.ui.pagesFor[key] = hash
 			state.Tree = tree
 			state.Err = ""
@@ -469,13 +529,11 @@ func (a *App) loadPage(c *ui.Context, ref contrib.PageRef, force bool) {
 
 // pageFailed counts a page's failure, says so in the page (which shows its error
 // state and a retry) and hides that page — and only that page — at the third.
-func (a *App) pageFailed(ref contrib.PageRef, key string, err error) {
+func (a *App) pageFailed(ref contrib.PageRef, err error) {
 	slog.Warn("remit: a plugin page failed", "plugin", ref.Name, "page", ref.Page.ID, "err", err)
-	a.ui.failures[key]++
-	if a.ui.failures[key] < contributionErrorLimit || a.ui.hidden[key] {
+	if !a.ui.failures.Failed(ref.Plugin, ref.Page.ID, err.Error()) {
 		return
 	}
-	a.ui.hidden[key] = true
 	slog.Warn("remit: a plugin page was hidden after three failures", "plugin", ref.Name, "page", ref.Page.ID)
 	if a.mode == modePlugin && a.page.Plugin == ref.Plugin && a.page.Page.ID == ref.Page.ID {
 		a.mode = modeNotes
@@ -484,14 +542,14 @@ func (a *App) pageFailed(ref contrib.PageRef, key string, err error) {
 
 // contributionFailed counts a command's failure, toasts what went wrong, and
 // hides that command — and only that command — at the third.
-func (a *App) contributionFailed(c *ui.Context, key, message string) {
+func (a *App) contributionFailed(c *ui.Context, plugin, id, message string) {
+	key := contrib.FailureKey(plugin, id)
 	slog.Warn("remit: a plugin command failed", "contribution", key)
-	a.ui.failures[key]++
+	hidden := a.ui.failures.Failed(plugin, id, message)
 	if message != "" {
 		c.Toast(message)
 	}
-	if a.ui.failures[key] >= contributionErrorLimit && !a.ui.hidden[key] {
-		a.ui.hidden[key] = true
+	if hidden {
 		slog.Warn("remit: a plugin command was hidden after three failures", "contribution", key)
 	}
 }
@@ -729,40 +787,48 @@ func settingJSON(typ contrib.SettingType, value string) (json.RawMessage, error)
 
 // reenablePlugin gives a plugin's failed contributions another try: the counts
 // go back to zero and the hidden ones show again. It is the settings page's
-// action beside the failure count (ui.md §8).
+// action beside the failure count (ui.md §8), and it moves only this plugin's
+// entries.
 func (a *App) reenablePlugin(c *ui.Context, name string) {
 	for id, idName := range a.ui.names {
 		if idName != name {
 			continue
 		}
-		prefix := id + "/"
-		for key := range a.ui.failures {
-			if strings.HasPrefix(key, prefix) {
-				a.ui.failures[key] = 0
-				delete(a.ui.hidden, key)
-			}
-		}
+		a.ui.failures.Reenable(id)
 	}
 	a.refreshSettingsData()
 	c.Toast(m(c).PluginReenabled())
 }
 
-// pluginProblems is what each plugin's manifest could not offer, by name: the
-// settings page lists it under the plugin.
-func (a *App) pluginProblems() map[string][]string { return a.ui.problems }
+// contributionIssues is the settings page's one snapshot of what the window is
+// not showing: what a manifest declared that this host could not use, and the
+// contributions three failures took out, each with its plugin, its contribution
+// id, the reason and whether failures hid it. It is data — it reads what the load
+// and the counters left, and calls no plugin.
+func (a *App) contributionIssues() []contrib.Issue {
+	return a.ui.failures.Issues(a.ui.problems)
+}
+
+// pluginProblems is what each plugin's manifest could not offer, by manifest
+// name: the settings page lists it under the plugin.
+func (a *App) pluginProblems() map[string][]string {
+	problems := map[string][]string{}
+	for id, reasons := range a.ui.problems {
+		name := a.ui.names[id]
+		if name == "" {
+			name = id
+		}
+		problems[name] = append(problems[name], reasons...)
+	}
+	return problems
+}
 
 // pluginFailures counts a plugin's failed contributions by manifest name.
 func (a *App) pluginFailures(name string) int {
 	total := 0
 	for id, idName := range a.ui.names {
-		if idName != name {
-			continue
-		}
-		prefix := id + "/"
-		for key, count := range a.ui.failures {
-			if strings.HasPrefix(key, prefix) {
-				total += count
-			}
+		if idName == name {
+			total += a.ui.failures.Total(id)
 		}
 	}
 	return total
