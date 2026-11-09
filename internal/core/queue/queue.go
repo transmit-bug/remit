@@ -250,22 +250,15 @@ func introduceReading(lib *store.Library, due []store.Reading, now time.Time, pe
 }
 
 // notesReadToday is how many notes had a reading session today, which is the
-// day's reading allowance already spent. A note read and then dropped from the
-// queue the same day is not in the store's listing of the queue and so is not
-// counted: the allowance paces what comes in, it is not an audit of the log.
+// day's reading allowance already spent. It counts the day's reading and not
+// the queue's membership: a note read and then dropped, archived or dismissed
+// the same day still spent the allowance, so leaving the queue cannot buy
+// another note in.
 func notesReadToday(lib *store.Library, now time.Time) int {
-	queued, err := lib.ReadingQueue()
+	day := startOfDay(now)
+	read, err := lib.CountNotesRead(day, day.AddDate(0, 0, 1))
 	if err != nil {
 		return 0
-	}
-	day := startOfDay(now)
-	end := day.AddDate(0, 0, 1)
-	read := 0
-	for _, entry := range queued {
-		at := entry.State.LastReview
-		if entry.State.Reviews > 0 && !at.Before(day) && at.Before(end) {
-			read++
-		}
 	}
 	return read
 }

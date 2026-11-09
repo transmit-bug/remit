@@ -166,6 +166,88 @@ func TestReadingUnqueuedNoteJoins(t *testing.T) {
 	}
 }
 
+// The day's reading is the reading, not the queue's membership: a note read and
+// then dropped, archived or dismissed the same day was still read that day,
+// which is what keeps the day's allowance spent.
+func TestCountNotesReadCountsWhatWasReadNotWhatIsQueued(t *testing.T) {
+	today := time.Date(2026, 11, 6, 0, 0, 0, 0, time.UTC)
+	yesterday := today.AddDate(0, 0, -1)
+
+	for _, tt := range []struct {
+		name string
+		// then is what becomes of the note after the session.
+		then func(t *testing.T, lib *store.Library, note core.Note, at time.Time)
+	}{
+		{"left in the queue", func(*testing.T, *store.Library, core.Note, time.Time) {}},
+		{"dropped", func(t *testing.T, lib *store.Library, note core.Note, at time.Time) {
+			if err := lib.RemoveFromReading(note.ID, at); err != nil {
+				t.Fatalf("RemoveFromReading: %v", err)
+			}
+		}},
+		{"archived", func(t *testing.T, lib *store.Library, note core.Note, at time.Time) {
+			if err := lib.ArchiveReading(note.ID, at); err != nil {
+				t.Fatalf("ArchiveReading: %v", err)
+			}
+		}},
+		{"dismissed", func(t *testing.T, lib *store.Library, note core.Note, at time.Time) {
+			if err := lib.DismissReading(note.ID, at); err != nil {
+				t.Fatalf("DismissReading: %v", err)
+			}
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			lib, _, clk := newLibrary(t)
+			note := saveNote(t, lib, "Long read", "first", "second")
+			if err := lib.ReadNote(note.ID, schedule.Good, note.Blocks[0].ID, clk.Now()); err != nil {
+				t.Fatalf("ReadNote: %v", err)
+			}
+			tt.then(t, lib, note, clk.Now().Add(time.Hour))
+
+			if got := countNotesRead(t, lib, today, today.AddDate(0, 0, 1)); got != 1 {
+				t.Errorf("read today = %d, want the note the session read", got)
+			}
+			if got := countNotesRead(t, lib, yesterday, today); got != 0 {
+				t.Errorf("read yesterday = %d, want none", got)
+			}
+		})
+	}
+}
+
+// Only a session is spending: a note that joined the queue and was never read
+// costs nothing, and a session yesterday belongs to yesterday.
+func TestCountNotesReadCountsSessionsOnly(t *testing.T) {
+	lib, _, clk := newLibrary(t)
+	yesterday := time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)
+	today := yesterday.AddDate(0, 0, 1)
+
+	fresh := saveNote(t, lib, "Never read", "first")
+	if err := lib.AddToReading(fresh.ID, clk.Now()); err != nil {
+		t.Fatalf("AddToReading: %v", err)
+	}
+	clk.advance(-24 * time.Hour)
+	old := saveNote(t, lib, "Read yesterday", "first")
+	if err := lib.ReadNote(old.ID, schedule.Good, old.Blocks[0].ID, clk.Now()); err != nil {
+		t.Fatalf("ReadNote: %v", err)
+	}
+
+	if got := countNotesRead(t, lib, today, today.AddDate(0, 0, 1)); got != 0 {
+		t.Errorf("read today = %d, want none: one queued note was never read and one was read yesterday", got)
+	}
+	if got := countNotesRead(t, lib, yesterday, today); got != 1 {
+		t.Errorf("read yesterday = %d, want the session that day", got)
+	}
+}
+
+// countNotesRead is CountNotesRead with the failure checked.
+func countNotesRead(t *testing.T, lib *store.Library, from, to time.Time) int {
+	t.Helper()
+	got, err := lib.CountNotesRead(from, to)
+	if err != nil {
+		t.Fatalf("CountNotesRead: %v", err)
+	}
+	return got
+}
+
 // An excerpt is a child note: the passage as its first block, and a reference
 // back to the block it was taken from, which the source's backlinks find.
 func TestExcerptMakesAChildNote(t *testing.T) {

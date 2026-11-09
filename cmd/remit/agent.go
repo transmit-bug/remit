@@ -14,6 +14,7 @@ import (
 	"github.com/transmit-bug/remit/internal/agentapi"
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
@@ -204,7 +205,7 @@ func serveAgent(lib *store.Library, token string) (net.Listener, error) {
 		_ = ln.Close()
 		return nil, err
 	}
-	srv := agentapi.New(source, agentapi.Options{Token: token, Stats: source})
+	srv := agentapi.New(source, agentapi.Options{Token: token, Stats: source, Today: todayCount(lib)})
 	go func() {
 		// Closing the listener is how the service stops, so a closed
 		// connection is the end of it, not a failure.
@@ -213,6 +214,19 @@ func serveAgent(lib *store.Library, token string) (net.Listener, error) {
 		}
 	}()
 	return ln, nil
+}
+
+// todayCount is the agent API's today count: the lines internal/core/queue
+// builds for one day, unbudgeted and with the reading introduction uncapped, so
+// the number is what the day holds rather than what one sitting would take.
+func todayCount(lib *store.Library) func(time.Time) (int, error) {
+	return func(now time.Time) (int, error) {
+		today, err := queue.Entries(lib, now, queue.TodayOptions{})
+		if err != nil {
+			return 0, err
+		}
+		return len(today.Entries), nil
+	}
 }
 
 // facesOf asks the shared resolver what a card asks. It is the same door the

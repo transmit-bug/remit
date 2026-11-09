@@ -104,6 +104,21 @@ func (l *Library) ReadingPosition(noteID core.ID) (core.ID, bool) {
 	return reading.Position, true
 }
 
+// CountNotesRead reports how many notes had a reading session in [from, to),
+// whatever became of each one since: a note read and then dropped, archived or
+// dismissed the same day was still read that day. The day's reading allowance
+// is about the reading and not about the queue's membership, so leaving the
+// queue cannot hand the day back a note it has already spent.
+func (l *Library) CountNotesRead(from, to time.Time) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return 0, ErrClosed
+	}
+	return l.index.count(`SELECT COUNT(*) FROM reading WHERE reviews > 0 AND last_review >= ? AND last_review < ?`,
+		from.UnixNano(), to.UnixNano())
+}
+
 // AddToReading puts a note in the reading queue, and takes it out of the archive
 // if it was archived or dismissed: being queued again is how a note comes back.
 // A note that is already there is left alone, so adding it twice writes one

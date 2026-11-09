@@ -162,6 +162,10 @@ func (h *fixtureHost) History(core.ID) ([]schedule.Event, error) { return nil, n
 // to read them in, and no plugin capability reaches it today.
 func (h *fixtureHost) ReadingQueue() ([]store.Reading, error) { return nil, nil }
 
+func (h *fixtureHost) ReadingArchive() ([]store.Reading, error) { return nil, nil }
+
+func (h *fixtureHost) UnExcerptedNotes(int) ([]store.Reading, error) { return nil, nil }
+
 func (h *fixtureHost) ReadingFor(core.ID) (store.Reading, bool) { return store.Reading{}, false }
 
 func (h *fixtureHost) ReadingEvents(core.ID) ([]schedule.Event, error) { return nil, nil }
