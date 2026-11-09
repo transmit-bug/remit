@@ -350,9 +350,19 @@ type Deps struct {
 	// LocateOnBoard opens the board page on a paragraph's node, when a board
 	// places it.
 	LocateOnBoard func(*ui.Context, core.ID)
+	// OnBoard reports whether a board the window holds places that paragraph. It
+	// reads the pages' cached data, so the entry a paragraph's menu offers is one
+	// that has somewhere to go.
+	OnBoard func(core.ID) bool
 	// BlockItems are the actions plugins contributed to the block menu and the
 	// block inspector, in drawing order.
 	BlockItems func(*ui.Context) []BlockItem
+	// SlashItems are the actions plugins contributed to the `/` insert menu. They
+	// follow the host's own commands at its foot, and the query filters them as
+	// it filters those.
+	SlashItems func(*ui.Context) []BlockItem
+	// RowItems are the actions plugins contributed to a note row's menu.
+	RowItems func(*ui.Context) []BlockItem
 
 	// Rows is the notes page's rows — the query, tag, filters and order the
 	// state holds, answered by the store — and how many notes match in all.

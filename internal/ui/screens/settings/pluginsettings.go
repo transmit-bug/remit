@@ -106,6 +106,11 @@ func pluginProblems(c *ui.Context, d Deps, msgs locales.Messages, tk design.Toke
 			Label(msgs.PluginReenableOf(p.Name)).
 			OnClick(func() { d.reenable(c, p.Name) })
 	})
+	// What the count is made of: each hidden contribution and why it went, so
+	// Re-enable is an informed action rather than a blind retry.
+	for _, hidden := range p.Hidden {
+		ui.Text(c, hidden).FontSize(tk.TypeLabel).TextColor(tk.TextMuted).SingleLine()
+	}
 }
 
 func (d Deps) pluginMessage(c *ui.Context, plugin, raw string) string {

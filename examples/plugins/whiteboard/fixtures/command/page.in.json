@@ -1,0 +1,1 @@
+{ "args": [{ "name": "boardData", "context": { "library.open": true, "area": "plugin", "page.id": "whiteboard" } }] }

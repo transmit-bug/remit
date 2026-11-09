@@ -29,7 +29,7 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 	}
 	s.tableWord = msgs.SlashTable()
 	s.ensureDocument()
-	s.syncSlash(msgs, d)
+	s.syncSlash(c, msgs, d)
 	if s.FindOpen {
 		s.findBar(c)
 	}

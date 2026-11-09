@@ -496,7 +496,7 @@ func (a *App) cardTableDeps(c *ui.Context) recall.CardsDeps {
 			a.bulkDone(c, result, err)
 		},
 		AddTag: func(ids []core.ID, tag string) { a.addTagToCards(c, ids, tag) },
-		Items:  a.browseRowItems(),
+		Items:  a.browseRowItems,
 		PluginText: func(c *ui.Context, plugin, raw string) string {
 			return a.pluginText(c, plugin, raw)
 		},

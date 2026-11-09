@@ -78,9 +78,9 @@ type State struct {
 	// Pages are the pages the enabled plugins contributed, which the plugins
 	// page lists with the one action that opens each.
 	Pages []PluginPage
-	// Details is which plugin's details the user opened, by manifest name. It
-	// is the page's own memory across frames, not a setting.
-	Details map[string]bool
+	// Detail is which plugin's detail dialog is open, by manifest name, "" for
+	// none. It is the page's own memory across frames, not a setting.
+	Detail string
 
 	// AgentOn is whether the API serves now, Agent where it listens, and Token
 	// the bearer token just minted, which is shown once and then forgotten.
@@ -121,16 +121,4 @@ func (s *State) page() Page {
 		return s.Page
 	}
 	return PageAppearance
-}
-
-// detailsOpen reports whether one plugin's details are open, and the page never
-// writes a nil map.
-func (s *State) detailsOpen(name string) bool { return s.Details[name] }
-
-// toggleDetails opens or closes one plugin's details.
-func (s *State) toggleDetails(name string) {
-	if s.Details == nil {
-		s.Details = map[string]bool{}
-	}
-	s.Details[name] = !s.Details[name]
 }

@@ -29,6 +29,9 @@ type Plugin struct {
 	// Failures is how many of its contributed commands and pages have failed in
 	// a row and been hidden.
 	Failures int
+	// Hidden names the contributions three failures took out, one line each, with
+	// what failed: the row a reader finds beside Re-enable.
+	Hidden []string
 }
 
 // enableRequest is the approval one frame asked for, applied after the
@@ -66,7 +69,7 @@ func pluginsPage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk desi
 		muted(c, tk, msgs.PluginEmpty())
 	default:
 		for _, p := range plugins {
-			pluginField(c, d, tk, msgs, p, s, &enable, &opened)
+			pluginField(c, d, tk, msgs, p, &enable, &opened)
 		}
 		if s.PluginErr != "" {
 			notice(c, tk, s.PluginErr)
@@ -78,7 +81,7 @@ func pluginsPage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk desi
 
 	if len(plugins) > 0 {
 		ui.Fieldset(c, msgs.SettingsPluginPages(), func() {
-			pluginPages(c, s, msgs, tk, &openPlugin)
+			pluginPages(c, s, d, msgs, tk, &openPlugin)
 		})
 	}
 	pluginSettingsFieldset(c, s, d, msgs, tk)
@@ -90,7 +93,7 @@ func pluginsPage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk desi
 		d.chooseRole(c, role.role, role.who)
 	}
 	if opened != "" {
-		s.toggleDetails(opened)
+		s.Detail = opened
 	}
 	if openPlugin.Plugin != "" {
 		d.openPage(c, openPlugin.Plugin, openPlugin.ID)
@@ -98,10 +101,10 @@ func pluginsPage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk desi
 }
 
 // pluginField is one plugin: its name and whether it ships with the app, the
-// capabilities approving it grants, the switch that grants them, and the
-// details the user opens. A built-in carries a badge instead of a switch,
-// because withdrawing the app's own card plugin is not a choice.
-func pluginField(c *ui.Context, d Deps, tk design.Tokens, msgs locales.Messages, p Plugin, s *State, enable *enableRequest, opened *string) {
+// capabilities approving it grants, the switch that grants them, and the details
+// the user opens. A built-in carries a badge instead of a switch, because
+// withdrawing the app's own card plugin is not a choice.
+func pluginField(c *ui.Context, d Deps, tk design.Tokens, msgs locales.Messages, p Plugin, enable *enableRequest, opened *string) {
 	on := p.Enabled
 	name := p.Name
 	ui.Column(c).Key(p.Name).Gap(tk.SpaceXS).Children(func() {
@@ -126,24 +129,8 @@ func pluginField(c *ui.Context, d Deps, tk design.Tokens, msgs locales.Messages,
 				}
 			})
 		}
-		if s.detailsOpen(name) {
-			ui.Column(c).Gap(tk.SpaceXS).Children(func() {
-				ui.Text(c, msgs.SettingsPluginID()+": "+p.ID+" · "+p.Version).
-					Font("monospace").FontSize(tk.TypeMono).TextColor(tk.TextMuted).SingleLine()
-				if len(p.Roles) == 0 {
-					muted(c, tk, msgs.PluginNoRoles())
-				} else {
-					ui.Text(c, msgs.SettingsPluginRoles()+": "+join(p.Roles)).
-						FontSize(tk.TypeUI).TextColor(tk.TextMuted).SingleLine()
-				}
-			})
-		}
 		ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
-			label := msgs.SettingsPluginDetails()
-			if s.detailsOpen(name) {
-				label = msgs.SettingsPluginDetailsHide()
-			}
-			if ui.Button(c, label).MinHeight(tk.Control).AlignSelf(ui.Start).
+			if ui.Button(c, msgs.SettingsPluginDetails()).MinHeight(tk.Control).AlignSelf(ui.Start).
 				Label(msgs.SettingsPluginDetailsOf(name)).Clicked() {
 				*opened = name
 			}
@@ -155,19 +142,22 @@ func pluginField(c *ui.Context, d Deps, tk design.Tokens, msgs locales.Messages,
 // pluginPages lists the pages the enabled plugins contributed, each with the one
 // action that opens it. A plugin whose page failed three times is not here: it
 // is in the problems above, with the way back.
-func pluginPages(c *ui.Context, s *State, msgs locales.Messages, tk design.Tokens, open *PluginPage) {
+func pluginPages(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design.Tokens, open *PluginPage) {
 	if len(s.Pages) == 0 {
 		muted(c, tk, msgs.SettingsPluginNoPages())
 		return
 	}
 	for _, page := range s.Pages {
 		chosen := page
+		// The page's title is the plugin's own message: the host resolves it in
+		// the window's language, so the list never shows a %key%.
+		title := d.pluginMessage(c, page.Plugin, page.Title)
 		ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, page.Title).FontSize(tk.TypeUI).SingleLine()
+			ui.Text(c, title).FontSize(tk.TypeUI).SingleLine()
 			ui.Text(c, page.Plugin).FontSize(tk.TypeLabel).TextColor(tk.TextFaint).SingleLine()
 			ui.Spacer(c)
 			if ui.Button(c, msgs.SettingsPluginPageOpen()).MinHeight(tk.Control).
-				Label(msgs.SettingsPluginPageOpenOf(page.Title)).Clicked() {
+				Label(msgs.SettingsPluginPageOpenOf(title)).Clicked() {
 				*open = chosen
 			}
 		})

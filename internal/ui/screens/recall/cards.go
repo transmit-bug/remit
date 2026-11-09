@@ -221,6 +221,11 @@ func chosenRows(rows []CardRow, s *CardsState) []core.ID {
 	return ids
 }
 
+// Chosen is the rows the user checked, in table order: what a bulk action acts
+// on, and what the plugin contract's browse.selection asks about. It is the
+// screen's own state, so the app asks rather than guessing at the checks.
+func (s *CardsState) Chosen(rows []CardRow) []core.ID { return chosenRows(rows, s) }
+
 // CardsDeps is what the card table asks of the app: the rows and facets it
 // derived, the reload a query, a filter or a sort asks for, and the writes a
 // row and the bulk bar carry. Each runs on the UI thread.
@@ -249,10 +254,12 @@ type CardsDeps struct {
 	Freeze  func([]core.ID)
 	AddTag  func([]core.ID, string)
 
-	// Items is the browse.row slot's items, as the library load cached them;
+	// Items are the browse.row slot's items, as the library load cached them,
+	// asked for where the action row draws them: an item that names
+	// browse.selection reads the rows chosen this frame, not the last one.
 	// PluginText resolves one of a plugin's messages in the frame's language,
 	// and Run answers one.
-	Items      []contrib.MenuRef
+	Items      func() []contrib.MenuRef
 	PluginText func(*ui.Context, string, string) string
 	Run        func(*ui.Context, contrib.CommandRef)
 }
@@ -391,19 +398,28 @@ func columnsMenu(c *ui.Context, s *CardsState, tk design.Tokens, msgs locales.Me
 	}).MinHeight(tk.Control).Label(msgs.RecallCardsColumns())
 }
 
+// items are the slot's items, empty when the app behind the screen has none.
+func (d CardsDeps) items() []contrib.MenuRef {
+	if d.Items == nil {
+		return nil
+	}
+	return d.Items()
+}
+
 // pluginActions is the browse.row slot: the actions plugins add for the rows on
 // screen. A library whose plugins add none says so beside the disabled button
 // rather than leaving a control that looks pressable and is not.
 func pluginActions(c *ui.Context, d CardsDeps, tk design.Tokens, msgs locales.Messages) {
 	label := msgs.RecallCardsActions()
-	if len(d.Items) == 0 {
+	items := d.items()
+	if len(items) == 0 {
 		ui.Button(c, label).MinHeight(tk.Control).Disabled(true)
 		ui.Text(c, msgs.RecallCardsNoActions()).FontSize(tk.TypeCaption).
 			TextColor(tk.TextFaint).SingleLine()
 		return
 	}
 	ui.PopoverMenuButton(c, label, func(m *ui.Menu) {
-		for _, item := range d.Items {
+		for _, item := range items {
 			item := item
 			name := string(item.Command.Title)
 			if d.PluginText != nil {

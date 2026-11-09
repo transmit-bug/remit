@@ -11,7 +11,7 @@ import (
 // run here through the same harness `remit ext test` is, against the fixtures it
 // ships, so the examples and the guide cannot rot.
 func TestTheExamplePluginsPass(t *testing.T) {
-	for _, dir := range []string{"cards-mini", "leeches"} {
+	for _, dir := range []string{"cards-mini", "leeches", "whiteboard"} {
 		dir := filepath.Join("..", "..", "..", "examples", "plugins", dir)
 		result := exttest.Run(dir, exttest.Options{})
 		if len(result.Problems) > 0 {

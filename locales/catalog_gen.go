@@ -8455,6 +8455,96 @@ func (msgs Messages) SettingsPluginDetails() string {
 	return Catalog.Format(msgs.locale, "settingsPluginDetails", nil)
 }
 
+// SettingsPluginTrust says "Trust level"
+// in the language the app shows.
+//
+// The field naming how far a plugin is trusted: the app's own build, or one
+// this library installed.
+func SettingsPluginTrust() string { return In(i18n.Locale()).SettingsPluginTrust() }
+
+// SettingsPluginTrust says "Trust level"
+// in the language of msgs.
+//
+// The field naming how far a plugin is trusted: the app's own build, or one
+// this library installed.
+func (msgs Messages) SettingsPluginTrust() string {
+	return Catalog.Format(msgs.locale, "settingsPluginTrust", nil)
+}
+
+// SettingsPluginTrustBuiltin says "Built into this build"
+// in the language the app shows.
+//
+// The trust level of a plugin that ships with the app.
+func SettingsPluginTrustBuiltin() string { return In(i18n.Locale()).SettingsPluginTrustBuiltin() }
+
+// SettingsPluginTrustBuiltin says "Built into this build"
+// in the language of msgs.
+//
+// The trust level of a plugin that ships with the app.
+func (msgs Messages) SettingsPluginTrustBuiltin() string {
+	return Catalog.Format(msgs.locale, "settingsPluginTrustBuiltin", nil)
+}
+
+// SettingsPluginTrustBuiltinBody says "It ships with Remit, so its capabilities are the app's own and cannot be withdrawn."
+// in the language the app shows.
+//
+// What the built-in trust level means for the switch beside it.
+func SettingsPluginTrustBuiltinBody() string {
+	return In(i18n.Locale()).SettingsPluginTrustBuiltinBody()
+}
+
+// SettingsPluginTrustBuiltinBody says "It ships with Remit, so its capabilities are the app's own and cannot be withdrawn."
+// in the language of msgs.
+//
+// What the built-in trust level means for the switch beside it.
+func (msgs Messages) SettingsPluginTrustBuiltinBody() string {
+	return Catalog.Format(msgs.locale, "settingsPluginTrustBuiltinBody", nil)
+}
+
+// SettingsPluginTrustThirdParty says "Installed in this library"
+// in the language the app shows.
+//
+// The trust level of a plugin this library installed and approved.
+func SettingsPluginTrustThirdParty() string { return In(i18n.Locale()).SettingsPluginTrustThirdParty() }
+
+// SettingsPluginTrustThirdParty says "Installed in this library"
+// in the language of msgs.
+//
+// The trust level of a plugin this library installed and approved.
+func (msgs Messages) SettingsPluginTrustThirdParty() string {
+	return Catalog.Format(msgs.locale, "settingsPluginTrustThirdParty", nil)
+}
+
+// SettingsPluginTrustThirdPartyBody says "This library approved it. Turning it off keeps its data and stops everything it contributes."
+// in the language the app shows.
+//
+// What the installed trust level means for the switch beside it.
+func SettingsPluginTrustThirdPartyBody() string {
+	return In(i18n.Locale()).SettingsPluginTrustThirdPartyBody()
+}
+
+// SettingsPluginTrustThirdPartyBody says "This library approved it. Turning it off keeps its data and stops everything it contributes."
+// in the language of msgs.
+//
+// What the installed trust level means for the switch beside it.
+func (msgs Messages) SettingsPluginTrustThirdPartyBody() string {
+	return Catalog.Format(msgs.locale, "settingsPluginTrustThirdPartyBody", nil)
+}
+
+// SettingsPluginCapabilities says "Capabilities"
+// in the language the app shows.
+//
+// The field listing what approving a plugin grants.
+func SettingsPluginCapabilities() string { return In(i18n.Locale()).SettingsPluginCapabilities() }
+
+// SettingsPluginCapabilities says "Capabilities"
+// in the language of msgs.
+//
+// The field listing what approving a plugin grants.
+func (msgs Messages) SettingsPluginCapabilities() string {
+	return Catalog.Format(msgs.locale, "settingsPluginCapabilities", nil)
+}
+
 // SettingsPluginDetailsOf says "{name} details"
 // in the language the app shows.
 //
@@ -9189,22 +9279,6 @@ func SettingsBudgetMinutesValue(count int) string {
 // The daily minutes beside their slider.
 func (msgs Messages) SettingsBudgetMinutesValue(count int) string {
 	return Catalog.Format(msgs.locale, "settingsBudgetMinutesValue", map[string]any{"count": count})
-}
-
-// SettingsPluginDetailsHide says "Hide details"
-// in the language the app shows.
-//
-// The button that closes one plugin's details, beside the one that opened
-// them.
-func SettingsPluginDetailsHide() string { return In(i18n.Locale()).SettingsPluginDetailsHide() }
-
-// SettingsPluginDetailsHide says "Hide details"
-// in the language of msgs.
-//
-// The button that closes one plugin's details, beside the one that opened
-// them.
-func (msgs Messages) SettingsPluginDetailsHide() string {
-	return Catalog.Format(msgs.locale, "settingsPluginDetailsHide", nil)
 }
 
 // SettingsPluginPageOpenOf says "Open {page}"
