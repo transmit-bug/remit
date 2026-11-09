@@ -123,3 +123,23 @@ Three event kinds join the log, and the rule of one authority stands unchanged:
   replayed like a rating, and a restore is the opposite event, not a rewrite.
   `void` still cancels a rating alone (#213, `docs/specs/ui-redesign-v2.md`
   §5.2/§5.3).
+
+## Amended 2026-11-10 (B5, the lists' query surface)
+
+The index moves `11 → 12` for three derived additions
+(`docs/specs/ui-redesign-v2.md` §5.6). `.remit/` is still disposable; a library
+written by an older build rebuilds once at its next open, which is what a
+schema marker is for.
+
+- `links` records the block a link anchors to (`[[Note#^block_…]]`, the shape an
+  excerpt writes), so the excerpt tree and the notebook's excerpt filter read
+  the anchor rather than re-reading block text.
+- `cards` records a due date the user set by hand, and when they set it. It is
+  written into the card file (`due`, `dueAt` — omitted unless set), not the log:
+  a postpone that names a card is a new event kind, which this slice does not
+  add. The card file is therefore the one place a card's schedule can be
+  overridden, and an override stops standing at the first review written after
+  it — the answer is newer than the hand-set date, so the schedule wins again.
+- `assets` answers the assets page: one row per file in `assets/`, with the notes
+  whose text references it. The files stay the truth; the table is re-derived
+  whenever the notes' saves or the directory's content have moved.

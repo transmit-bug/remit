@@ -121,6 +121,32 @@ func (r Reference) Thaw() Reference {
 	return r
 }
 
+// DueOverride is a due date the user set on a card by hand, and the moment they
+// set it: the one departure from the schedule the review log replays, and it
+// says both so it can stop standing. A review written after the card was moved
+// answers the card again, and an answer newer than the hand-set date takes the
+// card back — anything sooner would leave a card the user answered sitting on a
+// date they chose last week.
+//
+// It is a schedule fact and not a field of the card: it changes when the card
+// comes up and nothing about what the card says.
+type DueOverride struct {
+	// At is the moment the card is due.
+	At time.Time
+	// Set is when the override was written. Zero means unknown, and an
+	// override with no set moment stands until the card is reviewed.
+	Set time.Time
+}
+
+// Stands reports whether the override still governs a card whose newest review
+// was at lastReview (zero when no review has touched it).
+func (d *DueOverride) Stands(lastReview time.Time) bool {
+	if d == nil || d.At.IsZero() {
+		return false
+	}
+	return d.Set.IsZero() || lastReview.IsZero() || !lastReview.After(d.Set)
+}
+
 // Status is where a card is in its life, independent of FSRS scheduling.
 type Status uint8
 
@@ -220,4 +246,8 @@ type Card struct {
 	// ask several things (each blank, both directions), counted from 0.
 	Ordinal  int
 	Producer Producer
+	// Due is the due date the user set by hand, nil while the card keeps the
+	// date its reviews derive. It is written to the card file, so it survives a
+	// rebuilt index; a review written after it was set takes the card back.
+	Due *DueOverride
 }

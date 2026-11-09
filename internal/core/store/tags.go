@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/transmit-bug/remit/internal/core"
 )
@@ -93,4 +94,101 @@ func (l *Library) NotesWithTag(tag string) []core.ID {
 		out = append(out, core.ID(id))
 	}
 	return out
+}
+
+// TagRow is one tag as the tag page shows it: how many notes carry it, and a
+// couple of titles so the row says what the tag is about.
+type TagRow struct {
+	Tag   string
+	Count int
+	// Sample holds up to TagSampleTitles of the notes carrying the tag, by
+	// title: enough to recognise the tag without opening it.
+	Sample []string
+}
+
+// TagSampleTitles is how many example titles a tag row carries.
+const TagSampleTitles = 2
+
+// QueryTags returns the library's tags with how many notes carry each, the ones
+// carried by the most notes first and by name after them, at most limit of them
+// — zero or less is every tag.
+//
+// Two statements answer the whole page: the counts, then the examples of the
+// tags it selected. A tag's examples are the titles of the notes that carry it,
+// alphabetically and at most TagSampleTitles of each — by title rather than by
+// save time so a rebuilt index shows the same examples, which is what keeps the
+// page from changing under the reader for no edit of theirs.
+func (l *Library) QueryTags(limit int) []TagRow {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return nil
+	}
+	page, args := pageLimit(limit, 0)
+	rows, err := l.index.db.Query(
+		`SELECT t.tag, COUNT(DISTINCT t.note_id) FROM tags t
+		  GROUP BY t.tag ORDER BY COUNT(DISTINCT t.note_id) DESC, t.tag`+page, args...)
+	if err != nil {
+		return nil
+	}
+	var out []TagRow
+	for rows.Next() {
+		var row TagRow
+		if err := rows.Scan(&row.Tag, &row.Count); err != nil {
+			rows.Close()
+			return nil
+		}
+		out = append(out, row)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil
+	}
+	if err := l.index.tagSamples(out); err != nil {
+		return nil
+	}
+	return out
+}
+
+// tagSamples fills in the example titles of the tags it is given, one statement
+// per batch of them.
+func (x *index) tagSamples(tags []TagRow) error {
+	if len(tags) == 0 {
+		return nil
+	}
+	samples := make(map[string][]string, len(tags))
+	for start := 0; start < len(tags); start += 400 {
+		end := min(start+400, len(tags))
+		args := make([]any, 0, end-start+1)
+		for _, tag := range tags[start:end] {
+			args = append(args, tag.Tag)
+		}
+		args = append(args, TagSampleTitles)
+		rows, err := x.db.Query(`
+			SELECT tag, title FROM (
+				SELECT t.tag AS tag, n.title AS title,
+				       ROW_NUMBER() OVER (PARTITION BY t.tag ORDER BY lower(n.title), n.id) AS rn
+				  FROM tags t JOIN notes n ON n.id = t.note_id
+				 WHERE t.tag IN (?`+strings.Repeat(", ?", end-start-1)+`) AND n.title <> ''
+			) WHERE rn <= ? ORDER BY tag, rn`, args...)
+		if err != nil {
+			return fmt.Errorf("store: tag samples query: %w", err)
+		}
+		for rows.Next() {
+			var tag, title string
+			if err := rows.Scan(&tag, &title); err != nil {
+				rows.Close()
+				return err
+			}
+			samples[tag] = append(samples[tag], title)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+	}
+	for i := range tags {
+		tags[i].Sample = samples[tags[i].Tag]
+	}
+	return nil
 }
