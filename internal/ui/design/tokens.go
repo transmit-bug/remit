@@ -53,8 +53,9 @@ type Tokens struct {
 	// RailWidth is the navigation rail open, RailCollapsed the strip it folds
 	// to; PanelWidth is a document's side panel.
 	RailWidth, RailCollapsed, PanelWidth float32
-	// The page measures the full-window screens share.
-	ListWidth, SettingsWidth, BrowseWidth, WelcomeWidth float32
+	// The page measures the full-window screens share; SummaryWidth is a
+	// dialog's, as wide as a short page's sentence.
+	ListWidth, SettingsWidth, BrowseWidth, WelcomeWidth, SummaryWidth float32
 	// NotesColumnWidth and FilterPaneWidth are the two working columns: a
 	// document's notes list, and the card table's filters.
 	NotesColumnWidth, FilterPaneWidth float32
@@ -110,6 +111,7 @@ func NewTokens(base *ui.Theme) Tokens {
 		RailWidth: RailWidth, RailCollapsed: RailCollapsed, PanelWidth: PanelWidth,
 		ListWidth: ListWidth, SettingsWidth: SettingsWidth,
 		BrowseWidth: BrowseWidth, WelcomeWidth: WelcomeWidth,
+		SummaryWidth:     SummaryWidth,
 		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
 	}
 }

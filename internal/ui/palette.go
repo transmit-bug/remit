@@ -9,8 +9,20 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/kit"
 )
 
-// paletteWidth is the command palette's panel.
-const paletteWidth float32 = 480
+// paletteRowsPerGroup caps the notes and the cards one query lists: the launcher
+// is scanned, not browsed, so a group longer than a glance belongs to the search
+// page, and the cap keeps a frame off the whole library.
+const paletteRowsPerGroup = 8
+
+// paletteSection is one of the palette's three groups, in the order it lists
+// them: what the app can do, the notes it holds, then their cards.
+type paletteSection uint8
+
+const (
+	paletteCommands paletteSection = iota
+	paletteNotes
+	paletteCards
+)
 
 // paletteAction is one command the palette lists.
 type paletteAction struct {
@@ -18,11 +30,28 @@ type paletteAction struct {
 	run   func()
 }
 
+// paletteEntry is one row of the palette: the group it belongs to, the action it
+// runs, and the second line a card carries — the note its prompt came from.
+type paletteEntry struct {
+	section paletteSection
+	action  paletteAction
+	hint    string
+}
+
+// paletteRow is one line the list draws: a group's title, or an entry.
+type paletteRow struct {
+	header bool
+	title  string
+	entry  paletteEntry
+}
+
 // paletteState is the command palette: open or not, what has been typed, and
-// which of the matching actions the keys are on.
+// which of the rows the keys are on.
 type paletteState struct {
 	open  bool
 	query string
+	// sel is the row the keys are on. A group's title is never it: the list
+	// steps over headers, and so does every move this file makes.
 	sel   int
 	field ui.Handle
 	list  ui.ListState
@@ -44,30 +73,29 @@ func (a *App) openPalette(c *ui.Context) {
 // holds a note; each runs against the note the editor has loaded, loading it
 // first when the user has not been there yet.
 func (a *App) paletteActions(c *ui.Context) []paletteAction {
+	msgs := m(c)
 	actions := []paletteAction{
-		{label: m(c).ActionReviewCards(), run: func() { a.setMode(modeReview) }},
-		{label: m(c).ActionReading(), run: func() { a.setMode(modeReading) }},
-		{label: m(c).ActionEditNotes(), run: func() { a.setMode(modeNotes) }},
-		{label: m(c).BrowseTitle(), run: func() { a.setMode(modeBrowse) }},
-		{label: m(c).StatsTitle(), run: func() { a.setMode(modeStats) }},
-		{label: m(c).NewNote(), run: func() { a.newNote(c) }},
-		{label: m(c).OpenSettings(), run: func() { a.openSettings() }},
+		{label: msgs.ActionReviewCards(), run: func() { a.setMode(modeReview) }},
+		{label: msgs.ActionReading(), run: func() { a.setMode(modeReading) }},
+		{label: msgs.ActionEditNotes(), run: func() { a.setMode(modeNotes) }},
+		{label: msgs.BrowseTitle(), run: func() { a.setMode(modeBrowse) }},
+		{label: msgs.StatsTitle(), run: func() { a.setMode(modeStats) }},
+		{label: msgs.NewNote(), run: func() { a.newNote(c) }},
+		{label: msgs.OpenSettings(), run: func() { a.openSettings() }},
 	}
 	if a.lib == nil {
 		return actions
 	}
 	actions = append(actions,
-		paletteAction{label: m(c).ImportAnki(), run: func() { a.importAnkiPackage(c) }},
-		paletteAction{label: m(c).ImportMarkdown(), run: func() { a.importMarkdownFiles(c) }},
-		paletteAction{label: m(c).ExportNote(), run: func() { a.exportNoteMarkdown(c) }},
-		paletteAction{label: m(c).ExportAllNotes(), run: func() { a.exportAllMarkdown(c) }},
+		paletteAction{label: msgs.ImportTitle(), run: func() { a.openImport(c) }},
+		paletteAction{label: msgs.ExportTitle(), run: func() { a.openExport(c) }},
 		// A note's shape is typed, not commanded: paragraphs are separated by
 		// blank lines. Making a card from the paragraph at the caret stays a
 		// command until the typing gesture lands (#94).
-		paletteAction{label: m(c).MakeCard(), run: func() { a.makeCardAtCaret(c) }},
+		paletteAction{label: msgs.MakeCard(), run: func() { a.makeCardAtCaret(c) }},
 		// The note open in the notebook is the one the reading queue takes: any
 		// note can be read, so the command is where the user already is.
-		paletteAction{label: m(c).ActionAddReading(), run: func() {
+		paletteAction{label: msgs.ActionAddReading(), run: func() {
 			a.addReading(c, a.openNoteID())
 		}},
 	)
@@ -85,19 +113,147 @@ func (a *App) paletteActions(c *ui.Context) []paletteAction {
 	return append(actions, a.pluginPaletteActions(c)...)
 }
 
+// paletteEntries is the palette's three groups as the query narrows them: the
+// commands — the app's, then the plugins' — then the notes and the cards whose
+// text matches, each group capped.
+func (a *App) paletteEntries(c *ui.Context, query string) []paletteEntry {
+	msgs := m(c)
+	entries := make([]paletteEntry, 0, 24)
+	add := func(section paletteSection, action paletteAction, hint string) bool {
+		if !paletteMatches(action.label, query) {
+			return false
+		}
+		entries = append(entries, paletteEntry{section: section, action: action, hint: hint})
+		return true
+	}
+	for _, action := range a.paletteActions(c) {
+		add(paletteCommands, action, "")
+	}
+	// A note is its title, and the one without a title says so rather than
+	// leaving an unnamed row.
+	notes := 0
+	for _, note := range a.data.notes {
+		title := note.Title
+		if strings.TrimSpace(title) == "" {
+			title = msgs.UntitledNote()
+		}
+		if !paletteMatches(title, query) {
+			continue
+		}
+		id := note.ID
+		if add(paletteNotes, paletteAction{label: title, run: func() { a.ShowNote(id) }}, "") {
+			if notes++; notes == paletteRowsPerGroup {
+				break
+			}
+		}
+	}
+	// A card reads as the paragraph asks: its prompt, and the note it lives in.
+	cards := 0
+	for _, card := range a.data.cards {
+		prompt, _, _ := a.faces(card)
+		if strings.TrimSpace(prompt) == "" {
+			continue
+		}
+		hint := ""
+		if note, ok := a.data.noteOfBlock(card.Ref.Block); ok {
+			hint = a.data.titleOf(note)
+		}
+		if !paletteMatches(prompt+" "+hint, query) {
+			continue
+		}
+		id := card.ID
+		if add(paletteCards, paletteAction{label: prompt, run: func() { a.ShowCard(id) }}, hint) {
+			if cards++; cards == paletteRowsPerGroup {
+				break
+			}
+		}
+	}
+	return entries
+}
+
+// paletteRows groups the entries under their titles. A group with no entry
+// behind it is not drawn at all, and neither is its title: the palette shows
+// what matches, not an empty section.
+func paletteRows(c *ui.Context, entries []paletteEntry) []paletteRow {
+	msgs := m(c)
+	titles := [...]string{msgs.PaletteCommands(), msgs.PaletteNotes(), msgs.PaletteCards()}
+	rows := make([]paletteRow, 0, len(entries)+len(titles))
+	group := paletteSection(0)
+	for i, entry := range entries {
+		if i == 0 || entry.section != group {
+			group = entry.section
+			rows = append(rows, paletteRow{header: true, title: titles[group]})
+		}
+		rows = append(rows, paletteRow{entry: entry})
+	}
+	return rows
+}
+
+// paletteEntryRow answers the nearest entry row to row: the row itself when it
+// holds an entry, else the one after it, else the one before. -1 when the rows
+// hold none.
+func paletteEntryRow(rows []paletteRow, row int) int {
+	for i := row; i < len(rows); i++ {
+		if i >= 0 && !rows[i].header {
+			return i
+		}
+	}
+	for i := min(row, len(rows)-1); i >= 0; i-- {
+		if !rows[i].header {
+			return i
+		}
+	}
+	return -1
+}
+
+// paletteStep is the entry row delta steps from row, in the direction delta
+// names, staying where it is when there is none: the list's own movement, so
+// the keys walk the entries and never a title.
+func paletteStep(rows []paletteRow, row, delta int) int {
+	if delta == 0 {
+		return row
+	}
+	step := 1
+	if delta < 0 {
+		step = -1
+	}
+	for i := row + step; i >= 0 && i < len(rows); i += step {
+		if !rows[i].header {
+			return i
+		}
+	}
+	return row
+}
+
+// paletteEntryAt is the entry at row, when row holds one: a title or a row
+// outside the list answers false.
+func paletteEntryAt(rows []paletteRow, row int) (paletteEntry, bool) {
+	if row < 0 || row >= len(rows) || rows[row].header {
+		return paletteEntry{}, false
+	}
+	return rows[row].entry, true
+}
+
+// paletteMatches reports whether text holds the query, ignoring case. An empty
+// query matches everything.
+func paletteMatches(text, query string) bool {
+	q := strings.ToLower(strings.TrimSpace(query))
+	return q == "" || strings.Contains(strings.ToLower(text), q)
+}
+
 // paletteView draws the palette over the window. DialogBase keeps the keyboard
 // in it, Escape closes it and gives the focus back where it was.
 func (a *App) paletteView(c *ui.Context, tk design.Tokens) {
 	if !a.palette.open {
 		return
 	}
-	items := filterActions(a.paletteActions(c), a.palette.query)
-	sel := clamp(a.palette.sel, 0, len(items)-1)
+	msgs := m(c)
+	rows := paletteRows(c, a.paletteEntries(c, a.palette.query))
 
 	ui.DialogBase(c, &a.palette.open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.Scrim)
-		panel = kit.StylePanel(c, panel.Width(paletteWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
-		panel.Label(m(c).CommandPalette())
+		panel = kit.StylePanel(c, panel.Width(tk.SummaryWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
+		panel.Label(msgs.CommandPalette())
 		// The palette arrives a little small over a scrim that fades in.
 		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.palette})
 		scale := design.PanelScale + (1-design.PanelScale)*arriving
@@ -105,81 +261,79 @@ func (a *App) paletteView(c *ui.Context, tk design.Tokens) {
 		backdrop.Opacity(arriving)
 
 		panel.Children(func() {
+			// The choice is resolved against this pass's rows before anything
+			// reads it: a query narrows rows between passes, and the keys must
+			// land on an entry that exists now, never on the one they were on.
+			a.palette.sel = paletteEntryRow(rows, a.palette.sel)
+			// A plain field rather than a search field: Escape must close the
+			// palette in one keystroke, and a search field keeps it to clear its
+			// text first.
 			field := ui.TextInput(c, &a.palette.query).
-				Placeholder(m(c).SearchActions()).Bind(&a.palette.field).
-				Label(m(c).SearchActions()).MinHeight(tk.Control)
+				Placeholder(msgs.PaletteSearch()).Bind(&a.palette.field).
+				Label(msgs.PaletteSearch()).MinHeight(tk.Control)
 			if field.Changed() {
-				a.palette.sel = 0
+				a.palette.sel = paletteEntryRow(rows, 0)
 			}
 			if field.Submitted() {
-				a.runPalette(items, sel)
+				if entry, ok := paletteEntryAt(rows, a.palette.sel); ok {
+					a.runPaletteEntry(entry)
+				}
+				return
 			}
-			c.OnShortcut(0, ui.KeyDown, func() { a.movePalette(len(items), 1) })
-			c.OnShortcut(0, ui.KeyUp, func() { a.movePalette(len(items), -1) })
+			c.OnShortcut(0, ui.KeyDown, func() { a.palette.sel = paletteStep(rows, a.palette.sel, 1) })
+			c.OnShortcut(0, ui.KeyUp, func() { a.palette.sel = paletteStep(rows, a.palette.sel, -1) })
 
-			if len(items) == 0 {
-				ui.Text(c, m(c).NoActions()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+			if len(rows) == 0 {
+				ui.Text(c, msgs.PaletteEmpty()).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
 				return
 			}
 			// The rows are a list's: the choice, the keys and what assistive
 			// technology reads come with it, and the filter is the query above.
-			// Twelve rows, not eight: the host's own actions and the ones the
-			// plugins declare stay all visible at the default window, and a
-			// filter narrows what a smaller window cannot show.
-			a.palette.sel = clamp(a.palette.sel, 0, len(items)-1)
+			// A group's title is a header row, which the list keeps out of the
+			// choice and pins while its group scrolls under it. Twelve rows,
+			// not eight: the host's own actions and the ones the plugins
+			// declare stay all visible at the default window.
 			a.palette.list.Selected = &a.palette.sel
-			a.palette.list.Label = func(row int) string { return items[row].label }
-			rows := ui.List(c, &a.palette.list, len(items), func(i int) {
-				ui.Text(c, items[i].label).FontSize(tk.TypeUI).Padding(tk.SpaceXS, tk.SpaceS)
-			}).Grow(1).MaxHeight(tk.Control * 12).Label(m(c).CommandPalette())
-			if rows.Changed() || rows.Submitted() {
-				a.runPalette(items, a.palette.sel)
+			a.palette.list.Header = func(row int) bool { return rows[row].header }
+			a.palette.list.Label = func(row int) string {
+				if rows[row].header {
+					return rows[row].title
+				}
+				return rows[row].entry.action.label
+			}
+			chosen := ui.List(c, &a.palette.list, len(rows), func(i int) {
+				paletteRowView(c, tk, rows[i])
+			}).Grow(1).MaxHeight(tk.Control * 12).Label(msgs.CommandPalette())
+			if chosen.Changed() {
+				if entry, ok := paletteEntryAt(rows, a.palette.sel); ok {
+					a.runPaletteEntry(entry)
+				}
 			}
 		})
 	})
 }
 
-// runPalette runs the action at sel and closes the palette.
-func (a *App) runPalette(items []paletteAction, sel int) {
-	if sel < 0 || sel >= len(items) {
+// paletteRowView draws one line of the palette: a group's title, or an entry —
+// its text, and for a card the note its prompt came from. A title carries the
+// panel's own face, since it stays where it is while its group scrolls.
+func paletteRowView(c *ui.Context, tk design.Tokens, row paletteRow) {
+	if row.header {
+		ui.Text(c, row.title).FontSize(tk.TypeLabel).TextColor(tk.TextMuted).
+			Padding(tk.SpaceXS, tk.SpaceS).Background(tk.Surface)
 		return
 	}
-	a.runPaletteAction(items[sel])
-}
-
-// runPaletteAction closes the palette, then runs the action.
-func (a *App) runPaletteAction(act paletteAction) {
-	a.palette.open, a.palette.query, a.palette.sel = false, "", 0
-	act.run()
-}
-
-// movePalette moves the palette's selection within n actions.
-func (a *App) movePalette(n, delta int) {
-	if n == 0 {
-		return
-	}
-	a.palette.sel = clamp(a.palette.sel+delta, 0, n-1)
-}
-
-// filterActions keeps the actions whose label holds query, ignoring case.
-func filterActions(actions []paletteAction, query string) []paletteAction {
-	q := strings.ToLower(strings.TrimSpace(query))
-	if q == "" {
-		return actions
-	}
-	var out []paletteAction
-	for _, a := range actions {
-		if strings.Contains(strings.ToLower(a.label), q) {
-			out = append(out, a)
+	item := ui.Column(c).Gap(tk.SpaceXS).Padding(tk.SpaceXS, tk.SpaceS)
+	item.Children(func() {
+		ui.Text(c, row.entry.action.label).FontSize(tk.TypeUI).SingleLine()
+		if row.entry.hint != "" {
+			ui.Text(c, row.entry.hint).FontSize(tk.TypeLabel).
+				TextColor(tk.TextMuted).SingleLine()
 		}
-	}
-	return out
+	})
 }
 
-// clamp keeps v between lo and hi; an empty range gives lo.
-func clamp(v, lo, hi int) int {
-	if hi < lo {
-		return lo
-	}
-	return max(lo, min(v, hi))
+// runPaletteEntry closes the palette, then runs what was chosen.
+func (a *App) runPaletteEntry(entry paletteEntry) {
+	a.palette.open, a.palette.query, a.palette.sel = false, "", 0
+	entry.action.run()
 }

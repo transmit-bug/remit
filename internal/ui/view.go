@@ -41,7 +41,12 @@ func (a *App) View(c *ui.Context) {
 		} else {
 			a.stage(c, tk)
 		}
+		// The overlays come last: each takes the window's keyboard while it
+		// shows, and the one opened last is the one on top.
 		a.paletteView(c, tk)
+		a.keysView(c, tk)
+		a.importView(c, tk)
+		a.exportView(c, tk)
 		a.relinkView(c)
 		a.cardEditView(c, tk)
 	})

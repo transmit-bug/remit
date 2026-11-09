@@ -2763,34 +2763,6 @@ func (msgs Messages) ImportMarkdown() string {
 	return Catalog.Format(msgs.locale, "importMarkdown", nil)
 }
 
-// ExportNote says "Export note as Markdown…"
-// in the language the app shows.
-//
-// Command palette: write the open note's Markdown file.
-func ExportNote() string { return In(i18n.Locale()).ExportNote() }
-
-// ExportNote says "Export note as Markdown…"
-// in the language of msgs.
-//
-// Command palette: write the open note's Markdown file.
-func (msgs Messages) ExportNote() string {
-	return Catalog.Format(msgs.locale, "exportNote", nil)
-}
-
-// ExportAllNotes says "Export all notes as Markdown…"
-// in the language the app shows.
-//
-// Command palette: write every note's Markdown file into a folder.
-func ExportAllNotes() string { return In(i18n.Locale()).ExportAllNotes() }
-
-// ExportAllNotes says "Export all notes as Markdown…"
-// in the language of msgs.
-//
-// Command palette: write every note's Markdown file into a folder.
-func (msgs Messages) ExportAllNotes() string {
-	return Catalog.Format(msgs.locale, "exportAllNotes", nil)
-}
-
 // ChooseExportFolder says "Export to folder"
 // in the language the app shows.
 //
@@ -2981,18 +2953,1060 @@ func (msgs Messages) ExportFailed(reason string) string {
 	return Catalog.Format(msgs.locale, "exportFailed", map[string]any{"reason": reason})
 }
 
-// ExportNothingOpen says "Open a note first, then export it."
+// ExportTitle says "Export"
 // in the language the app shows.
 //
-// Exporting a note with no note open.
-func ExportNothingOpen() string { return In(i18n.Locale()).ExportNothingOpen() }
+// The export dialog's title, and the command and menu item that opens it.
+func ExportTitle() string { return In(i18n.Locale()).ExportTitle() }
 
-// ExportNothingOpen says "Open a note first, then export it."
+// ExportTitle says "Export"
 // in the language of msgs.
 //
-// Exporting a note with no note open.
-func (msgs Messages) ExportNothingOpen() string {
-	return Catalog.Format(msgs.locale, "exportNothingOpen", nil)
+// The export dialog's title, and the command and menu item that opens it.
+func (msgs Messages) ExportTitle() string {
+	return Catalog.Format(msgs.locale, "exportTitle", nil)
+}
+
+// ExportMarkdown says "A Markdown folder"
+// in the language the app shows.
+//
+// Export format: one Markdown file per note.
+func ExportMarkdown() string { return In(i18n.Locale()).ExportMarkdown() }
+
+// ExportMarkdown says "A Markdown folder"
+// in the language of msgs.
+//
+// Export format: one Markdown file per note.
+func (msgs Messages) ExportMarkdown() string {
+	return Catalog.Format(msgs.locale, "exportMarkdown", nil)
+}
+
+// ExportMarkdownHint says "One .md file per note, with the markers its cards point at."
+// in the language the app shows.
+//
+// What the Markdown export writes, under its choice.
+func ExportMarkdownHint() string { return In(i18n.Locale()).ExportMarkdownHint() }
+
+// ExportMarkdownHint says "One .md file per note, with the markers its cards point at."
+// in the language of msgs.
+//
+// What the Markdown export writes, under its choice.
+func (msgs Messages) ExportMarkdownHint() string {
+	return Catalog.Format(msgs.locale, "exportMarkdownHint", nil)
+}
+
+// ExportArchive says "A .remitlib archive"
+// in the language the app shows.
+//
+// Export format: the whole library as one archive.
+func ExportArchive() string { return In(i18n.Locale()).ExportArchive() }
+
+// ExportArchive says "A .remitlib archive"
+// in the language of msgs.
+//
+// Export format: the whole library as one archive.
+func (msgs Messages) ExportArchive() string {
+	return Catalog.Format(msgs.locale, "exportArchive", nil)
+}
+
+// ExportArchiveHint says "The whole library in one file, readable as a zip."
+// in the language the app shows.
+//
+// What the .remitlib export writes, under its choice.
+func ExportArchiveHint() string { return In(i18n.Locale()).ExportArchiveHint() }
+
+// ExportArchiveHint says "The whole library in one file, readable as a zip."
+// in the language of msgs.
+//
+// What the .remitlib export writes, under its choice.
+func (msgs Messages) ExportArchiveHint() string {
+	return Catalog.Format(msgs.locale, "exportArchiveHint", nil)
+}
+
+// ExportCards says "A card CSV"
+// in the language the app shows.
+//
+// Export format: a card table as CSV, which this version does not write.
+func ExportCards() string { return In(i18n.Locale()).ExportCards() }
+
+// ExportCards says "A card CSV"
+// in the language of msgs.
+//
+// Export format: a card table as CSV, which this version does not write.
+func (msgs Messages) ExportCards() string {
+	return Catalog.Format(msgs.locale, "exportCards", nil)
+}
+
+// ExportCardsHint says "The card table as a spreadsheet."
+// in the language the app shows.
+//
+// What the card CSV export would write, under its choice.
+func ExportCardsHint() string { return In(i18n.Locale()).ExportCardsHint() }
+
+// ExportCardsHint says "The card table as a spreadsheet."
+// in the language of msgs.
+//
+// What the card CSV export would write, under its choice.
+func (msgs Messages) ExportCardsHint() string {
+	return Catalog.Format(msgs.locale, "exportCardsHint", nil)
+}
+
+// ExportNoCSV says "Card CSV is not in 1.0. The card table waits for its own slice."
+// in the language the app shows.
+//
+// Why the card CSV export is disabled, shown beside the choices.
+func ExportNoCSV() string { return In(i18n.Locale()).ExportNoCSV() }
+
+// ExportNoCSV says "Card CSV is not in 1.0. The card table waits for its own slice."
+// in the language of msgs.
+//
+// Why the card CSV export is disabled, shown beside the choices.
+func (msgs Messages) ExportNoCSV() string {
+	return Catalog.Format(msgs.locale, "exportNoCSV", nil)
+}
+
+// ExportEmptyLibrary says "The library has no notes yet."
+// in the language the app shows.
+//
+// Why an export is disabled: the library holds nothing to write.
+func ExportEmptyLibrary() string { return In(i18n.Locale()).ExportEmptyLibrary() }
+
+// ExportEmptyLibrary says "The library has no notes yet."
+// in the language of msgs.
+//
+// Why an export is disabled: the library holds nothing to write.
+func (msgs Messages) ExportEmptyLibrary() string {
+	return Catalog.Format(msgs.locale, "exportEmptyLibrary", nil)
+}
+
+// ExportCancel says "Cancel"
+// in the language the app shows.
+//
+// The export dialog's cancel button.
+func ExportCancel() string { return In(i18n.Locale()).ExportCancel() }
+
+// ExportCancel says "Cancel"
+// in the language of msgs.
+//
+// The export dialog's cancel button.
+func (msgs Messages) ExportCancel() string {
+	return Catalog.Format(msgs.locale, "exportCancel", nil)
+}
+
+// ExportRun says "Export…"
+// in the language the app shows.
+//
+// The export dialog's main button.
+func ExportRun() string { return In(i18n.Locale()).ExportRun() }
+
+// ExportRun says "Export…"
+// in the language of msgs.
+//
+// The export dialog's main button.
+func (msgs Messages) ExportRun() string {
+	return Catalog.Format(msgs.locale, "exportRun", nil)
+}
+
+// ExportArchiveReport says "Wrote {name}."
+// in the language the app shows.
+//
+// What a .remitlib export wrote: the file's name.
+func ExportArchiveReport(name string) string { return In(i18n.Locale()).ExportArchiveReport(name) }
+
+// ExportArchiveReport says "Wrote {name}."
+// in the language of msgs.
+//
+// What a .remitlib export wrote: the file's name.
+func (msgs Messages) ExportArchiveReport(name string) string {
+	return Catalog.Format(msgs.locale, "exportArchiveReport", map[string]any{"name": name})
+}
+
+// ExportOpenFolder says "Open folder"
+// in the language the app shows.
+//
+// The action a finished export offers: show the files it wrote.
+func ExportOpenFolder() string { return In(i18n.Locale()).ExportOpenFolder() }
+
+// ExportOpenFolder says "Open folder"
+// in the language of msgs.
+//
+// The action a finished export offers: show the files it wrote.
+func (msgs Messages) ExportOpenFolder() string {
+	return Catalog.Format(msgs.locale, "exportOpenFolder", nil)
+}
+
+// RemitlibArchive says "Remit library archive"
+// in the language the app shows.
+//
+// File dialog filter for .remitlib archives.
+func RemitlibArchive() string { return In(i18n.Locale()).RemitlibArchive() }
+
+// RemitlibArchive says "Remit library archive"
+// in the language of msgs.
+//
+// File dialog filter for .remitlib archives.
+func (msgs Messages) RemitlibArchive() string {
+	return Catalog.Format(msgs.locale, "remitlibArchive", nil)
+}
+
+// ImportTitle says "Import into your library"
+// in the language the app shows.
+//
+// The import wizard's title, and the command and menu item that opens it.
+func ImportTitle() string { return In(i18n.Locale()).ImportTitle() }
+
+// ImportTitle says "Import into your library"
+// in the language of msgs.
+//
+// The import wizard's title, and the command and menu item that opens it.
+func (msgs Messages) ImportTitle() string {
+	return Catalog.Format(msgs.locale, "importTitle", nil)
+}
+
+// ImportClose says "Close the import"
+// in the language the app shows.
+//
+// The import wizard's close button, read by the pointer and the screen
+// reader.
+func ImportClose() string { return In(i18n.Locale()).ImportClose() }
+
+// ImportClose says "Close the import"
+// in the language of msgs.
+//
+// The import wizard's close button, read by the pointer and the screen
+// reader.
+func (msgs Messages) ImportClose() string {
+	return Catalog.Format(msgs.locale, "importClose", nil)
+}
+
+// ImportStepSource says "Source"
+// in the language the app shows.
+//
+// First step of the import wizard: which source to read.
+func ImportStepSource() string { return In(i18n.Locale()).ImportStepSource() }
+
+// ImportStepSource says "Source"
+// in the language of msgs.
+//
+// First step of the import wizard: which source to read.
+func (msgs Messages) ImportStepSource() string {
+	return Catalog.Format(msgs.locale, "importStepSource", nil)
+}
+
+// ImportStepPreview says "Preview"
+// in the language the app shows.
+//
+// Second step of the import wizard: what the source holds.
+func ImportStepPreview() string { return In(i18n.Locale()).ImportStepPreview() }
+
+// ImportStepPreview says "Preview"
+// in the language of msgs.
+//
+// Second step of the import wizard: what the source holds.
+func (msgs Messages) ImportStepPreview() string {
+	return Catalog.Format(msgs.locale, "importStepPreview", nil)
+}
+
+// ImportStepDone says "Done"
+// in the language the app shows.
+//
+// Third step of the import wizard: what the run wrote.
+func ImportStepDone() string { return In(i18n.Locale()).ImportStepDone() }
+
+// ImportStepDone says "Done"
+// in the language of msgs.
+//
+// Third step of the import wizard: what the run wrote.
+func (msgs Messages) ImportStepDone() string {
+	return Catalog.Format(msgs.locale, "importStepDone", nil)
+}
+
+// ImportFromArchive says "A Remit library"
+// in the language the app shows.
+//
+// Import source: a .remitlib archive.
+func ImportFromArchive() string { return In(i18n.Locale()).ImportFromArchive() }
+
+// ImportFromArchive says "A Remit library"
+// in the language of msgs.
+//
+// Import source: a .remitlib archive.
+func (msgs Messages) ImportFromArchive() string {
+	return Catalog.Format(msgs.locale, "importFromArchive", nil)
+}
+
+// ImportFromArchiveHint says "A .remitlib archive, unpacked into a folder of its own."
+// in the language the app shows.
+//
+// What the archive import reads, under its row.
+func ImportFromArchiveHint() string { return In(i18n.Locale()).ImportFromArchiveHint() }
+
+// ImportFromArchiveHint says "A .remitlib archive, unpacked into a folder of its own."
+// in the language of msgs.
+//
+// What the archive import reads, under its row.
+func (msgs Messages) ImportFromArchiveHint() string {
+	return Catalog.Format(msgs.locale, "importFromArchiveHint", nil)
+}
+
+// ImportFromMarkdown says "Markdown files"
+// in the language the app shows.
+//
+// Import source: one or more .md files.
+func ImportFromMarkdown() string { return In(i18n.Locale()).ImportFromMarkdown() }
+
+// ImportFromMarkdown says "Markdown files"
+// in the language of msgs.
+//
+// Import source: one or more .md files.
+func (msgs Messages) ImportFromMarkdown() string {
+	return Catalog.Format(msgs.locale, "importFromMarkdown", nil)
+}
+
+// ImportFromMarkdownHint says "One or more .md files, each one note."
+// in the language the app shows.
+//
+// What the Markdown import reads, under its row.
+func ImportFromMarkdownHint() string { return In(i18n.Locale()).ImportFromMarkdownHint() }
+
+// ImportFromMarkdownHint says "One or more .md files, each one note."
+// in the language of msgs.
+//
+// What the Markdown import reads, under its row.
+func (msgs Messages) ImportFromMarkdownHint() string {
+	return Catalog.Format(msgs.locale, "importFromMarkdownHint", nil)
+}
+
+// ImportFromAnki says "An Anki package"
+// in the language the app shows.
+//
+// Import source: an Anki .apkg package.
+func ImportFromAnki() string { return In(i18n.Locale()).ImportFromAnki() }
+
+// ImportFromAnki says "An Anki package"
+// in the language of msgs.
+//
+// Import source: an Anki .apkg package.
+func (msgs Messages) ImportFromAnki() string {
+	return Catalog.Format(msgs.locale, "importFromAnki", nil)
+}
+
+// ImportFromAnkiHint says "A .apkg with its notes, cards and review history."
+// in the language the app shows.
+//
+// What the Anki import reads, under its row.
+func ImportFromAnkiHint() string { return In(i18n.Locale()).ImportFromAnkiHint() }
+
+// ImportFromAnkiHint says "A .apkg with its notes, cards and review history."
+// in the language of msgs.
+//
+// What the Anki import reads, under its row.
+func (msgs Messages) ImportFromAnkiHint() string {
+	return Catalog.Format(msgs.locale, "importFromAnkiHint", nil)
+}
+
+// ImportChooseFirst says "Choose a source first."
+// in the language the app shows.
+//
+// Why the import wizard's Next is disabled: no source has been chosen yet.
+func ImportChooseFirst() string { return In(i18n.Locale()).ImportChooseFirst() }
+
+// ImportChooseFirst says "Choose a source first."
+// in the language of msgs.
+//
+// Why the import wizard's Next is disabled: no source has been chosen yet.
+func (msgs Messages) ImportChooseFirst() string {
+	return Catalog.Format(msgs.locale, "importChooseFirst", nil)
+}
+
+// ImportNext says "Next"
+// in the language the app shows.
+//
+// The import wizard's first step's button.
+func ImportNext() string { return In(i18n.Locale()).ImportNext() }
+
+// ImportNext says "Next"
+// in the language of msgs.
+//
+// The import wizard's first step's button.
+func (msgs Messages) ImportNext() string {
+	return Catalog.Format(msgs.locale, "importNext", nil)
+}
+
+// ImportBack says "Back"
+// in the language the app shows.
+//
+// The import wizard's return to its first step.
+func ImportBack() string { return In(i18n.Locale()).ImportBack() }
+
+// ImportBack says "Back"
+// in the language of msgs.
+//
+// The import wizard's return to its first step.
+func (msgs Messages) ImportBack() string {
+	return Catalog.Format(msgs.locale, "importBack", nil)
+}
+
+// ImportRun says "Import"
+// in the language the app shows.
+//
+// The import wizard's button that writes the source.
+func ImportRun() string { return In(i18n.Locale()).ImportRun() }
+
+// ImportRun says "Import"
+// in the language of msgs.
+//
+// The import wizard's button that writes the source.
+func (msgs Messages) ImportRun() string {
+	return Catalog.Format(msgs.locale, "importRun", nil)
+}
+
+// ImportEmptySource says "There is nothing in this source to import."
+// in the language the app shows.
+//
+// Why the import wizard cannot write: the source holds nothing.
+func ImportEmptySource() string { return In(i18n.Locale()).ImportEmptySource() }
+
+// ImportEmptySource says "There is nothing in this source to import."
+// in the language of msgs.
+//
+// Why the import wizard cannot write: the source holds nothing.
+func (msgs Messages) ImportEmptySource() string {
+	return Catalog.Format(msgs.locale, "importEmptySource", nil)
+}
+
+// ImportRebuild says "Rebuild the index when the import is done"
+// in the language the app shows.
+//
+// An import option: index the library again once the write finishes.
+func ImportRebuild() string { return In(i18n.Locale()).ImportRebuild() }
+
+// ImportRebuild says "Rebuild the index when the import is done"
+// in the language of msgs.
+//
+// An import option: index the library again once the write finishes.
+func (msgs Messages) ImportRebuild() string {
+	return Catalog.Format(msgs.locale, "importRebuild", nil)
+}
+
+// ImportQueue says "Add the imported notes to the reading queue"
+// in the language the app shows.
+//
+// An import option: queue the notes the import brought for reading.
+func ImportQueue() string { return In(i18n.Locale()).ImportQueue() }
+
+// ImportQueue says "Add the imported notes to the reading queue"
+// in the language of msgs.
+//
+// An import option: queue the notes the import brought for reading.
+func (msgs Messages) ImportQueue() string {
+	return Catalog.Format(msgs.locale, "importQueue", nil)
+}
+
+// ImportRowItem says "Item"
+// in the language the app shows.
+//
+// The import preview's table: the column naming what a row is.
+func ImportRowItem() string { return In(i18n.Locale()).ImportRowItem() }
+
+// ImportRowItem says "Item"
+// in the language of msgs.
+//
+// The import preview's table: the column naming what a row is.
+func (msgs Messages) ImportRowItem() string {
+	return Catalog.Format(msgs.locale, "importRowItem", nil)
+}
+
+// ImportRowValue says "Value"
+// in the language the app shows.
+//
+// The import preview's table: the column holding the row's value.
+func ImportRowValue() string { return In(i18n.Locale()).ImportRowValue() }
+
+// ImportRowValue says "Value"
+// in the language of msgs.
+//
+// The import preview's table: the column holding the row's value.
+func (msgs Messages) ImportRowValue() string {
+	return Catalog.Format(msgs.locale, "importRowValue", nil)
+}
+
+// ImportRowSource says "Source"
+// in the language the app shows.
+//
+// The import preview's row naming the source chosen.
+func ImportRowSource() string { return In(i18n.Locale()).ImportRowSource() }
+
+// ImportRowSource says "Source"
+// in the language of msgs.
+//
+// The import preview's row naming the source chosen.
+func (msgs Messages) ImportRowSource() string {
+	return Catalog.Format(msgs.locale, "importRowSource", nil)
+}
+
+// ImportRowFiles says "Files"
+// in the language the app shows.
+//
+// The import preview's row counting the files the source holds.
+func ImportRowFiles() string { return In(i18n.Locale()).ImportRowFiles() }
+
+// ImportRowFiles says "Files"
+// in the language of msgs.
+//
+// The import preview's row counting the files the source holds.
+func (msgs Messages) ImportRowFiles() string {
+	return Catalog.Format(msgs.locale, "importRowFiles", nil)
+}
+
+// ImportRowDestination says "Destination"
+// in the language the app shows.
+//
+// The import preview's row naming where the run writes.
+func ImportRowDestination() string { return In(i18n.Locale()).ImportRowDestination() }
+
+// ImportRowDestination says "Destination"
+// in the language of msgs.
+//
+// The import preview's row naming where the run writes.
+func (msgs Messages) ImportRowDestination() string {
+	return Catalog.Format(msgs.locale, "importRowDestination", nil)
+}
+
+// ImportArchiveUnreadable says "The archive unpacked into {path}, but the library in it did not open."
+// in the language the app shows.
+//
+// An archive import that unpacked but whose library would not open.
+func ImportArchiveUnreadable(path string) string {
+	return In(i18n.Locale()).ImportArchiveUnreadable(path)
+}
+
+// ImportArchiveUnreadable says "The archive unpacked into {path}, but the library in it did not open."
+// in the language of msgs.
+//
+// An archive import that unpacked but whose library would not open.
+func (msgs Messages) ImportArchiveUnreadable(path string) string {
+	return Catalog.Format(msgs.locale, "importArchiveUnreadable", map[string]any{"path": path})
+}
+
+// ImportArchiveDone says "Opened the library unpacked into {path}."
+// in the language the app shows.
+//
+// What an archive import did: it unpacked a library and opened it.
+func ImportArchiveDone(path string) string { return In(i18n.Locale()).ImportArchiveDone(path) }
+
+// ImportArchiveDone says "Opened the library unpacked into {path}."
+// in the language of msgs.
+//
+// What an archive import did: it unpacked a library and opened it.
+func (msgs Messages) ImportArchiveDone(path string) string {
+	return Catalog.Format(msgs.locale, "importArchiveDone", map[string]any{"path": path})
+}
+
+// PaletteCommands says "Commands"
+// in the language the app shows.
+//
+// The command palette's first group: what the app can do.
+func PaletteCommands() string { return In(i18n.Locale()).PaletteCommands() }
+
+// PaletteCommands says "Commands"
+// in the language of msgs.
+//
+// The command palette's first group: what the app can do.
+func (msgs Messages) PaletteCommands() string {
+	return Catalog.Format(msgs.locale, "paletteCommands", nil)
+}
+
+// PaletteNotes says "Notes"
+// in the language the app shows.
+//
+// The command palette's second group: the notes whose titles match.
+func PaletteNotes() string { return In(i18n.Locale()).PaletteNotes() }
+
+// PaletteNotes says "Notes"
+// in the language of msgs.
+//
+// The command palette's second group: the notes whose titles match.
+func (msgs Messages) PaletteNotes() string {
+	return Catalog.Format(msgs.locale, "paletteNotes", nil)
+}
+
+// PaletteCards says "Cards"
+// in the language the app shows.
+//
+// The command palette's third group: the cards whose prompts match.
+func PaletteCards() string { return In(i18n.Locale()).PaletteCards() }
+
+// PaletteCards says "Cards"
+// in the language of msgs.
+//
+// The command palette's third group: the cards whose prompts match.
+func (msgs Messages) PaletteCards() string {
+	return Catalog.Format(msgs.locale, "paletteCards", nil)
+}
+
+// PaletteSearch says "Search commands, notes and cards"
+// in the language the app shows.
+//
+// The command palette's field, as its placeholder and its name for
+// assistive technology.
+func PaletteSearch() string { return In(i18n.Locale()).PaletteSearch() }
+
+// PaletteSearch says "Search commands, notes and cards"
+// in the language of msgs.
+//
+// The command palette's field, as its placeholder and its name for
+// assistive technology.
+func (msgs Messages) PaletteSearch() string {
+	return Catalog.Format(msgs.locale, "paletteSearch", nil)
+}
+
+// PaletteEmpty says "No matching item."
+// in the language the app shows.
+//
+// The command palette with nothing matching the query.
+func PaletteEmpty() string { return In(i18n.Locale()).PaletteEmpty() }
+
+// PaletteEmpty says "No matching item."
+// in the language of msgs.
+//
+// The command palette with nothing matching the query.
+func (msgs Messages) PaletteEmpty() string {
+	return Catalog.Format(msgs.locale, "paletteEmpty", nil)
+}
+
+// KeysTitle says "Keyboard shortcuts"
+// in the language the app shows.
+//
+// The keyboard help's title, and the key that opens it.
+func KeysTitle() string { return In(i18n.Locale()).KeysTitle() }
+
+// KeysTitle says "Keyboard shortcuts"
+// in the language of msgs.
+//
+// The keyboard help's title, and the key that opens it.
+func (msgs Messages) KeysTitle() string {
+	return Catalog.Format(msgs.locale, "keysTitle", nil)
+}
+
+// KeysGroupGlobal says "Global"
+// in the language the app shows.
+//
+// Keyboard help group: keys that work anywhere in the window.
+func KeysGroupGlobal() string { return In(i18n.Locale()).KeysGroupGlobal() }
+
+// KeysGroupGlobal says "Global"
+// in the language of msgs.
+//
+// Keyboard help group: keys that work anywhere in the window.
+func (msgs Messages) KeysGroupGlobal() string {
+	return Catalog.Format(msgs.locale, "keysGroupGlobal", nil)
+}
+
+// KeysGroupDocument says "Document"
+// in the language the app shows.
+//
+// Keyboard help group: keys of the note on screen.
+func KeysGroupDocument() string { return In(i18n.Locale()).KeysGroupDocument() }
+
+// KeysGroupDocument says "Document"
+// in the language of msgs.
+//
+// Keyboard help group: keys of the note on screen.
+func (msgs Messages) KeysGroupDocument() string {
+	return Catalog.Format(msgs.locale, "keysGroupDocument", nil)
+}
+
+// KeysGroupReading says "Reading"
+// in the language the app shows.
+//
+// Keyboard help group: keys of a reading session.
+func KeysGroupReading() string { return In(i18n.Locale()).KeysGroupReading() }
+
+// KeysGroupReading says "Reading"
+// in the language of msgs.
+//
+// Keyboard help group: keys of a reading session.
+func (msgs Messages) KeysGroupReading() string {
+	return Catalog.Format(msgs.locale, "keysGroupReading", nil)
+}
+
+// KeysGroupReview says "Review"
+// in the language the app shows.
+//
+// Keyboard help group: keys of a review session.
+func KeysGroupReview() string { return In(i18n.Locale()).KeysGroupReview() }
+
+// KeysGroupReview says "Review"
+// in the language of msgs.
+//
+// Keyboard help group: keys of a review session.
+func (msgs Messages) KeysGroupReview() string {
+	return Catalog.Format(msgs.locale, "keysGroupReview", nil)
+}
+
+// KeysPalette says "Command palette"
+// in the language the app shows.
+//
+// Keyboard help: what the palette's key does.
+func KeysPalette() string { return In(i18n.Locale()).KeysPalette() }
+
+// KeysPalette says "Command palette"
+// in the language of msgs.
+//
+// Keyboard help: what the palette's key does.
+func (msgs Messages) KeysPalette() string {
+	return Catalog.Format(msgs.locale, "keysPalette", nil)
+}
+
+// KeysHelp says "This list of keys"
+// in the language the app shows.
+//
+// Keyboard help: what the keyboard help's own key does.
+func KeysHelp() string { return In(i18n.Locale()).KeysHelp() }
+
+// KeysHelp says "This list of keys"
+// in the language of msgs.
+//
+// Keyboard help: what the keyboard help's own key does.
+func (msgs Messages) KeysHelp() string {
+	return Catalog.Format(msgs.locale, "keysHelp", nil)
+}
+
+// KeysSettings says "Settings"
+// in the language the app shows.
+//
+// Keyboard help: what the settings key does.
+func KeysSettings() string { return In(i18n.Locale()).KeysSettings() }
+
+// KeysSettings says "Settings"
+// in the language of msgs.
+//
+// Keyboard help: what the settings key does.
+func (msgs Messages) KeysSettings() string {
+	return Catalog.Format(msgs.locale, "keysSettings", nil)
+}
+
+// KeysNewNote says "New note"
+// in the language the app shows.
+//
+// Keyboard help: what the new-note key does.
+func KeysNewNote() string { return In(i18n.Locale()).KeysNewNote() }
+
+// KeysNewNote says "New note"
+// in the language of msgs.
+//
+// Keyboard help: what the new-note key does.
+func (msgs Messages) KeysNewNote() string {
+	return Catalog.Format(msgs.locale, "keysNewNote", nil)
+}
+
+// KeysDailyNote says "Today's note"
+// in the language the app shows.
+//
+// Keyboard help: what the daily-note key does.
+func KeysDailyNote() string { return In(i18n.Locale()).KeysDailyNote() }
+
+// KeysDailyNote says "Today's note"
+// in the language of msgs.
+//
+// Keyboard help: what the daily-note key does.
+func (msgs Messages) KeysDailyNote() string {
+	return Catalog.Format(msgs.locale, "keysDailyNote", nil)
+}
+
+// KeysSearch says "Search the library"
+// in the language the app shows.
+//
+// Keyboard help: what the search key does outside a note.
+func KeysSearch() string { return In(i18n.Locale()).KeysSearch() }
+
+// KeysSearch says "Search the library"
+// in the language of msgs.
+//
+// Keyboard help: what the search key does outside a note.
+func (msgs Messages) KeysSearch() string {
+	return Catalog.Format(msgs.locale, "keysSearch", nil)
+}
+
+// KeysAreas says "Today, Write, Read, Recall, Stats, Settings"
+// in the language the app shows.
+//
+// Keyboard help: what the number keys of the six areas do.
+func KeysAreas() string { return In(i18n.Locale()).KeysAreas() }
+
+// KeysAreas says "Today, Write, Read, Recall, Stats, Settings"
+// in the language of msgs.
+//
+// Keyboard help: what the number keys of the six areas do.
+func (msgs Messages) KeysAreas() string {
+	return Catalog.Format(msgs.locale, "keysAreas", nil)
+}
+
+// KeysEscape says "Close the overlay, then leave the session"
+// in the language the app shows.
+//
+// Keyboard help: what Escape does, one layer at a time.
+func KeysEscape() string { return In(i18n.Locale()).KeysEscape() }
+
+// KeysEscape says "Close the overlay, then leave the session"
+// in the language of msgs.
+//
+// Keyboard help: what Escape does, one layer at a time.
+func (msgs Messages) KeysEscape() string {
+	return Catalog.Format(msgs.locale, "keysEscape", nil)
+}
+
+// KeysFindInNote says "Find in this note"
+// in the language the app shows.
+//
+// Keyboard help: what the find key does in a note.
+func KeysFindInNote() string { return In(i18n.Locale()).KeysFindInNote() }
+
+// KeysFindInNote says "Find in this note"
+// in the language of msgs.
+//
+// Keyboard help: what the find key does in a note.
+func (msgs Messages) KeysFindInNote() string {
+	return Catalog.Format(msgs.locale, "keysFindInNote", nil)
+}
+
+// KeysOutline says "Outline panel"
+// in the language the app shows.
+//
+// Keyboard help: what the outline key does.
+func KeysOutline() string { return In(i18n.Locale()).KeysOutline() }
+
+// KeysOutline says "Outline panel"
+// in the language of msgs.
+//
+// Keyboard help: what the outline key does.
+func (msgs Messages) KeysOutline() string {
+	return Catalog.Format(msgs.locale, "keysOutline", nil)
+}
+
+// KeysBacklinks says "Backlinks panel"
+// in the language the app shows.
+//
+// Keyboard help: what the backlinks key does.
+func KeysBacklinks() string { return In(i18n.Locale()).KeysBacklinks() }
+
+// KeysBacklinks says "Backlinks panel"
+// in the language of msgs.
+//
+// Keyboard help: what the backlinks key does.
+func (msgs Messages) KeysBacklinks() string {
+	return Catalog.Format(msgs.locale, "keysBacklinks", nil)
+}
+
+// KeysNextParagraph says "Next paragraph"
+// in the language the app shows.
+//
+// Keyboard help: what moving down in a reading session does.
+func KeysNextParagraph() string { return In(i18n.Locale()).KeysNextParagraph() }
+
+// KeysNextParagraph says "Next paragraph"
+// in the language of msgs.
+//
+// Keyboard help: what moving down in a reading session does.
+func (msgs Messages) KeysNextParagraph() string {
+	return Catalog.Format(msgs.locale, "keysNextParagraph", nil)
+}
+
+// KeysPrevParagraph says "Previous paragraph"
+// in the language the app shows.
+//
+// Keyboard help: what moving up in a reading session does.
+func KeysPrevParagraph() string { return In(i18n.Locale()).KeysPrevParagraph() }
+
+// KeysPrevParagraph says "Previous paragraph"
+// in the language of msgs.
+//
+// Keyboard help: what moving up in a reading session does.
+func (msgs Messages) KeysPrevParagraph() string {
+	return Catalog.Format(msgs.locale, "keysPrevParagraph", nil)
+}
+
+// KeysTooHard says "Too hard"
+// in the language the app shows.
+//
+// Keyboard help: what the first reading key records.
+func KeysTooHard() string { return In(i18n.Locale()).KeysTooHard() }
+
+// KeysTooHard says "Too hard"
+// in the language of msgs.
+//
+// Keyboard help: what the first reading key records.
+func (msgs Messages) KeysTooHard() string {
+	return Catalog.Format(msgs.locale, "keysTooHard", nil)
+}
+
+// KeysJustRight says "Just right"
+// in the language the app shows.
+//
+// Keyboard help: what the second reading key records.
+func KeysJustRight() string { return In(i18n.Locale()).KeysJustRight() }
+
+// KeysJustRight says "Just right"
+// in the language of msgs.
+//
+// Keyboard help: what the second reading key records.
+func (msgs Messages) KeysJustRight() string {
+	return Catalog.Format(msgs.locale, "keysJustRight", nil)
+}
+
+// KeysTooShallow says "Too shallow"
+// in the language the app shows.
+//
+// Keyboard help: what the third reading key records.
+func KeysTooShallow() string { return In(i18n.Locale()).KeysTooShallow() }
+
+// KeysTooShallow says "Too shallow"
+// in the language of msgs.
+//
+// Keyboard help: what the third reading key records.
+func (msgs Messages) KeysTooShallow() string {
+	return Catalog.Format(msgs.locale, "keysTooShallow", nil)
+}
+
+// KeysExcerpt says "Excerpt this paragraph"
+// in the language the app shows.
+//
+// Keyboard help: what the excerpt key does, in reading and in review.
+func KeysExcerpt() string { return In(i18n.Locale()).KeysExcerpt() }
+
+// KeysExcerpt says "Excerpt this paragraph"
+// in the language of msgs.
+//
+// Keyboard help: what the excerpt key does, in reading and in review.
+func (msgs Messages) KeysExcerpt() string {
+	return Catalog.Format(msgs.locale, "keysExcerpt", nil)
+}
+
+// KeysSkip says "Skip this note"
+// in the language the app shows.
+//
+// Keyboard help: what the skip key does in reading and in review.
+func KeysSkip() string { return In(i18n.Locale()).KeysSkip() }
+
+// KeysSkip says "Skip this note"
+// in the language of msgs.
+//
+// Keyboard help: what the skip key does in reading and in review.
+func (msgs Messages) KeysSkip() string {
+	return Catalog.Format(msgs.locale, "keysSkip", nil)
+}
+
+// KeysDropFromQueue says "Take this note out of the queue"
+// in the language the app shows.
+//
+// Keyboard help: what the dismiss key does in a reading session.
+func KeysDropFromQueue() string { return In(i18n.Locale()).KeysDropFromQueue() }
+
+// KeysDropFromQueue says "Take this note out of the queue"
+// in the language of msgs.
+//
+// Keyboard help: what the dismiss key does in a reading session.
+func (msgs Messages) KeysDropFromQueue() string {
+	return Catalog.Format(msgs.locale, "keysDropFromQueue", nil)
+}
+
+// KeysOpenInLibrary says "Open this note in the library"
+// in the language the app shows.
+//
+// Keyboard help: what the open key does in a reading session.
+func KeysOpenInLibrary() string { return In(i18n.Locale()).KeysOpenInLibrary() }
+
+// KeysOpenInLibrary says "Open this note in the library"
+// in the language of msgs.
+//
+// Keyboard help: what the open key does in a reading session.
+func (msgs Messages) KeysOpenInLibrary() string {
+	return Catalog.Format(msgs.locale, "keysOpenInLibrary", nil)
+}
+
+// KeysLeaveSession says "Leave the session"
+// in the language the app shows.
+//
+// Keyboard help: what Escape does inside a reading or review session.
+func KeysLeaveSession() string { return In(i18n.Locale()).KeysLeaveSession() }
+
+// KeysLeaveSession says "Leave the session"
+// in the language of msgs.
+//
+// Keyboard help: what Escape does inside a reading or review session.
+func (msgs Messages) KeysLeaveSession() string {
+	return Catalog.Format(msgs.locale, "keysLeaveSession", nil)
+}
+
+// KeysReveal says "Show the answer"
+// in the language the app shows.
+//
+// Keyboard help: what Space does in a review session.
+func KeysReveal() string { return In(i18n.Locale()).KeysReveal() }
+
+// KeysReveal says "Show the answer"
+// in the language of msgs.
+//
+// Keyboard help: what Space does in a review session.
+func (msgs Messages) KeysReveal() string {
+	return Catalog.Format(msgs.locale, "keysReveal", nil)
+}
+
+// KeysGrade says "Grade: again, hard, good, easy"
+// in the language the app shows.
+//
+// Keyboard help: what the digit keys do once a card's answer shows.
+func KeysGrade() string { return In(i18n.Locale()).KeysGrade() }
+
+// KeysGrade says "Grade: again, hard, good, easy"
+// in the language of msgs.
+//
+// Keyboard help: what the digit keys do once a card's answer shows.
+func (msgs Messages) KeysGrade() string {
+	return Catalog.Format(msgs.locale, "keysGrade", nil)
+}
+
+// KeysUndo says "Undo the last grade"
+// in the language the app shows.
+//
+// Keyboard help: what the undo key does in a review session.
+func KeysUndo() string { return In(i18n.Locale()).KeysUndo() }
+
+// KeysUndo says "Undo the last grade"
+// in the language of msgs.
+//
+// Keyboard help: what the undo key does in a review session.
+func (msgs Messages) KeysUndo() string {
+	return Catalog.Format(msgs.locale, "keysUndo", nil)
+}
+
+// KeysSuspend says "Suspend this card"
+// in the language the app shows.
+//
+// Keyboard help: what the suspend key does in a review session.
+func KeysSuspend() string { return In(i18n.Locale()).KeysSuspend() }
+
+// KeysSuspend says "Suspend this card"
+// in the language of msgs.
+//
+// Keyboard help: what the suspend key does in a review session.
+func (msgs Messages) KeysSuspend() string {
+	return Catalog.Format(msgs.locale, "keysSuspend", nil)
+}
+
+// KeysEditNote says "Edit the note it came from"
+// in the language the app shows.
+//
+// Keyboard help: what the edit key does in a review session.
+func KeysEditNote() string { return In(i18n.Locale()).KeysEditNote() }
+
+// KeysEditNote says "Edit the note it came from"
+// in the language of msgs.
+//
+// Keyboard help: what the edit key does in a review session.
+func (msgs Messages) KeysEditNote() string {
+	return Catalog.Format(msgs.locale, "keysEditNote", nil)
 }
 
 // ImportReport says "Imported {notes} notes, {cards} cards, {reviews} reviews, skipped {skipped} rows."
