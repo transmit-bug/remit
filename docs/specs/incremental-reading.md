@@ -148,7 +148,7 @@ basic / cloze 卡面逐字冻结（缝 5）。
 | `DELETE /v1/reading` | 405：移出与写位置是窗口的 |
 
 `GET /v1/library` 的计数加 `reading`（今日待读）。API 仍不暴露删除，也不接受位置写入：
-位置只由读者自己的会话写下。
+位置只由读者自己的会话写下。完整路由表见 `docs/specs/agent-api.md`。
 
 ## 10. 插件
 
