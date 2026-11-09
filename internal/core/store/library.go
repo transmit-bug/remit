@@ -129,7 +129,12 @@ type Library struct {
 
 	extensions []string
 	roles      map[string]string
-	onEvent    func(Event)
+
+	// onEvent is the window's handler; subscribers is the event stream's fan-out
+	// (see events.go). Both are told on every write, and neither waits for the
+	// other.
+	onEvent     func(Event)
+	subscribers map[*subscription]struct{}
 }
 
 // cardMeta is one card as the index holds it: the file's definition, the
@@ -233,6 +238,7 @@ func newLibrary(dir string, opts Options) *Library {
 		readingDefaults: schedule.DefaultReadingParams().Normalized(),
 		cards:           map[core.ID]*cardMeta{},
 		readings:        map[core.ID]*readingRow{},
+		subscribers:     map[*subscription]struct{}{},
 	}
 }
 
@@ -248,6 +254,7 @@ func (l *Library) Close() error {
 	l.readings = map[core.ID]*readingRow{}
 	l.byDue, l.byCreated = nil, nil
 	l.dueOK, l.createdOK = false, false
+	l.closeSubscribers()
 	return err
 }
 
@@ -1654,37 +1661,6 @@ func paramsDigest(params schedule.Params) string {
 	return hex.EncodeToString(sum[:8])
 }
 
-// Event is something that happened to the library, which an extension may want
-// to see. It carries an ID and nothing else: an extension reads the rest
-// through the agent API.
-type Event struct {
-	Kind string
-	ID   core.ID
-}
-
-const (
-	// EventNoteSaved fires after a note's file is written.
-	EventNoteSaved = "note.saved"
-	// EventCardCreated fires after a card file is written.
-	EventCardCreated = "card.created"
-	// EventReviewRecorded fires after a review enters the log.
-	EventReviewRecorded = "review.recorded"
-	// EventReadingRecorded fires after a reading session enters the log.
-	EventReadingRecorded = "reading.recorded"
-	// EventReadingQueued fires after a note joins the reading queue.
-	EventReadingQueued = "reading.queued"
-	// EventReadingDropped fires after a note leaves the reading queue.
-	EventReadingDropped = "reading.dropped"
-)
-
-// SetEventHandler registers the function told about events, replacing any
-// previous one. The handler runs on the writing thread, so it must not block.
-func (l *Library) SetEventHandler(fn func(Event)) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.onEvent = fn
-}
-
 // EnabledExtensions lists the extensions this library enabled, by name.
 func (l *Library) EnabledExtensions() []string {
 	l.mu.Lock()
@@ -1724,14 +1700,6 @@ func (l *Library) SetEnabledExtensions(names []string) error {
 	l.extensions = append([]string(nil), names...)
 	l.roles = roles
 	return nil
-}
-
-// emit tells the handler about an event, if one is registered.
-func (l *Library) emit(kind string, id core.ID) {
-	if l.onEvent == nil {
-		return
-	}
-	l.onEvent(Event{Kind: kind, ID: id})
 }
 
 // firstNonEmpty is the first of the values that has anything in it.
