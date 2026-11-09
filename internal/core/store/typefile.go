@@ -41,9 +41,11 @@ func encodeType(typ core.Type) ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-// decodeType reads a type file. A missing version reads as 1; a type without
-// an ID takes the file's name, so a hand-written types/front.json works.
-func decodeType(file string, data []byte) (core.Type, error) {
+// DecodeType reads a type file. A missing version reads as 1; a type without
+// an ID takes the file's name, so a hand-written types/front.json works. It is
+// exported for a reader that must not open the library, so a checker can report
+// a type the store would refuse instead of failing on it.
+func DecodeType(file string, data []byte) (core.Type, error) {
 	var tf typeFile
 	if err := json.Unmarshal(data, &tf); err != nil {
 		return core.Type{}, fmt.Errorf("store: decode type %q: %w", file, err)
@@ -70,11 +72,12 @@ func decodeType(file string, data []byte) (core.Type, error) {
 	}, nil
 }
 
-// loadTypes reads every type the library holds and seeds the built-ins a
-// missing one leaves out (spec §2.2: the three built-ins always exist). It
-// runs once per open, on three-plus small files, so it costs nothing on the
-// index path.
-func loadTypes(dir string) ([]core.Type, error) {
+// loadTypes reads every type the library holds and, when seed is set, writes
+// the built-ins a missing one leaves out (spec §2.2: the three built-ins always
+// exist). It runs once per open, on three-plus small files, so it costs nothing
+// on the index path. seed is false for a repair tool's rebuild, which must not
+// change a source file.
+func loadTypes(dir string, seed bool) ([]core.Type, error) {
 	entries, err := os.ReadDir(filepath.Join(dir, typesDir))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -94,7 +97,7 @@ func loadTypes(dir string) ([]core.Type, error) {
 		if err != nil {
 			return nil, err
 		}
-		typ, err := decodeType(entry.Name(), data)
+		typ, err := DecodeType(entry.Name(), data)
 		if err != nil {
 			return nil, err
 		}
@@ -105,8 +108,10 @@ func loadTypes(dir string) ([]core.Type, error) {
 		if held[typ.ID] {
 			continue
 		}
-		if err := writeType(dir, typ); err != nil {
-			return nil, err
+		if seed {
+			if err := writeType(dir, typ); err != nil {
+				return nil, err
+			}
 		}
 		types = append(types, typ)
 	}

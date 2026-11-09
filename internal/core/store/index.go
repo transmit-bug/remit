@@ -3,7 +3,9 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -140,6 +142,45 @@ func openIndex(path string) (*index, error) {
 		return nil, fmt.Errorf("store: open index: %w", err)
 	}
 	return &index{db: db}, nil
+}
+
+// IndexState is a library's derived index as it lies on disk.
+type IndexState struct {
+	// Present says the index file is there.
+	Present bool
+	// Schema is the schema version it was written with, empty when it declares
+	// none (an index this build cannot read).
+	Schema string
+	// Current says this build wrote the index, so an open reads it rather than
+	// rebuilding it.
+	Current bool
+}
+
+// InspectIndex reports the derived index without opening the library: a checker
+// can tell a missing or stale index from a current one without the open that
+// would rebuild it. The index is read read-only and nothing in .remit/ is
+// created or changed.
+func InspectIndex(dir string) (IndexState, error) {
+	path := filepath.Join(dir, indexDir, indexName)
+	if _, err := os.Stat(path); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return IndexState{}, nil
+		}
+		return IndexState{}, err
+	}
+	// immutable=1 keeps SQLite from creating the -shm and -wal files a writable
+	// open would: an inspection leaves the directory exactly as it found it, and
+	// the schema marker an open writes is already in the main file.
+	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro&immutable=1")
+	if err != nil {
+		return IndexState{Present: true}, nil
+	}
+	defer db.Close()
+	var schema string
+	if err := db.QueryRow(`SELECT value FROM meta WHERE key = ?`, metaSchema).Scan(&schema); err != nil {
+		return IndexState{Present: true}, nil
+	}
+	return IndexState{Present: true, Schema: schema, Current: schema == schemaVersion}, nil
 }
 
 // reset drops every table and creates the schema again.

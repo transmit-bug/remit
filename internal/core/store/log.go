@@ -90,8 +90,10 @@ func kindName(k schedule.Kind) string {
 	return k.String()
 }
 
-// decodeRecord reads one log line. A blank line is not an event.
-func decodeRecord(line []byte) (schedule.Event, bool, error) {
+// DecodeLogLine reads one log line. A blank line is not an event. It is
+// exported for a reader that must not open the library: a checker reports a
+// line the store would refuse instead of failing on it.
+func DecodeLogLine(line []byte) (schedule.Event, bool, error) {
 	if len(bytes.TrimSpace(line)) == 0 {
 		return schedule.Event{}, false, nil
 	}
@@ -160,7 +162,7 @@ func (l *Library) streamLog(offset int64, fn func(schedule.Event) error) (int64,
 			if line[len(line)-1] != '\n' {
 				break // a torn last line: leave it, and stop before it
 			}
-			event, ok, decodeErr := decodeRecord(line)
+			event, ok, decodeErr := DecodeLogLine(line)
 			if decodeErr != nil {
 				return 0, decodeErr
 			}
