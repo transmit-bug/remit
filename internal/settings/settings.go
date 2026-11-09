@@ -18,6 +18,24 @@ const FileName = "settings.json"
 // chosen one: Cmd+Shift+R on macOS, Ctrl+Shift+R elsewhere.
 const DefaultHotkey = "CmdOrCtrl+Shift+R"
 
+// The appearances the user may pick: the desktop's own, or an override. They
+// are the app's preference, not the library's, because the desktop a library is
+// read on decides how it looks (decision #23).
+const (
+	AppearanceSystem = "system"
+	AppearancePaper  = "paper"
+	AppearanceInk    = "ink"
+)
+
+// The paper's measure: what a document's column may be set to, in DIPs, and
+// what it is until the user says otherwise.
+const (
+	PaperWidthMin     = 620
+	PaperWidthMax     = 860
+	PaperWidthStep    = 20
+	DefaultPaperWidth = 760
+)
+
 // Settings are the user's preferences. The zero value is the shipped default:
 // no update check, no agent server, no reminders, the default shortcut, and no
 // library path chosen yet.
@@ -41,6 +59,47 @@ type Settings struct {
 	// RemindedOn is the calendar day (2006-01-02) of the last reminder, so
 	// that "once a day" holds across restarts; empty means none yet.
 	RemindedOn string `json:"reminded_on,omitempty"`
+	// Appearance is the look the user chose: AppearanceSystem (empty, the
+	// default), AppearancePaper or AppearanceInk. It is an override of the
+	// desktop's own appearance, which is the one a library-less first run keeps.
+	Appearance string `json:"appearance,omitempty"`
+	// PaperWidth is the document paper's measure in DIPs; zero means
+	// DefaultPaperWidth.
+	PaperWidth int `json:"paper_width,omitempty"`
+}
+
+// AppearanceName is the look the window draws: the one chosen, or the
+// desktop's when none was.
+func (s Settings) AppearanceName() string {
+	switch s.Appearance {
+	case AppearancePaper, AppearanceInk:
+		return s.Appearance
+	}
+	return AppearanceSystem
+}
+
+// ThemeSource is that look as MyGo's theme source names it: the desktop's
+// answer, or the forced light or dark one.
+func (s Settings) ThemeSource() string {
+	switch s.AppearanceName() {
+	case AppearancePaper:
+		return "light"
+	case AppearanceInk:
+		return "dark"
+	}
+	return "system"
+}
+
+// PaperMeasure is the document paper's width: what the user set, kept inside
+// the range the slider offers, or the default while they have set none.
+func (s Settings) PaperMeasure() int {
+	if s.PaperWidth < PaperWidthMin || s.PaperWidth > PaperWidthMax {
+		if s.PaperWidth == 0 {
+			return DefaultPaperWidth
+		}
+		return min(max(s.PaperWidth, PaperWidthMin), PaperWidthMax)
+	}
+	return s.PaperWidth
 }
 
 // HotkeyAccelerator is the shortcut the app binds: the one the user chose, or

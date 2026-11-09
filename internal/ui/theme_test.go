@@ -122,7 +122,7 @@ func TestEveryModeInBothAppearances(t *testing.T) {
 				assertShows(t, tt, "Statistics")
 
 				tt.Key(ui.Cmd, ui.KeyComma)
-				assertShows(t, tt, "Agent API")
+				assertShows(t, tt, "Paper width")
 
 				tt.Key(0, ui.KeyEscape)
 				tt.Advance(320 * time.Millisecond)

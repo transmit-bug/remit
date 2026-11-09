@@ -189,6 +189,30 @@ func (s *State) afterDelete(types []Type) {
 	s.TypeList.Selected = nil
 }
 
+// The type page's reads and writes, in the same shape as every other page's: a
+// nil function is a build without the service, and the page says so instead of
+// panicking in a frame.
+
+func (d Deps) typeList() []Type {
+	if d.Types == nil {
+		return nil
+	}
+	return d.Types()
+}
+
+func (d Deps) save(c *ui.Context, typ core.Type) core.ID {
+	if d.SaveType == nil {
+		return ""
+	}
+	return d.SaveType(c, typ)
+}
+
+func (d Deps) removeType(c *ui.Context, id core.ID) {
+	if d.DeleteType != nil {
+		d.DeleteType(c, id)
+	}
+}
+
 // holdsType reports whether a type is among those the page lists.
 func holdsType(types []Type, id core.ID) bool {
 	for _, typ := range types {

@@ -1893,20 +1893,6 @@ func (msgs Messages) OpenSettings() string {
 	return Catalog.Format(msgs.locale, "openSettings", nil)
 }
 
-// SettingsTitle says "Settings"
-// in the language the app shows.
-//
-// Title of the settings page.
-func SettingsTitle() string { return In(i18n.Locale()).SettingsTitle() }
-
-// SettingsTitle says "Settings"
-// in the language of msgs.
-//
-// Title of the settings page.
-func (msgs Messages) SettingsTitle() string {
-	return Catalog.Format(msgs.locale, "settingsTitle", nil)
-}
-
 // SettingsAgent says "Agent API"
 // in the language the app shows.
 //
@@ -2519,20 +2505,6 @@ func UpdateOff() string { return In(i18n.Locale()).UpdateOff() }
 // Check now was used while the setting is off.
 func (msgs Messages) UpdateOff() string {
 	return Catalog.Format(msgs.locale, "updateOff", nil)
-}
-
-// SettingsShortcut says "Shortcut"
-// in the language the app shows.
-//
-// Settings section: the global review shortcut.
-func SettingsShortcut() string { return In(i18n.Locale()).SettingsShortcut() }
-
-// SettingsShortcut says "Shortcut"
-// in the language of msgs.
-//
-// Settings section: the global review shortcut.
-func (msgs Messages) SettingsShortcut() string {
-	return Catalog.Format(msgs.locale, "settingsShortcut", nil)
 }
 
 // SettingsShortcutLabel says "Review shortcut"
@@ -4907,4 +4879,1724 @@ func TodayStub() string { return In(i18n.Locale()).TodayStub() }
 // The empty state of the today area until its queue is built.
 func (msgs Messages) TodayStub() string {
 	return Catalog.Format(msgs.locale, "todayStub", nil)
+}
+
+// ReviewPage says "Review"
+// in the language the app shows.
+//
+// Page of the settings area: the rhythm a library's reviews keep.
+func ReviewPage() string { return In(i18n.Locale()).ReviewPage() }
+
+// ReviewPage says "Review"
+// in the language of msgs.
+//
+// Page of the settings area: the rhythm a library's reviews keep.
+func (msgs Messages) ReviewPage() string {
+	return Catalog.Format(msgs.locale, "reviewPage", nil)
+}
+
+// BudgetPage says "Budget"
+// in the language the app shows.
+//
+// Page of the settings area: what one day's queue holds.
+func BudgetPage() string { return In(i18n.Locale()).BudgetPage() }
+
+// BudgetPage says "Budget"
+// in the language of msgs.
+//
+// Page of the settings area: what one day's queue holds.
+func (msgs Messages) BudgetPage() string {
+	return Catalog.Format(msgs.locale, "budgetPage", nil)
+}
+
+// KeysPage says "Shortcuts"
+// in the language the app shows.
+//
+// Page of the settings area: the keyboard map, read-only.
+func KeysPage() string { return In(i18n.Locale()).KeysPage() }
+
+// KeysPage says "Shortcuts"
+// in the language of msgs.
+//
+// Page of the settings area: the keyboard map, read-only.
+func (msgs Messages) KeysPage() string {
+	return Catalog.Format(msgs.locale, "keysPage", nil)
+}
+
+// AgentPage says "Agent"
+// in the language the app shows.
+//
+// Page of the settings area: the loopback agent API.
+func AgentPage() string { return In(i18n.Locale()).AgentPage() }
+
+// AgentPage says "Agent"
+// in the language of msgs.
+//
+// Page of the settings area: the loopback agent API.
+func (msgs Messages) AgentPage() string {
+	return Catalog.Format(msgs.locale, "agentPage", nil)
+}
+
+// UpdatePage says "Update"
+// in the language the app shows.
+//
+// Page of the settings area: the version, the index and the library
+// archive.
+func UpdatePage() string { return In(i18n.Locale()).UpdatePage() }
+
+// UpdatePage says "Update"
+// in the language of msgs.
+//
+// Page of the settings area: the version, the index and the library
+// archive.
+func (msgs Messages) UpdatePage() string {
+	return Catalog.Format(msgs.locale, "updatePage", nil)
+}
+
+// AboutPage says "About"
+// in the language the app shows.
+//
+// Page of the settings area: what this build is and where its library
+// lives.
+func AboutPage() string { return In(i18n.Locale()).AboutPage() }
+
+// AboutPage says "About"
+// in the language of msgs.
+//
+// Page of the settings area: what this build is and where its library
+// lives.
+func (msgs Messages) AboutPage() string {
+	return Catalog.Format(msgs.locale, "aboutPage", nil)
+}
+
+// SettingsLook says "Theme"
+// in the language the app shows.
+//
+// Settings field: the light, dark or desktop look.
+func SettingsLook() string { return In(i18n.Locale()).SettingsLook() }
+
+// SettingsLook says "Theme"
+// in the language of msgs.
+//
+// Settings field: the light, dark or desktop look.
+func (msgs Messages) SettingsLook() string {
+	return Catalog.Format(msgs.locale, "settingsLook", nil)
+}
+
+// SettingsLookBody says "Paper is the light look, ink the dark one, and system follows the desktop."
+// in the language the app shows.
+//
+// Description of the appearance choice.
+func SettingsLookBody() string { return In(i18n.Locale()).SettingsLookBody() }
+
+// SettingsLookBody says "Paper is the light look, ink the dark one, and system follows the desktop."
+// in the language of msgs.
+//
+// Description of the appearance choice.
+func (msgs Messages) SettingsLookBody() string {
+	return Catalog.Format(msgs.locale, "settingsLookBody", nil)
+}
+
+// SettingsLookSystem says "System"
+// in the language the app shows.
+//
+// Appearance option: follow the desktop's light or dark look.
+func SettingsLookSystem() string { return In(i18n.Locale()).SettingsLookSystem() }
+
+// SettingsLookSystem says "System"
+// in the language of msgs.
+//
+// Appearance option: follow the desktop's light or dark look.
+func (msgs Messages) SettingsLookSystem() string {
+	return Catalog.Format(msgs.locale, "settingsLookSystem", nil)
+}
+
+// SettingsLookPaper says "Paper"
+// in the language the app shows.
+//
+// Appearance option: always the light look.
+func SettingsLookPaper() string { return In(i18n.Locale()).SettingsLookPaper() }
+
+// SettingsLookPaper says "Paper"
+// in the language of msgs.
+//
+// Appearance option: always the light look.
+func (msgs Messages) SettingsLookPaper() string {
+	return Catalog.Format(msgs.locale, "settingsLookPaper", nil)
+}
+
+// SettingsLookInk says "Ink"
+// in the language the app shows.
+//
+// Appearance option: always the dark look.
+func SettingsLookInk() string { return In(i18n.Locale()).SettingsLookInk() }
+
+// SettingsLookInk says "Ink"
+// in the language of msgs.
+//
+// Appearance option: always the dark look.
+func (msgs Messages) SettingsLookInk() string {
+	return Catalog.Format(msgs.locale, "settingsLookInk", nil)
+}
+
+// SettingsPaperWidth says "Paper width"
+// in the language the app shows.
+//
+// Settings field: the measure of a document's paper.
+func SettingsPaperWidth() string { return In(i18n.Locale()).SettingsPaperWidth() }
+
+// SettingsPaperWidth says "Paper width"
+// in the language of msgs.
+//
+// Settings field: the measure of a document's paper.
+func (msgs Messages) SettingsPaperWidth() string {
+	return Catalog.Format(msgs.locale, "settingsPaperWidth", nil)
+}
+
+// SettingsPaperWidthBody says "The width of a document's paper, and of the page it is set on."
+// in the language the app shows.
+//
+// Description of the paper width slider.
+func SettingsPaperWidthBody() string { return In(i18n.Locale()).SettingsPaperWidthBody() }
+
+// SettingsPaperWidthBody says "The width of a document's paper, and of the page it is set on."
+// in the language of msgs.
+//
+// Description of the paper width slider.
+func (msgs Messages) SettingsPaperWidthBody() string {
+	return Catalog.Format(msgs.locale, "settingsPaperWidthBody", nil)
+}
+
+// SettingsPaperWidthValue says "{width} pt"
+// in the language the app shows.
+//
+// The paper's width, beside its slider.
+func SettingsPaperWidthValue(width int) string {
+	return In(i18n.Locale()).SettingsPaperWidthValue(width)
+}
+
+// SettingsPaperWidthValue says "{width} pt"
+// in the language of msgs.
+//
+// The paper's width, beside its slider.
+func (msgs Messages) SettingsPaperWidthValue(width int) string {
+	return Catalog.Format(msgs.locale, "settingsPaperWidthValue", map[string]any{"width": width})
+}
+
+// SettingsTextSize says "Text size"
+// in the language the app shows.
+//
+// Settings field: the window's text size, which the desktop decides.
+func SettingsTextSize() string { return In(i18n.Locale()).SettingsTextSize() }
+
+// SettingsTextSize says "Text size"
+// in the language of msgs.
+//
+// Settings field: the window's text size, which the desktop decides.
+func (msgs Messages) SettingsTextSize() string {
+	return Catalog.Format(msgs.locale, "settingsTextSize", nil)
+}
+
+// SettingsTextSizeBody says "Follows the desktop's text scaling; Remit keeps no second size."
+// in the language the app shows.
+//
+// Why the text size is read-only.
+func SettingsTextSizeBody() string { return In(i18n.Locale()).SettingsTextSizeBody() }
+
+// SettingsTextSizeBody says "Follows the desktop's text scaling; Remit keeps no second size."
+// in the language of msgs.
+//
+// Why the text size is read-only.
+func (msgs Messages) SettingsTextSizeBody() string {
+	return Catalog.Format(msgs.locale, "settingsTextSizeBody", nil)
+}
+
+// SettingsOpenDisplay says "Open system settings"
+// in the language the app shows.
+//
+// The button that opens the desktop's text-size page, where the size is
+// changed.
+func SettingsOpenDisplay() string { return In(i18n.Locale()).SettingsOpenDisplay() }
+
+// SettingsOpenDisplay says "Open system settings"
+// in the language of msgs.
+//
+// The button that opens the desktop's text-size page, where the size is
+// changed.
+func (msgs Messages) SettingsOpenDisplay() string {
+	return Catalog.Format(msgs.locale, "settingsOpenDisplay", nil)
+}
+
+// SettingsReviewRetention says "Target retention"
+// in the language the app shows.
+//
+// Settings field: how likely a card should be recalled when due.
+func SettingsReviewRetention() string { return In(i18n.Locale()).SettingsReviewRetention() }
+
+// SettingsReviewRetention says "Target retention"
+// in the language of msgs.
+//
+// Settings field: how likely a card should be recalled when due.
+func (msgs Messages) SettingsReviewRetention() string {
+	return Catalog.Format(msgs.locale, "settingsReviewRetention", nil)
+}
+
+// SettingsReviewRetentionBody says "How likely you want to recall a card when it comes due. The scheduling plugin's 90% is the default."
+// in the language the app shows.
+//
+// Description of the retention slider.
+func SettingsReviewRetentionBody() string { return In(i18n.Locale()).SettingsReviewRetentionBody() }
+
+// SettingsReviewRetentionBody says "How likely you want to recall a card when it comes due. The scheduling plugin's 90% is the default."
+// in the language of msgs.
+//
+// Description of the retention slider.
+func (msgs Messages) SettingsReviewRetentionBody() string {
+	return Catalog.Format(msgs.locale, "settingsReviewRetentionBody", nil)
+}
+
+// SettingsReviewRetentionValue says "{percent}%"
+// in the language the app shows.
+//
+// The retention, as a percentage beside its slider.
+func SettingsReviewRetentionValue(percent int) string {
+	return In(i18n.Locale()).SettingsReviewRetentionValue(percent)
+}
+
+// SettingsReviewRetentionValue says "{percent}%"
+// in the language of msgs.
+//
+// The retention, as a percentage beside its slider.
+func (msgs Messages) SettingsReviewRetentionValue(percent int) string {
+	return Catalog.Format(msgs.locale, "settingsReviewRetentionValue", map[string]any{"percent": percent})
+}
+
+// SettingsReviewMaxInterval says "Longest interval"
+// in the language the app shows.
+//
+// Settings field: the most days a card may wait.
+func SettingsReviewMaxInterval() string { return In(i18n.Locale()).SettingsReviewMaxInterval() }
+
+// SettingsReviewMaxInterval says "Longest interval"
+// in the language of msgs.
+//
+// Settings field: the most days a card may wait.
+func (msgs Messages) SettingsReviewMaxInterval() string {
+	return Catalog.Format(msgs.locale, "settingsReviewMaxInterval", nil)
+}
+
+// SettingsReviewMaxIntervalBody says "The most days a card may wait, whatever the schedule would pick."
+// in the language the app shows.
+//
+// Description of the longest-interval slider.
+func SettingsReviewMaxIntervalBody() string { return In(i18n.Locale()).SettingsReviewMaxIntervalBody() }
+
+// SettingsReviewMaxIntervalBody says "The most days a card may wait, whatever the schedule would pick."
+// in the language of msgs.
+//
+// Description of the longest-interval slider.
+func (msgs Messages) SettingsReviewMaxIntervalBody() string {
+	return Catalog.Format(msgs.locale, "settingsReviewMaxIntervalBody", nil)
+}
+
+// SettingsReviewDays says "{days, plural, one {# day} other {# days}}"
+// in the language the app shows.
+//
+// A number of days beside the longest-interval slider.
+func SettingsReviewDays(days int) string { return In(i18n.Locale()).SettingsReviewDays(days) }
+
+// SettingsReviewDays says "{days, plural, one {# day} other {# days}}"
+// in the language of msgs.
+//
+// A number of days beside the longest-interval slider.
+func (msgs Messages) SettingsReviewDays(days int) string {
+	return Catalog.Format(msgs.locale, "settingsReviewDays", map[string]any{"days": days})
+}
+
+// SettingsReviewPreview says "Show the next interval"
+// in the language the app shows.
+//
+// Settings field: whether each grade says when the card would come back.
+func SettingsReviewPreview() string { return In(i18n.Locale()).SettingsReviewPreview() }
+
+// SettingsReviewPreview says "Show the next interval"
+// in the language of msgs.
+//
+// Settings field: whether each grade says when the card would come back.
+func (msgs Messages) SettingsReviewPreview() string {
+	return Catalog.Format(msgs.locale, "settingsReviewPreview", nil)
+}
+
+// SettingsReviewPreviewBody says "Each grade says when the card would come back. Off, the grades show only their word."
+// in the language the app shows.
+//
+// Description of the interval-preview switch.
+func SettingsReviewPreviewBody() string { return In(i18n.Locale()).SettingsReviewPreviewBody() }
+
+// SettingsReviewPreviewBody says "Each grade says when the card would come back. Off, the grades show only their word."
+// in the language of msgs.
+//
+// Description of the interval-preview switch.
+func (msgs Messages) SettingsReviewPreviewBody() string {
+	return Catalog.Format(msgs.locale, "settingsReviewPreviewBody", nil)
+}
+
+// SettingsReviewReturn says "Back to the note after an excerpt"
+// in the language the app shows.
+//
+// Settings field: whether an excerpt returns the reader to the note.
+func SettingsReviewReturn() string { return In(i18n.Locale()).SettingsReviewReturn() }
+
+// SettingsReviewReturn says "Back to the note after an excerpt"
+// in the language of msgs.
+//
+// Settings field: whether an excerpt returns the reader to the note.
+func (msgs Messages) SettingsReviewReturn() string {
+	return Catalog.Format(msgs.locale, "settingsReviewReturn", nil)
+}
+
+// SettingsReviewReturnBody says "An excerpt taken while reading comes back to the note instead of moving on."
+// in the language the app shows.
+//
+// Description of the return-after-excerpt switch.
+func SettingsReviewReturnBody() string { return In(i18n.Locale()).SettingsReviewReturnBody() }
+
+// SettingsReviewReturnBody says "An excerpt taken while reading comes back to the note instead of moving on."
+// in the language of msgs.
+//
+// Description of the return-after-excerpt switch.
+func (msgs Messages) SettingsReviewReturnBody() string {
+	return Catalog.Format(msgs.locale, "settingsReviewReturnBody", nil)
+}
+
+// SettingsBudgetCards says "Cards a day"
+// in the language the app shows.
+//
+// Settings field: the most cards a day's queue holds.
+func SettingsBudgetCards() string { return In(i18n.Locale()).SettingsBudgetCards() }
+
+// SettingsBudgetCards says "Cards a day"
+// in the language of msgs.
+//
+// Settings field: the most cards a day's queue holds.
+func (msgs Messages) SettingsBudgetCards() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetCards", nil)
+}
+
+// SettingsBudgetCardsBody says "How many cards today's queue holds at most; zero is no cap."
+// in the language the app shows.
+//
+// Description of the daily cards slider.
+func SettingsBudgetCardsBody() string { return In(i18n.Locale()).SettingsBudgetCardsBody() }
+
+// SettingsBudgetCardsBody says "How many cards today's queue holds at most; zero is no cap."
+// in the language of msgs.
+//
+// Description of the daily cards slider.
+func (msgs Messages) SettingsBudgetCardsBody() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetCardsBody", nil)
+}
+
+// SettingsBudgetMinutes says "Minutes a day"
+// in the language the app shows.
+//
+// Settings field: what a day's reading and reviewing may take.
+func SettingsBudgetMinutes() string { return In(i18n.Locale()).SettingsBudgetMinutes() }
+
+// SettingsBudgetMinutes says "Minutes a day"
+// in the language of msgs.
+//
+// Settings field: what a day's reading and reviewing may take.
+func (msgs Messages) SettingsBudgetMinutes() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetMinutes", nil)
+}
+
+// SettingsBudgetMinutesBody says "What the reading and the reviewing are expected to take together."
+// in the language the app shows.
+//
+// Description of the daily minutes slider.
+func SettingsBudgetMinutesBody() string { return In(i18n.Locale()).SettingsBudgetMinutesBody() }
+
+// SettingsBudgetMinutesBody says "What the reading and the reviewing are expected to take together."
+// in the language of msgs.
+//
+// Description of the daily minutes slider.
+func (msgs Messages) SettingsBudgetMinutesBody() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetMinutesBody", nil)
+}
+
+// SettingsBudgetPreview says "Today at this pace"
+// in the language the app shows.
+//
+// Settings section: today's queue as the presets would build it.
+func SettingsBudgetPreview() string { return In(i18n.Locale()).SettingsBudgetPreview() }
+
+// SettingsBudgetPreview says "Today at this pace"
+// in the language of msgs.
+//
+// Settings section: today's queue as the presets would build it.
+func (msgs Messages) SettingsBudgetPreview() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetPreview", nil)
+}
+
+// SettingsBudgetPreviewBody says "Reading {read} min and reviewing {review} min of {budget} min, in {lines, plural, one {# line} other {# lines}}."
+// in the language the app shows.
+//
+// What today's queue would hold at the presets' pace.
+func SettingsBudgetPreviewBody(read int, review int, budget int, lines int) string {
+	return In(i18n.Locale()).SettingsBudgetPreviewBody(read, review, budget, lines)
+}
+
+// SettingsBudgetPreviewBody says "Reading {read} min and reviewing {review} min of {budget} min, in {lines, plural, one {# line} other {# lines}}."
+// in the language of msgs.
+//
+// What today's queue would hold at the presets' pace.
+func (msgs Messages) SettingsBudgetPreviewBody(read int, review int, budget int, lines int) string {
+	return Catalog.Format(msgs.locale, "settingsBudgetPreviewBody", map[string]any{"read": read, "review": review, "budget": budget, "lines": lines})
+}
+
+// SettingsBudgetPreviewEmpty says "Nothing is due yet, so today's queue is empty."
+// in the language the app shows.
+//
+// The budget preview when the library has nothing due.
+func SettingsBudgetPreviewEmpty() string { return In(i18n.Locale()).SettingsBudgetPreviewEmpty() }
+
+// SettingsBudgetPreviewEmpty says "Nothing is due yet, so today's queue is empty."
+// in the language of msgs.
+//
+// The budget preview when the library has nothing due.
+func (msgs Messages) SettingsBudgetPreviewEmpty() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetPreviewEmpty", nil)
+}
+
+// SettingsBudgetTray says "Menu bar title"
+// in the language the app shows.
+//
+// Settings field: the tray title, shown as it will read.
+func SettingsBudgetTray() string { return In(i18n.Locale()).SettingsBudgetTray() }
+
+// SettingsBudgetTray says "Menu bar title"
+// in the language of msgs.
+//
+// Settings field: the tray title, shown as it will read.
+func (msgs Messages) SettingsBudgetTray() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetTray", nil)
+}
+
+// SettingsBudgetTrayBody says "What the tray shows while Remit runs."
+// in the language the app shows.
+//
+// Description of the tray title preview.
+func SettingsBudgetTrayBody() string { return In(i18n.Locale()).SettingsBudgetTrayBody() }
+
+// SettingsBudgetTrayBody says "What the tray shows while Remit runs."
+// in the language of msgs.
+//
+// Description of the tray title preview.
+func (msgs Messages) SettingsBudgetTrayBody() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetTrayBody", nil)
+}
+
+// SettingsKeysChange says "Change keys"
+// in the language the app shows.
+//
+// The button that would let the user rebind keys; disabled in 1.0.
+func SettingsKeysChange() string { return In(i18n.Locale()).SettingsKeysChange() }
+
+// SettingsKeysChange says "Change keys"
+// in the language of msgs.
+//
+// The button that would let the user rebind keys; disabled in 1.0.
+func (msgs Messages) SettingsKeysChange() string {
+	return Catalog.Format(msgs.locale, "settingsKeysChange", nil)
+}
+
+// SettingsKeysLocked says "Custom keys are not in 1.0; see #155."
+// in the language the app shows.
+//
+// Why the keys cannot be changed.
+func SettingsKeysLocked() string { return In(i18n.Locale()).SettingsKeysLocked() }
+
+// SettingsKeysLocked says "Custom keys are not in 1.0; see #155."
+// in the language of msgs.
+//
+// Why the keys cannot be changed.
+func (msgs Messages) SettingsKeysLocked() string {
+	return Catalog.Format(msgs.locale, "settingsKeysLocked", nil)
+}
+
+// SettingsKeysGlobal says "Global"
+// in the language the app shows.
+//
+// Shortcut group: keys that work anywhere.
+func SettingsKeysGlobal() string { return In(i18n.Locale()).SettingsKeysGlobal() }
+
+// SettingsKeysGlobal says "Global"
+// in the language of msgs.
+//
+// Shortcut group: keys that work anywhere.
+func (msgs Messages) SettingsKeysGlobal() string {
+	return Catalog.Format(msgs.locale, "settingsKeysGlobal", nil)
+}
+
+// SettingsKeysReading says "Reading"
+// in the language the app shows.
+//
+// Shortcut group: keys of the reading session.
+func SettingsKeysReading() string { return In(i18n.Locale()).SettingsKeysReading() }
+
+// SettingsKeysReading says "Reading"
+// in the language of msgs.
+//
+// Shortcut group: keys of the reading session.
+func (msgs Messages) SettingsKeysReading() string {
+	return Catalog.Format(msgs.locale, "settingsKeysReading", nil)
+}
+
+// SettingsKeysReview says "Review"
+// in the language the app shows.
+//
+// Shortcut group: keys of the review session.
+func SettingsKeysReview() string { return In(i18n.Locale()).SettingsKeysReview() }
+
+// SettingsKeysReview says "Review"
+// in the language of msgs.
+//
+// Shortcut group: keys of the review session.
+func (msgs Messages) SettingsKeysReview() string {
+	return Catalog.Format(msgs.locale, "settingsKeysReview", nil)
+}
+
+// SettingsKeysDocument says "Document"
+// in the language the app shows.
+//
+// Shortcut group: keys of the document.
+func SettingsKeysDocument() string { return In(i18n.Locale()).SettingsKeysDocument() }
+
+// SettingsKeysDocument says "Document"
+// in the language of msgs.
+//
+// Shortcut group: keys of the document.
+func (msgs Messages) SettingsKeysDocument() string {
+	return Catalog.Format(msgs.locale, "settingsKeysDocument", nil)
+}
+
+// SettingsKeysPalette says "Command palette"
+// in the language the app shows.
+//
+// Shortcut row: opens the command palette.
+func SettingsKeysPalette() string { return In(i18n.Locale()).SettingsKeysPalette() }
+
+// SettingsKeysPalette says "Command palette"
+// in the language of msgs.
+//
+// Shortcut row: opens the command palette.
+func (msgs Messages) SettingsKeysPalette() string {
+	return Catalog.Format(msgs.locale, "settingsKeysPalette", nil)
+}
+
+// SettingsKeysOpenSettings says "Settings"
+// in the language the app shows.
+//
+// Shortcut row: opens the settings pages.
+func SettingsKeysOpenSettings() string { return In(i18n.Locale()).SettingsKeysOpenSettings() }
+
+// SettingsKeysOpenSettings says "Settings"
+// in the language of msgs.
+//
+// Shortcut row: opens the settings pages.
+func (msgs Messages) SettingsKeysOpenSettings() string {
+	return Catalog.Format(msgs.locale, "settingsKeysOpenSettings", nil)
+}
+
+// SettingsKeysNewNote says "New note"
+// in the language the app shows.
+//
+// Shortcut row: starts a new note.
+func SettingsKeysNewNote() string { return In(i18n.Locale()).SettingsKeysNewNote() }
+
+// SettingsKeysNewNote says "New note"
+// in the language of msgs.
+//
+// Shortcut row: starts a new note.
+func (msgs Messages) SettingsKeysNewNote() string {
+	return Catalog.Format(msgs.locale, "settingsKeysNewNote", nil)
+}
+
+// SettingsKeysDailyNote says "Daily note"
+// in the language the app shows.
+//
+// Shortcut row: opens today's daily note.
+func SettingsKeysDailyNote() string { return In(i18n.Locale()).SettingsKeysDailyNote() }
+
+// SettingsKeysDailyNote says "Daily note"
+// in the language of msgs.
+//
+// Shortcut row: opens today's daily note.
+func (msgs Messages) SettingsKeysDailyNote() string {
+	return Catalog.Format(msgs.locale, "settingsKeysDailyNote", nil)
+}
+
+// SettingsKeysFind says "Find in the note, or search the library"
+// in the language the app shows.
+//
+// Shortcut row: the find bar in a document, the search page elsewhere.
+func SettingsKeysFind() string { return In(i18n.Locale()).SettingsKeysFind() }
+
+// SettingsKeysFind says "Find in the note, or search the library"
+// in the language of msgs.
+//
+// Shortcut row: the find bar in a document, the search page elsewhere.
+func (msgs Messages) SettingsKeysFind() string {
+	return Catalog.Format(msgs.locale, "settingsKeysFind", nil)
+}
+
+// SettingsKeysAreas says "Today, Write, Read, Recall, Stats, Settings"
+// in the language the app shows.
+//
+// Shortcut row: the six areas, one per digit.
+func SettingsKeysAreas() string { return In(i18n.Locale()).SettingsKeysAreas() }
+
+// SettingsKeysAreas says "Today, Write, Read, Recall, Stats, Settings"
+// in the language of msgs.
+//
+// Shortcut row: the six areas, one per digit.
+func (msgs Messages) SettingsKeysAreas() string {
+	return Catalog.Format(msgs.locale, "settingsKeysAreas", nil)
+}
+
+// SettingsKeysBack says "Close the overlay, leave the session, or leave settings"
+// in the language the app shows.
+//
+// Shortcut row: what Escape does, in that order.
+func SettingsKeysBack() string { return In(i18n.Locale()).SettingsKeysBack() }
+
+// SettingsKeysBack says "Close the overlay, leave the session, or leave settings"
+// in the language of msgs.
+//
+// Shortcut row: what Escape does, in that order.
+func (msgs Messages) SettingsKeysBack() string {
+	return Catalog.Format(msgs.locale, "settingsKeysBack", nil)
+}
+
+// SettingsKeysMove says "Next or previous paragraph"
+// in the language the app shows.
+//
+// Shortcut row: moving the reading position.
+func SettingsKeysMove() string { return In(i18n.Locale()).SettingsKeysMove() }
+
+// SettingsKeysMove says "Next or previous paragraph"
+// in the language of msgs.
+//
+// Shortcut row: moving the reading position.
+func (msgs Messages) SettingsKeysMove() string {
+	return Catalog.Format(msgs.locale, "settingsKeysMove", nil)
+}
+
+// SettingsKeysReadingGrade says "Too hard, just right, too shallow"
+// in the language the app shows.
+//
+// Shortcut row: how a note digested while reading.
+func SettingsKeysReadingGrade() string { return In(i18n.Locale()).SettingsKeysReadingGrade() }
+
+// SettingsKeysReadingGrade says "Too hard, just right, too shallow"
+// in the language of msgs.
+//
+// Shortcut row: how a note digested while reading.
+func (msgs Messages) SettingsKeysReadingGrade() string {
+	return Catalog.Format(msgs.locale, "settingsKeysReadingGrade", nil)
+}
+
+// SettingsKeysExcerpt says "Excerpt the paragraph"
+// in the language the app shows.
+//
+// Shortcut row: keeping a passage.
+func SettingsKeysExcerpt() string { return In(i18n.Locale()).SettingsKeysExcerpt() }
+
+// SettingsKeysExcerpt says "Excerpt the paragraph"
+// in the language of msgs.
+//
+// Shortcut row: keeping a passage.
+func (msgs Messages) SettingsKeysExcerpt() string {
+	return Catalog.Format(msgs.locale, "settingsKeysExcerpt", nil)
+}
+
+// SettingsKeysSkip says "Skip the note"
+// in the language the app shows.
+//
+// Shortcut row: passing over the note.
+func SettingsKeysSkip() string { return In(i18n.Locale()).SettingsKeysSkip() }
+
+// SettingsKeysSkip says "Skip the note"
+// in the language of msgs.
+//
+// Shortcut row: passing over the note.
+func (msgs Messages) SettingsKeysSkip() string {
+	return Catalog.Format(msgs.locale, "settingsKeysSkip", nil)
+}
+
+// SettingsKeysDrop says "Take the note out of the queue"
+// in the language the app shows.
+//
+// Shortcut row: dismissing the note.
+func SettingsKeysDrop() string { return In(i18n.Locale()).SettingsKeysDrop() }
+
+// SettingsKeysDrop says "Take the note out of the queue"
+// in the language of msgs.
+//
+// Shortcut row: dismissing the note.
+func (msgs Messages) SettingsKeysDrop() string {
+	return Catalog.Format(msgs.locale, "settingsKeysDrop", nil)
+}
+
+// SettingsKeysOpenNote says "Open the note in the library"
+// in the language the app shows.
+//
+// Shortcut row: the note's own page.
+func SettingsKeysOpenNote() string { return In(i18n.Locale()).SettingsKeysOpenNote() }
+
+// SettingsKeysOpenNote says "Open the note in the library"
+// in the language of msgs.
+//
+// Shortcut row: the note's own page.
+func (msgs Messages) SettingsKeysOpenNote() string {
+	return Catalog.Format(msgs.locale, "settingsKeysOpenNote", nil)
+}
+
+// SettingsKeysReveal says "Show the answer"
+// in the language the app shows.
+//
+// Shortcut row: turning the card over.
+func SettingsKeysReveal() string { return In(i18n.Locale()).SettingsKeysReveal() }
+
+// SettingsKeysReveal says "Show the answer"
+// in the language of msgs.
+//
+// Shortcut row: turning the card over.
+func (msgs Messages) SettingsKeysReveal() string {
+	return Catalog.Format(msgs.locale, "settingsKeysReveal", nil)
+}
+
+// SettingsKeysGrade says "Again, Hard, Good, Easy"
+// in the language the app shows.
+//
+// Shortcut row: the four answers.
+func SettingsKeysGrade() string { return In(i18n.Locale()).SettingsKeysGrade() }
+
+// SettingsKeysGrade says "Again, Hard, Good, Easy"
+// in the language of msgs.
+//
+// Shortcut row: the four answers.
+func (msgs Messages) SettingsKeysGrade() string {
+	return Catalog.Format(msgs.locale, "settingsKeysGrade", nil)
+}
+
+// SettingsKeysUndo says "Undo the last answer"
+// in the language the app shows.
+//
+// Shortcut row: taking an answer back.
+func SettingsKeysUndo() string { return In(i18n.Locale()).SettingsKeysUndo() }
+
+// SettingsKeysUndo says "Undo the last answer"
+// in the language of msgs.
+//
+// Shortcut row: taking an answer back.
+func (msgs Messages) SettingsKeysUndo() string {
+	return Catalog.Format(msgs.locale, "settingsKeysUndo", nil)
+}
+
+// SettingsKeysSuspend says "Suspend the card"
+// in the language the app shows.
+//
+// Shortcut row: stopping the card's schedule.
+func SettingsKeysSuspend() string { return In(i18n.Locale()).SettingsKeysSuspend() }
+
+// SettingsKeysSuspend says "Suspend the card"
+// in the language of msgs.
+//
+// Shortcut row: stopping the card's schedule.
+func (msgs Messages) SettingsKeysSuspend() string {
+	return Catalog.Format(msgs.locale, "settingsKeysSuspend", nil)
+}
+
+// SettingsKeysEditCard says "Edit the card"
+// in the language the app shows.
+//
+// Shortcut row: opening the card's editor.
+func SettingsKeysEditCard() string { return In(i18n.Locale()).SettingsKeysEditCard() }
+
+// SettingsKeysEditCard says "Edit the card"
+// in the language of msgs.
+//
+// Shortcut row: opening the card's editor.
+func (msgs Messages) SettingsKeysEditCard() string {
+	return Catalog.Format(msgs.locale, "settingsKeysEditCard", nil)
+}
+
+// SettingsKeysOutline says "Outline panel"
+// in the language the app shows.
+//
+// Shortcut row: the document's outline.
+func SettingsKeysOutline() string { return In(i18n.Locale()).SettingsKeysOutline() }
+
+// SettingsKeysOutline says "Outline panel"
+// in the language of msgs.
+//
+// Shortcut row: the document's outline.
+func (msgs Messages) SettingsKeysOutline() string {
+	return Catalog.Format(msgs.locale, "settingsKeysOutline", nil)
+}
+
+// SettingsKeysBacklinks says "Backlinks panel"
+// in the language the app shows.
+//
+// Shortcut row: what links to the document.
+func SettingsKeysBacklinks() string { return In(i18n.Locale()).SettingsKeysBacklinks() }
+
+// SettingsKeysBacklinks says "Backlinks panel"
+// in the language of msgs.
+//
+// Shortcut row: what links to the document.
+func (msgs Messages) SettingsKeysBacklinks() string {
+	return Catalog.Format(msgs.locale, "settingsKeysBacklinks", nil)
+}
+
+// SettingsPluginDetails says "Details"
+// in the language the app shows.
+//
+// The button that opens one plugin's details.
+func SettingsPluginDetails() string { return In(i18n.Locale()).SettingsPluginDetails() }
+
+// SettingsPluginDetails says "Details"
+// in the language of msgs.
+//
+// The button that opens one plugin's details.
+func (msgs Messages) SettingsPluginDetails() string {
+	return Catalog.Format(msgs.locale, "settingsPluginDetails", nil)
+}
+
+// SettingsPluginDetailsOf says "{name} details"
+// in the language the app shows.
+//
+// The accessible name of one plugin's details button.
+func SettingsPluginDetailsOf(name string) string {
+	return In(i18n.Locale()).SettingsPluginDetailsOf(name)
+}
+
+// SettingsPluginDetailsOf says "{name} details"
+// in the language of msgs.
+//
+// The accessible name of one plugin's details button.
+func (msgs Messages) SettingsPluginDetailsOf(name string) string {
+	return Catalog.Format(msgs.locale, "settingsPluginDetailsOf", map[string]any{"name": name})
+}
+
+// SettingsPluginID says "ID"
+// in the language the app shows.
+//
+// A plugin's manifest id.
+func SettingsPluginID() string { return In(i18n.Locale()).SettingsPluginID() }
+
+// SettingsPluginID says "ID"
+// in the language of msgs.
+//
+// A plugin's manifest id.
+func (msgs Messages) SettingsPluginID() string {
+	return Catalog.Format(msgs.locale, "settingsPluginID", nil)
+}
+
+// SettingsPluginRoles says "Roles it can play"
+// in the language the app shows.
+//
+// The roles a plugin implements.
+func SettingsPluginRoles() string { return In(i18n.Locale()).SettingsPluginRoles() }
+
+// SettingsPluginRoles says "Roles it can play"
+// in the language of msgs.
+//
+// The roles a plugin implements.
+func (msgs Messages) SettingsPluginRoles() string {
+	return Catalog.Format(msgs.locale, "settingsPluginRoles", nil)
+}
+
+// SettingsPluginPages says "Plugin pages"
+// in the language the app shows.
+//
+// Settings section: the pages plugins contributed.
+func SettingsPluginPages() string { return In(i18n.Locale()).SettingsPluginPages() }
+
+// SettingsPluginPages says "Plugin pages"
+// in the language of msgs.
+//
+// Settings section: the pages plugins contributed.
+func (msgs Messages) SettingsPluginPages() string {
+	return Catalog.Format(msgs.locale, "settingsPluginPages", nil)
+}
+
+// SettingsPluginPageOpen says "Open"
+// in the language the app shows.
+//
+// The button that opens a plugin's page.
+func SettingsPluginPageOpen() string { return In(i18n.Locale()).SettingsPluginPageOpen() }
+
+// SettingsPluginPageOpen says "Open"
+// in the language of msgs.
+//
+// The button that opens a plugin's page.
+func (msgs Messages) SettingsPluginPageOpen() string {
+	return Catalog.Format(msgs.locale, "settingsPluginPageOpen", nil)
+}
+
+// SettingsPluginNoPages says "No plugin offers a page."
+// in the language the app shows.
+//
+// No enabled plugin contributes a page.
+func SettingsPluginNoPages() string { return In(i18n.Locale()).SettingsPluginNoPages() }
+
+// SettingsPluginNoPages says "No plugin offers a page."
+// in the language of msgs.
+//
+// No enabled plugin contributes a page.
+func (msgs Messages) SettingsPluginNoPages() string {
+	return Catalog.Format(msgs.locale, "settingsPluginNoPages", nil)
+}
+
+// SettingsAgentRoutes says "Routes"
+// in the language the app shows.
+//
+// Settings section: the agent API's route table.
+func SettingsAgentRoutes() string { return In(i18n.Locale()).SettingsAgentRoutes() }
+
+// SettingsAgentRoutes says "Routes"
+// in the language of msgs.
+//
+// Settings section: the agent API's route table.
+func (msgs Messages) SettingsAgentRoutes() string {
+	return Catalog.Format(msgs.locale, "settingsAgentRoutes", nil)
+}
+
+// SettingsAgentRoutesBody says "Reads need no token; writes need the one above. There are no deletes."
+// in the language the app shows.
+//
+// Description of the route table.
+func SettingsAgentRoutesBody() string { return In(i18n.Locale()).SettingsAgentRoutesBody() }
+
+// SettingsAgentRoutesBody says "Reads need no token; writes need the one above. There are no deletes."
+// in the language of msgs.
+//
+// Description of the route table.
+func (msgs Messages) SettingsAgentRoutesBody() string {
+	return Catalog.Format(msgs.locale, "settingsAgentRoutesBody", nil)
+}
+
+// SettingsRouteMethod says "Method"
+// in the language the app shows.
+//
+// Route table column: the HTTP method.
+func SettingsRouteMethod() string { return In(i18n.Locale()).SettingsRouteMethod() }
+
+// SettingsRouteMethod says "Method"
+// in the language of msgs.
+//
+// Route table column: the HTTP method.
+func (msgs Messages) SettingsRouteMethod() string {
+	return Catalog.Format(msgs.locale, "settingsRouteMethod", nil)
+}
+
+// SettingsRoutePath says "Path"
+// in the language the app shows.
+//
+// Route table column: the path.
+func SettingsRoutePath() string { return In(i18n.Locale()).SettingsRoutePath() }
+
+// SettingsRoutePath says "Path"
+// in the language of msgs.
+//
+// Route table column: the path.
+func (msgs Messages) SettingsRoutePath() string {
+	return Catalog.Format(msgs.locale, "settingsRoutePath", nil)
+}
+
+// SettingsRouteWhat says "What it does"
+// in the language the app shows.
+//
+// Route table column: what the endpoint answers.
+func SettingsRouteWhat() string { return In(i18n.Locale()).SettingsRouteWhat() }
+
+// SettingsRouteWhat says "What it does"
+// in the language of msgs.
+//
+// Route table column: what the endpoint answers.
+func (msgs Messages) SettingsRouteWhat() string {
+	return Catalog.Format(msgs.locale, "settingsRouteWhat", nil)
+}
+
+// SettingsRouteSchema says "The API and format version, and this route list"
+// in the language the app shows.
+//
+// Route table row: the schema endpoint.
+func SettingsRouteSchema() string { return In(i18n.Locale()).SettingsRouteSchema() }
+
+// SettingsRouteSchema says "The API and format version, and this route list"
+// in the language of msgs.
+//
+// Route table row: the schema endpoint.
+func (msgs Messages) SettingsRouteSchema() string {
+	return Catalog.Format(msgs.locale, "settingsRouteSchema", nil)
+}
+
+// SettingsRouteLibrary says "The library's counts"
+// in the language the app shows.
+//
+// Route table row: the library endpoint.
+func SettingsRouteLibrary() string { return In(i18n.Locale()).SettingsRouteLibrary() }
+
+// SettingsRouteLibrary says "The library's counts"
+// in the language of msgs.
+//
+// Route table row: the library endpoint.
+func (msgs Messages) SettingsRouteLibrary() string {
+	return Catalog.Format(msgs.locale, "settingsRouteLibrary", nil)
+}
+
+// SettingsRouteNotes says "List the notes, or add one"
+// in the language the app shows.
+//
+// Route table row: the notes endpoint.
+func SettingsRouteNotes() string { return In(i18n.Locale()).SettingsRouteNotes() }
+
+// SettingsRouteNotes says "List the notes, or add one"
+// in the language of msgs.
+//
+// Route table row: the notes endpoint.
+func (msgs Messages) SettingsRouteNotes() string {
+	return Catalog.Format(msgs.locale, "settingsRouteNotes", nil)
+}
+
+// SettingsRouteNote says "One note"
+// in the language the app shows.
+//
+// Route table row: a single note.
+func SettingsRouteNote() string { return In(i18n.Locale()).SettingsRouteNote() }
+
+// SettingsRouteNote says "One note"
+// in the language of msgs.
+//
+// Route table row: a single note.
+func (msgs Messages) SettingsRouteNote() string {
+	return Catalog.Format(msgs.locale, "settingsRouteNote", nil)
+}
+
+// SettingsRouteBacklinks says "What links to a note"
+// in the language the app shows.
+//
+// Route table row: a note's backlinks.
+func SettingsRouteBacklinks() string { return In(i18n.Locale()).SettingsRouteBacklinks() }
+
+// SettingsRouteBacklinks says "What links to a note"
+// in the language of msgs.
+//
+// Route table row: a note's backlinks.
+func (msgs Messages) SettingsRouteBacklinks() string {
+	return Catalog.Format(msgs.locale, "settingsRouteBacklinks", nil)
+}
+
+// SettingsRouteCards says "List the cards, or add one"
+// in the language the app shows.
+//
+// Route table row: the cards endpoint.
+func SettingsRouteCards() string { return In(i18n.Locale()).SettingsRouteCards() }
+
+// SettingsRouteCards says "List the cards, or add one"
+// in the language of msgs.
+//
+// Route table row: the cards endpoint.
+func (msgs Messages) SettingsRouteCards() string {
+	return Catalog.Format(msgs.locale, "settingsRouteCards", nil)
+}
+
+// SettingsRouteCard says "One card"
+// in the language the app shows.
+//
+// Route table row: a single card.
+func SettingsRouteCard() string { return In(i18n.Locale()).SettingsRouteCard() }
+
+// SettingsRouteCard says "One card"
+// in the language of msgs.
+//
+// Route table row: a single card.
+func (msgs Messages) SettingsRouteCard() string {
+	return Catalog.Format(msgs.locale, "settingsRouteCard", nil)
+}
+
+// SettingsRouteCardPatch says "Change a card's fields"
+// in the language the app shows.
+//
+// Route table row: changing a card.
+func SettingsRouteCardPatch() string { return In(i18n.Locale()).SettingsRouteCardPatch() }
+
+// SettingsRouteCardPatch says "Change a card's fields"
+// in the language of msgs.
+//
+// Route table row: changing a card.
+func (msgs Messages) SettingsRouteCardPatch() string {
+	return Catalog.Format(msgs.locale, "settingsRouteCardPatch", nil)
+}
+
+// SettingsRouteReview says "Record a review"
+// in the language the app shows.
+//
+// Route table row: recording a review.
+func SettingsRouteReview() string { return In(i18n.Locale()).SettingsRouteReview() }
+
+// SettingsRouteReview says "Record a review"
+// in the language of msgs.
+//
+// Route table row: recording a review.
+func (msgs Messages) SettingsRouteReview() string {
+	return Catalog.Format(msgs.locale, "settingsRouteReview", nil)
+}
+
+// SettingsRouteQueue says "The cards due now"
+// in the language the app shows.
+//
+// Route table row: today's queue.
+func SettingsRouteQueue() string { return In(i18n.Locale()).SettingsRouteQueue() }
+
+// SettingsRouteQueue says "The cards due now"
+// in the language of msgs.
+//
+// Route table row: today's queue.
+func (msgs Messages) SettingsRouteQueue() string {
+	return Catalog.Format(msgs.locale, "settingsRouteQueue", nil)
+}
+
+// SettingsRouteSearch says "Search the notes and the cards"
+// in the language the app shows.
+//
+// Route table row: search.
+func SettingsRouteSearch() string { return In(i18n.Locale()).SettingsRouteSearch() }
+
+// SettingsRouteSearch says "Search the notes and the cards"
+// in the language of msgs.
+//
+// Route table row: search.
+func (msgs Messages) SettingsRouteSearch() string {
+	return Catalog.Format(msgs.locale, "settingsRouteSearch", nil)
+}
+
+// SettingsRouteTags says "The tags the library holds"
+// in the language the app shows.
+//
+// Route table row: tags.
+func SettingsRouteTags() string { return In(i18n.Locale()).SettingsRouteTags() }
+
+// SettingsRouteTags says "The tags the library holds"
+// in the language of msgs.
+//
+// Route table row: tags.
+func (msgs Messages) SettingsRouteTags() string {
+	return Catalog.Format(msgs.locale, "settingsRouteTags", nil)
+}
+
+// SettingsRouteTypes says "The card types, or one of them"
+// in the language the app shows.
+//
+// Route table row: card types.
+func SettingsRouteTypes() string { return In(i18n.Locale()).SettingsRouteTypes() }
+
+// SettingsRouteTypes says "The card types, or one of them"
+// in the language of msgs.
+//
+// Route table row: card types.
+func (msgs Messages) SettingsRouteTypes() string {
+	return Catalog.Format(msgs.locale, "settingsRouteTypes", nil)
+}
+
+// SettingsRouteStats says "Summary, forecast and retention"
+// in the language the app shows.
+//
+// Route table row: the statistics routes.
+func SettingsRouteStats() string { return In(i18n.Locale()).SettingsRouteStats() }
+
+// SettingsRouteStats says "Summary, forecast and retention"
+// in the language of msgs.
+//
+// Route table row: the statistics routes.
+func (msgs Messages) SettingsRouteStats() string {
+	return Catalog.Format(msgs.locale, "settingsRouteStats", nil)
+}
+
+// SettingsRouteEvents says "The library's events, as they happen"
+// in the language the app shows.
+//
+// Route table row: the event stream.
+func SettingsRouteEvents() string { return In(i18n.Locale()).SettingsRouteEvents() }
+
+// SettingsRouteEvents says "The library's events, as they happen"
+// in the language of msgs.
+//
+// Route table row: the event stream.
+func (msgs Messages) SettingsRouteEvents() string {
+	return Catalog.Format(msgs.locale, "settingsRouteEvents", nil)
+}
+
+// SettingsRouteReading says "The reading queue, or one note in it"
+// in the language the app shows.
+//
+// Route table row: the reading queue.
+func SettingsRouteReading() string { return In(i18n.Locale()).SettingsRouteReading() }
+
+// SettingsRouteReading says "The reading queue, or one note in it"
+// in the language of msgs.
+//
+// Route table row: the reading queue.
+func (msgs Messages) SettingsRouteReading() string {
+	return Catalog.Format(msgs.locale, "settingsRouteReading", nil)
+}
+
+// SettingsTokenOnce says "The new token. It is shown once; the token file above holds it."
+// in the language the app shows.
+//
+// The newly minted agent token, shown once after it is written.
+func SettingsTokenOnce() string { return In(i18n.Locale()).SettingsTokenOnce() }
+
+// SettingsTokenOnce says "The new token. It is shown once; the token file above holds it."
+// in the language of msgs.
+//
+// The newly minted agent token, shown once after it is written.
+func (msgs Messages) SettingsTokenOnce() string {
+	return Catalog.Format(msgs.locale, "settingsTokenOnce", nil)
+}
+
+// SettingsVersion says "Version {version}"
+// in the language the app shows.
+//
+// The app's version on the update page.
+func SettingsVersion(version string) string { return In(i18n.Locale()).SettingsVersion(version) }
+
+// SettingsVersion says "Version {version}"
+// in the language of msgs.
+//
+// The app's version on the update page.
+func (msgs Messages) SettingsVersion(version string) string {
+	return Catalog.Format(msgs.locale, "settingsVersion", map[string]any{"version": version})
+}
+
+// SettingsFormatVersion says "Library format {format}"
+// in the language the app shows.
+//
+// The library format the build writes.
+func SettingsFormatVersion(format string) string {
+	return In(i18n.Locale()).SettingsFormatVersion(format)
+}
+
+// SettingsFormatVersion says "Library format {format}"
+// in the language of msgs.
+//
+// The library format the build writes.
+func (msgs Messages) SettingsFormatVersion(format string) string {
+	return Catalog.Format(msgs.locale, "settingsFormatVersion", map[string]any{"format": format})
+}
+
+// SettingsReindex says "Rebuild the index"
+// in the language the app shows.
+//
+// The button that derives the index again.
+func SettingsReindex() string { return In(i18n.Locale()).SettingsReindex() }
+
+// SettingsReindex says "Rebuild the index"
+// in the language of msgs.
+//
+// The button that derives the index again.
+func (msgs Messages) SettingsReindex() string {
+	return Catalog.Format(msgs.locale, "settingsReindex", nil)
+}
+
+// SettingsReindexBody says "Derives the index from the plaintext again; nothing in the library changes."
+// in the language the app shows.
+//
+// Description of rebuilding the index.
+func SettingsReindexBody() string { return In(i18n.Locale()).SettingsReindexBody() }
+
+// SettingsReindexBody says "Derives the index from the plaintext again; nothing in the library changes."
+// in the language of msgs.
+//
+// Description of rebuilding the index.
+func (msgs Messages) SettingsReindexBody() string {
+	return Catalog.Format(msgs.locale, "settingsReindexBody", nil)
+}
+
+// SettingsReindexed says "The index was rebuilt."
+// in the language the app shows.
+//
+// The rebuild finished.
+func SettingsReindexed() string { return In(i18n.Locale()).SettingsReindexed() }
+
+// SettingsReindexed says "The index was rebuilt."
+// in the language of msgs.
+//
+// The rebuild finished.
+func (msgs Messages) SettingsReindexed() string {
+	return Catalog.Format(msgs.locale, "settingsReindexed", nil)
+}
+
+// SettingsExport says "Export the library…"
+// in the language the app shows.
+//
+// The button that writes a .remitlib archive.
+func SettingsExport() string { return In(i18n.Locale()).SettingsExport() }
+
+// SettingsExport says "Export the library…"
+// in the language of msgs.
+//
+// The button that writes a .remitlib archive.
+func (msgs Messages) SettingsExport() string {
+	return Catalog.Format(msgs.locale, "settingsExport", nil)
+}
+
+// SettingsExportBody says "Writes a .remitlib archive of the plaintext sources. The derived index is not in it."
+// in the language the app shows.
+//
+// Description of exporting the library.
+func SettingsExportBody() string { return In(i18n.Locale()).SettingsExportBody() }
+
+// SettingsExportBody says "Writes a .remitlib archive of the plaintext sources. The derived index is not in it."
+// in the language of msgs.
+//
+// Description of exporting the library.
+func (msgs Messages) SettingsExportBody() string {
+	return Catalog.Format(msgs.locale, "settingsExportBody", nil)
+}
+
+// SettingsExported says "Wrote {path}."
+// in the language the app shows.
+//
+// The archive was written, at the path given.
+func SettingsExported(path string) string { return In(i18n.Locale()).SettingsExported(path) }
+
+// SettingsExported says "Wrote {path}."
+// in the language of msgs.
+//
+// The archive was written, at the path given.
+func (msgs Messages) SettingsExported(path string) string {
+	return Catalog.Format(msgs.locale, "settingsExported", map[string]any{"path": path})
+}
+
+// SettingsAboutTagline says "AGPL-3.0 · plaintext library · zero telemetry"
+// in the language the app shows.
+//
+// What the app is, under its name on the about page.
+func SettingsAboutTagline() string { return In(i18n.Locale()).SettingsAboutTagline() }
+
+// SettingsAboutTagline says "AGPL-3.0 · plaintext library · zero telemetry"
+// in the language of msgs.
+//
+// What the app is, under its name on the about page.
+func (msgs Messages) SettingsAboutTagline() string {
+	return Catalog.Format(msgs.locale, "settingsAboutTagline", nil)
+}
+
+// SettingsAboutLibrary says "Library"
+// in the language the app shows.
+//
+// The library's location on the about page.
+func SettingsAboutLibrary() string { return In(i18n.Locale()).SettingsAboutLibrary() }
+
+// SettingsAboutLibrary says "Library"
+// in the language of msgs.
+//
+// The library's location on the about page.
+func (msgs Messages) SettingsAboutLibrary() string {
+	return Catalog.Format(msgs.locale, "settingsAboutLibrary", nil)
+}
+
+// SettingsAboutNotes says "Notes"
+// in the language the app shows.
+//
+// How many notes the library holds.
+func SettingsAboutNotes() string { return In(i18n.Locale()).SettingsAboutNotes() }
+
+// SettingsAboutNotes says "Notes"
+// in the language of msgs.
+//
+// How many notes the library holds.
+func (msgs Messages) SettingsAboutNotes() string {
+	return Catalog.Format(msgs.locale, "settingsAboutNotes", nil)
+}
+
+// SettingsAboutCards says "Cards"
+// in the language the app shows.
+//
+// How many cards the library holds.
+func SettingsAboutCards() string { return In(i18n.Locale()).SettingsAboutCards() }
+
+// SettingsAboutCards says "Cards"
+// in the language of msgs.
+//
+// How many cards the library holds.
+func (msgs Messages) SettingsAboutCards() string {
+	return Catalog.Format(msgs.locale, "settingsAboutCards", nil)
+}
+
+// SettingsAboutQueue says "Due now"
+// in the language the app shows.
+//
+// How many cards and notes are due now.
+func SettingsAboutQueue() string { return In(i18n.Locale()).SettingsAboutQueue() }
+
+// SettingsAboutQueue says "Due now"
+// in the language of msgs.
+//
+// How many cards and notes are due now.
+func (msgs Messages) SettingsAboutQueue() string {
+	return Catalog.Format(msgs.locale, "settingsAboutQueue", nil)
+}
+
+// SettingsCredits says "Credits"
+// in the language the app shows.
+//
+// The about page's thanks.
+func SettingsCredits() string { return In(i18n.Locale()).SettingsCredits() }
+
+// SettingsCredits says "Credits"
+// in the language of msgs.
+//
+// The about page's thanks.
+func (msgs Messages) SettingsCredits() string {
+	return Catalog.Format(msgs.locale, "settingsCredits", nil)
+}
+
+// SettingsCreditsBody says "Built with MyGo. Spaced repetition follows FSRS; the review log is plain JSON Lines."
+// in the language the app shows.
+//
+// What the app is built on.
+func SettingsCreditsBody() string { return In(i18n.Locale()).SettingsCreditsBody() }
+
+// SettingsCreditsBody says "Built with MyGo. Spaced repetition follows FSRS; the review log is plain JSON Lines."
+// in the language of msgs.
+//
+// What the app is built on.
+func (msgs Messages) SettingsCreditsBody() string {
+	return Catalog.Format(msgs.locale, "settingsCreditsBody", nil)
+}
+
+// SettingsAppearanceLead says "How Remit looks, and how wide its paper is."
+// in the language the app shows.
+//
+// The one sentence under the appearance page's title.
+func SettingsAppearanceLead() string { return In(i18n.Locale()).SettingsAppearanceLead() }
+
+// SettingsAppearanceLead says "How Remit looks, and how wide its paper is."
+// in the language of msgs.
+//
+// The one sentence under the appearance page's title.
+func (msgs Messages) SettingsAppearanceLead() string {
+	return Catalog.Format(msgs.locale, "settingsAppearanceLead", nil)
+}
+
+// SettingsReviewLead says "The rhythm this library's reviews keep. It travels with the library, not the machine."
+// in the language the app shows.
+//
+// The one sentence under the review page's title.
+func SettingsReviewLead() string { return In(i18n.Locale()).SettingsReviewLead() }
+
+// SettingsReviewLead says "The rhythm this library's reviews keep. It travels with the library, not the machine."
+// in the language of msgs.
+//
+// The one sentence under the review page's title.
+func (msgs Messages) SettingsReviewLead() string {
+	return Catalog.Format(msgs.locale, "settingsReviewLead", nil)
+}
+
+// SettingsBudgetLead says "What one day holds. The presets travel with the library."
+// in the language the app shows.
+//
+// The one sentence under the budget page's title.
+func SettingsBudgetLead() string { return In(i18n.Locale()).SettingsBudgetLead() }
+
+// SettingsBudgetLead says "What one day holds. The presets travel with the library."
+// in the language of msgs.
+//
+// The one sentence under the budget page's title.
+func (msgs Messages) SettingsBudgetLead() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetLead", nil)
+}
+
+// SettingsKeysLead says "What each key does. The map is the same in every library."
+// in the language the app shows.
+//
+// The one sentence under the shortcuts page's title.
+func SettingsKeysLead() string { return In(i18n.Locale()).SettingsKeysLead() }
+
+// SettingsKeysLead says "What each key does. The map is the same in every library."
+// in the language of msgs.
+//
+// The one sentence under the shortcuts page's title.
+func (msgs Messages) SettingsKeysLead() string {
+	return Catalog.Format(msgs.locale, "settingsKeysLead", nil)
+}
+
+// SettingsAboutLead says "What this build is, and where its library lives."
+// in the language the app shows.
+//
+// The one sentence under the about page's title.
+func SettingsAboutLead() string { return In(i18n.Locale()).SettingsAboutLead() }
+
+// SettingsAboutLead says "What this build is, and where its library lives."
+// in the language of msgs.
+//
+// The one sentence under the about page's title.
+func (msgs Messages) SettingsAboutLead() string {
+	return Catalog.Format(msgs.locale, "settingsAboutLead", nil)
+}
+
+// SettingsReviewNeedsLibrary says "Open a library to change the pace its reviews keep."
+// in the language the app shows.
+//
+// The review page with no library open.
+func SettingsReviewNeedsLibrary() string { return In(i18n.Locale()).SettingsReviewNeedsLibrary() }
+
+// SettingsReviewNeedsLibrary says "Open a library to change the pace its reviews keep."
+// in the language of msgs.
+//
+// The review page with no library open.
+func (msgs Messages) SettingsReviewNeedsLibrary() string {
+	return Catalog.Format(msgs.locale, "settingsReviewNeedsLibrary", nil)
+}
+
+// SettingsBudgetNeedsLibrary says "Open a library to change what one of its days holds."
+// in the language the app shows.
+//
+// The budget page with no library open.
+func SettingsBudgetNeedsLibrary() string { return In(i18n.Locale()).SettingsBudgetNeedsLibrary() }
+
+// SettingsBudgetNeedsLibrary says "Open a library to change what one of its days holds."
+// in the language of msgs.
+//
+// The budget page with no library open.
+func (msgs Messages) SettingsBudgetNeedsLibrary() string {
+	return Catalog.Format(msgs.locale, "settingsBudgetNeedsLibrary", nil)
+}
+
+// SettingsBudgetCardsValue says "{count, plural, one {# card} other {# cards}}"
+// in the language the app shows.
+//
+// The daily cards beside their slider.
+func SettingsBudgetCardsValue(count int) string {
+	return In(i18n.Locale()).SettingsBudgetCardsValue(count)
+}
+
+// SettingsBudgetCardsValue says "{count, plural, one {# card} other {# cards}}"
+// in the language of msgs.
+//
+// The daily cards beside their slider.
+func (msgs Messages) SettingsBudgetCardsValue(count int) string {
+	return Catalog.Format(msgs.locale, "settingsBudgetCardsValue", map[string]any{"count": count})
+}
+
+// SettingsBudgetMinutesValue says "{count, plural, one {# minute} other {# minutes}}"
+// in the language the app shows.
+//
+// The daily minutes beside their slider.
+func SettingsBudgetMinutesValue(count int) string {
+	return In(i18n.Locale()).SettingsBudgetMinutesValue(count)
+}
+
+// SettingsBudgetMinutesValue says "{count, plural, one {# minute} other {# minutes}}"
+// in the language of msgs.
+//
+// The daily minutes beside their slider.
+func (msgs Messages) SettingsBudgetMinutesValue(count int) string {
+	return Catalog.Format(msgs.locale, "settingsBudgetMinutesValue", map[string]any{"count": count})
+}
+
+// SettingsPluginDetailsHide says "Hide details"
+// in the language the app shows.
+//
+// The button that closes one plugin's details, beside the one that opened
+// them.
+func SettingsPluginDetailsHide() string { return In(i18n.Locale()).SettingsPluginDetailsHide() }
+
+// SettingsPluginDetailsHide says "Hide details"
+// in the language of msgs.
+//
+// The button that closes one plugin's details, beside the one that opened
+// them.
+func (msgs Messages) SettingsPluginDetailsHide() string {
+	return Catalog.Format(msgs.locale, "settingsPluginDetailsHide", nil)
+}
+
+// SettingsPluginPageOpenOf says "Open {page}"
+// in the language the app shows.
+//
+// The accessible name of a plugin page's button, named by the page.
+func SettingsPluginPageOpenOf(page string) string {
+	return In(i18n.Locale()).SettingsPluginPageOpenOf(page)
+}
+
+// SettingsPluginPageOpenOf says "Open {page}"
+// in the language of msgs.
+//
+// The accessible name of a plugin page's button, named by the page.
+func (msgs Messages) SettingsPluginPageOpenOf(page string) string {
+	return Catalog.Format(msgs.locale, "settingsPluginPageOpenOf", map[string]any{"page": page})
+}
+
+// PluginNoRoles says "Implements no role"
+// in the language the app shows.
+//
+// A plugin's details when it plays none of the library's roles.
+func PluginNoRoles() string { return In(i18n.Locale()).PluginNoRoles() }
+
+// PluginNoRoles says "Implements no role"
+// in the language of msgs.
+//
+// A plugin's details when it plays none of the library's roles.
+func (msgs Messages) PluginNoRoles() string {
+	return Catalog.Format(msgs.locale, "pluginNoRoles", nil)
+}
+
+// SettingsUpdateNeedsLibrary says "Open a library to rebuild its index or export it."
+// in the language the app shows.
+//
+// The update page's two library actions with no library open.
+func SettingsUpdateNeedsLibrary() string { return In(i18n.Locale()).SettingsUpdateNeedsLibrary() }
+
+// SettingsUpdateNeedsLibrary says "Open a library to rebuild its index or export it."
+// in the language of msgs.
+//
+// The update page's two library actions with no library open.
+func (msgs Messages) SettingsUpdateNeedsLibrary() string {
+	return Catalog.Format(msgs.locale, "settingsUpdateNeedsLibrary", nil)
+}
+
+// SettingsAboutNoLibrary says "No library is open."
+// in the language the app shows.
+//
+// The about page's library line before one is open.
+func SettingsAboutNoLibrary() string { return In(i18n.Locale()).SettingsAboutNoLibrary() }
+
+// SettingsAboutNoLibrary says "No library is open."
+// in the language of msgs.
+//
+// The about page's library line before one is open.
+func (msgs Messages) SettingsAboutNoLibrary() string {
+	return Catalog.Format(msgs.locale, "settingsAboutNoLibrary", nil)
+}
+
+// PluginReenableOf says "Re-enable {name}"
+// in the language the app shows.
+//
+// The accessible name of the action that shows a plugin's hidden entries
+// again, named by the plugin.
+func PluginReenableOf(name string) string { return In(i18n.Locale()).PluginReenableOf(name) }
+
+// PluginReenableOf says "Re-enable {name}"
+// in the language of msgs.
+//
+// The accessible name of the action that shows a plugin's hidden entries
+// again, named by the plugin.
+func (msgs Messages) PluginReenableOf(name string) string {
+	return Catalog.Format(msgs.locale, "pluginReenableOf", map[string]any{"name": name})
 }

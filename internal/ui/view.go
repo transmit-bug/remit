@@ -24,7 +24,9 @@ func (a *App) View(c *ui.Context) {
 		a.invalidatePages()
 	}
 
-	tk := design.NewTokens(c.Theme())
+	// One place resolves the look: the appearance the user chose folded over the
+	// desktop's, and the paper's measure from the settings (a.tokens).
+	tk := a.tokens(c)
 	c.SetTheme(tk.Theme)
 
 	// Window shortcuts belong to the window, not to the column they are built

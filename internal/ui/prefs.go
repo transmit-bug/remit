@@ -4,15 +4,25 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
+	"os"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/queue"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/core/transfer"
 	"github.com/transmit-bug/remit/internal/settings"
+	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/screens/about"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // errCannotUpdate is the settings page's report of a build without update
@@ -88,13 +98,18 @@ func (a *App) remember(dir string) error {
 }
 
 // openSettings shows the settings area, remembering where the user was so that
-// Esc comes back to it. The page itself is loaded by loadCurrent, so opening it
-// is the same navigation as any other.
+// Esc comes back to it, and reopening the page they were on last. The page
+// itself is loaded by loadCurrent, so opening it is the same navigation as any
+// other.
 func (a *App) openSettings() {
 	if a.area != areaSettings {
 		a.prefsBack, a.prefsBackSub = a.area, a.sub
 	}
-	a.setArea(areaSettings, subSettingsAppearance)
+	sub := a.settingsSub
+	if !hasSub(areaSettings, sub) {
+		sub = subSettingsAppearance
+	}
+	a.setArea(areaSettings, sub)
 }
 
 // closeSettings returns to the area the page was opened from.
@@ -106,11 +121,17 @@ func (a *App) closeSettings() {
 	a.setArea(area, sub)
 }
 
-// syncPrefs copies the settings, and the agent API's own report, into what the
-// page shows. Every write ends here, so a failed one leaves the page showing
-// what the file holds rather than what the user clicked.
+// syncPrefs copies the settings, the library's presets and the agent API's own
+// report into what the pages show. Every write ends here, so a failed one
+// leaves a page showing what the file holds rather than what the user clicked.
 func (a *App) syncPrefs() {
-	a.prefs.Notifications = a.settings.Notifications
+	a.prefs.Page = screensettings.Page(subName(a.sub))
+	if a.area == areaSettings {
+		a.settingsSub = a.sub
+	}
+	a.prefs.Appearance = a.settings.AppearanceName()
+	a.prefs.PaperWidth = a.settings.PaperMeasure()
+	a.prefs.Reminder = a.settings.Notifications
 	a.prefs.AgentOn = a.settings.AgentServer
 	a.prefs.UpdateCheck = a.settings.UpdateCheck
 	a.prefs.Hotkey = a.settings.HotkeyAccelerator()
@@ -118,7 +139,287 @@ func (a *App) syncPrefs() {
 	if a.agentAPI != nil {
 		a.prefs.Agent = a.agentAPI.Status()
 	}
+	// A token is shown once, by the rotation that minted it: every other write
+	// takes it away again.
+	a.prefs.Token = ""
+	a.prefs.Version = Version
+	a.prefs.FormatVersion = store.FormatVersion
+	a.prefs.AppName = Name
+	a.prefs.LibraryDir = a.dir
+	a.prefs.Notes = len(a.data.notes)
+	a.prefs.Cards = len(a.data.cards)
+	counts := a.queueCounts()
+	a.prefs.DueNow = counts.Cards + counts.Reading
+	a.prefs.TrayCards, a.prefs.TrayReading = counts.Cards, counts.Reading
+	a.syncPresets()
 	a.refreshSettingsData()
+}
+
+// syncPresets copies the library's own rhythm into the pages, and today's queue
+// at it into the budget page. It is a load path: the pages read what it left,
+// and no frame asks the queue or the store.
+func (a *App) syncPresets() {
+	if a.lib == nil {
+		// No library is open: the pages show the rhythm a new one starts with,
+		// and today's queue has nothing to say.
+		p := store.DefaultPresets()
+		a.prefs.RetentionPercent = retentionPercent(p)
+		a.prefs.MaxIntervalDays = p.Review.MaxIntervalDays
+		a.prefs.IntervalPreview = p.Review.Preview
+		a.prefs.ReturnAfterExcerpt = p.Reading.ReturnAfterExcerpt
+		a.prefs.BudgetCards, a.prefs.BudgetMinutes = p.Budget.Cards, p.Budget.Minutes
+		a.prefs.Budget = screensettings.BudgetPreview{}
+		return
+	}
+	p := a.lib.Presets()
+	a.prefs.RetentionPercent = retentionPercent(p)
+	a.prefs.MaxIntervalDays = p.Review.MaxIntervalDays
+	a.prefs.IntervalPreview = p.Review.Preview
+	a.prefs.ReturnAfterExcerpt = p.Reading.ReturnAfterExcerpt
+	a.prefs.BudgetCards, a.prefs.BudgetMinutes = p.Budget.Cards, p.Budget.Minutes
+	a.prefs.Budget = a.budgetPreview(p)
+}
+
+// retentionPercent is the target the library schedules at: the override the user
+// set, or the scheduling plugin's own while there is none. The page shows one
+// number, so a presets file the user never touched and one that holds 90% read
+// the same.
+func retentionPercent(p store.Presets) int {
+	if p.Review.Retention != nil {
+		return int(math.Round(*p.Review.Retention * 100))
+	}
+	return int(math.Round(schedule.DefaultParams().DesiredRetention * 100))
+}
+
+// budgetPreview is today's queue at the presets' pace: the same function the
+// Today page asks, with the same options, so the page cannot promise a day the
+// queue would not build.
+func (a *App) budgetPreview(p store.Presets) screensettings.BudgetPreview {
+	today, err := queue.Entries(a.lib, time.Now(), todayOptions(p))
+	if err != nil {
+		slog.Warn("remit: today's queue", "err", err)
+		return screensettings.BudgetPreview{}
+	}
+	preview := screensettings.BudgetPreview{
+		Read: today.ReadMinutes, Review: today.ReviewMinutes,
+		Total: today.TotalMinutes, Budget: today.Budget, Lines: len(today.Entries),
+	}
+	for _, entry := range today.Entries {
+		if entry.Kind == queue.EntryReview {
+			preview.Cards = entry.Cards
+		}
+	}
+	return preview
+}
+
+// todayOptions is the day's queue as the presets set it: the minutes budget, the
+// excerpt slots, the new-card and new-reading pace, and the cap on the cards a
+// day holds. The Today page and the budget page's preview both ask through it.
+func todayOptions(p store.Presets) queue.TodayOptions {
+	limits := queue.Limits(p)
+	return queue.TodayOptions{
+		Budget:       time.Duration(p.Budget.Minutes) * time.Minute,
+		ExcerptSlots: p.Budget.ExcerptSlots,
+		Reading:      limits,
+		Cards:        queue.Options{Limit: p.Budget.Cards, NewPerDay: limits.NewPerDay},
+	}
+}
+
+// tokens is the design vocabulary the frame draws with: the appearance folded
+// from the user's choice over the desktop's, and the document paper's measure
+// from the settings. It is the one place the look is resolved, so the views
+// keep reading design.NewTokens' answer and never a second appearance.
+func (a *App) tokens(c *ui.Context) design.Tokens {
+	base := c.Theme()
+	dark := base.Dark
+	switch a.settings.AppearanceName() {
+	case settings.AppearancePaper:
+		dark = false
+	case settings.AppearanceInk:
+		dark = true
+	}
+	if dark != base.Dark {
+		base = &ui.Theme{Dark: dark, FontSize: base.FontSize}
+	}
+	tk := design.NewTokens(base)
+	tk.PaperWidth = float32(a.settings.PaperMeasure())
+	return tk
+}
+
+// setAppearance writes the look the user chose. The running window follows it on
+// the next frame, through the tokens the frame draws with; the desktop's own
+// chrome follows through OnSettings, which cmd answers with MyGo's theme source.
+// The look is the app's preference: a library travels between machines, and how
+// it looks does not.
+func (a *App) setAppearance(c *ui.Context, appearance string) {
+	a.writePrefs(c, func(s *settings.Settings) { s.Appearance = appearance })
+}
+
+// setPaperWidth writes the document paper's measure.
+func (a *App) setPaperWidth(c *ui.Context, width int) {
+	a.writePrefs(c, func(s *settings.Settings) { s.PaperWidth = width })
+}
+
+// openDisplaySettings opens the desktop's own text-size page: the window draws
+// at the desktop's scale, so the setting that changes it is the desktop's.
+func (a *App) openDisplaySettings(c *ui.Context) {
+	if a.openDisplay == nil {
+		c.Toast(m(c).SettingsUnavailable())
+		return
+	}
+	if err := a.openDisplay(); err != nil {
+		a.report(c, "open system settings", err)
+	}
+}
+
+// openLicense opens the license the app is under, in the browser.
+func (a *App) openLicense(c *ui.Context) {
+	if err := mygo.Shell.OpenExternal(about.LicenseURL); err != nil {
+		a.report(c, "open the license", err)
+	}
+}
+
+// writePresets applies one change to the library's own rhythm and writes it.
+// The presets follow the material, so they live in the library's config; a
+// refusal leaves the file as it was and says so where the change was made.
+func (a *App) writePresets(c *ui.Context, fn func(*store.Presets)) {
+	if a.lib == nil {
+		c.Toast(m(c).SettingsUpdateNeedsLibrary())
+		return
+	}
+	presets := a.lib.Presets()
+	fn(&presets)
+	if err := a.lib.SetPresets(presets); err != nil {
+		slog.Warn("remit: write presets", "err", err)
+		a.report(c, "save the library's presets", err)
+		a.syncPrefs() // the file did not take it: show what it holds
+		return
+	}
+	a.reload()
+	a.syncPrefs()
+}
+
+// setRetention overrides the scheduling plugin's target for this library.
+func (a *App) setRetention(c *ui.Context, percent int) {
+	a.writePresets(c, func(p *store.Presets) {
+		target := float64(percent) / 100
+		p.Review.Retention = &target
+	})
+}
+
+// setMaxInterval writes the most days a card may wait.
+func (a *App) setMaxInterval(c *ui.Context, days int) {
+	a.writePresets(c, func(p *store.Presets) { p.Review.MaxIntervalDays = days })
+}
+
+// setIntervalPreview says whether a review shows what each answer would
+// schedule.
+func (a *App) setIntervalPreview(c *ui.Context, on bool) {
+	a.writePresets(c, func(p *store.Presets) { p.Review.Preview = on })
+}
+
+// setReturnAfterExcerpt says whether an excerpt returns the reader to the note.
+func (a *App) setReturnAfterExcerpt(c *ui.Context, on bool) {
+	a.writePresets(c, func(p *store.Presets) { p.Reading.ReturnAfterExcerpt = on })
+}
+
+// setBudget writes what a day holds.
+func (a *App) setBudget(c *ui.Context, cards, minutes int) {
+	a.writePresets(c, func(p *store.Presets) {
+		p.Budget.Cards, p.Budget.Minutes = cards, minutes
+	})
+}
+
+// reindex throws the derived index away and derives it from the plaintext
+// again. The library's own files are not touched, which is what the page
+// promises.
+func (a *App) reindex(c *ui.Context) {
+	if a.lib == nil {
+		c.Toast(m(c).SettingsUpdateNeedsLibrary())
+		return
+	}
+	if err := a.lib.Rebuild(); err != nil {
+		a.report(c, "rebuild the index", err)
+		return
+	}
+	a.reload()
+	a.refreshSettingsData()
+	c.Toast(m(c).SettingsReindexed())
+}
+
+// exportLibrary writes the plaintext sources into the .remitlib archive the user
+// chooses, the same archive the offline -export writes.
+func (a *App) exportLibrary(c *ui.Context) {
+	if a.lib == nil {
+		c.Toast(m(c).SettingsUpdateNeedsLibrary())
+		return
+	}
+	path, err := a.pickArchive()
+	if err != nil {
+		a.report(c, "choose an archive", err)
+		return
+	}
+	if path == "" {
+		return // the dialog was canceled: nothing to do, and nothing to report
+	}
+	if err := writeArchive(a.dir, path); err != nil {
+		a.report(c, "export the library", err)
+		return
+	}
+	c.Toast(m(c).SettingsExported(path))
+}
+
+// writeArchive packages the library at dir into path, through a temporary file
+// in the same directory so a failed write never leaves half an archive behind.
+func writeArchive(dir, path string) error {
+	tmp := path + ".part"
+	file, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	if err := transfer.Write(dir, file); err != nil {
+		file.Close()
+		os.Remove(tmp)
+		return err
+	}
+	if err := file.Close(); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+// openPluginPage opens a page a plugin contributed, by its manifest name. It is
+// the plugins page's one navigation: a page is chosen, not copied.
+func (a *App) openPluginPage(c *ui.Context, plugin, id string) {
+	for _, page := range a.visiblePages() {
+		if page.Plugin == plugin && (id == "" || page.Page.ID == id) {
+			a.openPage(c, page)
+			return
+		}
+	}
+}
+
+// pickLibraryArchive is the save dialog an export of the whole library writes
+// through: one file, named for the app, filtered to the archive's extension.
+func pickLibraryArchive() (string, error) {
+	return mygo.Dialog.Save(mygo.SaveDialogOptions{
+		Title:       locales.SettingsExport(),
+		DefaultPath: Name + ".remitlib",
+		ButtonLabel: locales.SettingsExport(),
+		Filters: []mygo.FileFilter{
+			{Name: Name, Extensions: []string{"remitlib"}},
+		},
+	})
+}
+
+// openDisplaySettings opens the desktop's page where its text size is set. macOS
+// keeps it under Accessibility's display settings, and the app can name that
+// pane; the platforms without a page of their own have the default left unset,
+// so the settings page explains the size without offering a door that would not
+// open.
+func openDisplaySettings() error {
+	return mygo.Shell.OpenExternal("x-apple.systempreferences:com.apple.Accessibility-Settings.extension?Display")
 }
 
 // refreshSettingsData retakes what the plugins and types sections list: what
@@ -146,6 +447,12 @@ func (a *App) refreshSettingsData() {
 		a.pluginList[i].Failures = a.pluginFailures(name)
 	}
 	a.prefs.PluginSettings = a.pluginSettings()
+	a.prefs.Pages = nil
+	for _, page := range a.visiblePages() {
+		a.prefs.Pages = append(a.prefs.Pages, screensettings.PluginPage{
+			Plugin: page.Plugin, ID: page.Page.ID, Title: string(page.Page.Title),
+		})
+	}
 	used := make(map[core.ID]int, 8)
 	for _, card := range a.data.cards {
 		used[card.Type]++
@@ -175,22 +482,39 @@ func (a *App) discoveredPlugins() []screensettings.Plugin {
 	return found
 }
 
-// settingsDeps is what the settings page asks of the app: one function per
+// settingsDeps is what the settings pages ask of the app: one function per
 // thing the user can do there, each run on the UI thread. The reads answer the
-// snapshots refreshSettingsData left, so a frame never reaches the store.
+// snapshots syncPrefs and refreshSettingsData left, so a frame never reaches the
+// store.
 func (a *App) settingsDeps() screensettings.Deps {
 	return screensettings.Deps{
-		SetAgent:         a.setAgent,
-		RotateToken:      a.rotateToken,
-		CheckNow:         a.checkNow,
-		ApplyHotkey:      a.applyHotkey,
-		SetUpdateCheck:   a.setUpdateCheck,
-		SetNotifications: a.setNotifications,
+		SetAppearance:       a.setAppearance,
+		SetPaperWidth:       a.setPaperWidth,
+		OpenDisplaySettings: a.openDisplaySettings,
+
+		SetRetention:          a.setRetention,
+		SetMaxInterval:        a.setMaxInterval,
+		SetIntervalPreview:    a.setIntervalPreview,
+		SetReturnAfterExcerpt: a.setReturnAfterExcerpt,
+		SetBudget:             a.setBudget,
+		SetNotifications:      a.setNotifications,
+		ApplyHotkey:           a.applyHotkey,
+
+		SetAgent:    a.setAgent,
+		RotateToken: a.rotateToken,
+
+		SetUpdateCheck: a.setUpdateCheck,
+		CheckNow:       a.checkNow,
+		Reindex:        a.reindex,
+		ExportLibrary:  a.exportLibrary,
+		OpenLicense:    a.openLicense,
 
 		Plugins:    func() []screensettings.Plugin { return a.pluginList },
 		SetEnabled: a.setPluginEnabled,
 		Roles:      a.rolesSnapshot,
 		SetRole:    a.setRole,
+		OpenPage:   a.openPluginPage,
+
 		Types:      func() []screensettings.Type { return a.typeList },
 		SaveType:   a.saveType,
 		DeleteType: a.deleteType,
@@ -405,7 +729,23 @@ func (a *App) rotateToken(c *ui.Context) {
 		return
 	}
 	a.syncPrefs()
+	a.prefs.Token = readToken(a.prefs.Agent.TokenPath)
 	c.Toast(m(c).TokenRotated())
+}
+
+// readToken is the token the agent API just wrote, read back so the page can
+// show it once. A file that cannot be read leaves the page without one: the
+// rotation itself already succeeded, and a secret is not worth a toast.
+func readToken(path string) string {
+	if path == "" {
+		return ""
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		slog.Warn("remit: read the agent token", "err", err)
+		return ""
+	}
+	return strings.TrimSpace(string(data))
 }
 
 // setAgent turns the agent API on or off now, and remembers the choice for the

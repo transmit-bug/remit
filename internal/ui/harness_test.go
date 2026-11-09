@@ -114,6 +114,14 @@ func settle(tt *ui.Tester) {
 	tt.Advance(300 * time.Millisecond) // the entrance: two beats, on a spring
 }
 
+// settingsPage opens the settings area at one of its pages, the way the
+// sub-navigation does, and lets the page settle.
+func settingsPage(t *testing.T, tt *ui.Tester, a *App, sub subID) {
+	t.Helper()
+	a.setArea(areaSettings, sub)
+	settle(tt)
+}
+
 // newTestApp opens a window on a freshly seeded library.
 func newTestApp(t *testing.T) (*App, testLibrary) {
 	t.Helper()

@@ -28,7 +28,7 @@ func TestAreaShortcutsSwitchAreas(t *testing.T) {
 		{ui.Key3, msgs.AreaRead(), msgs.QueuePage(), msgs.NoReading()},
 		{ui.Key4, msgs.AreaRecall(), msgs.QueuePage(), "Spacing beats cramming"},
 		{ui.Key5, msgs.AreaStats(), msgs.OverviewPage(), msgs.StatsTitle()},
-		{ui.Key6, msgs.AreaSettings(), msgs.AppearancePage(), msgs.SettingsTitle()},
+		{ui.Key6, msgs.AreaSettings(), msgs.AppearancePage(), msgs.SettingsAppearanceLead()},
 	}
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
@@ -160,7 +160,7 @@ func TestAppBarAtMinimumSize(t *testing.T) {
 	}{
 		{msgs.AreaRecall(), "Spacing beats cramming"},
 		{msgs.AreaStats(), msgs.StatsTitle()},
-		{msgs.AreaSettings(), msgs.SettingsTitle()},
+		{msgs.AreaSettings(), msgs.SettingsAppearanceLead()},
 		{msgs.AreaWrite(), msgs.Notebook()},
 	} {
 		info, ok := tt.Access(area.name)

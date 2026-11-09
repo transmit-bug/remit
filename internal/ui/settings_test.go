@@ -5,13 +5,17 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/settings"
+	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/update"
+	"github.com/transmit-bug/remit/locales"
 )
 
 // fakeAgent is the agent API as the settings page drives it: it records what
@@ -20,13 +24,16 @@ import (
 type fakeAgent struct {
 	on       bool
 	rotated  int
+	token    string
 	fail     error
 	status   AgentStatus
 	servedOn []bool
 }
 
-func newFakeAgent() *fakeAgent {
-	return &fakeAgent{status: AgentStatus{Address: "127.0.0.1:51234", TokenPath: "/data/agent-token"}}
+func newFakeAgent(t *testing.T) *fakeAgent {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "agent-token")
+	return &fakeAgent{status: AgentStatus{Address: "127.0.0.1:51234", TokenPath: path}}
 }
 
 func (f *fakeAgent) SetEnabled(on bool) error {
@@ -46,6 +53,11 @@ func (f *fakeAgent) RotateToken() error {
 		return f.fail
 	}
 	f.rotated++
+	// The token file is the one cmd writes: owner-only, one line.
+	f.token = "fresh-token-" + strconv.Itoa(f.rotated)
+	if err := os.WriteFile(f.status.TokenPath, []byte(f.token+"\n"), 0o600); err != nil {
+		return err
+	}
 	// A restarted listener takes the port the system gives it next.
 	if f.on {
 		f.status.Address = "127.0.0.1:51999"
@@ -55,7 +67,7 @@ func (f *fakeAgent) RotateToken() error {
 
 func (f *fakeAgent) Status() AgentStatus { return f.status }
 
-// settingsApp is a window on a seeded library whose settings page has every
+// settingsApp is a window on a seeded library whose settings pages have every
 // seam replaced: no dialog, no port, no network.
 func settingsApp(t *testing.T, opts Options) *App {
 	t.Helper()
@@ -68,13 +80,28 @@ func settingsApp(t *testing.T, opts Options) *App {
 	return NewApp(opts)
 }
 
-// The settings page is one key or one palette action away, at both window
-// sizes, and every control on it is on screen and clickable. Esc goes back to
-// the face it was opened from.
-func TestSettingsPage(t *testing.T) {
+// The settings area is one key or one palette action away, its eight pages are
+// the sub-navigation, and each one opens on its own heading. Esc goes back to
+// the face the area was opened from.
+func TestSettingsPages(t *testing.T) {
+	msgs := locales.In("en")
+	pages := []struct {
+		sub   subID
+		page  string
+		title string
+	}{
+		{subSettingsAppearance, msgs.AppearancePage(), msgs.SettingsLook()},
+		{subSettingsReview, msgs.ReviewPage(), msgs.SettingsReviewRetention()},
+		{subSettingsBudget, msgs.BudgetPage(), msgs.SettingsBudgetCards()},
+		{subSettingsKeys, msgs.KeysPage(), msgs.SettingsKeysChange()},
+		{subSettingsPlugins, msgs.SettingsPlugins(), msgs.SettingsPluginsBody()},
+		{subSettingsAgent, msgs.AgentPage(), msgs.SettingsAgentServe()},
+		{subSettingsUpdate, msgs.UpdatePage(), msgs.SettingsCheckAtLaunch()},
+		{subSettingsAbout, msgs.AboutPage(), msgs.SettingsAboutNotes()},
+	}
 	for _, size := range windowSizes {
 		t.Run(size.name, func(t *testing.T) {
-			agent := newFakeAgent()
+			agent := newFakeAgent(t)
 			a := settingsApp(t, Options{AgentControls: agent})
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
@@ -82,38 +109,46 @@ func TestSettingsPage(t *testing.T) {
 			tt.Advance(320 * time.Millisecond) // the review card's exit
 
 			tt.Key(ui.Cmd, ui.KeyComma)
-			if a.mode != modeSettings {
-				t.Fatalf("Cmd+, opened %v, want the settings page; texts %q", a.mode, tt.Texts())
+			if a.mode != modeSettings || a.sub != subSettingsAppearance {
+				t.Fatalf("Cmd+, opened %v/%v, want the appearance page; texts %q", a.mode, a.sub, tt.Texts())
 			}
-			for _, label := range []string{"Agent API", "Serve to agents", "Rotate token", "Updates", "Check at launch", "Check now"} {
-				reveal(t, tt, size.w, size.h, label)
-				assertControl(t, tt, size.w, size.h, label)
-			}
-			// The page says where the agent API is, from the files cmd writes.
-			for _, want := range []string{agent.status.Address, "Token file: " + agent.status.TokenPath} {
-				if !tt.HasText(want) {
-					t.Fatalf("the page is missing %q; texts %q", want, tt.Texts())
-				}
-			}
-			for _, label := range []string{"Review shortcut", "Apply", "Reminders", "Daily reminder"} {
-				reveal(t, tt, size.w, size.h, label)
-				assertControl(t, tt, size.w, size.h, label)
+			// No Types page: the card-type editor moves to its own package in
+			// W5, and the sub-navigation does not offer it until then.
+			if got := len(subsOf(areaSettings)); got != len(pages) {
+				t.Errorf("the sub-navigation holds %d pages, want the eight", got)
 			}
 
-			// Esc returns to the face the page was opened from.
+			for _, page := range pages {
+				settingsPage(t, tt, a, page.sub)
+				reveal(t, tt, size.w, size.h, page.title)
+				if !tt.HasText(page.title) {
+					t.Fatalf("the %s page is missing %q; texts %q", page.page, page.title, tt.Texts())
+				}
+				reveal(t, tt, size.w, size.h, page.page)
+				if !tt.HasText(page.page) {
+					t.Fatalf("the %s page has no heading; texts %q", page.page, tt.Texts())
+				}
+			}
+
+			// Esc returns to the face the area was opened from.
 			tt.Key(0, ui.KeyEscape)
 			if a.mode != modeNotes {
 				t.Fatalf("Esc left the page on %v, want notes; texts %q", a.mode, tt.Texts())
 			}
-			if tt.HasText("Rotate token") {
+			if tt.HasText(msgs.AboutPage()) {
 				t.Error("the settings page stayed up after Esc")
 			}
 
-			// The palette reaches it too.
+			// The palette reaches it too, and it reopens the page the user was
+			// on last rather than the first one.
 			tt.Key(ui.Cmd, ui.KeyK)
 			tt.Type("settings")
 			tt.Key(0, ui.KeyEnter)
-			if a.mode != modeSettings || !tt.HasText("Rotate token") {
+			if a.mode != modeSettings || a.sub != subSettingsAbout {
+				t.Fatalf("the palette opened %v/%v, want the settings page the user left; texts %q",
+					a.mode, a.sub, tt.Texts())
+			}
+			if !tt.HasText(msgs.AboutPage()) {
 				t.Fatalf("the palette did not open the settings page; texts %q", tt.Texts())
 			}
 			tt.Advance(320 * time.Millisecond) // the screen's entrance
@@ -124,22 +159,173 @@ func TestSettingsPage(t *testing.T) {
 	}
 }
 
-// A switch on the page is the setting: it is written to settings.json, and the
+// The look is the app's own preference: choosing ink writes the override into
+// settings.json, and the window draws from the dark palette on the next frame,
+// whether or not the desktop is dark.
+func TestSettingsAppearanceWritesTheOverride(t *testing.T) {
+	msgs := locales.In("en")
+	data := t.TempDir()
+	a := settingsApp(t, Options{DataDir: data})
+	var got *ui.Theme
+	var tk design.Tokens
+	tt := ui.NewTester(func(c *ui.Context) {
+		a.View(c)
+		got, tk = c.Theme(), a.tokens(c)
+	}, 1024, 720)
+	tt.SetDark(false) // the desktop is light: the override must win
+	settle(tt)
+	settingsPage(t, tt, a, subSettingsAppearance)
+
+	if got.Dark {
+		t.Fatal("the window started dark with no override")
+	}
+	reveal(t, tt, 1024, 720, msgs.SettingsLookInk())
+	if err := tt.Click(msgs.SettingsLookInk()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if got == nil || !got.Dark {
+		t.Fatalf("the window did not draw ink after the choice: dark=%v", got.Dark)
+	}
+	if !sameColor(got.Background, design.Dark().Page) {
+		t.Errorf("the page is %v, want the dark palette's", got.Background)
+	}
+	saved, err := settings.Load(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.AppearanceName() != settings.AppearanceInk {
+		t.Fatalf("settings.json holds %q, want ink", saved.Appearance)
+	}
+
+	// Back to the desktop's own look: the override is gone and the light theme
+	// comes back.
+	reveal(t, tt, 1024, 720, msgs.SettingsLookSystem())
+	if err := tt.Click(msgs.SettingsLookSystem()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if got.Dark {
+		t.Error("the window stayed dark after choosing to follow the desktop")
+	}
+
+	// The paper's measure is the other half of the page, and it reaches the
+	// tokens the views draw with.
+	stepSlider(t, tt, msgs.SettingsPaperWidth(), float64(design.PaperWidth), settings.PaperWidthMin, settings.PaperWidthMax, 1)
+	if want := design.PaperWidth + settings.PaperWidthStep; tk.PaperWidth != want {
+		t.Errorf("the views draw %v wide, want %v", tk.PaperWidth, want)
+	}
+}
+
+// The review page writes the library's presets, not the app's settings: the
+// retention override lands in remit.json, and the library schedules with it.
+func TestSettingsReviewWritesThePresets(t *testing.T) {
+	msgs := locales.In("en")
+	a := settingsApp(t, Options{})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	settingsPage(t, tt, a, subSettingsReview)
+
+	stepSlider(t, tt, msgs.SettingsReviewRetention(), 90, 80, 97, 3)
+	presets := a.lib.Presets()
+	if presets.Review.Retention == nil || *presets.Review.Retention != 0.93 {
+		t.Fatalf("the library's retention is %v, want the 93%% the page set", presets.Review.Retention)
+	}
+	config := configOf(t, a.dir)
+	presetConfig, _ := config["presets"].(map[string]any)
+	review, _ := presetConfig["review"].(map[string]any)
+	if got, _ := review["retention"].(float64); got != 0.93 {
+		t.Fatalf("remit.json holds retention %v, want 0.93", review["retention"])
+	}
+
+	// The furthest a card may wait is a preset too.
+	stepSlider(t, tt, msgs.SettingsReviewMaxInterval(), 180, 30, 365, 1)
+	if got := a.lib.Presets().Review.MaxIntervalDays; got != 210 {
+		t.Fatalf("the longest interval is %d days, want 210", got)
+	}
+
+	reveal(t, tt, 1024, 720, msgs.SettingsReviewPreview())
+	if err := tt.Click(msgs.SettingsReviewPreview()); err != nil {
+		t.Fatal(err)
+	}
+	if a.lib.Presets().Review.Preview {
+		t.Error("the interval preview stayed on after the page turned it off")
+	}
+
+	// The app's own settings file holds none of it: a pace follows the library.
+	saved, err := settings.Load(a.settingsDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved != (settings.Settings{LibraryDir: saved.LibraryDir}) {
+		t.Errorf("settings.json gained %+v, want the library path alone", saved)
+	}
+}
+
+// The budget page's preview is today's queue at the presets' pace, derived by
+// the same function and options the Today page asks: the two cannot promise
+// different days, and moving a slider moves the numbers.
+func TestSettingsBudgetPreviewMatchesToday(t *testing.T) {
+	msgs := locales.In("en")
+	a := settingsApp(t, Options{})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	settingsPage(t, tt, a, subSettingsBudget)
+
+	// A day of 45 minutes and 30 cards, written by the page.
+	stepSlider(t, tt, msgs.SettingsBudgetCards(), 20, 5, 60, 2)
+	stepSlider(t, tt, msgs.SettingsBudgetMinutes(), 30, 10, 90, 3)
+	presets := a.lib.Presets()
+	if presets.Budget.Cards != 30 || presets.Budget.Minutes != 45 {
+		t.Fatalf("the presets hold %d cards and %d minutes, want 30 and 45", presets.Budget.Cards, presets.Budget.Minutes)
+	}
+
+	today, err := queue.Entries(a.lib, time.Now(), todayOptions(presets))
+	if err != nil {
+		t.Fatalf("queue.Entries: %v", err)
+	}
+	want := msgs.SettingsBudgetPreviewBody(
+		today.ReadMinutes, today.ReviewMinutes, today.Budget, len(today.Entries))
+	reveal(t, tt, 1024, 720, want)
+	if !tt.HasText(want) {
+		t.Fatalf("the preview says %q, want the day the queue builds %q", tt.Texts(), want)
+	}
+	if a.prefs.Budget.Total != today.TotalMinutes || a.prefs.Budget.Lines != len(today.Entries) {
+		t.Errorf("the page's snapshot is %+v, want the queue's %d minutes in %d lines",
+			a.prefs.Budget, today.TotalMinutes, len(today.Entries))
+	}
+
+	// The tray title beside it is the message the tray itself sets.
+	if !tt.HasText(msgs.TrayTitle(a.queueCounts().Cards)) {
+		t.Errorf("the page does not show the tray's title; texts %q", tt.Texts())
+	}
+}
+
+// A switch on a page is the setting: it is written to settings.json, and the
 // page reads it back, so it is still on after a restart.
 func TestSettingsSurviveRestart(t *testing.T) {
-	agent := newFakeAgent()
+	agent := newFakeAgent(t)
 	data := t.TempDir()
 	a := settingsApp(t, Options{DataDir: data, AgentControls: agent})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
-	tt.Key(ui.Cmd, ui.KeyComma)
 
-	for _, field := range []string{"Serve to agents", "Check at launch", "Daily reminder"} {
-		if err := tt.Click(field); err != nil {
-			t.Fatalf("click %q: %v", field, err)
-		}
+	settingsPage(t, tt, a, subSettingsAgent)
+	reveal(t, tt, 1024, 720, "Serve to agents")
+	if err := tt.Click("Serve to agents"); err != nil {
+		t.Fatalf("click the agent switch: %v", err)
+	}
+	settingsPage(t, tt, a, subSettingsUpdate)
+	reveal(t, tt, 1024, 720, "Check at launch")
+	if err := tt.Click("Check at launch"); err != nil {
+		t.Fatalf("click the update switch: %v", err)
+	}
+	settingsPage(t, tt, a, subSettingsBudget)
+	reveal(t, tt, 1024, 720, "Daily reminder")
+	if err := tt.Click("Daily reminder"); err != nil {
+		t.Fatalf("click the reminder switch: %v", err)
 	}
 
 	want := settings.Settings{LibraryDir: a.Settings().LibraryDir, AgentServer: true, UpdateCheck: true, Notifications: true}
@@ -153,16 +339,16 @@ func TestSettingsSurviveRestart(t *testing.T) {
 	if !agent.on {
 		t.Error("the agent switch did not start the listener")
 	}
-	if !a.prefs.AgentOn || !a.prefs.UpdateCheck || !a.prefs.Notifications {
+	if !a.prefs.AgentOn || !a.prefs.UpdateCheck || !a.prefs.Reminder {
 		t.Errorf("the page did not read its own write back: %+v", a.prefs)
 	}
 
 	// The next start shows what the file holds, without being asked again.
-	next := NewApp(Options{LibraryDir: a.dir, DataDir: data, AgentControls: newFakeAgent()})
+	next := NewApp(Options{LibraryDir: a.dir, DataDir: data, AgentControls: newFakeAgent(t)})
 	tt = ui.NewTester(next.View, 1024, 720)
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyComma)
-	if !next.prefs.AgentOn || !next.prefs.UpdateCheck || !next.prefs.Notifications {
+	if !next.prefs.AgentOn || !next.prefs.UpdateCheck || !next.prefs.Reminder {
 		t.Fatalf("the restarted app shows %+v, want the settings written", next.prefs)
 	}
 	tt.Advance(time.Second) // the switch knobs settle
@@ -175,11 +361,11 @@ func TestSettingsSurviveRestart(t *testing.T) {
 // launch: the switch starts and stops it now. Rotating the token restarts the
 // listener with the new one and the page shows the address it took.
 func TestAgentSwitchesNow(t *testing.T) {
-	agent := newFakeAgent()
+	agent := newFakeAgent(t)
 	a := settingsApp(t, Options{AgentControls: agent})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.KeyComma)
+	settingsPage(t, tt, a, subSettingsAgent)
 
 	if err := tt.Click("Serve to agents"); err != nil {
 		t.Fatal(err)
@@ -203,6 +389,18 @@ func TestAgentSwitchesNow(t *testing.T) {
 	if !tt.HasText("Listening on 127.0.0.1:51999") {
 		t.Errorf("the page kept the old address; texts %q", tt.Texts())
 	}
+	// A token is shown once, from the file the rotation wrote; the next write
+	// anywhere takes it off the page.
+	if !tt.HasText(agent.token) {
+		t.Fatalf("the page does not show the token it minted; texts %q", tt.Texts())
+	}
+	if err := a.UpdateSettings(func(s *settings.Settings) { s.Notifications = true }); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if tt.HasText(agent.token) {
+		t.Error("the page kept showing a token after another write")
+	}
 
 	tt.Advance(5 * time.Second) // let the toast go
 	if err := tt.Click("Serve to agents"); err != nil {
@@ -223,13 +421,13 @@ func TestAgentSwitchesNow(t *testing.T) {
 // A listener that will not start leaves the switch showing what the settings
 // say, and says why, rather than pretending to serve.
 func TestAgentFailureKeepsTheSwitch(t *testing.T) {
-	agent := newFakeAgent()
+	agent := newFakeAgent(t)
 	agent.fail = errors.New("address already in use")
 	data := t.TempDir()
 	a := settingsApp(t, Options{DataDir: data, AgentControls: agent})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.KeyComma)
+	settingsPage(t, tt, a, subSettingsAgent)
 
 	if err := tt.Click("Serve to agents"); err != nil {
 		t.Fatal(err)
@@ -315,13 +513,15 @@ func TestCheckNow(t *testing.T) {
 			}
 			tt := ui.NewTester(a.View, 1024, 720)
 			settle(tt)
-			tt.Key(ui.Cmd, ui.KeyComma)
+			settingsPage(t, tt, a, subSettingsUpdate)
+			reveal(t, tt, 1024, 720, "Check now")
 			if err := tt.Click("Check now"); err != nil {
 				t.Fatal(err)
 			}
 			if calls != test.calls {
 				t.Fatalf("the check ran %d times, want %d", calls, test.calls)
 			}
+			reveal(t, tt, 1024, 720, test.want)
 			if !tt.HasText(test.want) {
 				t.Fatalf("missing %q; texts %q", test.want, tt.Texts())
 			}
@@ -330,6 +530,51 @@ func TestCheckNow(t *testing.T) {
 				t.Error("view still requests frames after it should settle")
 			}
 		})
+	}
+}
+
+// Rebuilding the index derives it again from the plaintext: the library is
+// still whole, its notes are there and the counts on the about page agree.
+func TestReindexKeepsTheLibrary(t *testing.T) {
+	a := settingsApp(t, Options{})
+	before := len(a.data.notes)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	settingsPage(t, tt, a, subSettingsUpdate)
+
+	clickButton(t, tt, locales.In("en").SettingsReindex())
+	tt.Frame()
+	if want := locales.In("en").SettingsReindexed(); !tt.HasText(want) {
+		t.Fatalf("the rebuild said nothing; texts %q", tt.Texts())
+	}
+	if got := len(a.data.notes); got != before {
+		t.Fatalf("the library holds %d notes after the rebuild, want %d", got, before)
+	}
+	if _, ok := a.lib.Note(a.data.notes[0].ID); !ok {
+		t.Fatal("the rebuilt index does not find the note back")
+	}
+}
+
+// The about page states the library's facts: its path and what it holds.
+func TestAboutShowsTheLibraryFacts(t *testing.T) {
+	msgs := locales.In("en")
+	a := settingsApp(t, Options{})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	settingsPage(t, tt, a, subSettingsAbout)
+
+	for _, want := range []string{
+		Name, msgs.SettingsVersion(Version),
+		a.dir, msgs.SettingsAboutNotes(), msgs.SettingsAboutCards(),
+		msgs.SettingsAboutQueue(),
+	} {
+		reveal(t, tt, 1024, 720, want)
+		if !tt.HasText(want) {
+			t.Fatalf("the about page is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+	if !tt.HasText(locales.In("en").SettingsAboutTagline()) {
+		t.Errorf("the about page does not say what the app is; texts %q", tt.Texts())
 	}
 }
 
@@ -348,7 +593,7 @@ func TestHotkeyApply(t *testing.T) {
 	}})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.KeyComma)
+	settingsPage(t, tt, a, subSettingsKeys)
 
 	// The page starts on the default accelerator; typing a new one binds it and
 	// writes it.
@@ -360,6 +605,7 @@ func TestHotkeyApply(t *testing.T) {
 	}
 	tt.Command("selectAll")
 	tt.Type("CmdOrCtrl+Shift+J")
+	tt.Frame()
 	if err := tt.Click("Apply"); err != nil {
 		t.Fatal(err)
 	}
@@ -382,6 +628,7 @@ func TestHotkeyApply(t *testing.T) {
 	}
 	tt.Command("selectAll")
 	tt.Type("Bogus")
+	tt.Frame()
 	if err := tt.Click("Apply"); err != nil {
 		t.Fatal(err)
 	}
@@ -401,6 +648,7 @@ func TestHotkeyApply(t *testing.T) {
 	tt.Advance(5 * time.Second)
 	tt.Key(0, ui.KeyEscape)
 	tt.Key(ui.Cmd, ui.KeyComma)
+	settingsPage(t, tt, a, subSettingsKeys)
 	if !tt.HasText("That shortcut is not available: another app owns it") {
 		t.Fatalf("the startup failure is not on the page; texts %q", tt.Texts())
 	}
@@ -410,22 +658,46 @@ func TestHotkeyApply(t *testing.T) {
 	}
 }
 
-// reveal scrolls the page until s has a box inside the window, which is what
-// makes a control below the fold visible and clickable.
+// reveal scrolls a page until s has a box inside the window, which is what
+// makes a control below or above the fold visible and clickable.
 func reveal(t *testing.T, tt *ui.Tester, w, h int, s string) {
 	t.Helper()
 	inside := func(r ui.Rect) bool {
 		return r.W > 0 && r.H > 0 && r.X >= 0 && r.Y >= 0 &&
 			r.X+r.W <= float32(w) && r.Y+r.H <= float32(h)
 	}
+	// A box the scroll culled reads as zero-sized, so the target's side of the
+	// window cannot be told from it: go back to the top first, then down.
+	cx, cy := float32(w)/2, float32(h)/2
 	for i := 0; i < 20; i++ {
+		tt.Scroll(cx, cy, 0, -120)
+	}
+	for i := 0; i < 40; i++ {
 		if r, ok := tt.Find(s); ok && inside(r) {
 			return
 		}
-		tt.Scroll(float32(w)/2, float32(h)/2, 0, 120)
+		tt.Scroll(cx, cy, 0, 120)
 	}
 	r, ok := tt.Find(s)
 	t.Fatalf("%q did not scroll into the window: box %+v (found %v); texts %q", s, r, ok, tt.Texts())
+}
+
+// stepSlider focuses a slider where its knob is — the value it already holds,
+// so the click changes nothing — and moves it by presses of the Right arrow.
+func stepSlider(t *testing.T, tt *ui.Tester, name string, from, lo, hi float64, presses int) {
+	t.Helper()
+	reveal(t, tt, 1024, 720, name)
+	info, ok := tt.AccessByRole(ui.RoleSlider, name)
+	if !ok {
+		t.Fatalf("the page draws no slider named %q; texts %q", name, tt.Texts())
+	}
+	x := info.Bounds.X + info.Bounds.W*float32((from-lo)/(hi-lo))
+	tt.ClickAt(x, info.Bounds.Y+info.Bounds.H/2)
+	tt.Frame()
+	for i := 0; i < presses; i++ {
+		tt.Key(0, ui.KeyRight)
+		tt.Frame()
+	}
 }
 
 // The queues' numbers reach a service without the service asking the window:
@@ -451,8 +723,8 @@ func TestCountsReachAService(t *testing.T) {
 	}
 }
 
-// The settings page is the app's, not the library's: a first run that has not
-// made a library yet can still turn reminders and update checks on.
+// The settings area is the app's, not the library's: a first run that has not
+// made a library yet can still turn the reminder and update checks on.
 func TestSettingsWithoutALibrary(t *testing.T) {
 	data := t.TempDir()
 	a := NewApp(Options{LibraryDir: filepath.Join(t.TempDir(), "Remit"), DataDir: data})
@@ -466,6 +738,8 @@ func TestSettingsWithoutALibrary(t *testing.T) {
 	if a.mode != modeSettings {
 		t.Fatalf("Cmd+, opened %v with no library", a.mode)
 	}
+	settingsPage(t, tt, a, subSettingsBudget)
+	reveal(t, tt, 1024, 720, "Daily reminder")
 	if err := tt.Click("Daily reminder"); err != nil {
 		t.Fatal(err)
 	}
@@ -475,6 +749,14 @@ func TestSettingsWithoutALibrary(t *testing.T) {
 	}
 	if !saved.Notifications {
 		t.Error("the reminder switch did not write the setting")
+	}
+	settingsPage(t, tt, a, subSettingsUpdate)
+	reveal(t, tt, 1024, 720, "Check at launch")
+	if err := tt.Click("Check at launch"); err != nil {
+		t.Fatal(err)
+	}
+	if !a.Settings().UpdateCheck {
+		t.Error("the update switch did not write the setting without a library")
 	}
 
 	tt.Key(0, ui.KeyEscape)
@@ -512,14 +794,28 @@ func TestSettingsWriteFailureRevertsTheSwitch(t *testing.T) {
 
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	tt.Key(ui.Cmd, ui.KeyComma)
+	settingsPage(t, tt, a, subSettingsBudget)
+	reveal(t, tt, 1024, 720, "Daily reminder")
 	if err := tt.Click("Daily reminder"); err != nil {
 		t.Fatal(err)
 	}
 	if !tt.HasText("Could not save the change.") {
 		t.Fatalf("the failed write was not reported; texts %q", tt.Texts())
 	}
-	if a.prefs.Notifications || a.Settings().Notifications {
+	if a.prefs.Reminder || a.Settings().Notifications {
 		t.Error("the switch stayed on after the write failed")
 	}
+}
+
+// clickButton clicks the button named name, whichever legend happens to carry
+// the same words above it.
+func clickButton(t *testing.T, tt *ui.Tester, name string) {
+	t.Helper()
+	reveal(t, tt, 1024, 720, name)
+	info, ok := tt.AccessByRole(ui.RoleButton, name)
+	if !ok {
+		t.Fatalf("the page draws no button named %q; texts %q", name, tt.Texts())
+	}
+	tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
+	tt.Frame()
 }

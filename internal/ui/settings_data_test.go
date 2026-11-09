@@ -10,8 +10,19 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
+	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	"github.com/transmit-bug/remit/locales"
 )
+
+// typesPage draws the card-type editor. The page is not on the settings
+// sub-navigation: W5 moves it into its own package, and until then it is kept
+// whole and reachable here, with the same Deps the app hands it.
+func typesPage(a *App) *ui.Tester {
+	a.prefs.Page = screensettings.PageTypes
+	tt := ui.NewTester(func(c *ui.Context) { screensettings.View(c, &a.prefs, a.settingsDeps()) }, 1024, 720)
+	tt.Frame()
+	return tt
+}
 
 // configOf reads the library's remit.json as the file holds it.
 func configOf(t *testing.T, dir string) map[string]any {
@@ -40,8 +51,7 @@ func TestSettingsPluginAndRoleWritesReachTheLibrary(t *testing.T) {
 	a := settingsApp(t, Options{Discover: func() ([]Plugin, error) { return discovered, nil }})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	a.openSettings()
-	settle(tt)
+	settingsPage(t, tt, a, subSettingsPlugins)
 
 	reveal(t, tt, 1024, 720, msgs.PluginEnable("acme.cards"))
 	if err := tt.Click(msgs.PluginEnable("acme.cards")); err != nil {
@@ -76,10 +86,9 @@ func TestSettingsPluginAndRoleWritesReachTheLibrary(t *testing.T) {
 func TestSettingsTypeWriteReachesTheLibrary(t *testing.T) {
 	msgs := locales.In("en")
 	a := settingsApp(t, Options{})
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
 	a.openSettings()
-	settle(tt)
+	settle(ui.NewTester(a.View, 1024, 720))
+	tt := typesPage(a)
 
 	reveal(t, tt, 1024, 720, msgs.TypeFrontTemplate())
 	if err := tt.Click(msgs.TypeFrontTemplate()); err != nil {
@@ -163,10 +172,8 @@ func TestSettingsTypeRefusalReachesThePage(t *testing.T) {
 	}
 	a.reload()
 
-	tt := ui.NewTester(a.View, 1024, 720)
-	settle(tt)
 	a.openSettings()
-	settle(tt)
+	tt := typesPage(a)
 
 	reveal(t, tt, 1024, 720, typ.Name)
 	if err := tt.Click(typ.Name); err != nil {

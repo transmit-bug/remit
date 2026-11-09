@@ -35,10 +35,19 @@ const (
 	// The recall area.
 	subRecallQueue
 	subRecallCards
-	// The statistics and settings areas, each one page until its workflow
-	// splits it.
+	// The statistics area, one page until its workflow splits it.
 	subStatsOverview
+	// The settings area's eight pages: the look, the review and budget
+	// presets, the keyboard map, the plugins, the agent API, the version and
+	// what this build is.
 	subSettingsAppearance
+	subSettingsReview
+	subSettingsBudget
+	subSettingsKeys
+	subSettingsPlugins
+	subSettingsAgent
+	subSettingsUpdate
+	subSettingsAbout
 )
 
 // sessionKind is a full-window session over the stage: the review or the reading
@@ -67,7 +76,11 @@ func subsOf(area areaID) []subID {
 	case areaStats:
 		return []subID{subStatsOverview}
 	case areaSettings:
-		return []subID{subSettingsAppearance}
+		return []subID{
+			subSettingsAppearance, subSettingsReview, subSettingsBudget,
+			subSettingsKeys, subSettingsPlugins, subSettingsAgent,
+			subSettingsUpdate, subSettingsAbout,
+		}
 	}
 	return nil
 }
@@ -146,6 +159,20 @@ func subLabel(msgs locales.Messages, sub subID) string {
 		return msgs.OverviewPage()
 	case subSettingsAppearance:
 		return msgs.AppearancePage()
+	case subSettingsReview:
+		return msgs.ReviewPage()
+	case subSettingsBudget:
+		return msgs.BudgetPage()
+	case subSettingsKeys:
+		return msgs.KeysPage()
+	case subSettingsPlugins:
+		return msgs.SettingsPlugins()
+	case subSettingsAgent:
+		return msgs.AgentPage()
+	case subSettingsUpdate:
+		return msgs.UpdatePage()
+	case subSettingsAbout:
+		return msgs.AboutPage()
 	}
 	return ""
 }
@@ -167,6 +194,20 @@ func subName(sub subID) string {
 		return "overview"
 	case subSettingsAppearance:
 		return "appearance"
+	case subSettingsReview:
+		return "review"
+	case subSettingsBudget:
+		return "budget"
+	case subSettingsKeys:
+		return "keys"
+	case subSettingsPlugins:
+		return "plugins"
+	case subSettingsAgent:
+		return "agent"
+	case subSettingsUpdate:
+		return "update"
+	case subSettingsAbout:
+		return "about"
 	}
 	return ""
 }
