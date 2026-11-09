@@ -487,8 +487,10 @@ func flipCard(c *ui.Context, s *State, d Deps, card Card) {
 				return
 			}
 			// The answer's formulas are set for reading; the note keeps the
-			// source.
-			ui.Text(c, maths.Render(back)).FontSize(design.TypeBody).TextColor(c.Theme().Text)
+			// source. It unfolds where it appears: the card was there the frame
+			// before, so the reveal plays once, on this answer.
+			kit.Reveal(c, ui.Text(c, maths.Render(back)).
+				FontSize(design.TypeBody).TextColor(c.Theme().Text))
 		})
 }
 
@@ -521,15 +523,11 @@ func grades(c *ui.Context, d Deps, id core.ID) {
 				})
 			// The face eases under the pointer, and a press shrinks the key
 			// without changing the room it takes.
+			key = kit.HoverFace(c, key)
 			if key.Hovered() {
-				key.Background(t.Surface.Mix(face, 0.24)).
-					Transition(ui.ElementTransition{Colors: true, Animation: &design.Hover})
+				key.Background(t.Surface.Mix(face, 0.24))
 			}
-			pose := ui.Pose{Scale: 1}
-			if key.Pressed() {
-				pose.Scale = design.PressScale
-			}
-			key.AnimatePose(pose, design.Press)
+			kit.Press(key, key.Pressed())
 		}
 	})
 }
@@ -667,10 +665,10 @@ func empty(c *ui.Context, d Deps) {
 		summary, hasSummary = d.Summary()
 	}
 
-	// The tone is what the screen does: a quiet summary is simply there, a
-	// celebrated one arrives once and then rests. Both follow the desktop's
-	// reduce-motion setting, which snaps the frames to their end.
-	face := ui.Column(c)
+	// The tone is what the screen does: a quiet summary unfolds into the room
+	// the last card left, a celebrated one arrives once and rests. Both follow
+	// the desktop's reduce-motion setting, which snaps the frames to their end.
+	face := kit.Reveal(c, ui.Column(c))
 	if hasSummary && summary.Tone == Celebrated {
 		rise := face.Keyframes("celebrate", design.EnterFrames)
 		face.Opacity(rise).Translate(0, design.Rise*(1-rise))

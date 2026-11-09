@@ -4,6 +4,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -44,7 +45,7 @@ func subnav(c *ui.Context, tk design.Tokens, d Deps) {
 // design.ModeSwitch as the choice moves, so the mark follows the eye rather
 // than blinking to the new page.
 func tab(c *ui.Context, tk design.Tokens, tab ui.Element, page Sub, chosen bool) {
-	tab = tab.Padding(0, tk.SpaceM).Justify(ui.Center).Radius(0).Label(page.Label)
+	tab = kit.HoverFace(c, tab.Padding(0, tk.SpaceM).Justify(ui.Center).Radius(0).Label(page.Label))
 	target := float32(0)
 	if chosen {
 		target = 1

@@ -186,17 +186,23 @@ func queuePage(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design
 	s.queue.Key = func(row int) any { return items[row].Note }
 	s.queue.Label = func(row int) string { return items[row].Title }
 	ui.Divider(c)
-	ui.List(c, &s.queue, len(items), func(i int) {
-		queueRow(c, tk, msgs, items[i], now, d)
-	}).Grow(1).Label(msgs.ReadQueueTitle())
+	// The queue arrives as a list: each note behind the one above it, once, when
+	// the page appears.
+	holder := ui.Column(c).Grow(1)
+	arrive := kit.Stagger(holder, "read-queue")
+	holder.Children(func() {
+		ui.List(c, &s.queue, len(items), func(i int) {
+			queueRow(c, tk, msgs, items[i], arrive(i), now, d)
+		}).Grow(1).Label(msgs.ReadQueueTitle())
+	})
 	rhythm(c, tk, msgs, d.Counts())
 }
 
 // queueRow is one note waiting to be read: its title, where the last session
 // stopped, its paragraph progress, and the button that opens the session there.
-func queueRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, it Item, now time.Time, d Deps) {
-	ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Padding(tk.SpaceM, tk.SpaceS).
-		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border).Children(func() {
+func queueRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, it Item, shown float32, now time.Time, d Deps) {
+	kit.Arrive(ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Padding(tk.SpaceM, tk.SpaceS).
+		BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border), shown).Children(func() {
 		ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {
 			ui.Text(c, it.Title).FontSize(tk.TypeUI).SingleLine()
 			ui.Text(c, place(msgs, it, now)).FontSize(tk.TypeLabel).

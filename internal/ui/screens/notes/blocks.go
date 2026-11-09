@@ -8,6 +8,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -168,7 +169,7 @@ func (s *State) blockMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 	row := func(key, label string, selected, disabled, danger bool) ui.Element {
 		return blockMenuRow(c, tk, fmt.Sprintf("block-menu-%d-%s", box.Index, key), label, selected, disabled, danger)
 	}
-	ui.Popover(c, anchor, open, func() {
+	menu := ui.Popover(c, anchor, open, func() {
 		ui.Scroll(c).MaxHeight(360).Children(func() {
 			ui.Column(c).Role(ui.RoleMenu).MinWidth(220).Padding(tk.SpaceXS).Gap(1).Children(func() {
 				if row("add", msgs.AddBlockBelow(), false, false, false).Clicked() {
@@ -263,6 +264,9 @@ func (s *State) blockMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 			})
 		})
 	})
+	if menu.Valid() {
+		kit.ArrivePanel(menu, 0)
+	}
 }
 
 // blockMenuRow is one line of a block menu. The selected style is tinted, and
@@ -275,10 +279,10 @@ func blockMenuRow(c *ui.Context, tk design.Tokens, key, label string, selected, 
 	if selected {
 		colour = tk.Accent
 	}
-	row := ui.ButtonBase(c.Key("block-menu-"+key)).
+	row := kit.HoverFace(c, ui.ButtonBase(c.Key("block-menu-"+key)).
 		Label(label).Justify(ui.Start).FillWidth().
 		Padding(tk.SpaceXS, tk.SpaceS).Radius(tk.RadiusControl).
-		TextColor(colour).Disabled(disabled).Role(ui.RoleMenuItem)
+		TextColor(colour).Disabled(disabled).Role(ui.RoleMenuItem))
 	if selected {
 		row.Background(tk.Accent.Alpha(0.1))
 	} else if row.Hovered() && !disabled {
@@ -306,9 +310,9 @@ func (s *State) dropGutter(row ui.Element, at int, tk design.Tokens, action *blo
 // blockButton is a quiet 21-DIP control in the gutter, named for assistive
 // technology and lit under the pointer.
 func blockButton(c *ui.Context, tk design.Tokens, key, icon, label string) ui.Element {
-	button := ui.ButtonBase(c.Key(key)).
+	button := kit.HoverFace(c, ui.ButtonBase(c.Key(key)).
 		Size(21, 21).Radius(tk.RadiusControl).Justify(ui.Center).
-		Label(label).Cursor(ui.CursorPointer).TextColor(tk.TextMuted)
+		Label(label).Cursor(ui.CursorPointer).TextColor(tk.TextMuted))
 	if button.Hovered() {
 		button.Background(tk.SurfaceHover).TextColor(tk.Text)
 	}

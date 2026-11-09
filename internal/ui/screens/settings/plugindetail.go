@@ -30,9 +30,10 @@ func pluginDetailView(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk
 	open := true
 	ui.DialogBase(c, &open, func(backdrop, panel ui.Element) {
 		backdrop.Background(tk.Scrim)
-		panel = kit.StylePanel(c, panel.Width(tk.SettingsWidth).
+		panel = kit.ArrivePanel(kit.StylePanel(c, panel.Width(tk.SettingsWidth).
 			Padding(tk.SpaceL).Gap(tk.SpaceM)).
-			Label(msgs.SettingsPluginDetailsOf(p.Name))
+			Label(msgs.SettingsPluginDetailsOf(p.Name)), 0)
+		kit.ArriveScrim(backdrop, 0)
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
 				ui.Text(c, p.Name).FontSize(tk.TypeH2).Bold().Grow(1)

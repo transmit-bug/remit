@@ -59,8 +59,8 @@ func (s *State) selectionBar(c *ui.Context, tk design.Tokens, msgs locales.Messa
 
 	open := s.selectOpen
 	ui.PopoverBase(c, anchor, &open, func(panel ui.Element) {
-		panel = kit.StylePanel(c, panel.AttachTo(anchor, ui.AnchorTop, ui.AnchorBottom).
-			Margin(6, 0, 0, 0).Padding(tk.SpaceXS).Radius(tk.RadiusPanel))
+		panel = kit.ArrivePanel(kit.StylePanel(c, panel.AttachTo(anchor, ui.AnchorTop, ui.AnchorBottom).
+			Margin(6, 0, 0, 0).Padding(tk.SpaceXS).Radius(tk.RadiusPanel)), 0)
 		panel.Role(ui.RoleToolbar).Label(msgs.SelectionActions())
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(2).Children(func() {

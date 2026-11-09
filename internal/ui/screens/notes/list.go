@@ -76,7 +76,11 @@ func ListView(c *ui.Context, s *State, d Deps) {
 
 	reload := false
 	ui.Column(c).Grow(1).AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
-		ui.Column(c).FillWidth().MaxWidth(tk.ListWidth).Grow(1).Gap(tk.SpaceL).Children(func() {
+		page := ui.Column(c).FillWidth().MaxWidth(tk.ListWidth).Grow(1).Gap(tk.SpaceL)
+		// The notes arrive as a list: each row behind the one above it, once,
+		// when the page appears.
+		arrive := kit.Stagger(page, "notes-list")
+		page.Children(func() {
 			listHead(c, tk, msgs, total, cards, d)
 			reload = listToolbar(c, s, tk, msgs)
 			switch {
@@ -90,7 +94,7 @@ func ListView(c *ui.Context, s *State, d Deps) {
 						OnClick(func() { s.ClearFilters(); reload = true })
 				})
 			default:
-				s.listRows(c, tk, msgs, rows, d)
+				s.listRows(c, tk, msgs, rows, arrive, d)
 			}
 		})
 	})
@@ -194,12 +198,12 @@ func listToolbar(c *ui.Context, s *State, tk design.Tokens, msgs locales.Message
 
 // listRows is the list itself: one row per note, each opening the note, read
 // whole, or added to the reading queue from the row's own controls.
-func (s *State) listRows(c *ui.Context, tk design.Tokens, msgs locales.Messages, rows []Row, d Deps) {
+func (s *State) listRows(c *ui.Context, tk design.Tokens, msgs locales.Messages, rows []Row, arrive func(int) float32, d Deps) {
 	s.list.Key = func(row int) any { return rows[row].ID }
 	s.list.Label = func(row int) string { return rows[row].Title }
 	ui.Divider(c)
 	ui.List(c, &s.list, len(rows), func(row int) {
-		listRow(c, tk, msgs, rows[row], d)
+		listRow(c, tk, msgs, rows[row], arrive(row), d)
 	}).Grow(1).Label(msgs.ModeNotes())
 }
 
@@ -210,17 +214,17 @@ func (s *State) listRows(c *ui.Context, tk design.Tokens, msgs locales.Messages,
 //
 // The two actions stay drawn, quiet until the row is under the pointer: a
 // control that exists only under the pointer is out of the keyboard's reach.
-func listRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, d Deps) {
+func listRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, shown float32, d Deps) {
 	func() {
 		// A row is a line of the list, not a card: the hairline is what
 		// separates it from its neighbours, and the hover only tints the line.
-		face := ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
+		face := kit.HoverFace(c, ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
 			Padding(tk.SpaceM, tk.SpaceS).
-			BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border)
+			BorderWidth(0, 0, tk.Hairline, 0).BorderColor(tk.Border))
 		if face.Hovered() {
 			face.Background(tk.SurfaceHover)
 		}
-		face.Children(func() {
+		kit.Arrive(face, shown).Children(func() {
 			open := ui.Button(c, "").Label(row.Title).Grow(1).MinWidth(0).
 				MinHeight(tk.Hit).Padding(0).Radius(0).
 				Background(ui.Color{}).Border(0, tk.Border)

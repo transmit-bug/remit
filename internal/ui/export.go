@@ -68,10 +68,8 @@ func (a *App) exportView(c *ui.Context, tk design.Tokens) {
 		backdrop.Background(tk.Scrim)
 		panel = kit.StylePanel(c, panel.Width(tk.SummaryWidth).Padding(tk.SpaceL).Gap(tk.SpaceM))
 		panel.Label(msgs.ExportTitle())
-		arriving := panel.Keyframes("arrive", design.PanelFrames, ui.KeyframeOptions{Run: a.anim.export})
-		scale := design.PanelScale + (1-design.PanelScale)*arriving
-		panel.Opacity(arriving).Scale(scale, scale)
-		backdrop.Opacity(arriving)
+		panel = kit.ArrivePanel(panel, a.anim.export)
+		kit.ArriveScrim(backdrop, a.anim.export)
 
 		panel.Children(func() {
 			ui.Text(c, msgs.ExportTitle()).FontSize(tk.TypeH2).Bold()

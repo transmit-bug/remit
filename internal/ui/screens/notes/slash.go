@@ -9,6 +9,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
+	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -208,9 +209,9 @@ func (s *State) slashMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 	}
 	anchor := ui.Box(c.Key("slash-anchor")).Absolute().Left(0).Top(top).Width(1).Height(1)
 	ui.PopoverBase(c, anchor, &s.slashOpen, func(panel ui.Element) {
-		panel.Width(280).Padding(tk.SpaceXS).Gap(2).Radius(tk.RadiusControl).
+		panel = kit.ArrivePanel(panel.Width(280).Padding(tk.SpaceXS).Gap(2).Radius(tk.RadiusControl).
 			Background(tk.Surface).Border(1, tk.Border).
-			Shadow(0, 8, 24, 0, ui.RGBA(0, 0, 0, 0.18))
+			Shadow(0, 8, 24, 0, ui.RGBA(0, 0, 0, 0.18)), 0)
 		panel.Children(func() {
 			if len(s.slashMatches) == 0 {
 				ui.Text(c, msgs.NoSlashMatches()).FontSize(tk.TypeUI).
@@ -225,10 +226,10 @@ func (s *State) slashMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 						if chosen {
 							colour = tk.Accent
 						}
-						row := ui.ButtonBase(c.Key(fmt.Sprintf("slash-%s", command.key))).
+						row := kit.HoverFace(c, ui.ButtonBase(c.Key(fmt.Sprintf("slash-%s", command.key))).
 							Label(command.label).Justify(ui.Start).FillWidth().
 							Padding(tk.SpaceXS, tk.SpaceS).Radius(tk.RadiusControl).
-							TextColor(colour).Role(ui.RoleOption)
+							TextColor(colour).Role(ui.RoleOption))
 						if chosen {
 							row.Background(tk.SurfaceHover)
 						}

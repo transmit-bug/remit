@@ -9,7 +9,7 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/design"
 )
 
-// The nine moments carry the durations the design spec's table gives them, and
+// The ten moments carry the durations the design spec's table gives them, and
 // nothing else: motion is spec, tuned here.
 func TestMomentDurations(t *testing.T) {
 	moments := []struct {
@@ -86,6 +86,7 @@ func TestFramesRunForward(t *testing.T) {
 		"entrance": design.EnterFrames,
 		"mode":     design.ModeFrames,
 		"panel":    design.PanelFrames,
+		"progress": design.ProgressFrames,
 	}
 	for name, fs := range frames {
 		if len(fs) < 2 {
@@ -107,5 +108,22 @@ func TestFramesRunForward(t *testing.T) {
 		if last.At != design.ModeSwitch.Duration && name == "mode" {
 			t.Errorf("the mode switch plays for %v, its preset says %v", last.At, design.ModeSwitch.Duration)
 		}
+	}
+}
+
+// A row's arrival is the row preset's own: the same 180 ms, from nothing to its
+// place, easing out as the spring settles.
+func TestRowArrivalIsTheRowPreset(t *testing.T) {
+	tw := design.RowTween()
+	if tw.From != 0 || tw.To != 1 {
+		t.Errorf("a row arrives from %v to %v, want 0 to 1", tw.From, tw.To)
+	}
+	if tw.Duration != design.Row.Spring.Duration {
+		t.Errorf("a row arrives over %v, its preset says %v", tw.Duration, design.Row.Spring.Duration)
+	}
+	// Ease is a function: the curve is named by its identity, and the preset
+	// takes the ease-out the rest of the vocabulary does.
+	if tw.Ease == nil || tw.Ease(0.5) != ui.EaseOut(0.5) {
+		t.Error("a row arrives along a curve that is not the ease-out the moments use")
 	}
 }
