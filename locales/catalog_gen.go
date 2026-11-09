@@ -7474,3 +7474,1763 @@ func TodayLoading() string { return In(i18n.Locale()).TodayLoading() }
 func (msgs Messages) TodayLoading() string {
 	return Catalog.Format(msgs.locale, "todayLoading", nil)
 }
+
+// TypesPage says "Types"
+// in the language the app shows.
+//
+// Page of the recall area: the library’s card types.
+func TypesPage() string { return In(i18n.Locale()).TypesPage() }
+
+// TypesPage says "Types"
+// in the language of msgs.
+//
+// Page of the recall area: the library’s card types.
+func (msgs Messages) TypesPage() string {
+	return Catalog.Format(msgs.locale, "typesPage", nil)
+}
+
+// PresetsPage says "Presets"
+// in the language the app shows.
+//
+// Page of the recall area: the library’s rhythm.
+func PresetsPage() string { return In(i18n.Locale()).PresetsPage() }
+
+// PresetsPage says "Presets"
+// in the language of msgs.
+//
+// Page of the recall area: the library’s rhythm.
+func (msgs Messages) PresetsPage() string {
+	return Catalog.Format(msgs.locale, "presetsPage", nil)
+}
+
+// HistoryPage says "History"
+// in the language the app shows.
+//
+// Page of the recall area: what was reviewed today and this week.
+func HistoryPage() string { return In(i18n.Locale()).HistoryPage() }
+
+// HistoryPage says "History"
+// in the language of msgs.
+//
+// Page of the recall area: what was reviewed today and this week.
+func (msgs Messages) HistoryPage() string {
+	return Catalog.Format(msgs.locale, "historyPage", nil)
+}
+
+// RelinkPage says "Broken links"
+// in the language the app shows.
+//
+// Page of the recall area: the cards whose block is gone.
+func RelinkPage() string { return In(i18n.Locale()).RelinkPage() }
+
+// RelinkPage says "Broken links"
+// in the language of msgs.
+//
+// Page of the recall area: the cards whose block is gone.
+func (msgs Messages) RelinkPage() string {
+	return Catalog.Format(msgs.locale, "relinkPage", nil)
+}
+
+// RecallCardsTitle says "Cards"
+// in the language the app shows.
+//
+// Heading of the card table page.
+func RecallCardsTitle() string { return In(i18n.Locale()).RecallCardsTitle() }
+
+// RecallCardsTitle says "Cards"
+// in the language of msgs.
+//
+// Heading of the card table page.
+func (msgs Messages) RecallCardsTitle() string {
+	return Catalog.Format(msgs.locale, "recallCardsTitle", nil)
+}
+
+// RecallCardsBody says "Every card the library holds. Narrow it with the filters or the search syntax."
+// in the language the app shows.
+//
+// What the card table page lists.
+func RecallCardsBody() string { return In(i18n.Locale()).RecallCardsBody() }
+
+// RecallCardsBody says "Every card the library holds. Narrow it with the filters or the search syntax."
+// in the language of msgs.
+//
+// What the card table page lists.
+func (msgs Messages) RecallCardsBody() string {
+	return Catalog.Format(msgs.locale, "recallCardsBody", nil)
+}
+
+// RecallCardsSearch says "Search cards: is:new, type:remit.basic, tag:study"
+// in the language the app shows.
+//
+// Placeholder of the card table’s search field.
+func RecallCardsSearch() string { return In(i18n.Locale()).RecallCardsSearch() }
+
+// RecallCardsSearch says "Search cards: is:new, type:remit.basic, tag:study"
+// in the language of msgs.
+//
+// Placeholder of the card table’s search field.
+func (msgs Messages) RecallCardsSearch() string {
+	return Catalog.Format(msgs.locale, "recallCardsSearch", nil)
+}
+
+// RecallCardsSyntax says "Syntax"
+// in the language the app shows.
+//
+// The button that shows the card search syntax.
+func RecallCardsSyntax() string { return In(i18n.Locale()).RecallCardsSyntax() }
+
+// RecallCardsSyntax says "Syntax"
+// in the language of msgs.
+//
+// The button that shows the card search syntax.
+func (msgs Messages) RecallCardsSyntax() string {
+	return Catalog.Format(msgs.locale, "recallCardsSyntax", nil)
+}
+
+// RecallCardsSyntaxHelp says "is:new is:learning is:review is:suspended · is:live is:frozen is:lost · is:hard · type:<id> · tag:<name> · note:…"
+// in the language the app shows.
+//
+// The card search syntax, shown when the syntax button is pressed.
+func RecallCardsSyntaxHelp() string { return In(i18n.Locale()).RecallCardsSyntaxHelp() }
+
+// RecallCardsSyntaxHelp says "is:new is:learning is:review is:suspended · is:live is:frozen is:lost · is:hard · type:<id> · tag:<name> · note:…"
+// in the language of msgs.
+//
+// The card search syntax, shown when the syntax button is pressed.
+func (msgs Messages) RecallCardsSyntaxHelp() string {
+	return Catalog.Format(msgs.locale, "recallCardsSyntaxHelp", nil)
+}
+
+// RecallCardsColumns says "Columns"
+// in the language the app shows.
+//
+// The button that switches the card table’s columns on and off.
+func RecallCardsColumns() string { return In(i18n.Locale()).RecallCardsColumns() }
+
+// RecallCardsColumns says "Columns"
+// in the language of msgs.
+//
+// The button that switches the card table’s columns on and off.
+func (msgs Messages) RecallCardsColumns() string {
+	return Catalog.Format(msgs.locale, "recallCardsColumns", nil)
+}
+
+// RecallCardsActions says "Card actions"
+// in the language the app shows.
+//
+// The button that lists what plugins add to a card row.
+func RecallCardsActions() string { return In(i18n.Locale()).RecallCardsActions() }
+
+// RecallCardsActions says "Card actions"
+// in the language of msgs.
+//
+// The button that lists what plugins add to a card row.
+func (msgs Messages) RecallCardsActions() string {
+	return Catalog.Format(msgs.locale, "recallCardsActions", nil)
+}
+
+// RecallCardsNoActions says "No plugin adds an action here."
+// in the language the app shows.
+//
+// Says why the card actions button is disabled.
+func RecallCardsNoActions() string { return In(i18n.Locale()).RecallCardsNoActions() }
+
+// RecallCardsNoActions says "No plugin adds an action here."
+// in the language of msgs.
+//
+// Says why the card actions button is disabled.
+func (msgs Messages) RecallCardsNoActions() string {
+	return Catalog.Format(msgs.locale, "recallCardsNoActions", nil)
+}
+
+// RecallCardsFilters says "Filters"
+// in the language the app shows.
+//
+// Accessible label of the card table’s filter pane and its select.
+func RecallCardsFilters() string { return In(i18n.Locale()).RecallCardsFilters() }
+
+// RecallCardsFilters says "Filters"
+// in the language of msgs.
+//
+// Accessible label of the card table’s filter pane and its select.
+func (msgs Messages) RecallCardsFilters() string {
+	return Catalog.Format(msgs.locale, "recallCardsFilters", nil)
+}
+
+// RecallCardsAll says "All cards"
+// in the language the app shows.
+//
+// The filter that narrows the card table to nothing.
+func RecallCardsAll() string { return In(i18n.Locale()).RecallCardsAll() }
+
+// RecallCardsAll says "All cards"
+// in the language of msgs.
+//
+// The filter that narrows the card table to nothing.
+func (msgs Messages) RecallCardsAll() string {
+	return Catalog.Format(msgs.locale, "recallCardsAll", nil)
+}
+
+// RecallCardsSelectColumn says "Select"
+// in the language the app shows.
+//
+// Header of the card table’s checkbox column.
+func RecallCardsSelectColumn() string { return In(i18n.Locale()).RecallCardsSelectColumn() }
+
+// RecallCardsSelectColumn says "Select"
+// in the language of msgs.
+//
+// Header of the card table’s checkbox column.
+func (msgs Messages) RecallCardsSelectColumn() string {
+	return Catalog.Format(msgs.locale, "recallCardsSelectColumn", nil)
+}
+
+// RecallCardsSelect says "Select: {prompt}"
+// in the language the app shows.
+//
+// Accessible name of one row’s checkbox.
+func RecallCardsSelect(prompt string) string { return In(i18n.Locale()).RecallCardsSelect(prompt) }
+
+// RecallCardsSelect says "Select: {prompt}"
+// in the language of msgs.
+//
+// Accessible name of one row’s checkbox.
+func (msgs Messages) RecallCardsSelect(prompt string) string {
+	return Catalog.Format(msgs.locale, "recallCardsSelect", map[string]any{"prompt": prompt})
+}
+
+// RecallCardsSelected says "{count, plural, one {# card selected} other {# cards selected}}"
+// in the language the app shows.
+//
+// How many rows the bulk bar acts on.
+func RecallCardsSelected(count int) string { return In(i18n.Locale()).RecallCardsSelected(count) }
+
+// RecallCardsSelected says "{count, plural, one {# card selected} other {# cards selected}}"
+// in the language of msgs.
+//
+// How many rows the bulk bar acts on.
+func (msgs Messages) RecallCardsSelected(count int) string {
+	return Catalog.Format(msgs.locale, "recallCardsSelected", map[string]any{"count": count})
+}
+
+// RecallCardsEmpty says "No cards match."
+// in the language the app shows.
+//
+// The card table with no row for the search.
+func RecallCardsEmpty() string { return In(i18n.Locale()).RecallCardsEmpty() }
+
+// RecallCardsEmpty says "No cards match."
+// in the language of msgs.
+//
+// The card table with no row for the search.
+func (msgs Messages) RecallCardsEmpty() string {
+	return Catalog.Format(msgs.locale, "recallCardsEmpty", nil)
+}
+
+// RecallCardsNone says "No cards yet"
+// in the language the app shows.
+//
+// The card table of a library without cards.
+func RecallCardsNone() string { return In(i18n.Locale()).RecallCardsNone() }
+
+// RecallCardsNone says "No cards yet"
+// in the language of msgs.
+//
+// The card table of a library without cards.
+func (msgs Messages) RecallCardsNone() string {
+	return Catalog.Format(msgs.locale, "recallCardsNone", nil)
+}
+
+// RecallCardsNoneBody says "Make one with :: in a note, or select text in the editor to make a card from it."
+// in the language the app shows.
+//
+// How to make the first card.
+func RecallCardsNoneBody() string { return In(i18n.Locale()).RecallCardsNoneBody() }
+
+// RecallCardsNoneBody says "Make one with :: in a note, or select text in the editor to make a card from it."
+// in the language of msgs.
+//
+// How to make the first card.
+func (msgs Messages) RecallCardsNoneBody() string {
+	return Catalog.Format(msgs.locale, "recallCardsNoneBody", nil)
+}
+
+// RecallColumnPrompt says "Prompt"
+// in the language the app shows.
+//
+// Column of the card table: what the card asks.
+func RecallColumnPrompt() string { return In(i18n.Locale()).RecallColumnPrompt() }
+
+// RecallColumnPrompt says "Prompt"
+// in the language of msgs.
+//
+// Column of the card table: what the card asks.
+func (msgs Messages) RecallColumnPrompt() string {
+	return Catalog.Format(msgs.locale, "recallColumnPrompt", nil)
+}
+
+// RecallColumnNote says "Note"
+// in the language the app shows.
+//
+// Column of the card table: the note the card came from.
+func RecallColumnNote() string { return In(i18n.Locale()).RecallColumnNote() }
+
+// RecallColumnNote says "Note"
+// in the language of msgs.
+//
+// Column of the card table: the note the card came from.
+func (msgs Messages) RecallColumnNote() string {
+	return Catalog.Format(msgs.locale, "recallColumnNote", nil)
+}
+
+// RecallColumnType says "Type"
+// in the language the app shows.
+//
+// Column of the card table: the card type.
+func RecallColumnType() string { return In(i18n.Locale()).RecallColumnType() }
+
+// RecallColumnType says "Type"
+// in the language of msgs.
+//
+// Column of the card table: the card type.
+func (msgs Messages) RecallColumnType() string {
+	return Catalog.Format(msgs.locale, "recallColumnType", nil)
+}
+
+// RecallColumnStatus says "Status"
+// in the language the app shows.
+//
+// Column of the card table: where the card stands.
+func RecallColumnStatus() string { return In(i18n.Locale()).RecallColumnStatus() }
+
+// RecallColumnStatus says "Status"
+// in the language of msgs.
+//
+// Column of the card table: where the card stands.
+func (msgs Messages) RecallColumnStatus() string {
+	return Catalog.Format(msgs.locale, "recallColumnStatus", nil)
+}
+
+// RecallColumnInterval says "Interval"
+// in the language the app shows.
+//
+// Column of the card table: the card’s interval in days.
+func RecallColumnInterval() string { return In(i18n.Locale()).RecallColumnInterval() }
+
+// RecallColumnInterval says "Interval"
+// in the language of msgs.
+//
+// Column of the card table: the card’s interval in days.
+func (msgs Messages) RecallColumnInterval() string {
+	return Catalog.Format(msgs.locale, "recallColumnInterval", nil)
+}
+
+// RecallColumnLapses says "Lapses"
+// in the language the app shows.
+//
+// Column of the card table: how often the card was answered Again.
+func RecallColumnLapses() string { return In(i18n.Locale()).RecallColumnLapses() }
+
+// RecallColumnLapses says "Lapses"
+// in the language of msgs.
+//
+// Column of the card table: how often the card was answered Again.
+func (msgs Messages) RecallColumnLapses() string {
+	return Catalog.Format(msgs.locale, "recallColumnLapses", nil)
+}
+
+// RecallColumnDue says "Due"
+// in the language the app shows.
+//
+// Column of the card table: when the card comes due.
+func RecallColumnDue() string { return In(i18n.Locale()).RecallColumnDue() }
+
+// RecallColumnDue says "Due"
+// in the language of msgs.
+//
+// Column of the card table: when the card comes due.
+func (msgs Messages) RecallColumnDue() string {
+	return Catalog.Format(msgs.locale, "recallColumnDue", nil)
+}
+
+// RecallStatusNew says "New"
+// in the language the app shows.
+//
+// A card no review has touched.
+func RecallStatusNew() string { return In(i18n.Locale()).RecallStatusNew() }
+
+// RecallStatusNew says "New"
+// in the language of msgs.
+//
+// A card no review has touched.
+func (msgs Messages) RecallStatusNew() string {
+	return Catalog.Format(msgs.locale, "recallStatusNew", nil)
+}
+
+// RecallStatusLearning says "Learning"
+// in the language the app shows.
+//
+// A card still being learned.
+func RecallStatusLearning() string { return In(i18n.Locale()).RecallStatusLearning() }
+
+// RecallStatusLearning says "Learning"
+// in the language of msgs.
+//
+// A card still being learned.
+func (msgs Messages) RecallStatusLearning() string {
+	return Catalog.Format(msgs.locale, "recallStatusLearning", nil)
+}
+
+// RecallStatusReview says "Review"
+// in the language the app shows.
+//
+// A card on its long-term schedule.
+func RecallStatusReview() string { return In(i18n.Locale()).RecallStatusReview() }
+
+// RecallStatusReview says "Review"
+// in the language of msgs.
+//
+// A card on its long-term schedule.
+func (msgs Messages) RecallStatusReview() string {
+	return Catalog.Format(msgs.locale, "recallStatusReview", nil)
+}
+
+// RecallStatusSuspended says "Suspended"
+// in the language the app shows.
+//
+// A card taken out of the queue.
+func RecallStatusSuspended() string { return In(i18n.Locale()).RecallStatusSuspended() }
+
+// RecallStatusSuspended says "Suspended"
+// in the language of msgs.
+//
+// A card taken out of the queue.
+func (msgs Messages) RecallStatusSuspended() string {
+	return Catalog.Format(msgs.locale, "recallStatusSuspended", nil)
+}
+
+// RecallLinkLive says "Live"
+// in the language the app shows.
+//
+// A card whose text follows its block.
+func RecallLinkLive() string { return In(i18n.Locale()).RecallLinkLive() }
+
+// RecallLinkLive says "Live"
+// in the language of msgs.
+//
+// A card whose text follows its block.
+func (msgs Messages) RecallLinkLive() string {
+	return Catalog.Format(msgs.locale, "recallLinkLive", nil)
+}
+
+// RecallLinkFrozen says "Frozen"
+// in the language the app shows.
+//
+// A card that stopped following its block.
+func RecallLinkFrozen() string { return In(i18n.Locale()).RecallLinkFrozen() }
+
+// RecallLinkFrozen says "Frozen"
+// in the language of msgs.
+//
+// A card that stopped following its block.
+func (msgs Messages) RecallLinkFrozen() string {
+	return Catalog.Format(msgs.locale, "recallLinkFrozen", nil)
+}
+
+// RecallDueOn says "{date, date, ::MMMd}"
+// in the language the app shows.
+//
+// When a card comes due, in the table’s due column.
+func RecallDueOn(date time.Time) string { return In(i18n.Locale()).RecallDueOn(date) }
+
+// RecallDueOn says "{date, date, ::MMMd}"
+// in the language of msgs.
+//
+// When a card comes due, in the table’s due column.
+func (msgs Messages) RecallDueOn(date time.Time) string {
+	return Catalog.Format(msgs.locale, "recallDueOn", map[string]any{"date": date})
+}
+
+// RecallBulkDue says "Set due…"
+// in the language the app shows.
+//
+// The bulk action that moves the chosen cards to a date.
+func RecallBulkDue() string { return In(i18n.Locale()).RecallBulkDue() }
+
+// RecallBulkDue says "Set due…"
+// in the language of msgs.
+//
+// The bulk action that moves the chosen cards to a date.
+func (msgs Messages) RecallBulkDue() string {
+	return Catalog.Format(msgs.locale, "recallBulkDue", nil)
+}
+
+// RecallBulkFreeze says "Freeze"
+// in the language the app shows.
+//
+// The bulk action that stops the chosen cards following their blocks.
+func RecallBulkFreeze() string { return In(i18n.Locale()).RecallBulkFreeze() }
+
+// RecallBulkFreeze says "Freeze"
+// in the language of msgs.
+//
+// The bulk action that stops the chosen cards following their blocks.
+func (msgs Messages) RecallBulkFreeze() string {
+	return Catalog.Format(msgs.locale, "recallBulkFreeze", nil)
+}
+
+// RecallBulkTagPlaceholder says "Tag"
+// in the language the app shows.
+//
+// Placeholder of the bulk bar’s tag field.
+func RecallBulkTagPlaceholder() string { return In(i18n.Locale()).RecallBulkTagPlaceholder() }
+
+// RecallBulkTagPlaceholder says "Tag"
+// in the language of msgs.
+//
+// Placeholder of the bulk bar’s tag field.
+func (msgs Messages) RecallBulkTagPlaceholder() string {
+	return Catalog.Format(msgs.locale, "recallBulkTagPlaceholder", nil)
+}
+
+// RecallBulkTagApply says "Add tag"
+// in the language the app shows.
+//
+// The bulk action that tags the notes the chosen cards came from.
+func RecallBulkTagApply() string { return In(i18n.Locale()).RecallBulkTagApply() }
+
+// RecallBulkTagApply says "Add tag"
+// in the language of msgs.
+//
+// The bulk action that tags the notes the chosen cards came from.
+func (msgs Messages) RecallBulkTagApply() string {
+	return Catalog.Format(msgs.locale, "recallBulkTagApply", nil)
+}
+
+// RecallDueTomorrow says "Tomorrow"
+// in the language the app shows.
+//
+// The due menu: the next day.
+func RecallDueTomorrow() string { return In(i18n.Locale()).RecallDueTomorrow() }
+
+// RecallDueTomorrow says "Tomorrow"
+// in the language of msgs.
+//
+// The due menu: the next day.
+func (msgs Messages) RecallDueTomorrow() string {
+	return Catalog.Format(msgs.locale, "recallDueTomorrow", nil)
+}
+
+// RecallDueInAWeek says "In a week"
+// in the language the app shows.
+//
+// The due menu: seven days from now.
+func RecallDueInAWeek() string { return In(i18n.Locale()).RecallDueInAWeek() }
+
+// RecallDueInAWeek says "In a week"
+// in the language of msgs.
+//
+// The due menu: seven days from now.
+func (msgs Messages) RecallDueInAWeek() string {
+	return Catalog.Format(msgs.locale, "recallDueInAWeek", nil)
+}
+
+// RecallDueInAMonth says "In a month"
+// in the language the app shows.
+//
+// The due menu: thirty days from now.
+func RecallDueInAMonth() string { return In(i18n.Locale()).RecallDueInAMonth() }
+
+// RecallDueInAMonth says "In a month"
+// in the language of msgs.
+//
+// The due menu: thirty days from now.
+func (msgs Messages) RecallDueInAMonth() string {
+	return Catalog.Format(msgs.locale, "recallDueInAMonth", nil)
+}
+
+// RecallFilterStatus says "Status"
+// in the language the app shows.
+//
+// The card table’s filter group by lifecycle state.
+func RecallFilterStatus() string { return In(i18n.Locale()).RecallFilterStatus() }
+
+// RecallFilterStatus says "Status"
+// in the language of msgs.
+//
+// The card table’s filter group by lifecycle state.
+func (msgs Messages) RecallFilterStatus() string {
+	return Catalog.Format(msgs.locale, "recallFilterStatus", nil)
+}
+
+// RecallFilterType says "Type"
+// in the language the app shows.
+//
+// The card table’s filter group by card type.
+func RecallFilterType() string { return In(i18n.Locale()).RecallFilterType() }
+
+// RecallFilterType says "Type"
+// in the language of msgs.
+//
+// The card table’s filter group by card type.
+func (msgs Messages) RecallFilterType() string {
+	return Catalog.Format(msgs.locale, "recallFilterType", nil)
+}
+
+// RecallFilterLink says "Link"
+// in the language the app shows.
+//
+// The card table’s filter group by where a card’s text comes from.
+func RecallFilterLink() string { return In(i18n.Locale()).RecallFilterLink() }
+
+// RecallFilterLink says "Link"
+// in the language of msgs.
+//
+// The card table’s filter group by where a card’s text comes from.
+func (msgs Messages) RecallFilterLink() string {
+	return Catalog.Format(msgs.locale, "recallFilterLink", nil)
+}
+
+// RecallBulkDone says "{count, plural, one {# card updated} other {# cards updated}}"
+// in the language the app shows.
+//
+// A bulk action’s outcome.
+func RecallBulkDone(count int) string { return In(i18n.Locale()).RecallBulkDone(count) }
+
+// RecallBulkDone says "{count, plural, one {# card updated} other {# cards updated}}"
+// in the language of msgs.
+//
+// A bulk action’s outcome.
+func (msgs Messages) RecallBulkDone(count int) string {
+	return Catalog.Format(msgs.locale, "recallBulkDone", map[string]any{"count": count})
+}
+
+// RecallBulkPartial says "{applied} updated, {failed} could not be written"
+// in the language the app shows.
+//
+// A bulk action that wrote some of its cards.
+func RecallBulkPartial(applied int, failed int) string {
+	return In(i18n.Locale()).RecallBulkPartial(applied, failed)
+}
+
+// RecallBulkPartial says "{applied} updated, {failed} could not be written"
+// in the language of msgs.
+//
+// A bulk action that wrote some of its cards.
+func (msgs Messages) RecallBulkPartial(applied int, failed int) string {
+	return Catalog.Format(msgs.locale, "recallBulkPartial", map[string]any{"applied": applied, "failed": failed})
+}
+
+// RecallPresetsTitle says "Presets"
+// in the language the app shows.
+//
+// Heading of the presets page.
+func RecallPresetsTitle() string { return In(i18n.Locale()).RecallPresetsTitle() }
+
+// RecallPresetsTitle says "Presets"
+// in the language of msgs.
+//
+// Heading of the presets page.
+func (msgs Messages) RecallPresetsTitle() string {
+	return Catalog.Format(msgs.locale, "recallPresetsTitle", nil)
+}
+
+// RecallPresetsBody says "The rhythm this library keeps: what a day holds, how new material is paced, and what a broken link becomes. It lives …"
+// in the language the app shows.
+//
+// What the presets page sets.
+func RecallPresetsBody() string { return In(i18n.Locale()).RecallPresetsBody() }
+
+// RecallPresetsBody says "The rhythm this library keeps: what a day holds, how new material is paced, and what a broken link becomes. It lives …"
+// in the language of msgs.
+//
+// What the presets page sets.
+func (msgs Messages) RecallPresetsBody() string {
+	return Catalog.Format(msgs.locale, "recallPresetsBody", nil)
+}
+
+// RecallPresetsSteps says "Learning steps"
+// in the language the app shows.
+//
+// The presets group that explains the schedule’s learning steps.
+func RecallPresetsSteps() string { return In(i18n.Locale()).RecallPresetsSteps() }
+
+// RecallPresetsSteps says "Learning steps"
+// in the language of msgs.
+//
+// The presets group that explains the schedule’s learning steps.
+func (msgs Messages) RecallPresetsSteps() string {
+	return Catalog.Format(msgs.locale, "recallPresetsSteps", nil)
+}
+
+// RecallPresetsStepsFixed says "Learning steps"
+// in the language the app shows.
+//
+// The read-only field that names the learning steps.
+func RecallPresetsStepsFixed() string { return In(i18n.Locale()).RecallPresetsStepsFixed() }
+
+// RecallPresetsStepsFixed says "Learning steps"
+// in the language of msgs.
+//
+// The read-only field that names the learning steps.
+func (msgs Messages) RecallPresetsStepsFixed() string {
+	return Catalog.Format(msgs.locale, "recallPresetsStepsFixed", nil)
+}
+
+// RecallPresetsStepsAgain says "Again, then the next day"
+// in the language the app shows.
+//
+// What this build does with a card answered Again.
+func RecallPresetsStepsAgain() string { return In(i18n.Locale()).RecallPresetsStepsAgain() }
+
+// RecallPresetsStepsAgain says "Again, then the next day"
+// in the language of msgs.
+//
+// What this build does with a card answered Again.
+func (msgs Messages) RecallPresetsStepsAgain() string {
+	return Catalog.Format(msgs.locale, "recallPresetsStepsAgain", nil)
+}
+
+// RecallPresetsStepsReason says "Steps are the scheduler’s, not a preset: this build asks an Again card the next day, and custom steps wait for the …"
+// in the language the app shows.
+//
+// Why the learning steps are read-only.
+func RecallPresetsStepsReason() string { return In(i18n.Locale()).RecallPresetsStepsReason() }
+
+// RecallPresetsStepsReason says "Steps are the scheduler’s, not a preset: this build asks an Again card the next day, and custom steps wait for the …"
+// in the language of msgs.
+//
+// Why the learning steps are read-only.
+func (msgs Messages) RecallPresetsStepsReason() string {
+	return Catalog.Format(msgs.locale, "recallPresetsStepsReason", nil)
+}
+
+// RecallPresetsLimits says "Daily limits"
+// in the language the app shows.
+//
+// The presets group of what a day holds.
+func RecallPresetsLimits() string { return In(i18n.Locale()).RecallPresetsLimits() }
+
+// RecallPresetsLimits says "Daily limits"
+// in the language of msgs.
+//
+// The presets group of what a day holds.
+func (msgs Messages) RecallPresetsLimits() string {
+	return Catalog.Format(msgs.locale, "recallPresetsLimits", nil)
+}
+
+// RecallPresetsNewCards says "New cards a day"
+// in the language the app shows.
+//
+// The daily allowance of cards no review has touched.
+func RecallPresetsNewCards() string { return In(i18n.Locale()).RecallPresetsNewCards() }
+
+// RecallPresetsNewCards says "New cards a day"
+// in the language of msgs.
+//
+// The daily allowance of cards no review has touched.
+func (msgs Messages) RecallPresetsNewCards() string {
+	return Catalog.Format(msgs.locale, "recallPresetsNewCards", nil)
+}
+
+// RecallPresetsNewCardsBody says "Zero is no cap."
+// in the language the app shows.
+//
+// What a zero limit means.
+func RecallPresetsNewCardsBody() string { return In(i18n.Locale()).RecallPresetsNewCardsBody() }
+
+// RecallPresetsNewCardsBody says "Zero is no cap."
+// in the language of msgs.
+//
+// What a zero limit means.
+func (msgs Messages) RecallPresetsNewCardsBody() string {
+	return Catalog.Format(msgs.locale, "recallPresetsNewCardsBody", nil)
+}
+
+// RecallPresetsDayCards says "Cards a day"
+// in the language the app shows.
+//
+// How many cards the day’s queue holds.
+func RecallPresetsDayCards() string { return In(i18n.Locale()).RecallPresetsDayCards() }
+
+// RecallPresetsDayCards says "Cards a day"
+// in the language of msgs.
+//
+// How many cards the day’s queue holds.
+func (msgs Messages) RecallPresetsDayCards() string {
+	return Catalog.Format(msgs.locale, "recallPresetsDayCards", nil)
+}
+
+// RecallPresetsMinutes says "Minutes a day"
+// in the language the app shows.
+//
+// How many minutes the day’s queue is worth.
+func RecallPresetsMinutes() string { return In(i18n.Locale()).RecallPresetsMinutes() }
+
+// RecallPresetsMinutes says "Minutes a day"
+// in the language of msgs.
+//
+// How many minutes the day’s queue is worth.
+func (msgs Messages) RecallPresetsMinutes() string {
+	return Catalog.Format(msgs.locale, "recallPresetsMinutes", nil)
+}
+
+// RecallPresetsLimitsBody says "Zero is no cap; the day’s queue prices reading and review against it."
+// in the language the app shows.
+//
+// What the daily limits are read against.
+func RecallPresetsLimitsBody() string { return In(i18n.Locale()).RecallPresetsLimitsBody() }
+
+// RecallPresetsLimitsBody says "Zero is no cap; the day’s queue prices reading and review against it."
+// in the language of msgs.
+//
+// What the daily limits are read against.
+func (msgs Messages) RecallPresetsLimitsBody() string {
+	return Catalog.Format(msgs.locale, "recallPresetsLimitsBody", nil)
+}
+
+// RecallPresetsFailure says "Failure"
+// in the language the app shows.
+//
+// The presets group of what makes a card hard.
+func RecallPresetsFailure() string { return In(i18n.Locale()).RecallPresetsFailure() }
+
+// RecallPresetsFailure says "Failure"
+// in the language of msgs.
+//
+// The presets group of what makes a card hard.
+func (msgs Messages) RecallPresetsFailure() string {
+	return Catalog.Format(msgs.locale, "recallPresetsFailure", nil)
+}
+
+// RecallPresetsMaxInterval says "Maximum interval"
+// in the language the app shows.
+//
+// The longest interval a card may reach.
+func RecallPresetsMaxInterval() string { return In(i18n.Locale()).RecallPresetsMaxInterval() }
+
+// RecallPresetsMaxInterval says "Maximum interval"
+// in the language of msgs.
+//
+// The longest interval a card may reach.
+func (msgs Messages) RecallPresetsMaxInterval() string {
+	return Catalog.Format(msgs.locale, "recallPresetsMaxInterval", nil)
+}
+
+// RecallPresetsMaxIntervalBody says "How far a well-known card may be scheduled."
+// in the language the app shows.
+//
+// What the maximum interval bounds.
+func RecallPresetsMaxIntervalBody() string { return In(i18n.Locale()).RecallPresetsMaxIntervalBody() }
+
+// RecallPresetsMaxIntervalBody says "How far a well-known card may be scheduled."
+// in the language of msgs.
+//
+// What the maximum interval bounds.
+func (msgs Messages) RecallPresetsMaxIntervalBody() string {
+	return Catalog.Format(msgs.locale, "recallPresetsMaxIntervalBody", nil)
+}
+
+// RecallPresetsHard says "Hard card from"
+// in the language the app shows.
+//
+// The lapse count from which a card counts as hard.
+func RecallPresetsHard() string { return In(i18n.Locale()).RecallPresetsHard() }
+
+// RecallPresetsHard says "Hard card from"
+// in the language of msgs.
+//
+// The lapse count from which a card counts as hard.
+func (msgs Messages) RecallPresetsHard() string {
+	return Catalog.Format(msgs.locale, "recallPresetsHard", nil)
+}
+
+// RecallPresetsHardBody says "A card answered Again that often is marked hard in the card table and the queue."
+// in the language the app shows.
+//
+// What the hard-card threshold does.
+func RecallPresetsHardBody() string { return In(i18n.Locale()).RecallPresetsHardBody() }
+
+// RecallPresetsHardBody says "A card answered Again that often is marked hard in the card table and the queue."
+// in the language of msgs.
+//
+// What the hard-card threshold does.
+func (msgs Messages) RecallPresetsHardBody() string {
+	return Catalog.Format(msgs.locale, "recallPresetsHardBody", nil)
+}
+
+// RecallPresetsBroken says "Broken links"
+// in the language the app shows.
+//
+// The presets group of what a card whose block is gone becomes.
+func RecallPresetsBroken() string { return In(i18n.Locale()).RecallPresetsBroken() }
+
+// RecallPresetsBroken says "Broken links"
+// in the language of msgs.
+//
+// The presets group of what a card whose block is gone becomes.
+func (msgs Messages) RecallPresetsBroken() string {
+	return Catalog.Format(msgs.locale, "recallPresetsBroken", nil)
+}
+
+// RecallPresetsBrokenLabel says "When a block is deleted"
+// in the language the app shows.
+//
+// The field that chooses the broken-link policy.
+func RecallPresetsBrokenLabel() string { return In(i18n.Locale()).RecallPresetsBrokenLabel() }
+
+// RecallPresetsBrokenLabel says "When a block is deleted"
+// in the language of msgs.
+//
+// The field that chooses the broken-link policy.
+func (msgs Messages) RecallPresetsBrokenLabel() string {
+	return Catalog.Format(msgs.locale, "recallPresetsBrokenLabel", nil)
+}
+
+// RecallPresetsBrokenKeep says "Keep as a broken link"
+// in the language the app shows.
+//
+// The broken-link policy that leaves the card lost until it is repaired.
+func RecallPresetsBrokenKeep() string { return In(i18n.Locale()).RecallPresetsBrokenKeep() }
+
+// RecallPresetsBrokenKeep says "Keep as a broken link"
+// in the language of msgs.
+//
+// The broken-link policy that leaves the card lost until it is repaired.
+func (msgs Messages) RecallPresetsBrokenKeep() string {
+	return Catalog.Format(msgs.locale, "recallPresetsBrokenKeep", nil)
+}
+
+// RecallPresetsBrokenSnapshot says "Keep a snapshot"
+// in the language the app shows.
+//
+// The broken-link policy that gives the card the text it lost.
+func RecallPresetsBrokenSnapshot() string { return In(i18n.Locale()).RecallPresetsBrokenSnapshot() }
+
+// RecallPresetsBrokenSnapshot says "Keep a snapshot"
+// in the language of msgs.
+//
+// The broken-link policy that gives the card the text it lost.
+func (msgs Messages) RecallPresetsBrokenSnapshot() string {
+	return Catalog.Format(msgs.locale, "recallPresetsBrokenSnapshot", nil)
+}
+
+// RecallPresetsBrokenBody says "A kept snapshot still asks, reading the text the block had when it went."
+// in the language the app shows.
+//
+// What the snapshot policy does.
+func RecallPresetsBrokenBody() string { return In(i18n.Locale()).RecallPresetsBrokenBody() }
+
+// RecallPresetsBrokenBody says "A kept snapshot still asks, reading the text the block had when it went."
+// in the language of msgs.
+//
+// What the snapshot policy does.
+func (msgs Messages) RecallPresetsBrokenBody() string {
+	return Catalog.Format(msgs.locale, "recallPresetsBrokenBody", nil)
+}
+
+// RecallPresetsReset says "Restore defaults"
+// in the language the app shows.
+//
+// The action that writes the default presets back.
+func RecallPresetsReset() string { return In(i18n.Locale()).RecallPresetsReset() }
+
+// RecallPresetsReset says "Restore defaults"
+// in the language of msgs.
+//
+// The action that writes the default presets back.
+func (msgs Messages) RecallPresetsReset() string {
+	return Catalog.Format(msgs.locale, "recallPresetsReset", nil)
+}
+
+// RecallPresetsWrites says "A change is written as soon as it is made."
+// in the language the app shows.
+//
+// Says when the presets are saved.
+func RecallPresetsWrites() string { return In(i18n.Locale()).RecallPresetsWrites() }
+
+// RecallPresetsWrites says "A change is written as soon as it is made."
+// in the language of msgs.
+//
+// Says when the presets are saved.
+func (msgs Messages) RecallPresetsWrites() string {
+	return Catalog.Format(msgs.locale, "recallPresetsWrites", nil)
+}
+
+// RecallPresetsResetTitle says "Restore the default presets?"
+// in the language the app shows.
+//
+// Title of the reset question.
+func RecallPresetsResetTitle() string { return In(i18n.Locale()).RecallPresetsResetTitle() }
+
+// RecallPresetsResetTitle says "Restore the default presets?"
+// in the language of msgs.
+//
+// Title of the reset question.
+func (msgs Messages) RecallPresetsResetTitle() string {
+	return Catalog.Format(msgs.locale, "recallPresetsResetTitle", nil)
+}
+
+// RecallPresetsResetBody says "Every preset goes back to the library’s defaults. The library keeps no undo for it."
+// in the language the app shows.
+//
+// What the reset does.
+func RecallPresetsResetBody() string { return In(i18n.Locale()).RecallPresetsResetBody() }
+
+// RecallPresetsResetBody says "Every preset goes back to the library’s defaults. The library keeps no undo for it."
+// in the language of msgs.
+//
+// What the reset does.
+func (msgs Messages) RecallPresetsResetBody() string {
+	return Catalog.Format(msgs.locale, "recallPresetsResetBody", nil)
+}
+
+// RecallPresetsResetDone says "Presets restored."
+// in the language the app shows.
+//
+// The reset was written.
+func RecallPresetsResetDone() string { return In(i18n.Locale()).RecallPresetsResetDone() }
+
+// RecallPresetsResetDone says "Presets restored."
+// in the language of msgs.
+//
+// The reset was written.
+func (msgs Messages) RecallPresetsResetDone() string {
+	return Catalog.Format(msgs.locale, "recallPresetsResetDone", nil)
+}
+
+// RecallPresetsNeedsLibrary says "Open a library to change its presets."
+// in the language the app shows.
+//
+// A presets write without a library.
+func RecallPresetsNeedsLibrary() string { return In(i18n.Locale()).RecallPresetsNeedsLibrary() }
+
+// RecallPresetsNeedsLibrary says "Open a library to change its presets."
+// in the language of msgs.
+//
+// A presets write without a library.
+func (msgs Messages) RecallPresetsNeedsLibrary() string {
+	return Catalog.Format(msgs.locale, "recallPresetsNeedsLibrary", nil)
+}
+
+// RecallPresetsFailed says "The library did not take that: {reason}"
+// in the language the app shows.
+//
+// A presets write the store refused.
+func RecallPresetsFailed(reason string) string { return In(i18n.Locale()).RecallPresetsFailed(reason) }
+
+// RecallPresetsFailed says "The library did not take that: {reason}"
+// in the language of msgs.
+//
+// A presets write the store refused.
+func (msgs Messages) RecallPresetsFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "recallPresetsFailed", map[string]any{"reason": reason})
+}
+
+// RecallPresetsDays says "{count} days"
+// in the language the app shows.
+//
+// One choice of the maximum interval.
+func RecallPresetsDays(count int) string { return In(i18n.Locale()).RecallPresetsDays(count) }
+
+// RecallPresetsDays says "{count} days"
+// in the language of msgs.
+//
+// One choice of the maximum interval.
+func (msgs Messages) RecallPresetsDays(count int) string {
+	return Catalog.Format(msgs.locale, "recallPresetsDays", map[string]any{"count": count})
+}
+
+// RecallHistoryTitle says "History"
+// in the language the app shows.
+//
+// Heading of the history page.
+func RecallHistoryTitle() string { return In(i18n.Locale()).RecallHistoryTitle() }
+
+// RecallHistoryTitle says "History"
+// in the language of msgs.
+//
+// Heading of the history page.
+func (msgs Messages) RecallHistoryTitle() string {
+	return Catalog.Format(msgs.locale, "recallHistoryTitle", nil)
+}
+
+// RecallHistoryBody says "What today recorded, and how the week went. Every answer and every reading session in the live log is here."
+// in the language the app shows.
+//
+// What the history page shows.
+func RecallHistoryBody() string { return In(i18n.Locale()).RecallHistoryBody() }
+
+// RecallHistoryBody says "What today recorded, and how the week went. Every answer and every reading session in the live log is here."
+// in the language of msgs.
+//
+// What the history page shows.
+func (msgs Messages) RecallHistoryBody() string {
+	return Catalog.Format(msgs.locale, "recallHistoryBody", nil)
+}
+
+// RecallHistoryReviewed says "Reviewed today"
+// in the language the app shows.
+//
+// The number of answers today.
+func RecallHistoryReviewed() string { return In(i18n.Locale()).RecallHistoryReviewed() }
+
+// RecallHistoryReviewed says "Reviewed today"
+// in the language of msgs.
+//
+// The number of answers today.
+func (msgs Messages) RecallHistoryReviewed() string {
+	return Catalog.Format(msgs.locale, "recallHistoryReviewed", nil)
+}
+
+// RecallHistoryMinutes says "Minutes today"
+// in the language the app shows.
+//
+// The minutes today’s answers are priced at.
+func RecallHistoryMinutes() string { return In(i18n.Locale()).RecallHistoryMinutes() }
+
+// RecallHistoryMinutes says "Minutes today"
+// in the language of msgs.
+//
+// The minutes today’s answers are priced at.
+func (msgs Messages) RecallHistoryMinutes() string {
+	return Catalog.Format(msgs.locale, "recallHistoryMinutes", nil)
+}
+
+// RecallHistoryAgain says "Again today"
+// in the language the app shows.
+//
+// How many of today’s answers were Again.
+func RecallHistoryAgain() string { return In(i18n.Locale()).RecallHistoryAgain() }
+
+// RecallHistoryAgain says "Again today"
+// in the language of msgs.
+//
+// How many of today’s answers were Again.
+func (msgs Messages) RecallHistoryAgain() string {
+	return Catalog.Format(msgs.locale, "recallHistoryAgain", nil)
+}
+
+// RecallHistoryAccuracy says "Accuracy today"
+// in the language the app shows.
+//
+// The share of today’s answers that were not Again.
+func RecallHistoryAccuracy() string { return In(i18n.Locale()).RecallHistoryAccuracy() }
+
+// RecallHistoryAccuracy says "Accuracy today"
+// in the language of msgs.
+//
+// The share of today’s answers that were not Again.
+func (msgs Messages) RecallHistoryAccuracy() string {
+	return Catalog.Format(msgs.locale, "recallHistoryAccuracy", nil)
+}
+
+// RecallHistoryGrades says "Grades"
+// in the language the app shows.
+//
+// The section that splits today’s answers by grade.
+func RecallHistoryGrades() string { return In(i18n.Locale()).RecallHistoryGrades() }
+
+// RecallHistoryGrades says "Grades"
+// in the language of msgs.
+//
+// The section that splits today’s answers by grade.
+func (msgs Messages) RecallHistoryGrades() string {
+	return Catalog.Format(msgs.locale, "recallHistoryGrades", nil)
+}
+
+// RecallHistoryTimeline says "Today"
+// in the language the app shows.
+//
+// The section that lists today’s events in order.
+func RecallHistoryTimeline() string { return In(i18n.Locale()).RecallHistoryTimeline() }
+
+// RecallHistoryTimeline says "Today"
+// in the language of msgs.
+//
+// The section that lists today’s events in order.
+func (msgs Messages) RecallHistoryTimeline() string {
+	return Catalog.Format(msgs.locale, "recallHistoryTimeline", nil)
+}
+
+// RecallHistoryWeek says "This week"
+// in the language the app shows.
+//
+// The section that lists the week’s days.
+func RecallHistoryWeek() string { return In(i18n.Locale()).RecallHistoryWeek() }
+
+// RecallHistoryWeek says "This week"
+// in the language of msgs.
+//
+// The section that lists the week’s days.
+func (msgs Messages) RecallHistoryWeek() string {
+	return Catalog.Format(msgs.locale, "recallHistoryWeek", nil)
+}
+
+// RecallHistoryDay says "Day"
+// in the language the app shows.
+//
+// Column of the week’s table: the day.
+func RecallHistoryDay() string { return In(i18n.Locale()).RecallHistoryDay() }
+
+// RecallHistoryDay says "Day"
+// in the language of msgs.
+//
+// Column of the week’s table: the day.
+func (msgs Messages) RecallHistoryDay() string {
+	return Catalog.Format(msgs.locale, "recallHistoryDay", nil)
+}
+
+// RecallHistoryEmpty says "Nothing recorded today."
+// in the language the app shows.
+//
+// The history page with no event today.
+func RecallHistoryEmpty() string { return In(i18n.Locale()).RecallHistoryEmpty() }
+
+// RecallHistoryEmpty says "Nothing recorded today."
+// in the language of msgs.
+//
+// The history page with no event today.
+func (msgs Messages) RecallHistoryEmpty() string {
+	return Catalog.Format(msgs.locale, "recallHistoryEmpty", nil)
+}
+
+// RecallHistoryEmptyBody says "Review a card or read a note once and it shows here."
+// in the language the app shows.
+//
+// What fills the history page.
+func RecallHistoryEmptyBody() string { return In(i18n.Locale()).RecallHistoryEmptyBody() }
+
+// RecallHistoryEmptyBody says "Review a card or read a note once and it shows here."
+// in the language of msgs.
+//
+// What fills the history page.
+func (msgs Messages) RecallHistoryEmptyBody() string {
+	return Catalog.Format(msgs.locale, "recallHistoryEmptyBody", nil)
+}
+
+// RecallHistoryAt says "{at, time, ::jm}"
+// in the language the app shows.
+//
+// The time an event happened.
+func RecallHistoryAt(at time.Time) string { return In(i18n.Locale()).RecallHistoryAt(at) }
+
+// RecallHistoryAt says "{at, time, ::jm}"
+// in the language of msgs.
+//
+// The time an event happened.
+func (msgs Messages) RecallHistoryAt(at time.Time) string {
+	return Catalog.Format(msgs.locale, "recallHistoryAt", map[string]any{"at": at})
+}
+
+// RecallHistoryInterval says "{from} → {to} d"
+// in the language the app shows.
+//
+// The interval a card answer moved.
+func RecallHistoryInterval(from int, to int) string {
+	return In(i18n.Locale()).RecallHistoryInterval(from, to)
+}
+
+// RecallHistoryInterval says "{from} → {to} d"
+// in the language of msgs.
+//
+// The interval a card answer moved.
+func (msgs Messages) RecallHistoryInterval(from int, to int) string {
+	return Catalog.Format(msgs.locale, "recallHistoryInterval", map[string]any{"from": from, "to": to})
+}
+
+// RecallHistoryReadLabel says "Read {title}"
+// in the language the app shows.
+//
+// Accessible name of a reading event.
+func RecallHistoryReadLabel(title string) string {
+	return In(i18n.Locale()).RecallHistoryReadLabel(title)
+}
+
+// RecallHistoryReadLabel says "Read {title}"
+// in the language of msgs.
+//
+// Accessible name of a reading event.
+func (msgs Messages) RecallHistoryReadLabel(title string) string {
+	return Catalog.Format(msgs.locale, "recallHistoryReadLabel", map[string]any{"title": title})
+}
+
+// RecallHistoryCardLabel says "{title}, {rating}"
+// in the language the app shows.
+//
+// Accessible name of a card answer.
+func RecallHistoryCardLabel(title string, rating string) string {
+	return In(i18n.Locale()).RecallHistoryCardLabel(title, rating)
+}
+
+// RecallHistoryCardLabel says "{title}, {rating}"
+// in the language of msgs.
+//
+// Accessible name of a card answer.
+func (msgs Messages) RecallHistoryCardLabel(title string, rating string) string {
+	return Catalog.Format(msgs.locale, "recallHistoryCardLabel", map[string]any{"title": title, "rating": rating})
+}
+
+// RecallHistoryWeekday says "{date, date, ::EEE}"
+// in the language the app shows.
+//
+// One day of the week’s table.
+func RecallHistoryWeekday(date time.Time) string { return In(i18n.Locale()).RecallHistoryWeekday(date) }
+
+// RecallHistoryWeekday says "{date, date, ::EEE}"
+// in the language of msgs.
+//
+// One day of the week’s table.
+func (msgs Messages) RecallHistoryWeekday(date time.Time) string {
+	return Catalog.Format(msgs.locale, "recallHistoryWeekday", map[string]any{"date": date})
+}
+
+// RecallRelinkTitle says "Broken links"
+// in the language the app shows.
+//
+// Heading of the broken-links page.
+func RecallRelinkTitle() string { return In(i18n.Locale()).RecallRelinkTitle() }
+
+// RecallRelinkTitle says "Broken links"
+// in the language of msgs.
+//
+// Heading of the broken-links page.
+func (msgs Messages) RecallRelinkTitle() string {
+	return Catalog.Format(msgs.locale, "recallRelinkTitle", nil)
+}
+
+// RecallRelinkBody says "A card loses its block when the block it came from is deleted. Point it at another block, and it reads that text from…"
+// in the language the app shows.
+//
+// What the broken-links page repairs.
+func RecallRelinkBody() string { return In(i18n.Locale()).RecallRelinkBody() }
+
+// RecallRelinkBody says "A card loses its block when the block it came from is deleted. Point it at another block, and it reads that text from…"
+// in the language of msgs.
+//
+// What the broken-links page repairs.
+func (msgs Messages) RecallRelinkBody() string {
+	return Catalog.Format(msgs.locale, "recallRelinkBody", nil)
+}
+
+// RecallRelinkAll says "Re-link all…"
+// in the language the app shows.
+//
+// The bulk repair that points every lost card at one block.
+func RecallRelinkAll() string { return In(i18n.Locale()).RecallRelinkAll() }
+
+// RecallRelinkAll says "Re-link all…"
+// in the language of msgs.
+//
+// The bulk repair that points every lost card at one block.
+func (msgs Messages) RecallRelinkAll() string {
+	return Catalog.Format(msgs.locale, "recallRelinkAll", nil)
+}
+
+// RecallRelinkAllTitle says "Re-link every lost card?"
+// in the language the app shows.
+//
+// Title of the bulk repair’s question.
+func RecallRelinkAllTitle() string { return In(i18n.Locale()).RecallRelinkAllTitle() }
+
+// RecallRelinkAllTitle says "Re-link every lost card?"
+// in the language of msgs.
+//
+// Title of the bulk repair’s question.
+func (msgs Messages) RecallRelinkAllTitle() string {
+	return Catalog.Format(msgs.locale, "recallRelinkAllTitle", nil)
+}
+
+// RecallRelinkAllBody says "{count, plural, one {# lost card will point at the chosen block} other {# lost cards will point at the chosen block}}…"
+// in the language the app shows.
+//
+// What the bulk repair does.
+func RecallRelinkAllBody(count int) string { return In(i18n.Locale()).RecallRelinkAllBody(count) }
+
+// RecallRelinkAllBody says "{count, plural, one {# lost card will point at the chosen block} other {# lost cards will point at the chosen block}}…"
+// in the language of msgs.
+//
+// What the bulk repair does.
+func (msgs Messages) RecallRelinkAllBody(count int) string {
+	return Catalog.Format(msgs.locale, "recallRelinkAllBody", map[string]any{"count": count})
+}
+
+// RecallRelinkAllConfirm says "{count, plural, one {Re-link # card} other {Re-link # cards}}"
+// in the language the app shows.
+//
+// The bulk repair’s confirm button.
+func RecallRelinkAllConfirm(count int) string { return In(i18n.Locale()).RecallRelinkAllConfirm(count) }
+
+// RecallRelinkAllConfirm says "{count, plural, one {Re-link # card} other {Re-link # cards}}"
+// in the language of msgs.
+//
+// The bulk repair’s confirm button.
+func (msgs Messages) RecallRelinkAllConfirm(count int) string {
+	return Catalog.Format(msgs.locale, "recallRelinkAllConfirm", map[string]any{"count": count})
+}
+
+// RecallRelinkAllDone says "{count, plural, one {# card re-linked} other {# cards re-linked}}"
+// in the language the app shows.
+//
+// The bulk repair’s outcome.
+func RecallRelinkAllDone(count int) string { return In(i18n.Locale()).RecallRelinkAllDone(count) }
+
+// RecallRelinkAllDone says "{count, plural, one {# card re-linked} other {# cards re-linked}}"
+// in the language of msgs.
+//
+// The bulk repair’s outcome.
+func (msgs Messages) RecallRelinkAllDone(count int) string {
+	return Catalog.Format(msgs.locale, "recallRelinkAllDone", map[string]any{"count": count})
+}
+
+// RecallRelinkNoLost says "No card has lost its block."
+// in the language the app shows.
+//
+// Says why the bulk repair is disabled.
+func RecallRelinkNoLost() string { return In(i18n.Locale()).RecallRelinkNoLost() }
+
+// RecallRelinkNoLost says "No card has lost its block."
+// in the language of msgs.
+//
+// Says why the bulk repair is disabled.
+func (msgs Messages) RecallRelinkNoLost() string {
+	return Catalog.Format(msgs.locale, "recallRelinkNoLost", nil)
+}
+
+// RecallRelinkChooseBlock says "Choose the block to point the cards at."
+// in the language the app shows.
+//
+// Says why the bulk repair is disabled.
+func RecallRelinkChooseBlock() string { return In(i18n.Locale()).RecallRelinkChooseBlock() }
+
+// RecallRelinkChooseBlock says "Choose the block to point the cards at."
+// in the language of msgs.
+//
+// Says why the bulk repair is disabled.
+func (msgs Messages) RecallRelinkChooseBlock() string {
+	return Catalog.Format(msgs.locale, "recallRelinkChooseBlock", nil)
+}
+
+// RecallRelinkChooseBoth says "Choose a card and a block."
+// in the language the app shows.
+//
+// Says why the repair buttons are disabled.
+func RecallRelinkChooseBoth() string { return In(i18n.Locale()).RecallRelinkChooseBoth() }
+
+// RecallRelinkChooseBoth says "Choose a card and a block."
+// in the language of msgs.
+//
+// Says why the repair buttons are disabled.
+func (msgs Messages) RecallRelinkChooseBoth() string {
+	return Catalog.Format(msgs.locale, "recallRelinkChooseBoth", nil)
+}
+
+// RecallRelinkLost says "Lost cards"
+// in the language the app shows.
+//
+// The list of cards whose block is gone.
+func RecallRelinkLost() string { return In(i18n.Locale()).RecallRelinkLost() }
+
+// RecallRelinkLost says "Lost cards"
+// in the language of msgs.
+//
+// The list of cards whose block is gone.
+func (msgs Messages) RecallRelinkLost() string {
+	return Catalog.Format(msgs.locale, "recallRelinkLost", nil)
+}
+
+// RecallRelinkBlocks says "Point at a block"
+// in the language the app shows.
+//
+// The list of blocks a lost card can be pointed at.
+func RecallRelinkBlocks() string { return In(i18n.Locale()).RecallRelinkBlocks() }
+
+// RecallRelinkBlocks says "Point at a block"
+// in the language of msgs.
+//
+// The list of blocks a lost card can be pointed at.
+func (msgs Messages) RecallRelinkBlocks() string {
+	return Catalog.Format(msgs.locale, "recallRelinkBlocks", nil)
+}
+
+// RecallRelinkSearch says "Search blocks"
+// in the language the app shows.
+//
+// Placeholder of the block search field.
+func RecallRelinkSearch() string { return In(i18n.Locale()).RecallRelinkSearch() }
+
+// RecallRelinkSearch says "Search blocks"
+// in the language of msgs.
+//
+// Placeholder of the block search field.
+func (msgs Messages) RecallRelinkSearch() string {
+	return Catalog.Format(msgs.locale, "recallRelinkSearch", nil)
+}
+
+// RecallRelinkNoBlocks says "No blocks match."
+// in the language the app shows.
+//
+// The block list with no match.
+func RecallRelinkNoBlocks() string { return In(i18n.Locale()).RecallRelinkNoBlocks() }
+
+// RecallRelinkNoBlocks says "No blocks match."
+// in the language of msgs.
+//
+// The block list with no match.
+func (msgs Messages) RecallRelinkNoBlocks() string {
+	return Catalog.Format(msgs.locale, "recallRelinkNoBlocks", nil)
+}
+
+// RecallRelinkRelink says "Re-link"
+// in the language the app shows.
+//
+// The action that points the chosen card at the chosen block.
+func RecallRelinkRelink() string { return In(i18n.Locale()).RecallRelinkRelink() }
+
+// RecallRelinkRelink says "Re-link"
+// in the language of msgs.
+//
+// The action that points the chosen card at the chosen block.
+func (msgs Messages) RecallRelinkRelink() string {
+	return Catalog.Format(msgs.locale, "recallRelinkRelink", nil)
+}
+
+// RecallRelinkFreeze says "Keep a snapshot"
+// in the language the app shows.
+//
+// The action that points the card at the block and keeps its text.
+func RecallRelinkFreeze() string { return In(i18n.Locale()).RecallRelinkFreeze() }
+
+// RecallRelinkFreeze says "Keep a snapshot"
+// in the language of msgs.
+//
+// The action that points the card at the block and keeps its text.
+func (msgs Messages) RecallRelinkFreeze() string {
+	return Catalog.Format(msgs.locale, "recallRelinkFreeze", nil)
+}
+
+// RecallRelinkFrozen says "Frozen cards"
+// in the language the app shows.
+//
+// The section of cards that stopped following their block.
+func RecallRelinkFrozen() string { return In(i18n.Locale()).RecallRelinkFrozen() }
+
+// RecallRelinkFrozen says "Frozen cards"
+// in the language of msgs.
+//
+// The section of cards that stopped following their block.
+func (msgs Messages) RecallRelinkFrozen() string {
+	return Catalog.Format(msgs.locale, "recallRelinkFrozen", nil)
+}
+
+// RecallRelinkFrozenEmpty says "No frozen cards."
+// in the language the app shows.
+//
+// The frozen section with nothing in it.
+func RecallRelinkFrozenEmpty() string { return In(i18n.Locale()).RecallRelinkFrozenEmpty() }
+
+// RecallRelinkFrozenEmpty says "No frozen cards."
+// in the language of msgs.
+//
+// The frozen section with nothing in it.
+func (msgs Messages) RecallRelinkFrozenEmpty() string {
+	return Catalog.Format(msgs.locale, "recallRelinkFrozenEmpty", nil)
+}
+
+// RecallRelinkThaw says "Thaw"
+// in the language the app shows.
+//
+// The action that makes a frozen card follow its block again.
+func RecallRelinkThaw() string { return In(i18n.Locale()).RecallRelinkThaw() }
+
+// RecallRelinkThaw says "Thaw"
+// in the language of msgs.
+//
+// The action that makes a frozen card follow its block again.
+func (msgs Messages) RecallRelinkThaw() string {
+	return Catalog.Format(msgs.locale, "recallRelinkThaw", nil)
+}
+
+// RecallRelinkThawCard says "Thaw: {prompt}"
+// in the language the app shows.
+//
+// Accessible name of one frozen card’s thaw action.
+func RecallRelinkThawCard(prompt string) string {
+	return In(i18n.Locale()).RecallRelinkThawCard(prompt)
+}
+
+// RecallRelinkThawCard says "Thaw: {prompt}"
+// in the language of msgs.
+//
+// Accessible name of one frozen card’s thaw action.
+func (msgs Messages) RecallRelinkThawCard(prompt string) string {
+	return Catalog.Format(msgs.locale, "recallRelinkThawCard", map[string]any{"prompt": prompt})
+}
+
+// RecallRelinkThawed says "Card thawed."
+// in the language the app shows.
+//
+// A frozen card follows its block again.
+func RecallRelinkThawed() string { return In(i18n.Locale()).RecallRelinkThawed() }
+
+// RecallRelinkThawed says "Card thawed."
+// in the language of msgs.
+//
+// A frozen card follows its block again.
+func (msgs Messages) RecallRelinkThawed() string {
+	return Catalog.Format(msgs.locale, "recallRelinkThawed", nil)
+}
+
+// RecallRelinkFrozenDone says "Card keeps a snapshot now."
+// in the language the app shows.
+//
+// A card stopped following the block it was pointed at.
+func RecallRelinkFrozenDone() string { return In(i18n.Locale()).RecallRelinkFrozenDone() }
+
+// RecallRelinkFrozenDone says "Card keeps a snapshot now."
+// in the language of msgs.
+//
+// A card stopped following the block it was pointed at.
+func (msgs Messages) RecallRelinkFrozenDone() string {
+	return Catalog.Format(msgs.locale, "recallRelinkFrozenDone", nil)
+}
+
+// RecallRelinkEmpty says "No broken links."
+// in the language the app shows.
+//
+// The broken-links page with nothing to repair.
+func RecallRelinkEmpty() string { return In(i18n.Locale()).RecallRelinkEmpty() }
+
+// RecallRelinkEmpty says "No broken links."
+// in the language of msgs.
+//
+// The broken-links page with nothing to repair.
+func (msgs Messages) RecallRelinkEmpty() string {
+	return Catalog.Format(msgs.locale, "recallRelinkEmpty", nil)
+}
+
+// RecallRelinkEmptyBody says "A card appears here when the block it came from is deleted."
+// in the language the app shows.
+//
+// How a card loses its block.
+func RecallRelinkEmptyBody() string { return In(i18n.Locale()).RecallRelinkEmptyBody() }
+
+// RecallRelinkEmptyBody says "A card appears here when the block it came from is deleted."
+// in the language of msgs.
+//
+// How a card loses its block.
+func (msgs Messages) RecallRelinkEmptyBody() string {
+	return Catalog.Format(msgs.locale, "recallRelinkEmptyBody", nil)
+}
+
+// RecallRelinkParagraph says "¶{number}"
+// in the language the app shows.
+//
+// A block’s place in its note.
+func RecallRelinkParagraph(number int) string { return In(i18n.Locale()).RecallRelinkParagraph(number) }
+
+// RecallRelinkParagraph says "¶{number}"
+// in the language of msgs.
+//
+// A block’s place in its note.
+func (msgs Messages) RecallRelinkParagraph(number int) string {
+	return Catalog.Format(msgs.locale, "recallRelinkParagraph", map[string]any{"number": number})
+}
+
+// TypesTitle says "Card types"
+// in the language the app shows.
+//
+// Heading of the card types page.
+func TypesTitle() string { return In(i18n.Locale()).TypesTitle() }
+
+// TypesTitle says "Card types"
+// in the language of msgs.
+//
+// Heading of the card types page.
+func (msgs Messages) TypesTitle() string {
+	return Catalog.Format(msgs.locale, "typesTitle", nil)
+}
+
+// TypesBody says "A type is a field list and two templates. Cards render through it, so a template edit shows on the next frame."
+// in the language the app shows.
+//
+// What a card type is.
+func TypesBody() string { return In(i18n.Locale()).TypesBody() }
+
+// TypesBody says "A type is a field list and two templates. Cards render through it, so a template edit shows on the next frame."
+// in the language of msgs.
+//
+// What a card type is.
+func (msgs Messages) TypesBody() string {
+	return Catalog.Format(msgs.locale, "typesBody", nil)
+}
+
+// TypesNeedsLibrary says "Open a library to manage its types."
+// in the language the app shows.
+//
+// The types page without a library.
+func TypesNeedsLibrary() string { return In(i18n.Locale()).TypesNeedsLibrary() }
+
+// TypesNeedsLibrary says "Open a library to manage its types."
+// in the language of msgs.
+//
+// The types page without a library.
+func (msgs Messages) TypesNeedsLibrary() string {
+	return Catalog.Format(msgs.locale, "typesNeedsLibrary", nil)
+}
+
+// TypesBuiltin says "Built-in"
+// in the language the app shows.
+//
+// The badge of a type every library seeds.
+func TypesBuiltin() string { return In(i18n.Locale()).TypesBuiltin() }
+
+// TypesBuiltin says "Built-in"
+// in the language of msgs.
+//
+// The badge of a type every library seeds.
+func (msgs Messages) TypesBuiltin() string {
+	return Catalog.Format(msgs.locale, "typesBuiltin", nil)
+}
+
+// TypesList says "Types"
+// in the language the app shows.
+//
+// Accessible label of the type list.
+func TypesList() string { return In(i18n.Locale()).TypesList() }
+
+// TypesList says "Types"
+// in the language of msgs.
+//
+// Accessible label of the type list.
+func (msgs Messages) TypesList() string {
+	return Catalog.Format(msgs.locale, "typesList", nil)
+}
+
+// TypesFallback says "A card whose type is gone shows its fields instead of a blank face, so deleting a type never loses a card."
+// in the language the app shows.
+//
+// What happens to a card whose type is missing.
+func TypesFallback() string { return In(i18n.Locale()).TypesFallback() }
+
+// TypesFallback says "A card whose type is gone shows its fields instead of a blank face, so deleting a type never loses a card."
+// in the language of msgs.
+//
+// What happens to a card whose type is missing.
+func (msgs Messages) TypesFallback() string {
+	return Catalog.Format(msgs.locale, "typesFallback", nil)
+}
+
+// RecallPresetsResetConfirm says "Restore"
+// in the language the app shows.
+//
+// The confirm button of the preset reset question.
+func RecallPresetsResetConfirm() string { return In(i18n.Locale()).RecallPresetsResetConfirm() }
+
+// RecallPresetsResetConfirm says "Restore"
+// in the language of msgs.
+//
+// The confirm button of the preset reset question.
+func (msgs Messages) RecallPresetsResetConfirm() string {
+	return Catalog.Format(msgs.locale, "recallPresetsResetConfirm", nil)
+}

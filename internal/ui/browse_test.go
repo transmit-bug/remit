@@ -25,7 +25,7 @@ func TestBrowseEnter(t *testing.T) {
 			settle(tt)
 			tt.Advance(320 * time.Millisecond) // the opening card's entry
 
-			cardsPage(t, tt, "en")
+			searchPage(t, tt, "en")
 			tt.Advance(320 * time.Millisecond) // the review card's exit
 			for _, want := range []string{"Browse cards", "Search cards", "All", "Due", "Spacing beats cramming", "Memory and recall", "4 cards"} {
 				if !tt.HasText(want) {
@@ -147,7 +147,7 @@ func TestBrowseFilters(t *testing.T) {
 			tt := ui.NewTester(a.View, size.w, size.h)
 			settle(tt)
 			tt.Advance(320 * time.Millisecond) // the opening card's entry
-			cardsPage(t, tt, "en")
+			searchPage(t, tt, "en")
 			tt.Advance(320 * time.Millisecond) // the review card's exit
 
 			for _, want := range []string{"Due card", "Fresh card", "Suspended card", lostBody} {
@@ -200,7 +200,7 @@ func TestBrowseFilters(t *testing.T) {
 func TestBrowseOpens(t *testing.T) {
 	_, _, tt := openApp(t)
 	tt.Advance(320 * time.Millisecond) // the opening card's entry
-	cardsPage(t, tt, "en")
+	searchPage(t, tt, "en")
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click("Spacing beats cramming"); err != nil {
@@ -214,7 +214,7 @@ func TestBrowseOpens(t *testing.T) {
 	}
 
 	// The Open button does what Enter does.
-	cardsPage(t, tt, "en")
+	searchPage(t, tt, "en")
 	if err := tt.Click("A good card asks"); err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestBrowseOpensLostCard(t *testing.T) {
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	tt.Advance(320 * time.Millisecond) // the opening card's entry
-	cardsPage(t, tt, "en")
+	searchPage(t, tt, "en")
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 
 	if err := tt.Click(lostBody); err != nil {

@@ -9,8 +9,6 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
-	"github.com/transmit-bug/remit/internal/core"
-	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/settings"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 )
@@ -121,15 +119,14 @@ func (a *App) syncPrefs() {
 	a.refreshSettingsData()
 }
 
-// refreshSettingsData retakes what the plugins and types sections list: what
-// discovery finds, the roles this library plays and its types. It runs on the
-// UI thread when the page opens and after every write, so no frame reads the
-// plugins directory or the store for them.
+// refreshSettingsData retakes what the plugins section lists: what discovery
+// finds and the roles this library plays. It runs on the UI thread when the page
+// opens and after every write, so no frame reads the plugins directory or the
+// store for them.
 func (a *App) refreshSettingsData() {
 	a.prefs.HasLibrary = a.lib != nil
 	a.pluginList = a.discoveredPlugins()
 	a.roleList = map[string]string{}
-	a.typeList = nil
 	if a.lib == nil {
 		return
 	}
@@ -146,13 +143,6 @@ func (a *App) refreshSettingsData() {
 		a.pluginList[i].Failures = a.pluginFailures(name)
 	}
 	a.prefs.PluginSettings = a.pluginSettings()
-	used := make(map[core.ID]int, 8)
-	for _, card := range a.data.cards {
-		used[card.Type]++
-	}
-	for _, typ := range a.lib.Types() {
-		a.typeList = append(a.typeList, screensettings.Type{Type: typ, Cards: used[typ.ID]})
-	}
 }
 
 // discoveredPlugins is what the plugin directory holds, built-ins first and
@@ -191,9 +181,6 @@ func (a *App) settingsDeps() screensettings.Deps {
 		SetEnabled: a.setPluginEnabled,
 		Roles:      a.rolesSnapshot,
 		SetRole:    a.setRole,
-		Types:      func() []screensettings.Type { return a.typeList },
-		SaveType:   a.saveType,
-		DeleteType: a.deleteType,
 
 		SetPluginSetting: a.setPluginSetting,
 		PluginMessage:    a.pluginText,
@@ -254,67 +241,6 @@ func (a *App) setRole(c *ui.Context, role, name string) {
 		a.prefs.PluginErr = m(c).PluginRoleFailed(err.Error())
 	}
 	a.refreshSettingsData()
-}
-
-// saveType writes a type through the store, which mints a new ID and carries a
-// field rename through every card. The library is reloaded so the cards on
-// screen render through the type as it now is.
-func (a *App) saveType(c *ui.Context, typ core.Type) core.ID {
-	a.prefs.TypeErr = ""
-	if a.lib == nil {
-		a.prefs.TypeErr = m(c).SettingsTypesNeedsLibrary()
-		return ""
-	}
-	id, err := a.lib.SaveType(typ)
-	if err != nil {
-		slog.Warn("remit: save type", "type", typ.ID, "err", err)
-		a.prefs.TypeErr = a.typeWriteError(c, err)
-		a.refreshSettingsData()
-		return ""
-	}
-	a.reload()
-	a.refreshSettingsData()
-	c.Toast(m(c).TypeSaved())
-	return id
-}
-
-// deleteType removes a type no card references, and says why when one does.
-func (a *App) deleteType(c *ui.Context, id core.ID) {
-	a.prefs.TypeErr = ""
-	if a.lib == nil {
-		a.prefs.TypeErr = m(c).SettingsTypesNeedsLibrary()
-		return
-	}
-	if err := a.lib.DeleteType(id); err != nil {
-		slog.Warn("remit: delete type", "type", id, "err", err)
-		a.prefs.TypeErr = a.typeWriteError(c, err)
-		a.refreshSettingsData()
-		return
-	}
-	a.reload()
-	a.refreshSettingsData()
-	c.Toast(m(c).TypeDeleted())
-}
-
-// typeWriteError is the page's sentence for a refusal: which field holds the
-// values, how many cards keep the type, or what the store would not take.
-func (a *App) typeWriteError(c *ui.Context, err error) string {
-	msgs := m(c)
-	var held *store.FieldInUseError
-	if errors.As(err, &held) {
-		return msgs.TypeFieldHeld(held.Field, held.Cards)
-	}
-	var used *store.TypeInUseError
-	if errors.As(err, &used) {
-		return msgs.TypeInUse(used.Cards)
-	}
-	switch {
-	case errors.Is(err, store.ErrBuiltinType):
-		return msgs.TypeBuiltinDelete()
-	case errors.Is(err, store.ErrNoType):
-		return msgs.TypeUnknown()
-	}
-	return msgs.TypeBad(err.Error())
 }
 
 // setUpdateCheck remembers whether the app checks for updates at launch.

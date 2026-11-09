@@ -292,7 +292,9 @@ func (a *App) OnLibraryOpen(fn func(*store.Library)) {
 // session's scope: the whole library, one note, or one tag. Browse's Due filter
 // shows the same answer, so a scoped session narrows both.
 func (a *App) dueToday() []core.ID {
-	cards, err := queue.Cards(a.lib, time.Now(), queue.Options{Scope: a.reviewScope})
+	options := queue.Limits(a.lib.Presets())
+	options.Scope = a.reviewScope
+	cards, err := queue.Cards(a.lib, time.Now(), options)
 	if err != nil {
 		slog.Error("remit: today's queue", "err", err)
 		return nil
@@ -325,6 +327,7 @@ func (a *App) reload() {
 	}
 	a.resolver = cards.New(runner, a.lib.Types())
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
+	a.loadTypes()
 	a.excerpted = a.excerptedBlocks()
 	a.notesRows = a.noteRows()
 	now := time.Now()
@@ -409,12 +412,21 @@ func (a *App) loadCurrent() {
 		}
 		a.loadBacklinks()
 	case areaRecall:
-		if a.sub == subRecallCards {
-			a.loadBrowse()
-			return
+		switch a.sub {
+		case subRecallCards:
+			a.loadCards()
+		case subRecallTypes:
+			// The type list is retaken with the library, so the page reads it.
+		case subRecallPresets:
+			a.loadPresets()
+		case subRecallHistory:
+			a.loadHistory()
+		case subRecallRelink:
+			a.loadRelink()
+		default:
+			a.preview, a.hasPreview = a.previewFor()
+			a.summary, a.hasSummary = a.summaryFor()
 		}
-		a.preview, a.hasPreview = a.previewFor()
-		a.summary, a.hasSummary = a.summaryFor()
 	case areaStats:
 		a.loadStats()
 	case areaSettings:

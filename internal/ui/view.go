@@ -85,15 +85,14 @@ func (a *App) stage(c *ui.Context, tk design.Tokens) {
 			a.reviewView(c, tk)
 		case a.session == sessionReading:
 			a.readingView(c)
-		case a.area == areaWrite && a.sub == subSearch,
-			a.area == areaRecall && a.sub == subRecallCards:
+		case a.area == areaWrite && a.sub == subSearch:
 			a.browseView(c)
 		case a.area == areaWrite:
 			a.notesView(c)
 		case a.area == areaRead:
 			a.readView(c)
 		case a.area == areaRecall:
-			a.reviewView(c, tk)
+			a.recallStage(c, tk)
 		case a.area == areaStats:
 			screenstats.View(c, statsPage(a.sub), a.stats, screenstats.Deps{
 				Items:      a.statsBlockItems(),
@@ -218,6 +217,10 @@ func (a *App) subnavItems(c *ui.Context) []shell.Sub {
 			item.Count = a.queueCounts().Cards
 		case subRecallCards:
 			item.Count = len(a.data.cards)
+		case subRecallTypes:
+			item.Count = len(a.typeList)
+		case subRecallRelink:
+			item.Count = len(a.lostCards)
 		case subReadQueue:
 			item.Count = a.queueCounts().Reading
 		}

@@ -104,3 +104,22 @@ func StatDetail(c *ui.Context, value, label, detail string) ui.Element {
 		}
 	})
 }
+
+// Notice is one line in a tone that says how to read it — what failed, what a
+// page cannot do, or what a form just wrote — as an icon and the sentence, with
+// an optional action beside it.
+//
+// Composed rather than taken from a widget: MyGo v0.8.1 has no callout, banner
+// or notice (its catalogue lists none), and a Badge carries a count rather than
+// a paragraph. The same icon-and-line is what the Today screen and the window's
+// library error draw, so it is one helper here instead of a third copy.
+func Notice(c *ui.Context, icon, text string, colour ui.Color, action func()) ui.Element {
+	return ui.Row(c).AlignItems(ui.Center).Gap(design.SpaceS).Children(func() {
+		ui.Icon(c, design.Icon(icon)).Width(design.IconSmall).Height(design.IconSmall).
+			TextColor(colour)
+		ui.Text(c, text).FontSize(design.TypeUI).TextColor(colour).Grow(1)
+		if action != nil {
+			action()
+		}
+	})
+}

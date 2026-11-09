@@ -2263,51 +2263,51 @@
     }
   },
   "readQueueTitle": "Reading queue",
-  "@readQueueTitle":   {
+  "@readQueueTitle": {
     "description": "The read area's queue page: the notes due to read now."
   },
   "readArchiveTitle": "Archive",
-  "@readArchiveTitle":   {
+  "@readArchiveTitle": {
     "description": "The read area's archive page: the notes that left the queue for good."
   },
   "archivePage": "Archive",
-  "@archivePage":   {
+  "@archivePage": {
     "description": "Page of the read area: the notes that left the reading queue."
   },
   "readAdd": "Add to queue",
-  "@readAdd":   {
+  "@readAdd": {
     "description": "Opens the notebook so a note can be queued for reading."
   },
   "readStart": "Start reading",
-  "@readStart":   {
+  "@readStart": {
     "description": "Enters the reading session at the head of the queue."
   },
   "readContinue": "Continue",
-  "@readContinue":   {
+  "@readContinue": {
     "description": "Enters the reading session at the note on that row."
   },
   "readOpen": "Open",
-  "@readOpen":   {
+  "@readOpen": {
     "description": "Opens an archived note in the notebook."
   },
   "readRestore": "Restore",
-  "@readRestore":   {
+  "@readRestore": {
     "description": "Puts an archived or dismissed note back in the reading queue."
   },
   "readRestored": "Back in the reading queue.",
-  "@readRestored":   {
+  "@readRestored": {
     "description": "A restored note returned to the reading queue."
   },
   "readRetry": "Try again",
-  "@readRetry":   {
+  "@readRetry": {
     "description": "Asks the read area to load again after it failed."
   },
   "readLoading": "Loading the reading queue…",
-  "@readLoading":   {
+  "@readLoading": {
     "description": "The read area before its queue has loaded."
   },
   "readLoadFailed": "The reading area could not be read: {reason}",
-  "@readLoadFailed":   {
+  "@readLoadFailed": {
     "description": "The read area's queue or archive could not be loaded.",
     "placeholders": {
       "reason": {
@@ -2317,7 +2317,7 @@
     }
   },
   "readRowPlace": "Paragraph {at} of {blocks}",
-  "@readRowPlace":   {
+  "@readRowPlace": {
     "description": "Where a queued note resumes: the paragraph, and how many it holds.",
     "placeholders": {
       "at": {
@@ -2331,11 +2331,11 @@
     }
   },
   "readRowUnread": "Not started",
-  "@readRowUnread":   {
+  "@readRowUnread": {
     "description": "A queued note no session has read yet."
   },
   "readRowBlocks": "{count, plural, one {# paragraph} other {# paragraphs}}",
-  "@readRowBlocks":   {
+  "@readRowBlocks": {
     "description": "How many paragraphs a note holds.",
     "placeholders": {
       "count": {
@@ -2345,7 +2345,7 @@
     }
   },
   "readRowStopped": "last stopped {day}",
-  "@readRowStopped":   {
+  "@readRowStopped": {
     "description": "When a session last stopped in a note: today, yesterday, or a date.",
     "placeholders": {
       "day": {
@@ -2355,7 +2355,7 @@
     }
   },
   "readRowQueued": "queued {day}",
-  "@readRowQueued":   {
+  "@readRowQueued": {
     "description": "When a note joined the reading queue: today, yesterday, or a date.",
     "placeholders": {
       "day": {
@@ -2365,59 +2365,59 @@
     }
   },
   "readDayToday": "today",
-  "@readDayToday":   {
+  "@readDayToday": {
     "description": "The day a note was last touched, when it is the day on screen."
   },
   "readDayYesterday": "yesterday",
-  "@readDayYesterday":   {
+  "@readDayYesterday": {
     "description": "The day a note was last touched, when it was the day before."
   },
   "readRhythm": "Rhythm",
-  "@readRhythm":   {
+  "@readRhythm": {
     "description": "The row of numbers under the reading queue: what it holds and how reading digests."
   },
   "readRhythmDue": "due today",
-  "@readRhythmDue":   {
+  "@readRhythmDue": {
     "description": "How many notes the reading queue has due today."
   },
   "readRhythmQueued": "in the reading queue",
-  "@readRhythmQueued":   {
+  "@readRhythmQueued": {
     "description": "How many notes the reading queue holds, due or not."
   },
   "readRhythmTiers": "how a reading digests",
-  "@readRhythmTiers":   {
+  "@readRhythmTiers": {
     "description": "The three answers a reading session records: too hard, just right, too shallow."
   },
   "readArchiveEmpty": "The archive is still empty.",
-  "@readArchiveEmpty":   {
+  "@readArchiveEmpty": {
     "description": "The archive page with nothing archived or dismissed."
   },
   "readArchiveHint": "Press A in a reading session to archive a note.",
-  "@readArchiveHint":   {
+  "@readArchiveHint": {
     "description": "The archive page's hint at how a note gets there."
   },
   "readArchivedSection": "Archived",
-  "@readArchivedSection":   {
+  "@readArchivedSection": {
     "description": "The archive page's section of notes that were put away."
   },
   "readDismissedSection": "Dismissed",
-  "@readDismissedSection":   {
+  "@readDismissedSection": {
     "description": "The archive page's section of notes marked as not worth reading."
   },
   "readArchive": "Archive (A)",
-  "@readArchive":   {
+  "@readArchive": {
     "description": "The reading session's action that puts the note away for good."
   },
   "readDismiss": "Dismiss (D)",
-  "@readDismiss":   {
+  "@readDismiss": {
     "description": "The reading session's action that says a note is not worth reading."
   },
   "readPostpone": "Postpone (P)",
-  "@readPostpone":   {
+  "@readPostpone": {
     "description": "The reading session's action that brings a note back tomorrow."
   },
   "readArchived": "Archived “{title}”.",
-  "@readArchived":   {
+  "@readArchived": {
     "description": "The toast a reading session shows after archiving a note.",
     "placeholders": {
       "title": {
@@ -2427,7 +2427,7 @@
     }
   },
   "readDismissed": "Dismissed “{title}”.",
-  "@readDismissed":   {
+  "@readDismissed": {
     "description": "The toast a reading session shows after dismissing a note.",
     "placeholders": {
       "title": {
@@ -2437,7 +2437,7 @@
     }
   },
   "readPostponed": "Postponed “{title}” to tomorrow.",
-  "@readPostponed":   {
+  "@readPostponed": {
     "description": "The toast a reading session shows after postponing a note.",
     "placeholders": {
       "title": {
@@ -2447,11 +2447,11 @@
     }
   },
   "readUndo": "Undo",
-  "@readUndo":   {
+  "@readUndo": {
     "description": "The toast action that takes back a reading session's archive, dismissal or postpone."
   },
   "readCardsMark": "{count, plural, one {# card} other {# cards}}",
-  "@readCardsMark":   {
+  "@readCardsMark": {
     "description": "How many cards a paragraph on screen already has.",
     "placeholders": {
       "count": {
@@ -2461,19 +2461,19 @@
     }
   },
   "readExcerptedMark": "Excerpted",
-  "@readExcerptedMark":   {
+  "@readExcerptedMark": {
     "description": "A paragraph an excerpt was already taken from."
   },
   "readLastStopMark": "Last stop",
-  "@readLastStopMark":   {
+  "@readLastStopMark": {
     "description": "The paragraph the last reading session stopped at."
   },
   "readQueueEmpty": "Today's reading queue is empty.",
-  "@readQueueEmpty":   {
+  "@readQueueEmpty": {
     "description": "The queue page with no note due today."
   },
   "readNotesMark": "{count, plural, one {# note} other {# notes}}",
-  "@readNotesMark":   {
+  "@readNotesMark": {
     "description": "How many notes an archive section holds.",
     "placeholders": {
       "count": {
@@ -2483,7 +2483,7 @@
     }
   },
   "readAddNote": "Add a note",
-  "@readAddNote":   {
+  "@readAddNote": {
     "description": "The empty queue's own action: it opens the notes list, where a note is queued."
   },
   "trayTitleReading": "Remit · {cards} · {reading}",
@@ -2513,22 +2513,16 @@
         "example": "3"
       }
     }
-  }
-,
-  "pluginPages": "Plugin pages"
-,
+  },
+  "pluginPages": "Plugin pages",
   "@pluginPages": {
     "description": "The button that lists the pages plugins contributed."
-  }
-,
-  "pluginPageLoading": "Loading…"
-,
+  },
+  "pluginPageLoading": "Loading…",
   "@pluginPageLoading": {
     "description": "A plugin page whose data is still on its way."
-  }
-,
-  "pluginPageFailed": "This page could not be loaded: {reason}"
-,
+  },
+  "pluginPageFailed": "This page could not be loaded: {reason}",
   "@pluginPageFailed": {
     "description": "A plugin page whose data command failed, with the reason.",
     "placeholders": {
@@ -2537,16 +2531,12 @@
         "example": "the page's data command timed out"
       }
     }
-  }
-,
-  "pluginPageRetry": "Retry"
-,
+  },
+  "pluginPageRetry": "Retry",
   "@pluginPageRetry": {
     "description": "The button that asks a failed plugin page for its data again."
-  }
-,
-  "pluginPageUnknownNode": "{kind} is not something this version of Remit draws."
-,
+  },
+  "pluginPageUnknownNode": "{kind} is not something this version of Remit draws.",
   "@pluginPageUnknownNode": {
     "description": "A page node of a kind this host does not know, named in place.",
     "placeholders": {
@@ -2555,10 +2545,8 @@
         "example": "sparkline"
       }
     }
-  }
-,
-  "pluginCommandFailed": "{command} failed: {reason}"
-,
+  },
+  "pluginCommandFailed": "{command} failed: {reason}",
   "@pluginCommandFailed": {
     "description": "A plugin command that threw or ran past its budget.",
     "placeholders": {
@@ -2571,28 +2559,20 @@
         "example": "the command used its time"
       }
     }
-  }
-,
-  "settingsPluginOptions": "Plugin settings"
-,
+  },
+  "settingsPluginOptions": "Plugin settings",
   "@settingsPluginOptions": {
     "description": "Settings section: the settings plugins contributed."
-  }
-,
-  "settingsPluginOptionsBody": "Settings a plugin declared. They are kept in the plugin's own data, and Remit never runs it to write one."
-,
+  },
+  "settingsPluginOptionsBody": "Settings a plugin declared. They are kept in the plugin's own data, and Remit never runs it to write one.",
   "@settingsPluginOptionsBody": {
     "description": "Description of the plugin settings section."
-  }
-,
-  "pluginProblems": "Remit could not use these contributions:"
-,
+  },
+  "pluginProblems": "Remit could not use these contributions:",
   "@pluginProblems": {
     "description": "The problems a plugin's manifest declared, listed under it."
-  }
-,
-  "pluginFailures": "{count} contributed entries failed"
-,
+  },
+  "pluginFailures": "{count} contributed entries failed",
   "@pluginFailures": {
     "description": "How many of a plugin's commands or pages failed three times and were hidden.",
     "placeholders": {
@@ -2601,16 +2581,12 @@
         "example": "1"
       }
     }
-  }
-,
-  "pluginReenable": "Re-enable"
-,
+  },
+  "pluginReenable": "Re-enable",
   "@pluginReenable": {
     "description": "The button that clears a plugin's failure counts and shows its entries again."
-  }
-,
-  "pluginReenabled": "Its failed entries were given another try."
-,
+  },
+  "pluginReenabled": "Its failed entries were given another try.",
   "@pluginReenabled": {
     "description": "A plugin's failures were cleared."
   },
@@ -2627,8 +2603,7 @@
   "pluginPageRefresh": "Refresh",
   "@pluginPageRefresh": {
     "description": "The button that asks a plugin page's data command for its tree again."
-  }
-,
+  },
   "areaNav": "Areas",
   "@areaNav": {
     "description": "Accessible label of the navigation rail: the list of the workbench's areas."
@@ -2910,5 +2885,619 @@
   "todayLoading": "Loading today",
   "@todayLoading": {
     "description": "Accessible label of the loading page's placeholder rows."
+  },
+  "typesPage": "Types",
+  "@typesPage": {
+    "description": "Page of the recall area: the library’s card types."
+  },
+  "presetsPage": "Presets",
+  "@presetsPage": {
+    "description": "Page of the recall area: the library’s rhythm."
+  },
+  "historyPage": "History",
+  "@historyPage": {
+    "description": "Page of the recall area: what was reviewed today and this week."
+  },
+  "relinkPage": "Broken links",
+  "@relinkPage": {
+    "description": "Page of the recall area: the cards whose block is gone."
+  },
+  "recallCardsTitle": "Cards",
+  "@recallCardsTitle": {
+    "description": "Heading of the card table page."
+  },
+  "recallCardsBody": "Every card the library holds. Narrow it with the filters or the search syntax.",
+  "@recallCardsBody": {
+    "description": "What the card table page lists."
+  },
+  "recallCardsSearch": "Search cards: is:new, type:remit.basic, tag:study",
+  "@recallCardsSearch": {
+    "description": "Placeholder of the card table’s search field."
+  },
+  "recallCardsSyntax": "Syntax",
+  "@recallCardsSyntax": {
+    "description": "The button that shows the card search syntax."
+  },
+  "recallCardsSyntaxHelp": "is:new is:learning is:review is:suspended · is:live is:frozen is:lost · is:hard · type:<id> · tag:<name> · note:<title> — terms are combined, and anything else is searched as text.",
+  "@recallCardsSyntaxHelp": {
+    "description": "The card search syntax, shown when the syntax button is pressed."
+  },
+  "recallCardsColumns": "Columns",
+  "@recallCardsColumns": {
+    "description": "The button that switches the card table’s columns on and off."
+  },
+  "recallCardsActions": "Card actions",
+  "@recallCardsActions": {
+    "description": "The button that lists what plugins add to a card row."
+  },
+  "recallCardsNoActions": "No plugin adds an action here.",
+  "@recallCardsNoActions": {
+    "description": "Says why the card actions button is disabled."
+  },
+  "recallCardsFilters": "Filters",
+  "@recallCardsFilters": {
+    "description": "Accessible label of the card table’s filter pane and its select."
+  },
+  "recallCardsAll": "All cards",
+  "@recallCardsAll": {
+    "description": "The filter that narrows the card table to nothing."
+  },
+  "recallCardsSelectColumn": "Select",
+  "@recallCardsSelectColumn": {
+    "description": "Header of the card table’s checkbox column."
+  },
+  "recallCardsSelect": "Select: {prompt}",
+  "@recallCardsSelect": {
+    "description": "Accessible name of one row’s checkbox.",
+    "placeholders": {
+      "prompt": {
+        "type": "String",
+        "example": "Spacing beats cramming"
+      }
+    }
+  },
+  "recallCardsSelected": "{count, plural, one {# card selected} other {# cards selected}}",
+  "@recallCardsSelected": {
+    "description": "How many rows the bulk bar acts on.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "recallCardsEmpty": "No cards match.",
+  "@recallCardsEmpty": {
+    "description": "The card table with no row for the search."
+  },
+  "recallCardsNone": "No cards yet",
+  "@recallCardsNone": {
+    "description": "The card table of a library without cards."
+  },
+  "recallCardsNoneBody": "Make one with :: in a note, or select text in the editor to make a card from it.",
+  "@recallCardsNoneBody": {
+    "description": "How to make the first card."
+  },
+  "recallColumnPrompt": "Prompt",
+  "@recallColumnPrompt": {
+    "description": "Column of the card table: what the card asks."
+  },
+  "recallColumnNote": "Note",
+  "@recallColumnNote": {
+    "description": "Column of the card table: the note the card came from."
+  },
+  "recallColumnType": "Type",
+  "@recallColumnType": {
+    "description": "Column of the card table: the card type."
+  },
+  "recallColumnStatus": "Status",
+  "@recallColumnStatus": {
+    "description": "Column of the card table: where the card stands."
+  },
+  "recallColumnInterval": "Interval",
+  "@recallColumnInterval": {
+    "description": "Column of the card table: the card’s interval in days."
+  },
+  "recallColumnLapses": "Lapses",
+  "@recallColumnLapses": {
+    "description": "Column of the card table: how often the card was answered Again."
+  },
+  "recallColumnDue": "Due",
+  "@recallColumnDue": {
+    "description": "Column of the card table: when the card comes due."
+  },
+  "recallStatusNew": "New",
+  "@recallStatusNew": {
+    "description": "A card no review has touched."
+  },
+  "recallStatusLearning": "Learning",
+  "@recallStatusLearning": {
+    "description": "A card still being learned."
+  },
+  "recallStatusReview": "Review",
+  "@recallStatusReview": {
+    "description": "A card on its long-term schedule."
+  },
+  "recallStatusSuspended": "Suspended",
+  "@recallStatusSuspended": {
+    "description": "A card taken out of the queue."
+  },
+  "recallLinkLive": "Live",
+  "@recallLinkLive": {
+    "description": "A card whose text follows its block."
+  },
+  "recallLinkFrozen": "Frozen",
+  "@recallLinkFrozen": {
+    "description": "A card that stopped following its block."
+  },
+  "recallDueOn": "{date, date, ::MMMd}",
+  "@recallDueOn": {
+    "description": "When a card comes due, in the table’s due column.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-11-06"
+      }
+    }
+  },
+  "recallBulkDue": "Set due…",
+  "@recallBulkDue": {
+    "description": "The bulk action that moves the chosen cards to a date."
+  },
+  "recallBulkFreeze": "Freeze",
+  "@recallBulkFreeze": {
+    "description": "The bulk action that stops the chosen cards following their blocks."
+  },
+  "recallBulkTagPlaceholder": "Tag",
+  "@recallBulkTagPlaceholder": {
+    "description": "Placeholder of the bulk bar’s tag field."
+  },
+  "recallBulkTagApply": "Add tag",
+  "@recallBulkTagApply": {
+    "description": "The bulk action that tags the notes the chosen cards came from."
+  },
+  "recallDueTomorrow": "Tomorrow",
+  "@recallDueTomorrow": {
+    "description": "The due menu: the next day."
+  },
+  "recallDueInAWeek": "In a week",
+  "@recallDueInAWeek": {
+    "description": "The due menu: seven days from now."
+  },
+  "recallDueInAMonth": "In a month",
+  "@recallDueInAMonth": {
+    "description": "The due menu: thirty days from now."
+  },
+  "recallFilterStatus": "Status",
+  "@recallFilterStatus": {
+    "description": "The card table’s filter group by lifecycle state."
+  },
+  "recallFilterType": "Type",
+  "@recallFilterType": {
+    "description": "The card table’s filter group by card type."
+  },
+  "recallFilterLink": "Link",
+  "@recallFilterLink": {
+    "description": "The card table’s filter group by where a card’s text comes from."
+  },
+  "recallBulkDone": "{count, plural, one {# card updated} other {# cards updated}}",
+  "@recallBulkDone": {
+    "description": "A bulk action’s outcome.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "recallBulkPartial": "{applied} updated, {failed} could not be written",
+  "@recallBulkPartial": {
+    "description": "A bulk action that wrote some of its cards.",
+    "placeholders": {
+      "applied": {
+        "type": "int",
+        "example": "3"
+      },
+      "failed": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "recallPresetsTitle": "Presets",
+  "@recallPresetsTitle": {
+    "description": "Heading of the presets page."
+  },
+  "recallPresetsBody": "The rhythm this library keeps: what a day holds, how new material is paced, and what a broken link becomes. It lives in the library, so it follows the material rather than the machine.",
+  "@recallPresetsBody": {
+    "description": "What the presets page sets."
+  },
+  "recallPresetsSteps": "Learning steps",
+  "@recallPresetsSteps": {
+    "description": "The presets group that explains the schedule’s learning steps."
+  },
+  "recallPresetsStepsFixed": "Learning steps",
+  "@recallPresetsStepsFixed": {
+    "description": "The read-only field that names the learning steps."
+  },
+  "recallPresetsStepsAgain": "Again, then the next day",
+  "@recallPresetsStepsAgain": {
+    "description": "What this build does with a card answered Again."
+  },
+  "recallPresetsStepsReason": "Steps are the scheduler’s, not a preset: this build asks an Again card the next day, and custom steps wait for the scheduling contract.",
+  "@recallPresetsStepsReason": {
+    "description": "Why the learning steps are read-only."
+  },
+  "recallPresetsLimits": "Daily limits",
+  "@recallPresetsLimits": {
+    "description": "The presets group of what a day holds."
+  },
+  "recallPresetsNewCards": "New cards a day",
+  "@recallPresetsNewCards": {
+    "description": "The daily allowance of cards no review has touched."
+  },
+  "recallPresetsNewCardsBody": "Zero is no cap.",
+  "@recallPresetsNewCardsBody": {
+    "description": "What a zero limit means."
+  },
+  "recallPresetsDayCards": "Cards a day",
+  "@recallPresetsDayCards": {
+    "description": "How many cards the day’s queue holds."
+  },
+  "recallPresetsMinutes": "Minutes a day",
+  "@recallPresetsMinutes": {
+    "description": "How many minutes the day’s queue is worth."
+  },
+  "recallPresetsLimitsBody": "Zero is no cap; the day’s queue prices reading and review against it.",
+  "@recallPresetsLimitsBody": {
+    "description": "What the daily limits are read against."
+  },
+  "recallPresetsFailure": "Failure",
+  "@recallPresetsFailure": {
+    "description": "The presets group of what makes a card hard."
+  },
+  "recallPresetsMaxInterval": "Maximum interval",
+  "@recallPresetsMaxInterval": {
+    "description": "The longest interval a card may reach."
+  },
+  "recallPresetsMaxIntervalBody": "How far a well-known card may be scheduled.",
+  "@recallPresetsMaxIntervalBody": {
+    "description": "What the maximum interval bounds."
+  },
+  "recallPresetsHard": "Hard card from",
+  "@recallPresetsHard": {
+    "description": "The lapse count from which a card counts as hard."
+  },
+  "recallPresetsHardBody": "A card answered Again that often is marked hard in the card table and the queue.",
+  "@recallPresetsHardBody": {
+    "description": "What the hard-card threshold does."
+  },
+  "recallPresetsBroken": "Broken links",
+  "@recallPresetsBroken": {
+    "description": "The presets group of what a card whose block is gone becomes."
+  },
+  "recallPresetsBrokenLabel": "When a block is deleted",
+  "@recallPresetsBrokenLabel": {
+    "description": "The field that chooses the broken-link policy."
+  },
+  "recallPresetsBrokenKeep": "Keep as a broken link",
+  "@recallPresetsBrokenKeep": {
+    "description": "The broken-link policy that leaves the card lost until it is repaired."
+  },
+  "recallPresetsBrokenSnapshot": "Keep a snapshot",
+  "@recallPresetsBrokenSnapshot": {
+    "description": "The broken-link policy that gives the card the text it lost."
+  },
+  "recallPresetsBrokenBody": "A kept snapshot still asks, reading the text the block had when it went.",
+  "@recallPresetsBrokenBody": {
+    "description": "What the snapshot policy does."
+  },
+  "recallPresetsReset": "Restore defaults",
+  "@recallPresetsReset": {
+    "description": "The action that writes the default presets back."
+  },
+  "recallPresetsWrites": "A change is written as soon as it is made.",
+  "@recallPresetsWrites": {
+    "description": "Says when the presets are saved."
+  },
+  "recallPresetsResetTitle": "Restore the default presets?",
+  "@recallPresetsResetTitle": {
+    "description": "Title of the reset question."
+  },
+  "recallPresetsResetBody": "Every preset goes back to the library’s defaults. The library keeps no undo for it.",
+  "@recallPresetsResetBody": {
+    "description": "What the reset does."
+  },
+  "recallPresetsResetDone": "Presets restored.",
+  "@recallPresetsResetDone": {
+    "description": "The reset was written."
+  },
+  "recallPresetsNeedsLibrary": "Open a library to change its presets.",
+  "@recallPresetsNeedsLibrary": {
+    "description": "A presets write without a library."
+  },
+  "recallPresetsFailed": "The library did not take that: {reason}",
+  "@recallPresetsFailed": {
+    "description": "A presets write the store refused.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "review.newPerDay is -1"
+      }
+    }
+  },
+  "recallPresetsDays": "{count} days",
+  "@recallPresetsDays": {
+    "description": "One choice of the maximum interval.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "180"
+      }
+    }
+  },
+  "recallHistoryTitle": "History",
+  "@recallHistoryTitle": {
+    "description": "Heading of the history page."
+  },
+  "recallHistoryBody": "What today recorded, and how the week went. Every answer and every reading session in the live log is here.",
+  "@recallHistoryBody": {
+    "description": "What the history page shows."
+  },
+  "recallHistoryReviewed": "Reviewed today",
+  "@recallHistoryReviewed": {
+    "description": "The number of answers today."
+  },
+  "recallHistoryMinutes": "Minutes today",
+  "@recallHistoryMinutes": {
+    "description": "The minutes today’s answers are priced at."
+  },
+  "recallHistoryAgain": "Again today",
+  "@recallHistoryAgain": {
+    "description": "How many of today’s answers were Again."
+  },
+  "recallHistoryAccuracy": "Accuracy today",
+  "@recallHistoryAccuracy": {
+    "description": "The share of today’s answers that were not Again."
+  },
+  "recallHistoryGrades": "Grades",
+  "@recallHistoryGrades": {
+    "description": "The section that splits today’s answers by grade."
+  },
+  "recallHistoryTimeline": "Today",
+  "@recallHistoryTimeline": {
+    "description": "The section that lists today’s events in order."
+  },
+  "recallHistoryWeek": "This week",
+  "@recallHistoryWeek": {
+    "description": "The section that lists the week’s days."
+  },
+  "recallHistoryDay": "Day",
+  "@recallHistoryDay": {
+    "description": "Column of the week’s table: the day."
+  },
+  "recallHistoryEmpty": "Nothing recorded today.",
+  "@recallHistoryEmpty": {
+    "description": "The history page with no event today."
+  },
+  "recallHistoryEmptyBody": "Review a card or read a note once and it shows here.",
+  "@recallHistoryEmptyBody": {
+    "description": "What fills the history page."
+  },
+  "recallHistoryAt": "{at, time, ::jm}",
+  "@recallHistoryAt": {
+    "description": "The time an event happened.",
+    "placeholders": {
+      "at": {
+        "type": "DateTime",
+        "example": "2026-11-06T14:30:00Z"
+      }
+    }
+  },
+  "recallHistoryInterval": "{from} → {to} d",
+  "@recallHistoryInterval": {
+    "description": "The interval a card answer moved.",
+    "placeholders": {
+      "from": {
+        "type": "int",
+        "example": "3"
+      },
+      "to": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
+  "recallHistoryReadLabel": "Read {title}",
+  "@recallHistoryReadLabel": {
+    "description": "Accessible name of a reading event.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Memory and recall"
+      }
+    }
+  },
+  "recallHistoryCardLabel": "{title}, {rating}",
+  "@recallHistoryCardLabel": {
+    "description": "Accessible name of a card answer.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Spacing beats cramming"
+      },
+      "rating": {
+        "type": "String",
+        "example": "Good"
+      }
+    }
+  },
+  "recallHistoryWeekday": "{date, date, ::EEE}",
+  "@recallHistoryWeekday": {
+    "description": "One day of the week’s table.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "example": "2026-11-02"
+      }
+    }
+  },
+  "recallRelinkTitle": "Broken links",
+  "@recallRelinkTitle": {
+    "description": "Heading of the broken-links page."
+  },
+  "recallRelinkBody": "A card loses its block when the block it came from is deleted. Point it at another block, and it reads that text from then on.",
+  "@recallRelinkBody": {
+    "description": "What the broken-links page repairs."
+  },
+  "recallRelinkAll": "Re-link all…",
+  "@recallRelinkAll": {
+    "description": "The bulk repair that points every lost card at one block."
+  },
+  "recallRelinkAllTitle": "Re-link every lost card?",
+  "@recallRelinkAllTitle": {
+    "description": "Title of the bulk repair’s question."
+  },
+  "recallRelinkAllBody": "{count, plural, one {# lost card will point at the chosen block} other {# lost cards will point at the chosen block}}. The library keeps no undo for it.",
+  "@recallRelinkAllBody": {
+    "description": "What the bulk repair does.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "recallRelinkAllConfirm": "{count, plural, one {Re-link # card} other {Re-link # cards}}",
+  "@recallRelinkAllConfirm": {
+    "description": "The bulk repair’s confirm button.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "recallRelinkAllDone": "{count, plural, one {# card re-linked} other {# cards re-linked}}",
+  "@recallRelinkAllDone": {
+    "description": "The bulk repair’s outcome.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "recallRelinkNoLost": "No card has lost its block.",
+  "@recallRelinkNoLost": {
+    "description": "Says why the bulk repair is disabled."
+  },
+  "recallRelinkChooseBlock": "Choose the block to point the cards at.",
+  "@recallRelinkChooseBlock": {
+    "description": "Says why the bulk repair is disabled."
+  },
+  "recallRelinkChooseBoth": "Choose a card and a block.",
+  "@recallRelinkChooseBoth": {
+    "description": "Says why the repair buttons are disabled."
+  },
+  "recallRelinkLost": "Lost cards",
+  "@recallRelinkLost": {
+    "description": "The list of cards whose block is gone."
+  },
+  "recallRelinkBlocks": "Point at a block",
+  "@recallRelinkBlocks": {
+    "description": "The list of blocks a lost card can be pointed at."
+  },
+  "recallRelinkSearch": "Search blocks",
+  "@recallRelinkSearch": {
+    "description": "Placeholder of the block search field."
+  },
+  "recallRelinkNoBlocks": "No blocks match.",
+  "@recallRelinkNoBlocks": {
+    "description": "The block list with no match."
+  },
+  "recallRelinkRelink": "Re-link",
+  "@recallRelinkRelink": {
+    "description": "The action that points the chosen card at the chosen block."
+  },
+  "recallRelinkFreeze": "Keep a snapshot",
+  "@recallRelinkFreeze": {
+    "description": "The action that points the card at the block and keeps its text."
+  },
+  "recallRelinkFrozen": "Frozen cards",
+  "@recallRelinkFrozen": {
+    "description": "The section of cards that stopped following their block."
+  },
+  "recallRelinkFrozenEmpty": "No frozen cards.",
+  "@recallRelinkFrozenEmpty": {
+    "description": "The frozen section with nothing in it."
+  },
+  "recallRelinkThaw": "Thaw",
+  "@recallRelinkThaw": {
+    "description": "The action that makes a frozen card follow its block again."
+  },
+  "recallRelinkThawCard": "Thaw: {prompt}",
+  "@recallRelinkThawCard": {
+    "description": "Accessible name of one frozen card’s thaw action.",
+    "placeholders": {
+      "prompt": {
+        "type": "String",
+        "example": "A good card asks"
+      }
+    }
+  },
+  "recallRelinkThawed": "Card thawed.",
+  "@recallRelinkThawed": {
+    "description": "A frozen card follows its block again."
+  },
+  "recallRelinkFrozenDone": "Card keeps a snapshot now.",
+  "@recallRelinkFrozenDone": {
+    "description": "A card stopped following the block it was pointed at."
+  },
+  "recallRelinkEmpty": "No broken links.",
+  "@recallRelinkEmpty": {
+    "description": "The broken-links page with nothing to repair."
+  },
+  "recallRelinkEmptyBody": "A card appears here when the block it came from is deleted.",
+  "@recallRelinkEmptyBody": {
+    "description": "How a card loses its block."
+  },
+  "recallRelinkParagraph": "¶{number}",
+  "@recallRelinkParagraph": {
+    "description": "A block’s place in its note.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "typesTitle": "Card types",
+  "@typesTitle": {
+    "description": "Heading of the card types page."
+  },
+  "typesBody": "A type is a field list and two templates. Cards render through it, so a template edit shows on the next frame.",
+  "@typesBody": {
+    "description": "What a card type is."
+  },
+  "typesNeedsLibrary": "Open a library to manage its types.",
+  "@typesNeedsLibrary": {
+    "description": "The types page without a library."
+  },
+  "typesBuiltin": "Built-in",
+  "@typesBuiltin": {
+    "description": "The badge of a type every library seeds."
+  },
+  "typesList": "Types",
+  "@typesList": {
+    "description": "Accessible label of the type list."
+  },
+  "typesFallback": "A card whose type is gone shows its fields instead of a blank face, so deleting a type never loses a card.",
+  "@typesFallback": {
+    "description": "What happens to a card whose type is missing."
+  },
+  "recallPresetsResetConfirm": "Restore",
+  "@recallPresetsResetConfirm": {
+    "description": "The confirm button of the preset reset question."
   }
 }

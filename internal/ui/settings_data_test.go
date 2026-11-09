@@ -71,14 +71,15 @@ func TestSettingsPluginAndRoleWritesReachTheLibrary(t *testing.T) {
 	}
 }
 
-// Saving a type from the page writes the type file the store owns, and the
-// app's own catalog shows it: the page asked the app, the app asked the store.
-func TestSettingsTypeWriteReachesTheLibrary(t *testing.T) {
+// Saving a type from the types page writes the type file the store owns, and
+// the app's own catalog shows it: the page asked the app, the app asked the
+// store.
+func TestTypesPageWritesTheType(t *testing.T) {
 	msgs := locales.In("en")
 	a := settingsApp(t, Options{})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	a.openSettings()
+	a.setArea(areaRecall, subRecallTypes)
 	settle(tt)
 
 	reveal(t, tt, 1024, 720, msgs.TypeFrontTemplate())
@@ -111,9 +112,6 @@ func TestSettingsTypeWriteReachesTheLibrary(t *testing.T) {
 	if file.Front != "{{Back}}?" {
 		t.Errorf("types/remit.basic.json front = %q, want the saved template", file.Front)
 	}
-	if !a.prefs.HasLibrary {
-		t.Error("the page does not know a library is open")
-	}
 }
 
 // A library that names no roles reads the built-ins, and the settings page is
@@ -133,10 +131,10 @@ func TestSettingsRolesSnapshot(t *testing.T) {
 	}
 }
 
-// A refused write explains itself where it was made: the page's words for a
-// field a card holds come from the store's own refusal, not from the page
+// A refused write explains itself where it was made: the types page's words for
+// a field a card holds come from the store's own refusal, not from the page
 // guessing. The type keeps its field and its file.
-func TestSettingsTypeRefusalReachesThePage(t *testing.T) {
+func TestTypesPageShowsTheRefusal(t *testing.T) {
 	msgs := locales.In("en")
 	a := settingsApp(t, Options{})
 	typ := core.Type{ID: "type_vocab", Name: "Vocabulary", Fields: []string{"Term", "Meaning", "Extra"}, Front: "{{Term}}", Back: "{{Meaning}}", Version: 1}
@@ -165,7 +163,7 @@ func TestSettingsTypeRefusalReachesThePage(t *testing.T) {
 
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
-	a.openSettings()
+	a.setArea(areaRecall, subRecallTypes)
 	settle(tt)
 
 	reveal(t, tt, 1024, 720, typ.Name)

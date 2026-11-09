@@ -113,7 +113,7 @@ func TestEveryModeInBothAppearances(t *testing.T) {
 				assertShows(t, tt, "Notebook")
 
 				cardsPage(t, tt, "en")
-				assertShows(t, tt, "Browse cards")
+				assertShows(t, tt, "Cards")
 
 				// Statistics, from the command palette as a user reaches it.
 				tt.Key(ui.Cmd, ui.KeyK)

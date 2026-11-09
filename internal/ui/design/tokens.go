@@ -59,6 +59,9 @@ type Tokens struct {
 	// NotesColumnWidth and FilterPaneWidth are the two working columns: a
 	// document's notes list, and the card table's filters.
 	NotesColumnWidth, FilterPaneWidth float32
+	// The card table's fixed columns: a row's checkbox, a count, a date and a
+	// name.
+	CheckColumnWidth, CountColumnWidth, DateColumnWidth, NameColumnWidth float32
 	// MeterWidth is a row's paragraph progress bar.
 	MeterWidth float32
 	// The statistics calendar: a day's box in the overview's strip and on the
@@ -119,8 +122,10 @@ func NewTokens(base *ui.Theme) Tokens {
 		BrowseWidth: BrowseWidth, WelcomeWidth: WelcomeWidth,
 		SummaryWidth:     SummaryWidth,
 		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
+		CheckColumnWidth: CheckColumnWidth, CountColumnWidth: CountColumnWidth,
+		DateColumnWidth: DateColumnWidth, NameColumnWidth: NameColumnWidth,
 		MeterWidth: MeterWidth,
-		HeatCell: HeatCell, HeatCellLarge: HeatCellLarge,
+		HeatCell:   HeatCell, HeatCellLarge: HeatCellLarge,
 		HeatGap: HeatGap, HeatWeekday: HeatWeekday,
 	}
 }

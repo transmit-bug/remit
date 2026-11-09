@@ -8,7 +8,6 @@ package settings
 import (
 	"github.com/egoist/mygo/ui"
 
-	"github.com/transmit-bug/remit/internal/core"
 	appsettings "github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
@@ -45,16 +44,6 @@ type Deps struct {
 	Roles func() map[string]string
 	// SetRole chooses the plugin for a role; "" returns to the built-in.
 	SetRole func(*ui.Context, string, string)
-	// Types is this library's card types, with how many cards reference each.
-	Types func() []Type
-	// SaveType writes a type, minting the ID of a new one and rewriting the
-	// references a field rename touches. It answers the type's ID, "" when the
-	// app refused the write and said why in the page's State.
-	SaveType func(*ui.Context, core.Type) core.ID
-	// DeleteType removes a type no card references, and says why in the
-	// page's State when one does.
-	DeleteType func(*ui.Context, core.ID)
-
 	// SetPluginSetting writes one value into the plugin's own store, under its
 	// id: the host owns the write, and the plugin reads the value itself.
 	SetPluginSetting func(*ui.Context, string, string, string)
@@ -67,8 +56,8 @@ type Deps struct {
 }
 
 // View draws the settings page: the agent API, updates, the global shortcut,
-// the daily reminder, the plugin roles and the card types, each written as soon
-// as it is changed.
+// the daily reminder and the library's plugins, each written as soon as it is
+// changed.
 func View(c *ui.Context, s *State, d Deps) {
 	msgs := locales.In(c.Locale())
 	tk := design.NewTokens(c.Theme())
@@ -84,7 +73,6 @@ func View(c *ui.Context, s *State, d Deps) {
 					reminderFieldset(c, s, d, msgs, tk)
 					pluginsFieldset(c, s, d, msgs, tk)
 					pluginSettingsFieldset(c, s, d, msgs, tk)
-					typesFieldset(c, s, d, msgs, tk)
 				})
 			})
 		})
@@ -202,13 +190,6 @@ func (d Deps) roles() map[string]string {
 	return d.Roles()
 }
 
-func (d Deps) typeList() []Type {
-	if d.Types == nil {
-		return nil
-	}
-	return d.Types()
-}
-
 func (d Deps) enable(c *ui.Context, name string, on bool) {
 	if d.SetEnabled != nil {
 		d.SetEnabled(c, name, on)
@@ -218,18 +199,5 @@ func (d Deps) enable(c *ui.Context, name string, on bool) {
 func (d Deps) chooseRole(c *ui.Context, role, name string) {
 	if d.SetRole != nil {
 		d.SetRole(c, role, name)
-	}
-}
-
-func (d Deps) save(c *ui.Context, typ core.Type) core.ID {
-	if d.SaveType == nil {
-		return ""
-	}
-	return d.SaveType(c, typ)
-}
-
-func (d Deps) removeType(c *ui.Context, id core.ID) {
-	if d.DeleteType != nil {
-		d.DeleteType(c, id)
 	}
 }

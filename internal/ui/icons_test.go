@@ -25,7 +25,7 @@ func lostCardWindow(t *testing.T) (*ui.Tester, testLibrary) {
 	}
 	a.reload()
 
-	cardsPage(t, tt, "en")
+	searchPage(t, tt, "en")
 	tt.Advance(320 * time.Millisecond) // the card's exit
 	if err := tt.Click("Lost"); err != nil {
 		t.Fatalf("show the lost cards: %v", err)

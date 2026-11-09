@@ -189,7 +189,7 @@ func TestSubnavKeepsTheAreaOnReload(t *testing.T) {
 	if a.area != areaRecall || a.sub != subRecallCards {
 		t.Fatalf("the reload moved the window to %v/%v, want the card table", a.area, a.sub)
 	}
-	if !tt.HasText(msgs.BrowseTitle()) {
+	if !tt.HasText(msgs.RecallCardsTitle()) {
 		t.Fatalf("the card table is not up after the reload; texts %q", tt.Texts())
 	}
 	// The tabs say which one is chosen, so the page is not only in the state.
