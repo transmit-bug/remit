@@ -123,6 +123,33 @@ func (h *fixtureHost) Block(id core.ID) (core.Block, bool) {
 	return core.Block{}, false
 }
 
+// NoteOfBlock searches the fixture's notes: a fixture is a handful of notes, so
+// a scan is the whole lookup.
+func (h *fixtureHost) NoteOfBlock(id core.ID) (core.ID, bool) {
+	for _, note := range h.notes {
+		if _, ok := note.Block(id); ok {
+			return note.ID, true
+		}
+	}
+	return "", false
+}
+
+// SearchCards, the library's card types, tags and backlinks and the statistics
+// are empty: a fixture host holds notes to derive from, not a library to browse.
+func (h *fixtureHost) SearchCards(string) ([]core.Card, error) { return nil, nil }
+
+func (h *fixtureHost) Types() []core.Type { return nil }
+
+func (h *fixtureHost) Type(core.ID) (core.Type, bool) { return core.Type{}, false }
+
+func (h *fixtureHost) Tags() []store.TagCount { return nil }
+
+func (h *fixtureHost) Backlinks(core.ID) []store.Backlink { return nil }
+
+// Subscribe takes the callback and never calls it: a fixture run is over before
+// an event could happen.
+func (h *fixtureHost) Subscribe(func(store.Event)) func() { return func() {} }
+
 func (h *fixtureHost) Cards() []core.Card { return nil }
 
 func (h *fixtureHost) Card(core.ID) (core.Card, bool) { return core.Card{}, false }

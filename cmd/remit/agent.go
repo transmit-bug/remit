@@ -8,11 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"fmt"
 	"github.com/transmit-bug/remit/internal/agentapi"
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/builtin"
@@ -202,7 +204,7 @@ func serveAgent(lib *store.Library, token string) (net.Listener, error) {
 		_ = ln.Close()
 		return nil, err
 	}
-	srv := agentapi.New(source, agentapi.Options{Token: token})
+	srv := agentapi.New(source, agentapi.Options{Token: token, Stats: source})
 	go func() {
 		// Closing the listener is how the service stops, so a closed
 		// connection is the end of it, not a failure.
@@ -219,6 +221,19 @@ func serveAgent(lib *store.Library, token string) (net.Listener, error) {
 func facesOf(faces *cards.Resolver, lib *store.Library, card core.Card) (front, back, link string) {
 	answer := faces.Face(card, blocksOf(lib))
 	return answer.Front, answer.Back, answer.State.String()
+}
+
+// Summary, Forecast and Retention are the statistics routes' answers: the log
+// and the schedule read by the stats package over the library the API serves,
+// so an agent sees the numbers the statistics view plots.
+func (s cardSource) Summary(now time.Time) stats.Summary { return stats.Summarize(s.Library, now) }
+
+func (s cardSource) Forecast(from time.Time, days int) []stats.DayCount {
+	return stats.ForecastAll(s.Library, from, days)
+}
+
+func (s cardSource) Retention() stats.Retention {
+	return stats.RetentionOf(s.Library, s.ScheduleParams())
 }
 
 // blocksOf is the library's blocks as the model reads them.

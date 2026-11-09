@@ -20,6 +20,7 @@ import (
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/schedule"
+	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/builtin"
@@ -41,7 +42,12 @@ func newLibrary(t *testing.T) *store.Library {
 
 func newServer(t *testing.T, lib *store.Library) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(agentapi.New(newPluginSource(t, lib), agentapi.Options{Token: token, Now: func() time.Time { return now }}).Handler())
+	source := newPluginSource(t, lib)
+	srv := httptest.NewServer(agentapi.New(source, agentapi.Options{
+		Token: token,
+		Stats: source,
+		Now:   func() time.Time { return now },
+	}).Handler())
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -217,8 +223,21 @@ func TestUnknownRoutesAndMethods(t *testing.T) {
 	if code, raw := do(t, http.MethodGet, srv.URL+"/v2/nothing", "", nil); code != http.StatusNotFound || object(t, raw)["error"] == nil {
 		t.Errorf("unknown path = %d (%s), want 404 with an error", code, raw)
 	}
-	if code, _ := do(t, http.MethodDelete, srv.URL+"/v1/notes", token, nil); code != http.StatusMethodNotAllowed {
-		t.Errorf("DELETE notes = %d, want 405: deletion is not part of the API", code)
+	// Every known path answers an unsupported method with a 405: the endpoint
+	// exists and the API deliberately has no such operation (no deletes).
+	for _, target := range []struct{ method, path string }{
+		{http.MethodDelete, "/v1/notes"},
+		{http.MethodDelete, "/v1/cards"},
+		{http.MethodPost, "/v1/search"},
+		{http.MethodDelete, "/v1/types"},
+		{http.MethodDelete, "/v1/notes/note_x/backlinks"},
+		{http.MethodDelete, "/v1/stats/summary"},
+		{http.MethodPost, "/v1/events"},
+		{http.MethodPut, "/v1/schema"},
+	} {
+		if code, raw := do(t, target.method, srv.URL+target.path, token, nil); code != http.StatusMethodNotAllowed {
+			t.Errorf("%s %s = %d (%s), want 405: the API has no such operation", target.method, target.path, code, raw)
+		}
 	}
 }
 
@@ -315,6 +334,18 @@ func (s pluginSource) CreateCard(blockID core.ID) (core.Card, error) {
 func (s pluginSource) Faces(card core.Card) (front, back string, link string) {
 	answer := s.faces.Face(card, s.Blocks())
 	return answer.Front, answer.Back, answer.State.String()
+}
+
+// The statistics routes read the same library as every other route, through
+// the package the statistics view reads.
+func (s pluginSource) Summary(at time.Time) stats.Summary { return stats.Summarize(s.Library, at) }
+
+func (s pluginSource) Forecast(from time.Time, days int) []stats.DayCount {
+	return stats.ForecastAll(s.Library, from, days)
+}
+
+func (s pluginSource) Retention() stats.Retention {
+	return stats.RetentionOf(s.Library, s.ScheduleParams())
 }
 
 // Blocks is the library's blocks as the model reads them.

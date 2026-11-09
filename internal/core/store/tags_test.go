@@ -65,6 +65,39 @@ func TestTagsFollowTheSave(t *testing.T) {
 	}
 }
 
+// A tag counts the notes that carry it and the cards their blocks feed. The
+// counts are distinct on both sides: a tag repeated across a note's blocks is
+// one note, and two cards on one tagged block are two cards.
+func TestTagsCountNotesAndCards(t *testing.T) {
+	lib, _, spacing, habit := taggedLibrary(t)
+	defer lib.Close()
+
+	if _, err := lib.CreateCards(spacing.Blocks[0].ID, []core.Derived{
+		{Type: core.TypeBasic, Ordinal: 0},
+		{Type: core.TypeBidirectional, Ordinal: 1},
+	}); err != nil {
+		t.Fatalf("cards for the tagged block: %v", err)
+	}
+	if _, err := lib.CreateCards(habit.Blocks[0].ID, []core.Derived{{Type: core.TypeBasic}}); err != nil {
+		t.Fatalf("card for the habit note: %v", err)
+	}
+
+	want := map[string]store.TagCount{
+		"learning": {Tag: "learning", Notes: 1, Cards: 2},
+		"spacing":  {Tag: "spacing", Notes: 1, Cards: 0},
+		"habit":    {Tag: "habit", Notes: 1, Cards: 1},
+	}
+	counts := lib.Tags()
+	if len(counts) != len(want) {
+		t.Fatalf("the library has %d tags, want %d: %+v", len(counts), len(want), counts)
+	}
+	for _, count := range counts {
+		if count != want[count.Tag] {
+			t.Errorf("%s is %+v, want %+v", count.Tag, count, want[count.Tag])
+		}
+	}
+}
+
 // The index is a cache: deleting it and reopening rebuilds the same tags.
 func TestTagsSurviveARebuiltIndex(t *testing.T) {
 	lib, dir, _, _ := taggedLibrary(t)

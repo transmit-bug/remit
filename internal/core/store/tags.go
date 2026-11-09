@@ -7,10 +7,13 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 )
 
-// TagCount is one tag and how many notes carry it.
+// TagCount is one tag and how much of the library carries it: the notes whose
+// text names it, and the cards whose source block does — a card's block and its
+// note are two doors into the same demand for review.
 type TagCount struct {
 	Tag   string
 	Notes int
+	Cards int
 }
 
 // putTags records the tags a note's blocks carry, one row per tag per block.
@@ -34,15 +37,22 @@ func deleteTagsOfNote(e execer, note core.ID) error {
 	return err
 }
 
-// Tags returns every tag in the library with how many notes carry it, by name.
+// Tags returns every tag in the library with how many notes and cards carry
+// it, by name.
 func (l *Library) Tags() []TagCount {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.index == nil {
 		return nil
 	}
+	// One row per tag per block, joined to the cards that block feeds: the
+	// distinct counts keep a tag on several blocks of one note, or on a block
+	// with three cards, from being counted once per row.
 	rows, err := l.index.db.Query(
-		`SELECT tag, COUNT(DISTINCT note_id) FROM tags GROUP BY tag ORDER BY tag`)
+		`SELECT t.tag, COUNT(DISTINCT t.note_id), COUNT(DISTINCT c.id)
+		   FROM tags t
+		   LEFT JOIN cards c ON c.block_id = t.block_id
+		  GROUP BY t.tag ORDER BY t.tag`)
 	if err != nil {
 		return nil
 	}
@@ -50,7 +60,7 @@ func (l *Library) Tags() []TagCount {
 	var out []TagCount
 	for rows.Next() {
 		var count TagCount
-		if err := rows.Scan(&count.Tag, &count.Notes); err != nil {
+		if err := rows.Scan(&count.Tag, &count.Notes, &count.Cards); err != nil {
 			return nil
 		}
 		out = append(out, count)
