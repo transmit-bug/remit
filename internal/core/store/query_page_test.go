@@ -294,7 +294,7 @@ func TestQueryCardsFilters(t *testing.T) {
 			}
 			blocks := make([]string, 0, len(got))
 			for _, card := range got {
-				blocks = append(blocks, card.Block)
+				blocks = append(blocks, string(card.Block))
 			}
 			if !slices.Equal(blocks, tt.want) {
 				t.Errorf("blocks = %v, want %v", blocks, tt.want)
@@ -307,7 +307,7 @@ func TestQueryCardsFilters(t *testing.T) {
 		if err != nil {
 			t.Fatalf("QueryCards: %v", err)
 		}
-		if total != 1 || len(got) != 1 || got[0].Block != string(studied.Blocks[1].ID) {
+		if total != 1 || len(got) != 1 || got[0].Block != studied.Blocks[1].ID {
 			t.Fatalf("QueryCards = %+v of %d, want the edited card", got, total)
 		}
 	})
@@ -323,7 +323,7 @@ func TestQueryCardsFilters(t *testing.T) {
 		if got[0].Status != core.StatusReview {
 			t.Errorf("the reviewed card's status = %s, want review", got[0].Status)
 		}
-		if got[0].Type != string(core.TypeBasic) {
+		if got[0].Type != core.TypeBasic {
 			t.Errorf("type = %q, want %q", got[0].Type, core.TypeBasic)
 		}
 		for _, card := range got {
@@ -374,7 +374,7 @@ func TestQueryCardsDueOrderMatchesTheQueue(t *testing.T) {
 		t.Fatalf("listing has %d of %d, the queue %d", len(listing), total, len(scheduled))
 	}
 	for i := range listing {
-		if listing[i].ID != string(scheduled[i].Card.ID) {
+		if listing[i].ID != scheduled[i].Card.ID {
 			t.Fatalf("position %d: the listing has %s, the queue %s", i, listing[i].ID, scheduled[i].Card.ID)
 		}
 	}
@@ -446,7 +446,7 @@ func noteIDs(notes []store.NoteSummary) []string {
 func cardIDs(cards []store.CardSummary) []string {
 	out := make([]string, 0, len(cards))
 	for _, card := range cards {
-		out = append(out, card.ID)
+		out = append(out, string(card.ID))
 	}
 	return out
 }

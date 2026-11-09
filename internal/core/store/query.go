@@ -86,9 +86,9 @@ type CardQuery struct {
 // CardSummary is a card as a list shows it: no field values, so a page costs no
 // rendering.
 type CardSummary struct {
-	ID      string
-	Block   string
-	Type    string
+	ID      core.ID
+	Block   core.ID
+	Type    core.ID
 	Status  core.Status
 	Created time.Time
 	Due     time.Time
@@ -168,14 +168,14 @@ func (l *Library) QueryCards(q CardQuery) ([]CardSummary, int, error) {
 	var out []CardSummary
 	for rows.Next() {
 		var (
-			summary           CardSummary
-			id, block, status string
-			created, due      int64
+			summary                CardSummary
+			id, block, typ, status string
+			created, due           int64
 		)
-		if err := rows.Scan(&id, &block, &summary.Type, &status, &created, &due); err != nil {
+		if err := rows.Scan(&id, &block, &typ, &status, &created, &due); err != nil {
 			return nil, 0, err
 		}
-		summary.ID, summary.Block = id, block
+		summary.ID, summary.Block, summary.Type = core.ID(id), core.ID(block), core.ID(typ)
 		summary.Status, _ = core.ParseStatus(status)
 		summary.Created = time.Unix(0, created).UTC()
 		summary.Due = time.Unix(0, due).UTC()
