@@ -41,6 +41,11 @@ type Options struct {
 	Limit     int
 	NewPerDay int
 	Scope     Scope
+	// ReadingNewPerDay caps how many notes no session has read yet join today's
+	// reading queue, when that many notes were already read today: it paces new
+	// material, where NewPerDay paces new cards. A note being read again spends
+	// none of it. Zero means no cap.
+	ReadingNewPerDay int
 }
 
 // Counts is what the tray and the first screen show.
@@ -51,11 +56,15 @@ type Counts struct {
 	Remaining int
 }
 
-// Today returns the cards to review now, ordered learning, then due, then new,
+// Cards returns the cards to review now, ordered learning, then due, then new,
 // each by due time and then by ID so the order is stable. A scope in opts
 // narrows the answer to that part of the library before the new-card allowance
 // and the limit act.
-func Today(lib *store.Library, now time.Time, opts Options) ([]core.Card, error) {
+//
+// It is the review queue on its own. Today's mixed queue — reading, the excerpts
+// owed, and these cards as one line — is Entries, which is what the first screen
+// asks for.
+func Cards(lib *store.Library, now time.Time, opts Options) ([]core.Card, error) {
 	scheduled, err := lib.Scheduled()
 	if err != nil {
 		return nil, err
@@ -70,7 +79,7 @@ func Today(lib *store.Library, now time.Time, opts Options) ([]core.Card, error)
 	return out, nil
 }
 
-// CountsOf reports what Today would return, without building it, under the
+// CountsOf reports what Cards would return, without building it, under the
 // same scope. The new-card allowance is not applied: a count is how much is
 // waiting, not how much one sitting would take.
 func CountsOf(lib *store.Library, now time.Time, opts Options) (Counts, error) {
@@ -185,6 +194,9 @@ func startOfDay(now time.Time) time.Time {
 // order is stable. A note that joined the queue and was never read is due at
 // once; one that was read comes back on the schedule FSRS gave it, which is what
 // makes reading incremental rather than a second to-do list.
+//
+// The day's introduction allowance caps the notes no session has read yet: the
+// allowance limits new material, never the cadence a read note comes back on.
 func Reading(lib *store.Library, now time.Time, opts Options) ([]store.Reading, error) {
 	queued, err := lib.ReadingQueue()
 	if err != nil {
@@ -196,10 +208,66 @@ func Reading(lib *store.Library, now time.Time, opts Options) ([]store.Reading, 
 			out = append(out, entry)
 		}
 	}
+	out = introduceReading(lib, out, now, opts.ReadingNewPerDay)
 	if opts.Limit > 0 && len(out) > opts.Limit {
 		out = out[:opts.Limit]
 	}
 	return out, nil
+}
+
+// introduceReading keeps today's reading queue within the day's allowance: a
+// note no session has read yet is new material, and a day holds so much of it.
+// A note being read again is not new — its cadence belongs to the schedule — so
+// only never-read notes are held back, in the order the queue put them.
+func introduceReading(lib *store.Library, due []store.Reading, now time.Time, perDay int) []store.Reading {
+	if perDay <= 0 {
+		return due
+	}
+	fresh := 0
+	for _, entry := range due {
+		if entry.State.Reviews == 0 {
+			fresh++
+		}
+	}
+	if fresh == 0 {
+		return due
+	}
+	room := perDay - notesReadToday(lib, now)
+	if room >= fresh {
+		return due
+	}
+	out := make([]store.Reading, 0, len(due))
+	for _, entry := range due {
+		if entry.State.Reviews == 0 {
+			if room <= 0 {
+				continue
+			}
+			room--
+		}
+		out = append(out, entry)
+	}
+	return out
+}
+
+// notesReadToday is how many notes had a reading session today, which is the
+// day's reading allowance already spent. A note read and then dropped from the
+// queue the same day is not in the store's listing of the queue and so is not
+// counted: the allowance paces what comes in, it is not an audit of the log.
+func notesReadToday(lib *store.Library, now time.Time) int {
+	queued, err := lib.ReadingQueue()
+	if err != nil {
+		return 0
+	}
+	day := startOfDay(now)
+	end := day.AddDate(0, 0, 1)
+	read := 0
+	for _, entry := range queued {
+		at := entry.State.LastReview
+		if entry.State.Reviews > 0 && !at.Before(day) && at.Before(end) {
+			read++
+		}
+	}
+	return read
 }
 
 // ReadingCount is how many notes wait to be read now: the number the tray and

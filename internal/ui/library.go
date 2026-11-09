@@ -289,7 +289,7 @@ func (a *App) OnLibraryOpen(fn func(*store.Library)) {
 // session's scope: the whole library, one note, or one tag. Browse's Due filter
 // shows the same answer, so a scoped session narrows both.
 func (a *App) dueToday() []core.ID {
-	cards, err := queue.Today(a.lib, time.Now(), queue.Options{Scope: a.reviewScope})
+	cards, err := queue.Cards(a.lib, time.Now(), queue.Options{Scope: a.reviewScope})
 	if err != nil {
 		slog.Error("remit: today's queue", "err", err)
 		return nil

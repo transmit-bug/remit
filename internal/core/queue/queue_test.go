@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -54,7 +55,7 @@ func TestNewCardsComeLastAndOnlySoMany(t *testing.T) {
 		t.Fatalf("review: %v", err)
 	}
 
-	got, err := Today(lib, now, Options{NewPerDay: 1})
+	got, err := Cards(lib, now, Options{NewPerDay: 1})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
@@ -86,7 +87,7 @@ func TestExcludedCardsAreNotInTheQueue(t *testing.T) {
 		t.Fatalf("save: %v", err)
 	}
 
-	got, err := Today(lib, now, Options{})
+	got, err := Cards(lib, now, Options{})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
@@ -104,11 +105,11 @@ func TestOrderIsStable(t *testing.T) {
 	lib := library(t)
 	_ = cards(t, lib, 4)
 
-	first, err := Today(lib, now, Options{})
+	first, err := Cards(lib, now, Options{})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
-	second, err := Today(lib, now, Options{})
+	second, err := Cards(lib, now, Options{})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
@@ -182,7 +183,7 @@ func TestZeroScopeIsTheWholeLibrary(t *testing.T) {
 	lib := library(t)
 	_, _, all := scopedFixture(t, lib)
 
-	got, err := Today(lib, now, Options{})
+	got, err := Cards(lib, now, Options{})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
@@ -198,7 +199,7 @@ func TestNoteAndTagScopesFilterTheQueue(t *testing.T) {
 	lib := library(t)
 	alpha, beta, all := scopedFixture(t, lib)
 
-	byNote, err := Today(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
+	byNote, err := Cards(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
 	if err != nil {
 		t.Fatalf("Today by note: %v", err)
 	}
@@ -207,7 +208,7 @@ func TestNoteAndTagScopesFilterTheQueue(t *testing.T) {
 		t.Fatalf("note scope = %v, want alpha's cards %v", ids(byNote), wantNote)
 	}
 
-	byTag, err := Today(lib, now, Options{Scope: Scope{Kind: ScopeTag, Tag: "ch1"}})
+	byTag, err := Cards(lib, now, Options{Scope: Scope{Kind: ScopeTag, Tag: "ch1"}})
 	if err != nil {
 		t.Fatalf("Today by tag: %v", err)
 	}
@@ -217,7 +218,7 @@ func TestNoteAndTagScopesFilterTheQueue(t *testing.T) {
 
 	// beta's cards are the complement: reachable under no scope here, so the
 	// filters genuinely exclude rather than return everything.
-	byBeta, err := Today(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: beta.ID}})
+	byBeta, err := Cards(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: beta.ID}})
 	if err != nil {
 		t.Fatalf("Today by beta: %v", err)
 	}
@@ -258,7 +259,7 @@ func TestAllowanceAndLimitActAfterTheScope(t *testing.T) {
 	lib := library(t)
 	alpha, beta, all := scopedFixture(t, lib)
 
-	got, err := Today(lib, now, Options{Limit: 1, Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
+	got, err := Cards(lib, now, Options{Limit: 1, Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
 	if err != nil {
 		t.Fatalf("Today scoped and limited: %v", err)
 	}
@@ -284,7 +285,7 @@ func TestAllowanceAndLimitActAfterTheScope(t *testing.T) {
 	if err := lib.Review(all[2].ID, schedule.Again, now.Add(-24*time.Hour)); err != nil {
 		t.Fatalf("review: %v", err)
 	}
-	scoped, err := Today(lib, now, Options{NewPerDay: 1, Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
+	scoped, err := Cards(lib, now, Options{NewPerDay: 1, Scope: Scope{Kind: ScopeNote, Note: alpha.ID}})
 	if err != nil {
 		t.Fatalf("Today scoped: %v", err)
 	}
@@ -307,7 +308,7 @@ func TestEmptyScopeStaysEmpty(t *testing.T) {
 		t.Fatalf("save prose: %v", err)
 	}
 
-	got, err := Today(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: empty.ID}})
+	got, err := Cards(lib, now, Options{Scope: Scope{Kind: ScopeNote, Note: empty.ID}})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
@@ -315,7 +316,7 @@ func TestEmptyScopeStaysEmpty(t *testing.T) {
 		t.Fatalf("cardless note scope = %v, want an empty queue", ids(got))
 	}
 
-	got, err = Today(lib, now, Options{Scope: Scope{Kind: ScopeTag, Tag: "nothing-has-this"}})
+	got, err = Cards(lib, now, Options{Scope: Scope{Kind: ScopeTag, Tag: "nothing-has-this"}})
 	if err != nil {
 		t.Fatalf("Today by missing tag: %v", err)
 	}
@@ -344,7 +345,7 @@ func TestCountsMatchTheQueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CountsOf: %v", err)
 	}
-	cardsNow, err := Today(lib, now, Options{})
+	cardsNow, err := Cards(lib, now, Options{})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
@@ -360,7 +361,7 @@ func TestLimitCapsTheQueue(t *testing.T) {
 	lib := library(t)
 	_ = cards(t, lib, 5)
 
-	got, err := Today(lib, now, Options{Limit: 2})
+	got, err := Cards(lib, now, Options{Limit: 2})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
@@ -380,7 +381,7 @@ func TestNewPerDayCountsWhatStartedToday(t *testing.T) {
 		}
 	}
 
-	got, err := Today(lib, now, Options{NewPerDay: 2})
+	got, err := Cards(lib, now, Options{NewPerDay: 2})
 	if err != nil {
 		t.Fatalf("Today: %v", err)
 	}
@@ -535,5 +536,72 @@ func TestTemplateJoinsTheReadingQueue(t *testing.T) {
 	}
 	if len(due) != 1 || due[0].Note != template.ID {
 		t.Fatalf("reading queue = %v, want the template", due)
+	}
+}
+
+// The day's reading allowance paces new material: a note no session has read
+// yet is new, and only so many of them come in a day. A count is what is
+// waiting, not what one sitting takes, so it is not capped.
+func TestReadingIntroducesSoManyNewNotesPerDay(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		cap  int
+		want int
+	}{
+		{"no cap", 0, 3},
+		{"three a day, two already spent", 3, 1},
+		{"one a day, two already spent", 1, 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			lib := library(t)
+			for i := range 3 {
+				queueNote(t, lib, todayNote(t, lib, fmt.Sprintf("new%d", i), 1), now.AddDate(0, 0, -2))
+			}
+			for i := range 2 {
+				stopReading(t, lib, todayNote(t, lib, fmt.Sprintf("read%d", i), 1), 1, schedule.Easy,
+					now.Add(-time.Duration(i+1)*time.Hour))
+			}
+
+			due, err := Reading(lib, now, Options{ReadingNewPerDay: tt.cap})
+			if err != nil {
+				t.Fatalf("Reading: %v", err)
+			}
+			fresh := 0
+			for _, entry := range due {
+				if entry.State.Reviews == 0 {
+					fresh++
+				}
+			}
+			if fresh != tt.want {
+				t.Fatalf("reading queue introduces %d unread notes, want %d", fresh, tt.want)
+			}
+			count, err := ReadingCount(lib, now)
+			if err != nil {
+				t.Fatalf("ReadingCount: %v", err)
+			}
+			if count != 3 {
+				t.Errorf("count = %d, want the three notes waiting", count)
+			}
+		})
+	}
+}
+
+// A note coming back for a second reading is not new material: the allowance is
+// spent, and the cadence the schedule set still brings it back. The unread note
+// it outranks in the queue is the one held back.
+func TestReadingAllowanceLeavesTheCadenceAlone(t *testing.T) {
+	lib := library(t)
+	again := todayNote(t, lib, "again", 2)
+	stopReading(t, lib, again, 1, schedule.Again, now.AddDate(0, 0, -2))
+	// One note read today, so a one-a-day allowance has nothing left.
+	stopReading(t, lib, todayNote(t, lib, "read today", 1), 1, schedule.Easy, now.Add(-time.Hour))
+	queueNote(t, lib, todayNote(t, lib, "unread", 1), now.AddDate(0, 0, -3))
+
+	due, err := Reading(lib, now, Options{ReadingNewPerDay: 1})
+	if err != nil {
+		t.Fatalf("Reading: %v", err)
+	}
+	if len(due) != 1 || due[0].Note != again.ID {
+		t.Fatalf("reading queue = %+v, want the note coming back and not the unread one", due)
 	}
 }

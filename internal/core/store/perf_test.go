@@ -133,7 +133,7 @@ func TestPerformanceBudget(t *testing.T) {
 	// The queue and the statistics read the index, not the cards: they are what
 	// a write re-derives, so their cost is part of the budget's story.
 	today := time.Now()
-	cards, err := queue.Today(lib, now, queue.Options{})
+	cards, err := queue.Cards(lib, now, queue.Options{})
 	if err != nil {
 		t.Fatalf("today: %v", err)
 	}

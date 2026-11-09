@@ -138,7 +138,7 @@ type Deps struct {
 }
 
 // State is the queue and where the user is in it. What belongs in it is the
-// store's answer (queue.Today); the order is the session's, so progress
+// store's answer (queue.Cards); the order is the session's, so progress
 // survives leaving review for notes, and undo can put the card just graded back
 // at the head where the user left it.
 type State struct {

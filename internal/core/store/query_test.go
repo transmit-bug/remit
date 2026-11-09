@@ -1,10 +1,12 @@
 package store_test
 
 import (
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
 )
 
@@ -208,4 +210,94 @@ func firstCard(lib *store.Library, blockID core.ID) (core.Card, error) {
 		return core.Card{}, err
 	}
 	return cards[0], nil
+}
+
+// UnExcerptedNotes is the "read but not excerpted" question: the notes a reading
+// session touched that no note points back into yet, most recently read first.
+// A note still waiting to be read, or one taken out of the queue, is not one of
+// them; an excerpt writes the back-reference, so its source leaves the list.
+func TestUnExcerptedNotes(t *testing.T) {
+	lib, _, clk := newLibrary(t)
+	source := saveNote(t, lib, "Source", "first paragraph", "second paragraph")
+	if err := lib.AddToReading(source.ID, clk.Now()); err != nil {
+		t.Fatalf("AddToReading: %v", err)
+	}
+	clk.advance(time.Hour)
+	if err := lib.ReadNote(source.ID, schedule.Good, source.Blocks[1].ID, clk.Now()); err != nil {
+		t.Fatalf("ReadNote: %v", err)
+	}
+
+	fresher := saveNote(t, lib, "Fresher", "one paragraph")
+	clk.advance(time.Hour)
+	if err := lib.ReadNote(fresher.ID, schedule.Good, fresher.Blocks[0].ID, clk.Now()); err != nil {
+		t.Fatalf("ReadNote: %v", err)
+	}
+
+	queued := saveNote(t, lib, "Queued", "never read")
+	if err := lib.AddToReading(queued.ID, clk.Now()); err != nil {
+		t.Fatalf("AddToReading: %v", err)
+	}
+	dropped := saveNote(t, lib, "Dropped", "read and then dropped")
+	if err := lib.ReadNote(dropped.ID, schedule.Good, dropped.Blocks[0].ID, clk.Now()); err != nil {
+		t.Fatalf("ReadNote: %v", err)
+	}
+	if err := lib.RemoveFromReading(dropped.ID, clk.Now()); err != nil {
+		t.Fatalf("RemoveFromReading: %v", err)
+	}
+
+	got, err := lib.UnExcerptedNotes(0)
+	if err != nil {
+		t.Fatalf("UnExcerptedNotes: %v", err)
+	}
+	if want := []core.ID{fresher.ID, source.ID}; !slices.Equal(readingNotesOf(got), want) {
+		t.Fatalf("unexcerpted = %v, want %v", readingNotesOf(got), want)
+	}
+	// A candidate carries where the reader stopped, so the screen can open the
+	// passage and not just the note.
+	if got[1].Position != source.Blocks[1].ID || !got[1].Queued || got[1].State.LastReview.IsZero() {
+		t.Errorf("candidate = %+v, want the second paragraph and when it was read", got[1])
+	}
+
+	one, err := lib.UnExcerptedNotes(1)
+	if err != nil {
+		t.Fatalf("UnExcerptedNotes(1): %v", err)
+	}
+	if want := []core.ID{fresher.ID}; !slices.Equal(readingNotesOf(one), want) {
+		t.Fatalf("limited unexcerpted = %v, want the most recently read", readingNotesOf(one))
+	}
+
+	// The excerpt is the answer: once one is taken, the source is no longer
+	// waiting for one.
+	if _, err := lib.Excerpt(source.ID, source.Blocks[1].ID, "second paragraph", "Excerpt of Source"); err != nil {
+		t.Fatalf("Excerpt: %v", err)
+	}
+	got, err = lib.UnExcerptedNotes(0)
+	if err != nil {
+		t.Fatalf("UnExcerptedNotes after the excerpt: %v", err)
+	}
+	if want := []core.ID{fresher.ID}; !slices.Equal(readingNotesOf(got), want) {
+		t.Fatalf("unexcerpted after the excerpt = %v, want %v", readingNotesOf(got), want)
+	}
+
+	// The index is a cache: derived again, it answers the same.
+	if err := lib.Rebuild(); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	again, err := lib.UnExcerptedNotes(0)
+	if err != nil {
+		t.Fatalf("UnExcerptedNotes after a rebuild: %v", err)
+	}
+	if !slices.Equal(readingNotesOf(again), readingNotesOf(got)) {
+		t.Errorf("rebuilt unexcerpted = %v, want %v", readingNotesOf(again), readingNotesOf(got))
+	}
+}
+
+// readingNotesOf names the notes a reading listing holds, which is what these
+// tests compare.
+func readingNotesOf(readings []store.Reading) []core.ID {
+	out := make([]core.ID, len(readings))
+	for i, reading := range readings {
+		out[i] = reading.Note
+	}
+	return out
 }
