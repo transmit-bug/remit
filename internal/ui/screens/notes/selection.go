@@ -105,6 +105,17 @@ func (s *State) selectionBar(c *ui.Context, tk design.Tokens, msgs locales.Messa
 	}
 }
 
+// HasSelection reports whether the document has words selected, which is what
+// the plugin contract's note.selection key answers. It reads the editor's
+// selection, so a frame may ask it and no store is touched.
+func (s *State) HasSelection() bool {
+	if s.Doc == nil {
+		return false
+	}
+	anchor, caret := s.Doc.Selection()
+	return anchor != caret
+}
+
 // dismissSelection closes the bar for the range it was raised for, so the same
 // selection does not raise it again the frame after.
 func (s *State) dismissSelection(start, end int) {

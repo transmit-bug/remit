@@ -3218,6 +3218,30 @@
   "@settingsPluginDetails": {
     "description": "The button that opens one plugin's details."
   },
+  "settingsPluginTrust": "Trust level",
+  "@settingsPluginTrust": {
+    "description": "The field naming how far a plugin is trusted: the app's own build, or one this library installed."
+  },
+  "settingsPluginTrustBuiltin": "Built into this build",
+  "@settingsPluginTrustBuiltin": {
+    "description": "The trust level of a plugin that ships with the app."
+  },
+  "settingsPluginTrustBuiltinBody": "It ships with Remit, so its capabilities are the app's own and cannot be withdrawn.",
+  "@settingsPluginTrustBuiltinBody": {
+    "description": "What the built-in trust level means for the switch beside it."
+  },
+  "settingsPluginTrustThirdParty": "Installed in this library",
+  "@settingsPluginTrustThirdParty": {
+    "description": "The trust level of a plugin this library installed and approved."
+  },
+  "settingsPluginTrustThirdPartyBody": "This library approved it. Turning it off keeps its data and stops everything it contributes.",
+  "@settingsPluginTrustThirdPartyBody": {
+    "description": "What the installed trust level means for the switch beside it."
+  },
+  "settingsPluginCapabilities": "Capabilities",
+  "@settingsPluginCapabilities": {
+    "description": "The field listing what approving a plugin grants."
+  },
   "settingsPluginDetailsOf": "{name} details",
   "@settingsPluginDetailsOf": {
     "description": "The accessible name of one plugin's details button.",
@@ -3461,10 +3485,6 @@
         "example": "30"
       }
     }
-  },
-  "settingsPluginDetailsHide": "Hide details",
-  "@settingsPluginDetailsHide": {
-    "description": "The button that closes one plugin's details, beside the one that opened them."
   },
   "settingsPluginPageOpenOf": "Open {page}",
   "@settingsPluginPageOpenOf": {

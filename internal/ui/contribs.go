@@ -13,6 +13,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
@@ -132,20 +133,26 @@ func (a *App) loadContributions() {
 
 // contributionContext is the window as a when expression reads it: state the
 // app already holds, so that a frame may ask it without a store read or a
-// plugin call.
+// plugin call. Every key the contract names answers here, and answers what the
+// frame is drawing now: a key this host left empty would hide a contribution
+// that a manifest asked for correctly.
 func (a *App) contributionContext() contrib.Context {
 	ctx := contrib.Context{
-		Mode:        a.modeName(),
-		Area:        a.ui.area,
-		Sub:         a.ui.sub,
-		LibraryOpen: a.lib != nil && !a.start && a.openErr == nil,
-		NoteOpen:    a.notes.Draft.ID != "",
+		Mode:          a.modeName(),
+		Area:          a.ui.area,
+		Sub:           a.ui.sub,
+		LibraryOpen:   a.lib != nil && !a.start && a.openErr == nil,
+		NoteOpen:      a.notes.Draft.ID != "",
+		NoteSelection: a.notes.HasSelection(),
+		ScopeActive:   a.reviewScope.Kind != queue.ScopeAll,
 	}
 	if a.mode == modePlugin {
 		ctx.PluginID, ctx.PageID = a.page.Plugin, a.page.Page.ID
 	}
-	if a.mode == modeBrowse {
-		ctx.BrowseSelection = a.cardTable.Selected >= 0 && a.cardTable.Selected < len(a.cardRows)
+	if a.mode == modeBrowse && a.area == areaRecall && a.sub == subRecallCards {
+		// The table is on screen: a row the keys are on, or the rows the user
+		// checked for an action, is what browse.selection answers.
+		ctx.BrowseSelection = a.cardTable.Selected >= 0 || len(a.cardTable.Chosen(a.cardRows)) > 0
 	}
 	if id, ok := a.currentCard(); ok {
 		if card, ok := a.data.card(id); ok {
@@ -183,13 +190,15 @@ func (a *App) modeName() string {
 	return ""
 }
 
-// currentCard is the card the window is about now: the one in review, or the row
-// the card table has chosen. It is what a contributed command acts on.
+// currentCard is the card the window is about now: the one the review session
+// shows, or the row the card table has chosen. It is asked of what is on screen,
+// so a screen that merely could show a card — the recall queue, the write area's
+// search — answers no card rather than one the user cannot see.
 func (a *App) currentCard() (core.ID, bool) {
-	switch a.mode {
-	case modeReview:
+	switch {
+	case a.session == sessionReview:
 		return a.review.Current()
-	case modeBrowse:
+	case a.area == areaRecall && a.sub == subRecallCards:
 		if a.cardTable.Selected >= 0 && a.cardTable.Selected < len(a.cardRows) {
 			return a.cardRows[a.cardTable.Selected].ID, true
 		}
@@ -847,6 +856,29 @@ func (a *App) pluginProblems() map[string][]string {
 		problems[name] = append(problems[name], reasons...)
 	}
 	return problems
+}
+
+// hiddenContributions names each contribution three failures took out, by
+// manifest name, as the settings page lists it: which one it was and what failed,
+// beside the one action that shows it again. It reads the counters the handlers
+// left, so a frame may ask it.
+func (a *App) hiddenContributions() map[string][]string {
+	out := map[string][]string{}
+	for _, issue := range a.contributionIssues() {
+		if !issue.Hidden {
+			continue
+		}
+		name := a.ui.names[issue.Plugin]
+		if name == "" {
+			name = issue.Plugin
+		}
+		line := issue.Contribution
+		if issue.Reason != "" {
+			line += ": " + issue.Reason
+		}
+		out[name] = append(out[name], line)
+	}
+	return out
 }
 
 // pluginFailures counts a plugin's failed contributions by manifest name.

@@ -127,6 +127,11 @@ func View(c *ui.Context, s *State, d Deps) {
 			})
 		})
 	})
+	// The details are an overlay over the page, at the window's root: the one
+	// that was opened last takes the keyboard, and Escape closes it (S47).
+	if page == PagePlugins {
+		pluginDetailView(c, s, d, msgs, tk)
+	}
 }
 
 // pageTitle is one page's name, the word the sub-navigation shows and the

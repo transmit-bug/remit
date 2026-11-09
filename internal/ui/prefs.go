@@ -438,11 +438,13 @@ func (a *App) refreshSettingsData() {
 		enabled[name] = true
 	}
 	problems := a.pluginProblems()
+	hidden := a.hiddenContributions()
 	for i := range a.pluginList {
 		name := a.pluginList[i].Name
 		a.pluginList[i].Enabled = a.pluginList[i].Builtin || enabled[name]
 		a.pluginList[i].Problems = problems[name]
 		a.pluginList[i].Failures = a.pluginFailures(name)
+		a.pluginList[i].Hidden = hidden[name]
 	}
 	a.prefs.PluginSettings = a.pluginSettings()
 	a.prefs.Pages = nil

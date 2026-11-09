@@ -239,6 +239,14 @@ func (s *State) blockMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 					*open = false
 					s.openInspector(c, d, block.ID)
 				}
+				// A board that places this paragraph: the way back to its node, and
+				// only when there is one, so the menu never offers a trip to nowhere.
+				if has && d.LocateOnBoard != nil && d.OnBoard != nil && d.OnBoard(block.ID) {
+					if row("board", msgs.BoardLocate(), false, false, false).Clicked() {
+						*open = false
+						d.LocateOnBoard(c, block.ID)
+					}
+				}
 				// A plugin's actions for a paragraph sit at the bottom, under
 				// the host's, as every contributed menu does.
 				items := blockItems(d, c)

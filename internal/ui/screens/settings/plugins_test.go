@@ -277,3 +277,122 @@ func TestPluginsDegradeToAStatedEmptyState(t *testing.T) {
 		t.Error("the plugins page did not ask for a library")
 	}
 }
+
+// The S47 sheet is the plugin's own: what approving it grants, how far it is
+// trusted, the switch that grants it, the entries failures took out with the way
+// back, and the pages it contributes. It reads the list's own data, so the row and
+// the sheet cannot disagree.
+func TestPluginDetailShowsCapabilitiesAndFailures(t *testing.T) {
+	msgs := en
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			w := newWorld()
+			w.plugins[2].Enabled = true
+			w.plugins[2].Capabilities = []string{"notes:read", "cards:write"}
+			w.plugins[2].Failures = 3
+			w.plugins[2].Problems = []string{"status.item: the slot is reserved"}
+			state := &settings.State{
+				HasLibrary: true, Page: settings.PagePlugins,
+				Pages: []settings.PluginPage{
+					{Plugin: "acme.cards", ID: "report", Title: "Card report"},
+					{Plugin: "acme.sched", ID: "sched", Title: "Schedule"},
+				},
+			}
+			tt := ui.NewTester(func(c *ui.Context) {
+				settings.View(c, state, w.deps())
+			}, size.w, size.h)
+			tt.Frame()
+			tt.Advance(300 * time.Millisecond)
+
+			// One switch before the sheet: the row's own grant.
+			if got := countText(tt, msgs.PluginEnable("acme.cards")); got != 1 {
+				t.Fatalf("the row draws %d switches for acme.cards, want 1", got)
+			}
+			reveal(t, tt, size.w, size.h, msgs.SettingsPluginDetails())
+			info, ok := tt.AccessByRole(ui.RoleButton, msgs.SettingsPluginDetailsOf("acme.cards"))
+			if !ok {
+				t.Fatalf("no details button for acme.cards; texts %q", tt.Texts())
+			}
+			tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
+			tt.Frame()
+
+			for _, want := range []string{
+				msgs.SettingsPluginTrust(), msgs.SettingsPluginTrustThirdParty(),
+				msgs.SettingsPluginTrustThirdPartyBody(),
+				msgs.SettingsPluginCapabilities(), "notes:read", "cards:write",
+				"acme.cards · 0.3.0", msgs.PluginFailures(3), msgs.PluginReenable(),
+				msgs.SettingsPluginPages() + ": Card report",
+			} {
+				if !tt.HasText(want) {
+					t.Fatalf("the sheet is missing %q; texts %q", want, tt.Texts())
+				}
+			}
+			// Its pages are the plugin's own, and its switch is the same grant the
+			// row carries: the sheet draws a second one, and nothing of another
+			// plugin's.
+			if tt.HasText("Card report, Schedule") {
+				t.Errorf("the sheet lists another plugin's page; texts %q", tt.Texts())
+			}
+			if got := countText(tt, msgs.PluginEnable("acme.cards")); got != 2 {
+				t.Errorf("the sheet draws %d switches for acme.cards, want its own beside the row's", got-1)
+			}
+			if tt.FramePending() {
+				t.Error("the sheet still asks for frames after it settled")
+			}
+
+			// Escape closes it, and the page is where it was.
+			tt.Key(0, ui.KeyEscape)
+			tt.Frame()
+			if tt.HasText(msgs.SettingsPluginTrust()) {
+				t.Fatalf("Escape left the sheet open; texts %q", tt.Texts())
+			}
+		})
+	}
+}
+
+// countText is how many elements of the frame show s, which tells a control the
+// page draws once from one it draws twice.
+func countText(tt *ui.Tester, s string) int {
+	n := 0
+	for _, shown := range tt.Texts() {
+		if shown == s {
+			n++
+		}
+	}
+	return n
+}
+
+// A built-in is the app's own: its sheet states that trust level and offers no
+// switch, because withdrawing what the build ships is not a choice.
+func TestPluginDetailOfABuiltinOffersNoSwitch(t *testing.T) {
+	w := newWorld()
+	state := &settings.State{HasLibrary: true, Page: settings.PagePlugins}
+	tt := ui.NewTester(func(c *ui.Context) {
+		settings.View(c, state, w.deps())
+	}, 1024, 720)
+	tt.Frame()
+	tt.Advance(300 * time.Millisecond)
+
+	info, ok := tt.AccessByRole(ui.RoleButton, en.SettingsPluginDetailsOf("cards"))
+	if !ok {
+		t.Fatalf("no details button for the built-in; texts %q", tt.Texts())
+	}
+	tt.ClickAt(info.Bounds.X+info.Bounds.W/2, info.Bounds.Y+info.Bounds.H/2)
+	tt.Frame()
+
+	if !tt.HasText(en.SettingsPluginTrustBuiltin()) || !tt.HasText(en.SettingsPluginTrustBuiltinBody()) {
+		t.Fatalf("the sheet does not state the built-in trust level; texts %q", tt.Texts())
+	}
+	if tt.HasText(en.PluginEnable("cards")) {
+		t.Error("the built-in's sheet offers a switch that would change nothing")
+	}
+	// Escape closes it, and the page is where it was.
+	tt.Key(0, ui.KeyEscape)
+	tt.Frame()
+	if tt.HasText(en.SettingsPluginTrustBuiltinBody()) {
+		t.Fatalf("Escape left the sheet open; texts %q", tt.Texts())
+	}
+	if !tt.HasText(en.SettingsPlugins()) {
+		t.Error("the plugins page did not come back")
+	}
+}

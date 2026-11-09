@@ -7,6 +7,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
 )
@@ -49,8 +50,15 @@ func (a *App) notesDeps() notes.Deps {
 			a.excerptBlock(c, note, block, false)
 		},
 		LocateOnBoard: a.LocateOnBoard,
+		OnBoard:       a.OnBoard,
 		BlockItems: func(c *ui.Context) []notes.BlockItem {
 			return a.blockMenuItems(c)
+		},
+		SlashItems: func(c *ui.Context) []notes.BlockItem {
+			return a.slotMenuItems(c, a.slashItems())
+		},
+		RowItems: func(c *ui.Context) []notes.BlockItem {
+			return a.slotMenuItems(c, a.sidebarNoteItems())
 		},
 
 		Rows:      func() ([]notes.Row, int) { return a.write.rows, a.write.total },
@@ -452,7 +460,13 @@ func (a *App) clozeSelection(c *ui.Context, noteID, blockID core.ID, selected st
 // its inspector, in drawing order, with the labels the window's language gives
 // them (ui.md §4, the note.block slot).
 func (a *App) blockMenuItems(c *ui.Context) []notes.BlockItem {
-	items := a.noteBlockItems()
+	return a.slotMenuItems(c, a.noteBlockItems())
+}
+
+// slotMenuItems turns a slot's items into the labels and actions a screen draws,
+// in the window's language: every receiver of a menu slot goes through it, so
+// one slot reads the same wherever it lands.
+func (a *App) slotMenuItems(c *ui.Context, items []contrib.MenuRef) []notes.BlockItem {
 	if len(items) == 0 {
 		return nil
 	}

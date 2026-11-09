@@ -26,7 +26,8 @@ type Context struct {
 	LibraryOpen bool
 	// NoteOpen is a note in the editor.
 	NoteOpen bool
-	// NoteSelection is a selection inside that note's text.
+	// NoteSelection is words selected inside that note's text: what a
+	// contribution that acts on a passage asks for.
 	NoteSelection bool
 	// CardPresent is a card on screen, in review or in browse.
 	CardPresent bool
@@ -35,8 +36,8 @@ type Context struct {
 	CardStatus string
 	// BrowseSelection is a chosen row in the card list.
 	BrowseSelection bool
-	// ScopeActive is a review scope narrower than the whole library. No screen
-	// narrows one yet.
+	// ScopeActive is a review scope narrower than the whole library: one note's
+	// cards or one tag's, as the recall queue's scope dialog set it.
 	ScopeActive bool
 	// PageID is the plugin page on screen, and PluginID the plugin it belongs
 	// to; both empty elsewhere.

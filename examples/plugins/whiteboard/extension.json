@@ -1,0 +1,62 @@
+{
+  "id": "example.whiteboard",
+  "name": "whiteboard",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "runtime": "js",
+  "entry": "main.js",
+  "capabilities": ["notes:read"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "example.whiteboard.about",
+        "title": "%command.about%",
+        "category": "%category.board%",
+        "icon": "layers",
+        "action": "command:about"
+      }
+    ],
+    "menus": {
+      "page.header": [
+        {
+          "command": "example.whiteboard.about",
+          "group": "secondary",
+          "order": 10,
+          "when": "page.id == whiteboard"
+        }
+      ]
+    },
+    "pages": [
+      {
+        "id": "whiteboard",
+        "title": "%page.title%",
+        "icon": "layers",
+        "nav": "plugins",
+        "when": "library.open",
+        "data": "command:boardData"
+      }
+    ],
+    "locales": {
+      "en": {
+        "page.title": "Whiteboard",
+        "command.about": "About this board",
+        "category.board": "Board",
+        "section.board": "Places",
+        "section.body": "Every paragraph of the library, in the order the notes hold them. A node opens its paragraph; the block's menu brings you back here.",
+        "action.open": "Back to this paragraph",
+        "empty": "No note holds a paragraph yet.",
+        "toast.about": "Every node here is one paragraph of a note."
+      },
+      "zh-Hans": {
+        "page.title": "白板",
+        "command.about": "关于这块白板",
+        "category.board": "白板",
+        "section.board": "位置",
+        "section.body": "整个笔记库的段落，按笔记里的顺序排列。点一个节点打开它的段落；块的菜单能把你带回这里。",
+        "action.open": "回到这一段",
+        "empty": "还没有笔记写下任何段落。",
+        "toast.about": "这里的每个节点都是笔记里的一段。"
+      }
+    }
+  }
+}

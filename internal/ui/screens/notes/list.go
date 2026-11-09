@@ -262,9 +262,30 @@ func listRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, row Row, d 
 				if m.Item(msgs.WriteRowQueue()).Chosen() && d.QueueReading != nil {
 					d.QueueReading(c, row.ID)
 				}
+				// A plugin's actions for a note close the menu, under the host's,
+				// which is where the sidebar.note slot puts them (ui.md §4).
+				items := rowItems(d, c)
+				if len(items) == 0 {
+					return
+				}
+				m.Separator()
+				for _, item := range items {
+					if m.Item(item.Label).Chosen() {
+						item.Run(c)
+					}
+				}
 			})
 		})
 	}()
+}
+
+// rowItems are the actions plugins contributed to a note row's menu. A screen
+// drawn without an app behind it has none.
+func rowItems(d Deps, c *ui.Context) []BlockItem {
+	if d.RowItems == nil {
+		return nil
+	}
+	return d.RowItems(c)
 }
 
 // summaryOf is the line under a row's title: the note's first paragraph, or the

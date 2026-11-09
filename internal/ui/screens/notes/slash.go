@@ -19,6 +19,9 @@ const (
 	slashInsert
 	slashImage
 	slashTable
+	// slashPlugin is a command a plugin contributed to the menu: it changes the
+	// note through the app, not through the paragraph's style.
+	slashPlugin
 )
 
 // slashCommand is one way a slash menu can change the block it was typed in.
@@ -32,11 +35,13 @@ type slashCommand struct {
 	style    richtext.ParagraphStyle
 	insert   string
 	caret    int
+	// run is the action a plugin's item holds; nil for the host's own commands.
+	run func(*ui.Context)
 }
 
 // slashCommands is the menu's whole set, in the order it lists them. Table is
 // added by the table slice, after the document can preserve one.
-func slashCommands(msgs locales.Messages, d Deps) []slashCommand {
+func slashCommands(c *ui.Context, msgs locales.Messages, d Deps) []slashCommand {
 	commands := []slashCommand{
 		{key: "body", label: msgs.StyleBody(), keywords: "text body paragraph p", kind: slashStyle},
 		{key: "title", label: msgs.StyleTitle(), keywords: "h1 heading 1 title", kind: slashStyle, style: richtext.ParagraphStyle{Heading: 1}},
@@ -55,6 +60,19 @@ func slashCommands(msgs locales.Messages, d Deps) []slashCommand {
 			key: "image", label: msgs.SlashImage(), keywords: "image picture photo asset file", kind: slashImage,
 		})
 	}
+	// A plugin's commands close the menu, under the host's own: the contract
+	// puts the editor.slash slot at its foot (ui.md §4), and the host owns the
+	// items — the screen only draws what the app read from its cache.
+	if d.SlashItems != nil {
+		for i, item := range d.SlashItems(c) {
+			commands = append(commands, slashCommand{
+				key:   fmt.Sprintf("plugin-%d", i),
+				label: item.Label,
+				kind:  slashPlugin,
+				run:   item.Run,
+			})
+		}
+	}
 	return commands
 }
 
@@ -71,7 +89,7 @@ func (s *State) resetSlash() {
 // syncSlash reads the paragraph at the caret as a slash query. A slash at the
 // start of a paragraph opens the menu once; Escape closes it without deleting
 // what was typed, and the same query stays closed until the slash is removed.
-func (s *State) syncSlash(msgs locales.Messages, d Deps) {
+func (s *State) syncSlash(c *ui.Context, msgs locales.Messages, d Deps) {
 	start, end, query, ok := s.slashAtCaret()
 	if !ok {
 		s.slashOpen, s.slashSeen, s.slashTake = false, false, false
@@ -84,7 +102,7 @@ func (s *State) syncSlash(msgs locales.Messages, d Deps) {
 		s.slashChoice = -1
 	}
 	s.slashStart, s.slashEnd = start, end
-	s.slashMatches = filterSlash(slashCommands(msgs, d), query)
+	s.slashMatches = filterSlash(slashCommands(c, msgs, d), query)
 	if len(s.slashMatches) == 0 {
 		s.slashChoice = -1
 	} else if s.slashChoice < 0 || s.slashChoice >= len(s.slashMatches) {
@@ -268,6 +286,17 @@ func (s *State) applySlash(c *ui.Context, d Deps) bool {
 	}
 	if command.kind == slashTable {
 		s.insertTable(c, d, start, end)
+		return false
+	}
+	if command.kind == slashPlugin {
+		// The typed query goes, and the note it was typed in is stored: the
+		// plugin's command acts on the note as the user wrote it, not on a draft
+		// that still holds "/name".
+		s.replaceSlash(c, start, end, "", 0, command)
+		s.saveDocument(c, d)
+		if command.run != nil {
+			command.run(c)
+		}
 		return false
 	}
 

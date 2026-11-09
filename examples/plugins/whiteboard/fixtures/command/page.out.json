@@ -1,0 +1,87 @@
+{
+  "children": [
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "text": "Memory"
+                },
+                {
+                  "kind": "markdown",
+                  "text": "spacing"
+                },
+                {
+                  "items": [
+                    {
+                      "command": "example.whiteboard.about",
+                      "label": "%action.open%",
+                      "value": "note_1/block_1"
+                    }
+                  ],
+                  "kind": "actions"
+                }
+              ],
+              "kind": "card"
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "text": "Memory"
+                },
+                {
+                  "kind": "markdown",
+                  "text": "interleaving"
+                },
+                {
+                  "items": [
+                    {
+                      "command": "example.whiteboard.about",
+                      "label": "%action.open%",
+                      "value": "note_1/block_2"
+                    }
+                  ],
+                  "kind": "actions"
+                }
+              ],
+              "kind": "card"
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "text": "Sleep"
+                },
+                {
+                  "kind": "markdown",
+                  "text": "a paragraph that asks nothing"
+                },
+                {
+                  "items": [
+                    {
+                      "command": "example.whiteboard.about",
+                      "label": "%action.open%",
+                      "value": "note_2/block_3"
+                    }
+                  ],
+                  "kind": "actions"
+                }
+              ],
+              "kind": "card"
+            }
+          ],
+          "columns": 2,
+          "kind": "grid"
+        }
+      ],
+      "description": "%section.body%",
+      "kind": "section",
+      "title": "%section.board%"
+    }
+  ],
+  "kind": "page"
+}
