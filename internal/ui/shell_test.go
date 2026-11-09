@@ -157,20 +157,24 @@ func TestSubnavKeepsTheAreaOnReload(t *testing.T) {
 	settle(tt)
 	msgs := locales.In("en")
 
-	// The read area's one page, and a reading recorded from it: the write's
-	// reload must not move the window off it.
+	// The read area's second page is kept through a reload: a write that
+	// rederives the library leaves the window where the reader put it.
 	tt.Key(ui.Cmd, ui.Key3)
 	tt.Advance(320 * time.Millisecond)
 	if !tt.HasText(msgs.QueuePage()) {
 		t.Fatalf("the read area has no queue page; texts %q", tt.Texts())
 	}
-	tt.Key(0, ui.Key2) // Just right: a write, then the reload behind it
-	tt.Frame()
-	if a.area != areaRead || a.sub != subReadQueue {
-		t.Fatalf("the reload moved the window to %v/%v, want the read queue", a.area, a.sub)
+	if err := tt.Click(msgs.ArchivePage()); err != nil {
+		t.Fatalf("the read area has no archive page: %v", err)
 	}
-	if !tt.HasText(msgs.Excerpt()) {
-		t.Fatalf("the reading page is not up after the reload; texts %q", tt.Texts())
+	tt.Advance(320 * time.Millisecond)
+	a.reload()
+	tt.Frame()
+	if a.area != areaRead || a.sub != subReadArchive {
+		t.Fatalf("the reload moved the window to %v/%v, want the archive", a.area, a.sub)
+	}
+	if !tt.HasText(msgs.ReadArchiveEmpty()) {
+		t.Fatalf("the archive page is not up after the reload; texts %q", tt.Texts())
 	}
 
 	// The recall area's card table is not its first page: a reload keeps the
@@ -209,7 +213,7 @@ func TestNoHorizontalScrollAt720(t *testing.T) {
 	}{
 		{ui.Key1, msgs.TodayStub()},
 		{ui.Key2, msgs.Notebook()},
-		{ui.Key3, msgs.NoReading()},
+		{ui.Key3, msgs.ReadQueueEmpty()},
 		{ui.Key4, "Show answer"},
 		{ui.Key5, msgs.StatsTitle()},
 		{ui.Key6, msgs.SettingsTitle()},

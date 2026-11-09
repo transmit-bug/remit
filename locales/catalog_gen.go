@@ -4419,6 +4419,574 @@ func (msgs Messages) ReadingWaiting(count int) string {
 	return Catalog.Format(msgs.locale, "readingWaiting", map[string]any{"count": count})
 }
 
+// ReadQueueTitle says "Reading queue"
+// in the language the app shows.
+//
+// The read area's queue page: the notes due to read now.
+func ReadQueueTitle() string { return In(i18n.Locale()).ReadQueueTitle() }
+
+// ReadQueueTitle says "Reading queue"
+// in the language of msgs.
+//
+// The read area's queue page: the notes due to read now.
+func (msgs Messages) ReadQueueTitle() string {
+	return Catalog.Format(msgs.locale, "readQueueTitle", nil)
+}
+
+// ReadArchiveTitle says "Archive"
+// in the language the app shows.
+//
+// The read area's archive page: the notes that left the queue for good.
+func ReadArchiveTitle() string { return In(i18n.Locale()).ReadArchiveTitle() }
+
+// ReadArchiveTitle says "Archive"
+// in the language of msgs.
+//
+// The read area's archive page: the notes that left the queue for good.
+func (msgs Messages) ReadArchiveTitle() string {
+	return Catalog.Format(msgs.locale, "readArchiveTitle", nil)
+}
+
+// ArchivePage says "Archive"
+// in the language the app shows.
+//
+// Page of the read area: the notes that left the reading queue.
+func ArchivePage() string { return In(i18n.Locale()).ArchivePage() }
+
+// ArchivePage says "Archive"
+// in the language of msgs.
+//
+// Page of the read area: the notes that left the reading queue.
+func (msgs Messages) ArchivePage() string {
+	return Catalog.Format(msgs.locale, "archivePage", nil)
+}
+
+// ReadAdd says "Add to queue"
+// in the language the app shows.
+//
+// Opens the notebook so a note can be queued for reading.
+func ReadAdd() string { return In(i18n.Locale()).ReadAdd() }
+
+// ReadAdd says "Add to queue"
+// in the language of msgs.
+//
+// Opens the notebook so a note can be queued for reading.
+func (msgs Messages) ReadAdd() string {
+	return Catalog.Format(msgs.locale, "readAdd", nil)
+}
+
+// ReadStart says "Start reading"
+// in the language the app shows.
+//
+// Enters the reading session at the head of the queue.
+func ReadStart() string { return In(i18n.Locale()).ReadStart() }
+
+// ReadStart says "Start reading"
+// in the language of msgs.
+//
+// Enters the reading session at the head of the queue.
+func (msgs Messages) ReadStart() string {
+	return Catalog.Format(msgs.locale, "readStart", nil)
+}
+
+// ReadContinue says "Continue"
+// in the language the app shows.
+//
+// Enters the reading session at the note on that row.
+func ReadContinue() string { return In(i18n.Locale()).ReadContinue() }
+
+// ReadContinue says "Continue"
+// in the language of msgs.
+//
+// Enters the reading session at the note on that row.
+func (msgs Messages) ReadContinue() string {
+	return Catalog.Format(msgs.locale, "readContinue", nil)
+}
+
+// ReadOpen says "Open"
+// in the language the app shows.
+//
+// Opens an archived note in the notebook.
+func ReadOpen() string { return In(i18n.Locale()).ReadOpen() }
+
+// ReadOpen says "Open"
+// in the language of msgs.
+//
+// Opens an archived note in the notebook.
+func (msgs Messages) ReadOpen() string {
+	return Catalog.Format(msgs.locale, "readOpen", nil)
+}
+
+// ReadRestore says "Restore"
+// in the language the app shows.
+//
+// Puts an archived or dismissed note back in the reading queue.
+func ReadRestore() string { return In(i18n.Locale()).ReadRestore() }
+
+// ReadRestore says "Restore"
+// in the language of msgs.
+//
+// Puts an archived or dismissed note back in the reading queue.
+func (msgs Messages) ReadRestore() string {
+	return Catalog.Format(msgs.locale, "readRestore", nil)
+}
+
+// ReadRestored says "Back in the reading queue."
+// in the language the app shows.
+//
+// A restored note returned to the reading queue.
+func ReadRestored() string { return In(i18n.Locale()).ReadRestored() }
+
+// ReadRestored says "Back in the reading queue."
+// in the language of msgs.
+//
+// A restored note returned to the reading queue.
+func (msgs Messages) ReadRestored() string {
+	return Catalog.Format(msgs.locale, "readRestored", nil)
+}
+
+// ReadRetry says "Try again"
+// in the language the app shows.
+//
+// Asks the read area to load again after it failed.
+func ReadRetry() string { return In(i18n.Locale()).ReadRetry() }
+
+// ReadRetry says "Try again"
+// in the language of msgs.
+//
+// Asks the read area to load again after it failed.
+func (msgs Messages) ReadRetry() string {
+	return Catalog.Format(msgs.locale, "readRetry", nil)
+}
+
+// ReadLoading says "Loading the reading queue…"
+// in the language the app shows.
+//
+// The read area before its queue has loaded.
+func ReadLoading() string { return In(i18n.Locale()).ReadLoading() }
+
+// ReadLoading says "Loading the reading queue…"
+// in the language of msgs.
+//
+// The read area before its queue has loaded.
+func (msgs Messages) ReadLoading() string {
+	return Catalog.Format(msgs.locale, "readLoading", nil)
+}
+
+// ReadLoadFailed says "The reading area could not be read: {reason}"
+// in the language the app shows.
+//
+// The read area's queue or archive could not be loaded.
+func ReadLoadFailed(reason string) string { return In(i18n.Locale()).ReadLoadFailed(reason) }
+
+// ReadLoadFailed says "The reading area could not be read: {reason}"
+// in the language of msgs.
+//
+// The read area's queue or archive could not be loaded.
+func (msgs Messages) ReadLoadFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "readLoadFailed", map[string]any{"reason": reason})
+}
+
+// ReadRowPlace says "Paragraph {at} of {blocks}"
+// in the language the app shows.
+//
+// Where a queued note resumes: the paragraph, and how many it holds.
+func ReadRowPlace(at int, blocks int) string { return In(i18n.Locale()).ReadRowPlace(at, blocks) }
+
+// ReadRowPlace says "Paragraph {at} of {blocks}"
+// in the language of msgs.
+//
+// Where a queued note resumes: the paragraph, and how many it holds.
+func (msgs Messages) ReadRowPlace(at int, blocks int) string {
+	return Catalog.Format(msgs.locale, "readRowPlace", map[string]any{"at": at, "blocks": blocks})
+}
+
+// ReadRowUnread says "Not started"
+// in the language the app shows.
+//
+// A queued note no session has read yet.
+func ReadRowUnread() string { return In(i18n.Locale()).ReadRowUnread() }
+
+// ReadRowUnread says "Not started"
+// in the language of msgs.
+//
+// A queued note no session has read yet.
+func (msgs Messages) ReadRowUnread() string {
+	return Catalog.Format(msgs.locale, "readRowUnread", nil)
+}
+
+// ReadRowBlocks says "{count, plural, one {# paragraph} other {# paragraphs}}"
+// in the language the app shows.
+//
+// How many paragraphs a note holds.
+func ReadRowBlocks(count int) string { return In(i18n.Locale()).ReadRowBlocks(count) }
+
+// ReadRowBlocks says "{count, plural, one {# paragraph} other {# paragraphs}}"
+// in the language of msgs.
+//
+// How many paragraphs a note holds.
+func (msgs Messages) ReadRowBlocks(count int) string {
+	return Catalog.Format(msgs.locale, "readRowBlocks", map[string]any{"count": count})
+}
+
+// ReadRowStopped says "last stopped {day}"
+// in the language the app shows.
+//
+// When a session last stopped in a note: today, yesterday, or a date.
+func ReadRowStopped(day string) string { return In(i18n.Locale()).ReadRowStopped(day) }
+
+// ReadRowStopped says "last stopped {day}"
+// in the language of msgs.
+//
+// When a session last stopped in a note: today, yesterday, or a date.
+func (msgs Messages) ReadRowStopped(day string) string {
+	return Catalog.Format(msgs.locale, "readRowStopped", map[string]any{"day": day})
+}
+
+// ReadRowQueued says "queued {day}"
+// in the language the app shows.
+//
+// When a note joined the reading queue: today, yesterday, or a date.
+func ReadRowQueued(day string) string { return In(i18n.Locale()).ReadRowQueued(day) }
+
+// ReadRowQueued says "queued {day}"
+// in the language of msgs.
+//
+// When a note joined the reading queue: today, yesterday, or a date.
+func (msgs Messages) ReadRowQueued(day string) string {
+	return Catalog.Format(msgs.locale, "readRowQueued", map[string]any{"day": day})
+}
+
+// ReadDayToday says "today"
+// in the language the app shows.
+//
+// The day a note was last touched, when it is the day on screen.
+func ReadDayToday() string { return In(i18n.Locale()).ReadDayToday() }
+
+// ReadDayToday says "today"
+// in the language of msgs.
+//
+// The day a note was last touched, when it is the day on screen.
+func (msgs Messages) ReadDayToday() string {
+	return Catalog.Format(msgs.locale, "readDayToday", nil)
+}
+
+// ReadDayYesterday says "yesterday"
+// in the language the app shows.
+//
+// The day a note was last touched, when it was the day before.
+func ReadDayYesterday() string { return In(i18n.Locale()).ReadDayYesterday() }
+
+// ReadDayYesterday says "yesterday"
+// in the language of msgs.
+//
+// The day a note was last touched, when it was the day before.
+func (msgs Messages) ReadDayYesterday() string {
+	return Catalog.Format(msgs.locale, "readDayYesterday", nil)
+}
+
+// ReadRhythm says "Rhythm"
+// in the language the app shows.
+//
+// The row of numbers under the reading queue: what it holds and how reading
+// digests.
+func ReadRhythm() string { return In(i18n.Locale()).ReadRhythm() }
+
+// ReadRhythm says "Rhythm"
+// in the language of msgs.
+//
+// The row of numbers under the reading queue: what it holds and how reading
+// digests.
+func (msgs Messages) ReadRhythm() string {
+	return Catalog.Format(msgs.locale, "readRhythm", nil)
+}
+
+// ReadRhythmDue says "due today"
+// in the language the app shows.
+//
+// How many notes the reading queue has due today.
+func ReadRhythmDue() string { return In(i18n.Locale()).ReadRhythmDue() }
+
+// ReadRhythmDue says "due today"
+// in the language of msgs.
+//
+// How many notes the reading queue has due today.
+func (msgs Messages) ReadRhythmDue() string {
+	return Catalog.Format(msgs.locale, "readRhythmDue", nil)
+}
+
+// ReadRhythmQueued says "in the reading queue"
+// in the language the app shows.
+//
+// How many notes the reading queue holds, due or not.
+func ReadRhythmQueued() string { return In(i18n.Locale()).ReadRhythmQueued() }
+
+// ReadRhythmQueued says "in the reading queue"
+// in the language of msgs.
+//
+// How many notes the reading queue holds, due or not.
+func (msgs Messages) ReadRhythmQueued() string {
+	return Catalog.Format(msgs.locale, "readRhythmQueued", nil)
+}
+
+// ReadRhythmTiers says "how a reading digests"
+// in the language the app shows.
+//
+// The three answers a reading session records: too hard, just right, too
+// shallow.
+func ReadRhythmTiers() string { return In(i18n.Locale()).ReadRhythmTiers() }
+
+// ReadRhythmTiers says "how a reading digests"
+// in the language of msgs.
+//
+// The three answers a reading session records: too hard, just right, too
+// shallow.
+func (msgs Messages) ReadRhythmTiers() string {
+	return Catalog.Format(msgs.locale, "readRhythmTiers", nil)
+}
+
+// ReadArchiveEmpty says "The archive is still empty."
+// in the language the app shows.
+//
+// The archive page with nothing archived or dismissed.
+func ReadArchiveEmpty() string { return In(i18n.Locale()).ReadArchiveEmpty() }
+
+// ReadArchiveEmpty says "The archive is still empty."
+// in the language of msgs.
+//
+// The archive page with nothing archived or dismissed.
+func (msgs Messages) ReadArchiveEmpty() string {
+	return Catalog.Format(msgs.locale, "readArchiveEmpty", nil)
+}
+
+// ReadArchiveHint says "Press A in a reading session to archive a note."
+// in the language the app shows.
+//
+// The archive page's hint at how a note gets there.
+func ReadArchiveHint() string { return In(i18n.Locale()).ReadArchiveHint() }
+
+// ReadArchiveHint says "Press A in a reading session to archive a note."
+// in the language of msgs.
+//
+// The archive page's hint at how a note gets there.
+func (msgs Messages) ReadArchiveHint() string {
+	return Catalog.Format(msgs.locale, "readArchiveHint", nil)
+}
+
+// ReadArchivedSection says "Archived"
+// in the language the app shows.
+//
+// The archive page's section of notes that were put away.
+func ReadArchivedSection() string { return In(i18n.Locale()).ReadArchivedSection() }
+
+// ReadArchivedSection says "Archived"
+// in the language of msgs.
+//
+// The archive page's section of notes that were put away.
+func (msgs Messages) ReadArchivedSection() string {
+	return Catalog.Format(msgs.locale, "readArchivedSection", nil)
+}
+
+// ReadDismissedSection says "Dismissed"
+// in the language the app shows.
+//
+// The archive page's section of notes marked as not worth reading.
+func ReadDismissedSection() string { return In(i18n.Locale()).ReadDismissedSection() }
+
+// ReadDismissedSection says "Dismissed"
+// in the language of msgs.
+//
+// The archive page's section of notes marked as not worth reading.
+func (msgs Messages) ReadDismissedSection() string {
+	return Catalog.Format(msgs.locale, "readDismissedSection", nil)
+}
+
+// ReadArchive says "Archive (A)"
+// in the language the app shows.
+//
+// The reading session's action that puts the note away for good.
+func ReadArchive() string { return In(i18n.Locale()).ReadArchive() }
+
+// ReadArchive says "Archive (A)"
+// in the language of msgs.
+//
+// The reading session's action that puts the note away for good.
+func (msgs Messages) ReadArchive() string {
+	return Catalog.Format(msgs.locale, "readArchive", nil)
+}
+
+// ReadDismiss says "Dismiss (D)"
+// in the language the app shows.
+//
+// The reading session's action that says a note is not worth reading.
+func ReadDismiss() string { return In(i18n.Locale()).ReadDismiss() }
+
+// ReadDismiss says "Dismiss (D)"
+// in the language of msgs.
+//
+// The reading session's action that says a note is not worth reading.
+func (msgs Messages) ReadDismiss() string {
+	return Catalog.Format(msgs.locale, "readDismiss", nil)
+}
+
+// ReadPostpone says "Postpone (P)"
+// in the language the app shows.
+//
+// The reading session's action that brings a note back tomorrow.
+func ReadPostpone() string { return In(i18n.Locale()).ReadPostpone() }
+
+// ReadPostpone says "Postpone (P)"
+// in the language of msgs.
+//
+// The reading session's action that brings a note back tomorrow.
+func (msgs Messages) ReadPostpone() string {
+	return Catalog.Format(msgs.locale, "readPostpone", nil)
+}
+
+// ReadArchived says "Archived “{title}”."
+// in the language the app shows.
+//
+// The toast a reading session shows after archiving a note.
+func ReadArchived(title string) string { return In(i18n.Locale()).ReadArchived(title) }
+
+// ReadArchived says "Archived “{title}”."
+// in the language of msgs.
+//
+// The toast a reading session shows after archiving a note.
+func (msgs Messages) ReadArchived(title string) string {
+	return Catalog.Format(msgs.locale, "readArchived", map[string]any{"title": title})
+}
+
+// ReadDismissed says "Dismissed “{title}”."
+// in the language the app shows.
+//
+// The toast a reading session shows after dismissing a note.
+func ReadDismissed(title string) string { return In(i18n.Locale()).ReadDismissed(title) }
+
+// ReadDismissed says "Dismissed “{title}”."
+// in the language of msgs.
+//
+// The toast a reading session shows after dismissing a note.
+func (msgs Messages) ReadDismissed(title string) string {
+	return Catalog.Format(msgs.locale, "readDismissed", map[string]any{"title": title})
+}
+
+// ReadPostponed says "Postponed “{title}” to tomorrow."
+// in the language the app shows.
+//
+// The toast a reading session shows after postponing a note.
+func ReadPostponed(title string) string { return In(i18n.Locale()).ReadPostponed(title) }
+
+// ReadPostponed says "Postponed “{title}” to tomorrow."
+// in the language of msgs.
+//
+// The toast a reading session shows after postponing a note.
+func (msgs Messages) ReadPostponed(title string) string {
+	return Catalog.Format(msgs.locale, "readPostponed", map[string]any{"title": title})
+}
+
+// ReadUndo says "Undo"
+// in the language the app shows.
+//
+// The toast action that takes back a reading session's archive, dismissal
+// or postpone.
+func ReadUndo() string { return In(i18n.Locale()).ReadUndo() }
+
+// ReadUndo says "Undo"
+// in the language of msgs.
+//
+// The toast action that takes back a reading session's archive, dismissal
+// or postpone.
+func (msgs Messages) ReadUndo() string {
+	return Catalog.Format(msgs.locale, "readUndo", nil)
+}
+
+// ReadCardsMark says "{count, plural, one {# card} other {# cards}}"
+// in the language the app shows.
+//
+// How many cards a paragraph on screen already has.
+func ReadCardsMark(count int) string { return In(i18n.Locale()).ReadCardsMark(count) }
+
+// ReadCardsMark says "{count, plural, one {# card} other {# cards}}"
+// in the language of msgs.
+//
+// How many cards a paragraph on screen already has.
+func (msgs Messages) ReadCardsMark(count int) string {
+	return Catalog.Format(msgs.locale, "readCardsMark", map[string]any{"count": count})
+}
+
+// ReadExcerptedMark says "Excerpted"
+// in the language the app shows.
+//
+// A paragraph an excerpt was already taken from.
+func ReadExcerptedMark() string { return In(i18n.Locale()).ReadExcerptedMark() }
+
+// ReadExcerptedMark says "Excerpted"
+// in the language of msgs.
+//
+// A paragraph an excerpt was already taken from.
+func (msgs Messages) ReadExcerptedMark() string {
+	return Catalog.Format(msgs.locale, "readExcerptedMark", nil)
+}
+
+// ReadLastStopMark says "Last stop"
+// in the language the app shows.
+//
+// The paragraph the last reading session stopped at.
+func ReadLastStopMark() string { return In(i18n.Locale()).ReadLastStopMark() }
+
+// ReadLastStopMark says "Last stop"
+// in the language of msgs.
+//
+// The paragraph the last reading session stopped at.
+func (msgs Messages) ReadLastStopMark() string {
+	return Catalog.Format(msgs.locale, "readLastStopMark", nil)
+}
+
+// ReadQueueEmpty says "Today's reading queue is empty."
+// in the language the app shows.
+//
+// The queue page with no note due today.
+func ReadQueueEmpty() string { return In(i18n.Locale()).ReadQueueEmpty() }
+
+// ReadQueueEmpty says "Today's reading queue is empty."
+// in the language of msgs.
+//
+// The queue page with no note due today.
+func (msgs Messages) ReadQueueEmpty() string {
+	return Catalog.Format(msgs.locale, "readQueueEmpty", nil)
+}
+
+// ReadNotesMark says "{count, plural, one {# note} other {# notes}}"
+// in the language the app shows.
+//
+// How many notes an archive section holds.
+func ReadNotesMark(count int) string { return In(i18n.Locale()).ReadNotesMark(count) }
+
+// ReadNotesMark says "{count, plural, one {# note} other {# notes}}"
+// in the language of msgs.
+//
+// How many notes an archive section holds.
+func (msgs Messages) ReadNotesMark(count int) string {
+	return Catalog.Format(msgs.locale, "readNotesMark", map[string]any{"count": count})
+}
+
+// ReadAddNote says "Add a note"
+// in the language the app shows.
+//
+// The empty queue's own action: it opens the notes list, where a note is
+// queued.
+func ReadAddNote() string { return In(i18n.Locale()).ReadAddNote() }
+
+// ReadAddNote says "Add a note"
+// in the language of msgs.
+//
+// The empty queue's own action: it opens the notes list, where a note is
+// queued.
+func (msgs Messages) ReadAddNote() string {
+	return Catalog.Format(msgs.locale, "readAddNote", nil)
+}
+
 // TrayTitleReading says "Remit · {cards} · {reading}"
 // in the language the app shows.
 //

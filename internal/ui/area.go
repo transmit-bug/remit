@@ -32,6 +32,7 @@ const (
 	subSearch
 	// The read area.
 	subReadQueue
+	subReadArchive
 	// The recall area.
 	subRecallQueue
 	subRecallCards
@@ -61,7 +62,7 @@ func subsOf(area areaID) []subID {
 	case areaWrite:
 		return []subID{subNotes, subSearch}
 	case areaRead:
-		return []subID{subReadQueue}
+		return []subID{subReadQueue, subReadArchive}
 	case areaRecall:
 		return []subID{subRecallQueue, subRecallCards}
 	case areaStats:
@@ -140,6 +141,8 @@ func subLabel(msgs locales.Messages, sub subID) string {
 		return msgs.SearchPage()
 	case subReadQueue, subRecallQueue:
 		return msgs.QueuePage()
+	case subReadArchive:
+		return msgs.ArchivePage()
 	case subRecallCards:
 		return msgs.CardsPage()
 	case subStatsOverview:
@@ -159,6 +162,8 @@ func subName(sub subID) string {
 		return "search"
 	case subReadQueue:
 		return "queue"
+	case subReadArchive:
+		return "archive"
 	case subRecallQueue:
 		return "queue"
 	case subRecallCards:

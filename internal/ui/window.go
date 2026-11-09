@@ -207,6 +207,9 @@ func (a *App) shortcuts(c *ui.Context) {
 		c.OnShortcut(0, ui.KeyE, func() { a.excerptCurrent(c) })
 		c.OnShortcut(0, ui.KeyS, func() { a.skipCurrentReading() })
 		c.OnShortcut(0, ui.KeyX, func() { a.dropCurrentReading(c) })
+		c.OnShortcut(0, ui.KeyA, func() { a.endCurrentReading(c, reading.ArchiveDecision) })
+		c.OnShortcut(0, ui.KeyD, func() { a.endCurrentReading(c, reading.DismissDecision) })
+		c.OnShortcut(0, ui.KeyP, func() { a.endCurrentReading(c, reading.PostponeDecision) })
 		c.OnShortcut(0, ui.KeyM, a.editCurrentReading)
 		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
 	case modeBrowse, modeStats, modePlugin:

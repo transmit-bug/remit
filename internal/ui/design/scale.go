@@ -62,6 +62,9 @@ const (
 	NotesColumnWidth float32 = 260
 	// FilterPaneWidth is the filter rail the card table keeps on its left.
 	FilterPaneWidth float32 = 200
+	// MeterWidth is a row's paragraph progress bar: wide enough to read as a
+	// fraction, narrow enough to leave the title the room it needs (spec §4.5).
+	MeterWidth float32 = 120
 
 	// The frame: a rail, a top bar, a sub-navigation and a status line around
 	// the stage. RailWidth is the rail open, RailCollapsed the icon strip it

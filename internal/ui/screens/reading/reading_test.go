@@ -31,8 +31,12 @@ type fake struct {
 	edited   []core.ID
 	excerpts []excerptCall
 	opened   []core.ID
-	review   int
-	home     int
+	// ended counts the session's terminal decisions, and queued are the notes
+	// their undo put back.
+	ended  map[string]int
+	queued []core.ID
+	review int
+	home   int
 }
 
 type readCall struct {
@@ -59,6 +63,12 @@ func (f *fake) deps() reading.Deps {
 		Skip:     func(id core.ID) { f.skipped = append(f.skipped, id) },
 		Drop:     func(id core.ID) { f.dropped = append(f.dropped, id) },
 		EditNote: func(id core.ID) { f.edited = append(f.edited, id) },
+		Archive:  func() { f.ended["archive"]++ },
+		Dismiss:  func() { f.ended["dismiss"]++ },
+		Postpone: func() { f.ended["postpone"]++ },
+		QueueNote: func(id core.ID) {
+			f.queued = append(f.queued, id)
+		},
 		Excerpt: func(note, block core.ID, card bool) {
 			f.excerpts = append(f.excerpts, excerptCall{note: note, block: block, card: card})
 		},
@@ -92,7 +102,7 @@ func note(id core.ID, n int) reading.Note {
 // open builds the screen on a queue of notes, in the order they were given.
 func open(t *testing.T, notes ...reading.Note) (*fake, *reading.State, reading.Deps) {
 	t.Helper()
-	f := &fake{notes: map[core.ID]reading.Note{}, sources: map[string]core.ID{}}
+	f := &fake{notes: map[core.ID]reading.Note{}, sources: map[string]core.ID{}, ended: map[string]int{}}
 	order := make([]core.ID, 0, len(notes))
 	for _, n := range notes {
 		f.notes[n.ID] = n
@@ -377,11 +387,131 @@ func TestChineseAtTheMinimumSize(t *testing.T) {
 
 	for _, want := range []string{
 		msgs.ReadingTooHard(), msgs.ReadingJustRight(), msgs.ReadingTooShallow(),
-		msgs.Excerpt(), msgs.Skip(), msgs.RemoveReading(), msgs.ReadingWhere(1, 2),
-		"Note note_a", "Paragraph 1 of note_a",
+		msgs.Excerpt(), msgs.Skip(), msgs.ReadArchive(), msgs.ReadDismiss(), msgs.ReadPostpone(),
+		msgs.BackToNotes(), msgs.ReadingWhere(1, 2), "Note note_a", "Paragraph 1 of note_a",
 	} {
 		if !tt.HasText(want) {
 			t.Errorf("missing %q; texts %q", want, tt.Texts())
 		}
+	}
+}
+
+// Ending a note — archiving it, dismissing it, postponing it — is one gesture
+// with three meanings: the app writes the event, the session moves on without
+// recording an answer, and the toast says what happened with the way back.
+func TestEndingANoteTellsAndUndoes(t *testing.T) {
+	msgs := locales.In("en")
+	for _, decision := range []struct {
+		name  string
+		label string
+		told  string
+		key   string
+	}{
+		{"archive", msgs.ReadArchive(), msgs.ReadArchived("Note note_a"), "archive"},
+		{"dismiss", msgs.ReadDismiss(), msgs.ReadDismissed("Note note_a"), "dismiss"},
+		{"postpone", msgs.ReadPostpone(), msgs.ReadPostponed("Note note_a"), "postpone"},
+	} {
+		t.Run(decision.name, func(t *testing.T) {
+			f, state, deps := open(t, note("note_a", 2), note("note_b", 2))
+			tt := at(t, view(state, deps), 1024, 720)
+
+			if err := tt.Click(decision.label); err != nil {
+				t.Fatalf("the session has no %q action: %v", decision.label, err)
+			}
+			tt.Frame()
+			if f.ended[decision.key] != 1 {
+				t.Errorf("the app was asked to %s %d times, want 1", decision.name, f.ended[decision.key])
+			}
+			if len(f.reads) != 0 {
+				t.Errorf("ending a note recorded %d answers, want none", len(f.reads))
+			}
+			if head, _ := state.Current(); head != "note_b" {
+				t.Errorf("the session is on %q, want the next note", head)
+			}
+			if !tt.HasText(decision.told) {
+				t.Fatalf("the decision said nothing; texts %q", tt.Texts())
+			}
+
+			if err := tt.Click(msgs.ReadUndo()); err != nil {
+				t.Fatalf("the toast has no undo: %v", err)
+			}
+			if len(f.queued) != 1 || f.queued[0] != "note_a" {
+				t.Errorf("the undo queued %v, want the note that was ended", f.queued)
+			}
+		})
+	}
+}
+
+// The session moves past a note the store already took out of its queue: ending
+// the note on screen must not skip the one after it.
+func TestEndingANoteTheStoreAlreadyDropped(t *testing.T) {
+	msgs := locales.In("en")
+	f, state, deps := open(t, note("note_a", 1), note("note_b", 1), note("note_c", 1))
+	tt := at(t, view(state, deps), 1024, 720)
+
+	// The reload behind the write drops the note, as the store does; the session
+	// must stay on the next one whether or not it ever held the ended note.
+	// The store's answer, as the reload behind the write applies it.
+	deps.Archive = func() {
+		f.ended["archive"]++
+		state.Sync([]core.ID{"note_b", "note_c"})
+	}
+	if err := tt.Click(msgs.ReadArchive()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if head, _ := state.Current(); head != "note_b" {
+		t.Errorf("the session is on %q, want note_b", head)
+	}
+	if got := state.Remaining(); got != 2 {
+		t.Errorf("remaining = %d, want 2", got)
+	}
+}
+
+// A paragraph's marks say what it already carries: the cards that quote it, the
+// excerpt taken from it, and whether it is where the last session stopped.
+func TestParagraphsCarryTheirMarks(t *testing.T) {
+	msgs := locales.In("en")
+	passage := note("note_a", 3)
+	passage.Marks = map[core.ID]reading.Mark{
+		passage.Blocks[0].ID: {Cards: 2},
+		passage.Blocks[1].ID: {Excerpted: true, LastStop: true},
+	}
+	_, state, deps := open(t, passage)
+	tt := at(t, view(state, deps), 1024, 720)
+
+	for _, want := range []string{msgs.ReadCardsMark(2), msgs.ReadExcerptedMark(), msgs.ReadLastStopMark()} {
+		if !tt.HasText(want) {
+			t.Errorf("the paragraph marks lost %q; texts %q", want, tt.Texts())
+		}
+	}
+}
+
+// The action row keeps its two groups readable at the smallest window: the three
+// difficulties, and what to do with the note itself.
+func TestActionRowAtTheMinimumSize(t *testing.T) {
+	msgs := locales.In("en")
+	for _, size := range sizes {
+		t.Run(size.name, func(t *testing.T) {
+			_, state, deps := open(t, note("note_a", 3))
+			tt := at(t, view(state, deps), size.w, size.h)
+			for _, label := range []string{
+				msgs.ReadingTooHard(), msgs.ReadingJustRight(), msgs.ReadingTooShallow(),
+				msgs.ExcerptWithCard(), msgs.Excerpt(), msgs.Skip(),
+				msgs.ReadArchive(), msgs.ReadDismiss(), msgs.ReadPostpone(),
+				msgs.RemoveReading(), msgs.ReadingEdit(), msgs.BackToNotes(),
+			} {
+				r, ok := tt.Find(label)
+				if !ok {
+					t.Fatalf("%q has no box at %dx%d; texts %q", label, size.w, size.h, tt.Texts())
+				}
+				if r.W <= 0 || r.H <= 0 {
+					t.Errorf("%q has an empty box %.1fx%.1f", label, r.W, r.H)
+				}
+			}
+			if tt.FramePending() {
+				t.Error("the view still requests frames after it should settle")
+			}
+		})
 	}
 }

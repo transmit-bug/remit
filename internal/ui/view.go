@@ -87,7 +87,7 @@ func (a *App) stage(c *ui.Context, tk design.Tokens) {
 		case a.area == areaWrite:
 			a.notesView(c)
 		case a.area == areaRead:
-			a.readingView(c)
+			a.readView(c)
 		case a.area == areaRecall:
 			a.reviewView(c, tk)
 		case a.area == areaStats:

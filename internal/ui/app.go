@@ -22,6 +22,7 @@ import (
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/browse"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
+	"github.com/transmit-bug/remit/internal/ui/screens/read"
 	"github.com/transmit-bug/remit/internal/ui/screens/reading"
 	"github.com/transmit-bug/remit/internal/ui/screens/relink"
 	"github.com/transmit-bug/remit/internal/ui/screens/review"
@@ -91,6 +92,13 @@ type App struct {
 	reading          reading.State // the reading session: the queue's order and where the reader is
 	readingPositions map[core.ID]core.ID
 	readingCount     int
+	// read is the read area's own pages — the queue and the archive — and readPages
+	// is what the last load derived for them: the rows and the rhythm under them.
+	read      read.State
+	readPages readPages
+	// excerpted are the blocks something already quotes, so that a paragraph can
+	// say it was excerpted without a frame reading the library's links.
+	excerpted        map[core.ID]bool
 	notes            notes.State  // the notebook: the note open, its draft and its panes
 	notesRows        []notes.Note // the notebook's list, as the snapshot derived it
 	browse           browse.State
