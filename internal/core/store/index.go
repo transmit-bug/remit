@@ -19,7 +19,7 @@ import (
 // schemaVersion is the shape of the index. The index is derived, so a version
 // this build does not know is a rebuild, never a reason to refuse a library.
 // Bump it whenever a table or a column changes.
-const schemaVersion = "9"
+const schemaVersion = "10"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -32,6 +32,7 @@ DROP TABLE IF EXISTS notes;
 DROP TABLE IF EXISTS blocks;
 DROP TABLE IF EXISTS cards;
 DROP TABLE IF EXISTS card_state;
+DROP TABLE IF EXISTS search;
 CREATE TABLE meta (
 	key   TEXT PRIMARY KEY,
 	value TEXT NOT NULL
@@ -103,6 +104,22 @@ CREATE TABLE reading (
 	last_seq    INTEGER NOT NULL,
 	position    TEXT NOT NULL,
 	queued      INTEGER NOT NULL
+);
+-- search is the full-text index: one row per note (its title and block text),
+-- one per card (the block it renders and the fields edited over it). The
+-- trigram tokenizer makes a query a substring match in any script, at the cost
+-- of needing three characters; Search falls back to LIKE below that. The
+-- unindexed columns are what a page order needs, so the fallback needs no join.
+CREATE VIRTUAL TABLE search USING fts5(
+	kind    UNINDEXED,
+	doc     UNINDEXED,
+	note    UNINDEXED,
+	block   UNINDEXED,
+	updated UNINDEXED,
+	created UNINDEXED,
+	title,
+	body,
+	tokenize = 'trigram'
 );
 `
 
@@ -426,6 +443,9 @@ func cardFieldsText(fields map[string]string) string {
 
 func deleteCard(e execer, card core.ID) error {
 	if _, err := e.Exec(`DELETE FROM cards WHERE id = ?`, string(card)); err != nil {
+		return err
+	}
+	if err := deleteSearchCard(e, card); err != nil {
 		return err
 	}
 	_, err := e.Exec(`DELETE FROM card_state WHERE card_id = ?`, string(card))

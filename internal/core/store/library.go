@@ -395,7 +395,8 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 
 	return l.index.write(func(e execer) error {
 		for id, entry := range notes {
-			if err := putNote(e, noteRow{id: id, slug: entry.slug, title: entry.note.Title, updated: entry.note.Updated}); err != nil {
+			row := noteRow{id: id, slug: entry.slug, title: entry.note.Title, updated: entry.note.Updated}
+			if err := putNote(e, row); err != nil {
 				return err
 			}
 			for at, block := range entry.note.Blocks {
@@ -407,6 +408,9 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 				return err
 			}
 			if err := putTags(e, id, entry.note.Blocks); err != nil {
+				return err
+			}
+			if err := putSearchNote(e, row, entry.note.Blocks); err != nil {
 				return err
 			}
 		}
@@ -437,6 +441,11 @@ func (l *Library) rebuildIndex(marks sourceMarks) error {
 			}); err != nil {
 				return err
 			}
+		}
+		// The cards' search rows are derived from the rows just written, in one
+		// statement rather than a hundred thousand of them.
+		if err := putSearchCards(e); err != nil {
+			return err
 		}
 		if err := l.putMarks(e, marks); err != nil {
 			return err
@@ -799,8 +808,9 @@ func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 		return core.Note{}, err
 	}
 	moved := movedBlocks(before, note.Blocks)
+	row := noteRow{id: note.ID, slug: slug, title: note.Title, updated: note.Updated}
 	err = l.index.write(func(e execer) error {
-		if err := putNote(e, noteRow{id: note.ID, slug: slug, title: note.Title, updated: note.Updated}); err != nil {
+		if err := putNote(e, row); err != nil {
 			return err
 		}
 		if err := deleteBlocksOfNote(e, note.ID); err != nil {
@@ -823,6 +833,14 @@ func (l *Library) SaveNote(note core.Note) (core.Note, error) {
 			return err
 		}
 		if err := putTags(e, note.ID, note.Blocks); err != nil {
+			return err
+		}
+		// The note's own search row, and the cards' rows for every block the
+		// save could have rewritten the text of.
+		if err := putSearchNote(e, row, note.Blocks); err != nil {
+			return err
+		}
+		if err := refreshCardSearchOfBlocks(e, moved); err != nil {
 			return err
 		}
 		if err := resolveBlocks(e, moved); err != nil {
@@ -1087,6 +1105,9 @@ func (l *Library) saveCard(card core.Card) error {
 		if err := putCard(e, row); err != nil {
 			return err
 		}
+		if err := refreshCardSearch(e, []core.ID{card.ID}); err != nil {
+			return err
+		}
 		if state.Reviews > 0 {
 			if err := putState(e, card.ID, state, lastSeq); err != nil {
 				return err
@@ -1193,6 +1214,9 @@ func (l *Library) CreateCards(blockID core.ID, derived []core.Derived) ([]core.C
 		row := cardRow{card: card, stored: card.Status, created: created, live: true}
 		err = l.index.write(func(e execer) error {
 			if err := putCard(e, row); err != nil {
+				return err
+			}
+			if err := refreshCardSearch(e, []core.ID{card.ID}); err != nil {
 				return err
 			}
 			return l.putMarks(e, marks)
