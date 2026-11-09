@@ -38,6 +38,26 @@ func (a *App) notesDeps() notes.Deps {
 		GetAsset:     a.getAsset,
 		ChooseImage:  a.pickImage,
 		OpenCardEdit: a.openCardEdit,
+
+		Rows:      func() ([]notes.Row, int) { return a.write.rows, a.write.total },
+		TagRows:   func() []notes.TagRow { return a.write.tags },
+		AssetRows: func() []notes.AssetRow { return a.write.assets },
+		ImportAssets: func(c *ui.Context) {
+			a.importAssets(c)
+		},
+		SearchResults: func() (notes, cards []notes.Hit, total int) {
+			return a.write.hits, a.write.cardHits, a.write.hitsTotal
+		},
+		Excerpts:     func() []notes.TreeNode { return a.write.tree },
+		Now:          time.Now,
+		OpenNote:     a.openNote,
+		OpenNoteRead: a.openNoteRead,
+		QueueReading: a.addReading,
+		OpenTag:      a.openTag,
+		OpenReadingQueue: func() {
+			a.setArea(areaRead, subReadQueue)
+		},
+		OpenCard: a.openCardSource,
 	}
 }
 

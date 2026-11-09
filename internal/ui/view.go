@@ -85,11 +85,10 @@ func (a *App) stage(c *ui.Context, tk design.Tokens) {
 			a.reviewView(c, tk)
 		case a.session == sessionReading:
 			a.readingView(c)
-		case a.area == areaWrite && a.sub == subSearch,
-			a.area == areaRecall && a.sub == subRecallCards:
+		case a.area == areaRecall && a.sub == subRecallCards:
 			a.browseView(c)
 		case a.area == areaWrite:
-			a.notesView(c)
+			a.writeView(c)
 		case a.area == areaRead:
 			a.readView(c)
 		case a.area == areaRecall:

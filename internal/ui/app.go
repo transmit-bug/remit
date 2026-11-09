@@ -101,13 +101,16 @@ type App struct {
 	today            screenToday.State // today: the day's queue and the list's place
 	todayDay         queue.Today       // the day's queue, as loadToday derived it
 	todayTomorrow    int               // what comes due on the day after
+	// write is what the write area's list pages read: the rows the store
+	// answered when the page loaded.
+	write writePages
 	// read is the read area's own pages — the queue and the archive — and readPages
 	// is what the last load derived for them: the rows and the rhythm under them.
 	read      read.State
 	readPages readPages
 	// excerpted are the blocks something already quotes, so that a paragraph can
 	// say it was excerpted without a frame reading the library's links.
-	excerpted map[core.ID]bool
+	excerpted        map[core.ID]bool
 	browse           browse.State
 	browseRows       []browse.Row // the cards browse lists, as loadBrowse derived them
 	stats            screenstats.State

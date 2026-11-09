@@ -2910,5 +2910,337 @@
   "todayLoading": "Loading today",
   "@todayLoading": {
     "description": "Accessible label of the loading page's placeholder rows."
+  },
+  "writeListCount": "{notes, plural, one {# note} other {# notes}} · {cards, plural, one {# card} other {# cards}}",
+  "@writeListCount": {
+    "description": "The notes page's subtitle: how many notes the list holds, and how many cards they feed.",
+    "placeholders": {
+      "notes": {
+        "type": "int",
+        "example": "12"
+      },
+      "cards": {
+        "type": "int",
+        "example": "34"
+      }
+    }
+  },
+  "writeFilterAll": "All",
+  "@writeFilterAll": {
+    "description": "The notes list's filter that keeps every note."
+  },
+  "writeFilterReading": "Reading",
+  "@writeFilterReading": {
+    "description": "The notes list's filter that keeps the notes the reading queue holds now."
+  },
+  "writeFilterCards": "With cards",
+  "@writeFilterCards": {
+    "description": "The notes list's filter that keeps the notes at least one card renders from."
+  },
+  "writeFilterExcerpt": "Excerpts",
+  "@writeFilterExcerpt": {
+    "description": "The notes list's filter that keeps the notes that are excerpts."
+  },
+  "writeFilterLabel": "Filter notes",
+  "@writeFilterLabel": {
+    "description": "Accessible label of the notes list's group of filters."
+  },
+  "writeSort": "Sort",
+  "@writeSort": {
+    "description": "The notes list's sort menu button."
+  },
+  "writeSortUpdated": "Recently edited",
+  "@writeSortUpdated": {
+    "description": "The notes list's order: newest save first."
+  },
+  "writeSortTitle": "Title",
+  "@writeSortTitle": {
+    "description": "The notes list's order: by title."
+  },
+  "writeSortCards": "Most cards",
+  "@writeSortCards": {
+    "description": "The notes list's order: by how many cards a note feeds."
+  },
+  "writeRowRead": "Read",
+  "@writeRowRead": {
+    "description": "A note row's action that opens the note read whole."
+  },
+  "writeRowActions": "Note actions",
+  "@writeRowActions": {
+    "description": "Accessible label of a note row's menu button."
+  },
+  "writeRowQueue": "Add to reading queue",
+  "@writeRowQueue": {
+    "description": "A note row's action that puts the note in the reading queue."
+  },
+  "writeRowProgress": "{at} of {blocks}",
+  "@writeRowProgress": {
+    "description": "A note row's reading badge: the paragraph the reader reached, and how many the note holds.",
+    "placeholders": {
+      "at": {
+        "type": "int",
+        "example": "6"
+      },
+      "blocks": {
+        "type": "int",
+        "example": "14"
+      }
+    }
+  },
+  "writeRowNoSummary": "No text yet",
+  "@writeRowNoSummary": {
+    "description": "A note row's summary line when the note's first paragraph is empty."
+  },
+  "writeExcerpt": "Excerpt",
+  "@writeExcerpt": {
+    "description": "The badge a note row shows when the note is an excerpt."
+  },
+  "writeNoMatch": "No note matches these filters.",
+  "@writeNoMatch": {
+    "description": "The notes list's empty state when a search, a filter or a tag keeps every note out."
+  },
+  "writeClearFilters": "Clear filters",
+  "@writeClearFilters": {
+    "description": "The notes list's action that puts the whole notebook back."
+  },
+  "writeSearch": "Search",
+  "@writeSearch": {
+    "description": "The search page's title."
+  },
+  "writeSearchPlaceholder": "Search notes and cards",
+  "@writeSearchPlaceholder": {
+    "description": "The search page's field, and its accessible label."
+  },
+  "writeSearchCount": "{total, plural, one {# result} other {# results}} for “{query}”",
+  "@writeSearchCount": {
+    "description": "The search page's subtitle: how many notes and cards matched, and what for.",
+    "placeholders": {
+      "total": {
+        "type": "int",
+        "example": "7"
+      },
+      "query": {
+        "type": "String",
+        "example": "spacing"
+      }
+    }
+  },
+  "writeSearchScope": "Searches note titles, paragraphs and cards.",
+  "@writeSearchScope": {
+    "description": "The search page's empty state before anything is typed: what it looks at."
+  },
+  "writeSearchNotes": "Notes",
+  "@writeSearchNotes": {
+    "description": "The search page's group of note hits."
+  },
+  "writeSearchCards": "Cards",
+  "@writeSearchCards": {
+    "description": "The search page's group of card hits."
+  },
+  "writeSearchNone": "No note or card matches.",
+  "@writeSearchNone": {
+    "description": "The search page's empty state when the query found nothing."
+  },
+  "writeTagsTitle": "Tags",
+  "@writeTagsTitle": {
+    "description": "The tags page's title."
+  },
+  "writeTagsHint": "A tag is a note's property: write {tag} in a note and it appears here.",
+  "@writeTagsHint": {
+    "description": "The tags page's subtitle, and the one thing to know about tags.",
+    "placeholders": {
+      "tag": {
+        "type": "String",
+        "example": "#learning"
+      }
+    }
+  },
+  "writeTagNotes": "{n, plural, one {# note} other {# notes}}",
+  "@writeTagNotes": {
+    "description": "A tag row's count: how many notes carry the tag.",
+    "placeholders": {
+      "n": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "writeTagsEmpty": "No tags yet.",
+  "@writeTagsEmpty": {
+    "description": "The tags page's empty state."
+  },
+  "writeAssetsTitle": "Assets",
+  "@writeAssetsTitle": {
+    "description": "The assets page's title."
+  },
+  "writeAssetsHint": "Files travel with the library, named by their content.",
+  "@writeAssetsHint": {
+    "description": "The assets page's subtitle."
+  },
+  "writeAssetsEmpty": "No assets yet.",
+  "@writeAssetsEmpty": {
+    "description": "The assets page's empty state."
+  },
+  "writeAssetsImport": "Import files",
+  "@writeAssetsImport": {
+    "description": "The assets page's action that adds files to the library."
+  },
+  "writeAssetsFile": "File",
+  "@writeAssetsFile": {
+    "description": "The assets table's column of file names."
+  },
+  "writeAssetsKind": "Kind",
+  "@writeAssetsKind": {
+    "description": "The assets table's column of file kinds."
+  },
+  "writeAssetsSize": "Size",
+  "@writeAssetsSize": {
+    "description": "The assets table's column of file sizes."
+  },
+  "writeAssetsFormat": "Format",
+  "@writeAssetsFormat": {
+    "description": "The assets table's column of file extensions."
+  },
+  "writeAssetsRefs": "Referenced by",
+  "@writeAssetsRefs": {
+    "description": "The assets table's column of the notes that carry a file."
+  },
+  "writeAssetRefs": "{n, plural, one {# note} other {# notes}}",
+  "@writeAssetRefs": {
+    "description": "An asset row's count of the notes that reference it.",
+    "placeholders": {
+      "n": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "writeAssetUnreferenced": "Not referenced",
+  "@writeAssetUnreferenced": {
+    "description": "An asset row that no note references."
+  },
+  "writeKindImage": "Image",
+  "@writeKindImage": {
+    "description": "An asset kind: a picture."
+  },
+  "writeKindSound": "Sound",
+  "@writeKindSound": {
+    "description": "An asset kind: a sound file."
+  },
+  "writeKindOther": "File",
+  "@writeKindOther": {
+    "description": "An asset kind: neither a picture nor a sound."
+  },
+  "writeTemplatesTitle": "Templates",
+  "@writeTemplatesTitle": {
+    "description": "The templates page's title."
+  },
+  "writeTemplatesHint": "A note tagged {tag} is a template: a copy strips the marker and mints new block IDs.",
+  "@writeTemplatesHint": {
+    "description": "The templates page's subtitle: what makes a note a template, and what a copy does.",
+    "placeholders": {
+      "tag": {
+        "type": "String",
+        "example": "#template"
+      }
+    }
+  },
+  "writeTemplatesEmpty": "No templates yet.",
+  "@writeTemplatesEmpty": {
+    "description": "The templates page's empty state."
+  },
+  "writeTemplateNew": "New from template",
+  "@writeTemplateNew": {
+    "description": "A template row's action that starts a note from it."
+  },
+  "writeTemplateBlank": "Blank note",
+  "@writeTemplateBlank": {
+    "description": "The templates page's action that starts a note with no template."
+  },
+  "writeTemplateBlocks": "{n, plural, one {# block} other {# blocks}}",
+  "@writeTemplateBlocks": {
+    "description": "A template row's count of the paragraphs it holds.",
+    "placeholders": {
+      "n": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "writeTreeTitle": "Excerpt tree",
+  "@writeTreeTitle": {
+    "description": "The excerpt tree page's title."
+  },
+  "writeTreeHint": "Each excerpt sits under the note it was taken from.",
+  "@writeTreeHint": {
+    "description": "The excerpt tree page's subtitle."
+  },
+  "writeTreeEmpty": "No excerpts yet.",
+  "@writeTreeEmpty": {
+    "description": "The excerpt tree page's empty state."
+  },
+  "writeTreeStart": "Start reading",
+  "@writeTreeStart": {
+    "description": "The excerpt tree page's action that opens the reading queue."
+  },
+  "writeTreeContinue": "Continue reading",
+  "@writeTreeContinue": {
+    "description": "The excerpt tree page's action that opens the reading queue."
+  },
+  "writeTreeCards": "{n, plural, one {# card} other {# cards}}",
+  "@writeTreeCards": {
+    "description": "A tree node's count of the cards it feeds.",
+    "placeholders": {
+      "n": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "writeTreeMore": "{n, plural, one {# excerpt} other {# excerpts}}",
+  "@writeTreeMore": {
+    "description": "A tree node's count of the excerpts taken from it.",
+    "placeholders": {
+      "n": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "writeTreeOrphans": "Orphans",
+  "@writeTreeOrphans": {
+    "description": "The section heading of the excerpts whose source is gone."
+  },
+  "writeTreeOrphanHint": "The note they were taken from is gone; the excerpts are still here.",
+  "@writeTreeOrphanHint": {
+    "description": "The line under the orphans section heading."
+  },
+  "writeCardsCount": "{n, plural, one {# card} other {# cards}}",
+  "@writeCardsCount": {
+    "description": "A note row's badge counting the cards its paragraphs feed, and its accessible name.",
+    "placeholders": {
+      "n": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "writeAssetsImported": "{n} files imported",
+  "@writeAssetsImported": {
+    "description": "The report after the assets page copied files into the library.",
+    "placeholders": {
+      "n": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "documentPage": "Document",
+  "@documentPage": {
+    "description": "Page of the write area: the note written in. It is a page of its own until the document gets a route."
+  },
+  "writePlainText": "plain text",
+  "@writePlainText": {
+    "description": "The notes page's subtitle names the library as plain text: the notes are files the user owns."
   }
 }

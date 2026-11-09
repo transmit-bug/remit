@@ -403,10 +403,7 @@ func (a *App) loadCurrent() {
 			a.read.Show(read.Queue)
 		}
 	case areaWrite:
-		if a.sub == subSearch {
-			a.loadBrowse()
-			return
-		}
+		a.loadWrite()
 		a.loadBacklinks()
 	case areaRecall:
 		if a.sub == subRecallCards {

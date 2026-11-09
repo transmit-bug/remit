@@ -237,5 +237,5 @@ func (a *App) ShowAbout(parent *mygo.Window) {
 // field, from anywhere: the one way to search the library by text.
 func (a *App) focusSearch(c *ui.Context) {
 	a.setArea(areaWrite, subSearch)
-	a.browse.Focus()
+	a.notes.FocusSearch()
 }
