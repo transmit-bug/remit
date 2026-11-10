@@ -5,7 +5,9 @@
   "apiVersion": 1,
   "runtime": "js",
   "entry": "main.js",
-  "capabilities": ["notes:read"],
+  "capabilities": [
+    "notes:read"
+  ],
   "contributes": {
     "commands": [
       {
@@ -42,20 +44,18 @@
         "command.about": "About this board",
         "category.board": "Board",
         "section.board": "Places",
-        "section.body": "Every paragraph of the library, in the order the notes hold them. A node opens its paragraph; the block's menu brings you back here.",
-        "action.open": "Back to this paragraph",
-        "empty": "No note holds a paragraph yet.",
-        "toast.about": "Every node here is one paragraph of a note."
+        "section.body": "Five paragraphs of the library, and the lines between them. A node opens its paragraph; the block's menu brings you back here.",
+        "toast.about": "Every node here is one paragraph of a note, and every line joins two of them.",
+        "empty": "No note holds a paragraph yet."
       },
       "zh-Hans": {
         "page.title": "白板",
         "command.about": "关于这块白板",
         "category.board": "白板",
         "section.board": "位置",
-        "section.body": "整个笔记库的段落，按笔记里的顺序排列。点一个节点打开它的段落；块的菜单能把你带回这里。",
-        "action.open": "回到这一段",
-        "empty": "还没有笔记写下任何段落。",
-        "toast.about": "这里的每个节点都是笔记里的一段。"
+        "section.body": "笔记库里的五段话，以及它们之间的连线。点节点打开它的段落；块的菜单能把你带回这里。",
+        "toast.about": "这里的每个节点都是笔记里的一段，每条线连接其中的两段。",
+        "empty": "还没有笔记写下任何段落。"
       }
     }
   }

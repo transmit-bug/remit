@@ -171,7 +171,7 @@ export interface Context {
 // ─── a page's tree ─────────────────────────────────────────────────────────
 
 /** A layout node the host arranges, or a semantic leaf it draws. */
-export type NodeKind = "page" | "section" | "stack" | "grid" | "split" | "tabs" | "card" | "markdown" | "text" | "stat" | "table" | "list" | "tree" | "form" | "chart" | "callout" | "actions";
+export type NodeKind = "page" | "section" | "stack" | "grid" | "split" | "tabs" | "card" | "board" | "markdown" | "text" | "stat" | "table" | "list" | "tree" | "form" | "chart" | "callout" | "actions";
 
 export type Gap = "xs" | "s" | "m" | "l";
 export type Tone = "neutral" | "info" | "warn" | "danger" | "success";
@@ -179,8 +179,10 @@ export type StackDirection = "column" | "row";
 
 /**
  * One node of a page. The host draws it: there is no width, height, colour,
- * font, margin, padding or position. Depth <= 8, nodes <= 500, table rows <= 500,
- * one page <= 262144 bytes; over any of them the page shows its error state.
+ * font, margin, padding or position, except on a board, which names its own
+ * space and its nodes' places in it. Depth <= 8, nodes <= 500, table rows <= 500,
+ * one page <= 262144 bytes, a board 200 nodes and 200 edges; over any of them the
+ * page shows its error state.
  */
 export interface Node {
   kind: NodeKind;
@@ -207,6 +209,33 @@ export interface Node {
   fields?: Item[];
   /** A chart's bars. */
   points?: Point[];
+  /** A board's own space, in DIP: the rectangle its nodes were placed in. */
+  width?: number;
+  height?: number;
+  /** A board's places. */
+  nodes?: BoardNode[];
+  /** A board's connections, by node id. */
+  edges?: [string, string][];
+}
+
+/**
+ * One place a board names: the block it stands for and where the page put it.
+ * The host scales the board's space into the room a window has, and draws the
+ * node with its own widget; nothing here is a style. An extra field on a board
+ * node is ignored, so a newer plugin's datum still draws.
+ */
+export interface BoardNode {
+  id: string;
+  /** The note the block lives in; the host finds it by the block alone when empty. */
+  note?: string;
+  block: string;
+  x: number;
+  y: number;
+  w: number;
+  /** The note's title, the block's first line and how many cards it feeds, as the page said them. */
+  title?: string;
+  text?: string;
+  cards?: number;
 }
 
 export interface Tab {

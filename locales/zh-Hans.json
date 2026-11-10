@@ -803,6 +803,7 @@
   "boardCards": "{count} 张卡片",
   "boardBlockGone": "这一段已经不在笔记里了。",
   "boardLocate": "在白板里定位",
+  "boardOpen": "回到这一段",
   "cardType": "类型",
   "cardFieldsHint": "留空的字段跟随段落原文。",
   "cardNotACard": "这一段还不是卡片。",

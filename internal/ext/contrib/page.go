@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -22,6 +23,11 @@ const (
 	KindSplit   Kind = "split"
 	KindTabs    Kind = "tabs"
 	KindCard    Kind = "card"
+	// KindBoard is the one node that names a coordinate: a connected graph of
+	// places in the library, whose nodes the host places and whose edges the host
+	// paints (ui-redesign-v2 §6.4). It names geometry, never a pixel: no colour,
+	// no size of text, no style.
+	KindBoard Kind = "board"
 )
 
 // The semantic leaves: what a page says, in the host's widgets.
@@ -43,6 +49,7 @@ const (
 // validates against and the one remit.d.ts is generated from.
 var Kinds = []Kind{
 	KindPage, KindSection, KindStack, KindGrid, KindSplit, KindTabs, KindCard,
+	KindBoard,
 	KindMarkdown, KindText, KindStat, KindTable, KindList, KindTree, KindForm,
 	KindChart, KindCallout, KindActions,
 }
@@ -98,6 +105,14 @@ const (
 	MaxTableRows  = 500
 	MaxPageBytes  = 256 << 10
 	maxGridColumn = 4
+	// MaxBoardNodes and MaxBoardEdges bound one board. A board is drawn as one
+	// node of the tree whatever it holds, so it counts against the page's node
+	// budget on its own: these are what keeps a graph a picture rather than a
+	// canvas the host must reason about.
+	MaxBoardNodes = 200
+	MaxBoardEdges = 200
+	// MaxBoardSize is the largest coordinate space a board may claim, in DIP.
+	MaxBoardSize = 4000
 )
 
 // Node is one element of a page tree: the layout node or the leaf the plugin
@@ -134,6 +149,31 @@ type Node struct {
 	Fields []Item
 	// Points are a chart's values, one bar each.
 	Points []Point
+	// Width and Height are a board's coordinate space: the DIP rectangle the
+	// page drew its nodes in. The host scales it to the room the window has.
+	Width, Height float32
+	// Nodes are a board's places, and Edges the connections between them by node
+	// id: {from, to}, in the page's order.
+	Nodes []BoardNode
+	Edges [][2]string
+}
+
+// BoardNode is one place a board names: the block it stands for and where the
+// page put it. X, Y and W are in the board's own space; the host turns them
+// into the room it has, so a node keeps its place without the page knowing a
+// pixel. Title, Text and Cards are what the page says the block is, which the
+// host replaces with what the library holds now when it can.
+//
+// A board's node entries are the one place a page's data may carry a field this
+// host does not know: the host reads the fields below and ignores the rest, so
+// a newer plugin's extra datum does not take the page down. Nothing there is a
+// style — the host draws the node with its own widget either way.
+type BoardNode struct {
+	ID          string
+	Note, Block string
+	X, Y, W     float32
+	Title, Text string
+	Cards       int
 }
 
 // Tab is one page of a tabs node: its label and the content it shows.
@@ -278,6 +318,10 @@ func (v *validator) walk(n Node, path string, depth int) error {
 				return fmt.Errorf("%s.items[%d]: an action needs a label", path, i)
 			}
 		}
+	case KindBoard:
+		if err := validateBoard(n, path); err != nil {
+			return err
+		}
 	}
 	for i, child := range n.Children {
 		if err := v.walk(child, fmt.Sprintf("%s.children[%d]", path, i), depth+1); err != nil {
@@ -316,6 +360,55 @@ func (v *validator) walkItems(items []Item, path string, depth int) error {
 		}
 		if err := v.walkItems(item.Items, fmt.Sprintf("%s.items[%d]", path, i), depth+1); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// validateBoard checks one board: its own space, then each place and each
+// connection, by its index: a space layout can use, nodes and edges inside the
+// contract's count, an id no other node takes, a place inside the board, and an
+// edge whose two ends are nodes the board names.
+func validateBoard(n Node, path string) error {
+	if n.Width <= 0 || n.Height <= 0 {
+		return fmt.Errorf("%s: a board needs a width and a height, not %gx%g", path, n.Width, n.Height)
+	}
+	if n.Width > MaxBoardSize || n.Height > MaxBoardSize {
+		return fmt.Errorf("%s: %gx%g, a board is at most %d DIP across", path, n.Width, n.Height, MaxBoardSize)
+	}
+	if len(n.Nodes) > MaxBoardNodes {
+		return fmt.Errorf("%s: %d nodes, the contract allows %d", path, len(n.Nodes), MaxBoardNodes)
+	}
+	if len(n.Edges) > MaxBoardEdges {
+		return fmt.Errorf("%s: %d edges, the contract allows %d", path, len(n.Edges), MaxBoardEdges)
+	}
+	ids := make(map[string]bool, len(n.Nodes))
+	for i, node := range n.Nodes {
+		if strings.TrimSpace(node.ID) == "" {
+			return fmt.Errorf("%s.nodes[%d]: a node needs an id", path, i)
+		}
+		if ids[node.ID] {
+			return fmt.Errorf("%s.nodes[%d]: id %q is already a node of this board", path, i, node.ID)
+		}
+		ids[node.ID] = true
+		if strings.TrimSpace(node.Block) == "" {
+			return fmt.Errorf("%s.nodes[%d]: a node needs the block it stands for", path, i)
+		}
+		if node.X < 0 || node.Y < 0 {
+			return fmt.Errorf("%s.nodes[%d]: %.0f,%.0f is off the board", path, i, node.X, node.Y)
+		}
+		if node.W <= 0 {
+			return fmt.Errorf("%s.nodes[%d]: width %g, a node is wider than nothing", path, i, node.W)
+		}
+		if node.X+node.W > n.Width || node.Y > n.Height {
+			return fmt.Errorf("%s.nodes[%d]: %.0f,%.0f %.0f wide is outside %gx%g",
+				path, i, node.X, node.Y, node.W, n.Width, n.Height)
+		}
+	}
+	for i, edge := range n.Edges {
+		from, to := edge[0], edge[1]
+		if !ids[from] || !ids[to] {
+			return fmt.Errorf("%s.edges[%d]: %q to %q is not two nodes of this board", path, i, from, to)
 		}
 	}
 	return nil
@@ -370,6 +463,13 @@ type wire struct {
 	Items       []itemWire      `json:"items"`
 	Fields      []itemWire      `json:"fields"`
 	Points      []pointWire     `json:"points"`
+	// The board's geometry, kept raw until the kind is known: a board is the one
+	// node that may name a width, a height or a position, and the same field on
+	// any other node is the styling the contract bans.
+	Width  json.RawMessage `json:"width"`
+	Height json.RawMessage `json:"height"`
+	Nodes  json.RawMessage `json:"nodes"`
+	Edges  json.RawMessage `json:"edges"`
 }
 
 type tabWire struct {
@@ -413,6 +513,21 @@ func (w wire) node(path string) (Node, error) {
 		// Unknown: keep the name and whatever children the host can still draw.
 		n.Direction, n.Gap, n.Tone = "", "", ""
 	}
+	if n.Kind != KindBoard {
+		// The board's geometry is the only coordinate a page may name, and a
+		// node of any other kind naming one is the styling the contract bans.
+		for _, field := range []struct {
+			name string
+			raw  json.RawMessage
+		}{{"width", w.Width}, {"height", w.Height}, {"nodes", w.Nodes}} {
+			if len(field.raw) > 0 {
+				return Node{}, fmt.Errorf("%s: json: unknown field %q", path, field.name)
+			}
+		}
+		if len(w.Edges) > 0 {
+			return Node{}, fmt.Errorf("%s: json: unknown field %q", path, "edges")
+		}
+	}
 	for i, child := range w.Children {
 		node, err := child.node(fmt.Sprintf("%s.children[%d]", path, i))
 		if err != nil {
@@ -448,7 +563,97 @@ func (w wire) node(path string) (Node, error) {
 	for _, point := range w.Points {
 		n.Points = append(n.Points, Point{Label: point.Label, Value: point.Value})
 	}
+	if n.Kind == KindBoard {
+		if err := n.readBoard(w, path); err != nil {
+			return Node{}, err
+		}
+	}
 	return n, nil
+}
+
+// readBoard reads a board's own space, its places and its connections.
+func (n *Node) readBoard(w wire, path string) error {
+	for _, field := range []struct {
+		name string
+		raw  json.RawMessage
+		dst  *float32
+	}{{"width", w.Width, &n.Width}, {"height", w.Height, &n.Height}} {
+		if len(field.raw) == 0 {
+			continue
+		}
+		value, err := finite(field.raw)
+		if err != nil {
+			return fmt.Errorf("%s: %s: %w", path, field.name, err)
+		}
+		*field.dst = value
+	}
+	if len(w.Edges) > 0 {
+		if err := json.Unmarshal(w.Edges, &n.Edges); err != nil {
+			return fmt.Errorf("%s: edges: %w", path, err)
+		}
+	}
+	if len(w.Nodes) == 0 {
+		return nil
+	}
+	// A board's node entries are data, not page structure: unknown fields are
+	// ignored here so a newer plugin's extra datum still draws.
+	var nodes []boardWire
+	if err := json.Unmarshal(w.Nodes, &nodes); err != nil {
+		return fmt.Errorf("%s: nodes: %w", path, err)
+	}
+	for i, node := range nodes {
+		x, err := usable(node.X)
+		if err != nil {
+			return fmt.Errorf("%s.nodes[%d]: x: %w", path, i, err)
+		}
+		y, err := usable(node.Y)
+		if err != nil {
+			return fmt.Errorf("%s.nodes[%d]: y: %w", path, i, err)
+		}
+		width, err := usable(node.W)
+		if err != nil {
+			return fmt.Errorf("%s.nodes[%d]: w: %w", path, i, err)
+		}
+		n.Nodes = append(n.Nodes, BoardNode{
+			ID: node.ID, Note: node.Note, Block: node.Block,
+			X: x, Y: y, W: width,
+			Title: node.Title, Text: node.Text, Cards: node.Cards,
+		})
+	}
+	return nil
+}
+
+// boardWire is one node of a board as the page wrote it.
+type boardWire struct {
+	ID    string  `json:"id"`
+	Note  string  `json:"note"`
+	Block string  `json:"block"`
+	X     float64 `json:"x"`
+	Y     float64 `json:"y"`
+	W     float64 `json:"w"`
+	Title string  `json:"title"`
+	Text  string  `json:"text"`
+	Cards int     `json:"cards"`
+}
+
+// finite is one coordinate as the host can use it: a JSON number that is
+// neither NaN nor an infinity, and one float32 holds, so that a page cannot put
+// a place where layout has no answer.
+func finite(raw json.RawMessage) (float32, error) {
+	var number float64
+	if err := json.Unmarshal(raw, &number); err != nil {
+		return 0, err
+	}
+	return usable(number)
+}
+
+// usable is one coordinate a page wrote, as the host can use it.
+func usable(number float64) (float32, error) {
+	value := float32(number)
+	if math.IsNaN(number) || math.IsInf(number, 0) || math.IsInf(float64(value), 0) {
+		return 0, fmt.Errorf("%v is past what a coordinate holds", number)
+	}
+	return value, nil
 }
 
 func items(in []itemWire) []Item {

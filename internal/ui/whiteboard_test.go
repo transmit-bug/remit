@@ -157,7 +157,7 @@ func TestTheWhiteboardExampleFollowsTheLocale(t *testing.T) {
 	_, _, tt := whiteboardExample(t, "zh-Hans")
 	openPage(t, tt, boardTitle("zh-Hans"))
 
-	for _, want := range []string{"白板", "位置", "关于这块白板", "页面动作", "整"} {
+	for _, want := range []string{"白板", "位置", "关于这块白板", "页面动作", "连线"} {
 		if !tt.HasText(want) {
 			t.Fatalf("the board is not in Chinese: missing %q; texts %q", want, tt.Texts())
 		}

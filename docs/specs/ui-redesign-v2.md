@@ -400,7 +400,7 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 | S48 | 快捷键总表 | 浮层 | — | `⌘/` | 浮层 | §2.8 表 | 关闭 | `Esc` | — |
 | S49 | 命令面板 | 浮层 | — | `⌘K` | 浮层 | 命令表 + `Search` + 插件命令 | 选一条执行 | `↑↓` `↵` `Esc` | 「没有匹配项」 |
 | S50 | 插件页·制卡脚本 | 插件 | — | `#/plugin/remit.cards` | 页 | 页面数据命令（缓存） | 重新运行、页头动作 | — | 无数据：骨架 → 错误态 + 重试 |
-| S51 | 插件页·白板 | 插件 | — | `#/plugin/acme.whiteboard` | 页 | 页面数据命令 | 点节点回块、居中 | — | 「这块画布还没有节点」 |
+| S51 | 插件页·白板 | 插件 | — | `#/plugin/acme.whiteboard` | 页 | 页面数据命令 | 点节点回块、定位回跳并高亮 | — | 「这块画布还没有节点」 |
 | S52 | 笔记行菜单 | 浮层 | — | S05 行 `⋯` | 浮层 | 笔记 + `sidebar.note` 槽 | 阅读、加入队列、重命名、删除 | `Esc` | — |
 
 ---
@@ -806,7 +806,7 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 - **S49 命令面板**：既有 `internal/ui/palette.go`（`ui.DialogBase` + `ui.List`）扩为三组：
   命令 / 笔记 / 卡片；插件命令在最后一组（既有 `paletteActions`）；空态「没有匹配项」。
 - **S50 制卡脚本**（插件页）：`page.header` 槽动作；三个数字；「上一次运行」卡；「它能做什么」列表。
-- **S51 白板**：见 §6.5（宿主画的节点网格，不是自由画布）。
+- **S51 白板**：见 §6.4（宿主画的只读连接图：节点是宿主按钮，边由宿主绘制，不是自由画布）。
 - **S52 笔记行菜单**：`ui.Popover`/`Element.Menu`：阅读、加入阅读队列、重命名、删除（`AlertDialog`）、
   `sidebar.note` 插件项。
 
@@ -871,7 +871,7 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 | `kit.PageHead` | 页头：H1 标题 + Label 副行 + 页级动作 | `ui.Toolbar`（窗口条，一个 tab stop 与 overflow）、`ui.Fieldset`（表单组，无自用标题） | 组合保留（v0.8.1 无页头组件）；§4.10 的 measure 由调用方给 |
 | `kit.SectionHead` | 节头：UI 13/600 名 + Label 提示 + 右侧动作 | `ui.Fieldset`（无计数与动作）、`ui.TabsBase`（选页而非标题） | 组合保留；替代屏内自绘的 H2 节标题 |
 | `kit.Notice` | 就地提示：图标 + 一句 + 可选动作，语义色 12% 底 | `ui.Badge`（计数）、`ui.AlertDialog`（提问） | 组合保留（v0.8.1 无 callout/banner）；错误与"写不进去"共用一处 |
-| `kit.Board` | 白板节点网格 | `ui.NewCanvas`/`Draw`（自由画布）、`ui.GridView` | v1 用 `ui.Grid` + `ui.List` 语义行；自由画布（坐标 + 连线）推迟（§10） |
+| `kit.Board` | 白板连接图 | `ui.NewCanvas`/`Draw`（自由画布）、`ui.GridView` | 节点是 `ui.ButtonBase`（`Absolute` 放在插件给的位置），边由 `Draw` 画；最小窗落 `ui.List`；自由画布的拖拽/缩放/平移推迟（§10） |
 
 ---
 
@@ -1144,19 +1144,42 @@ S27 的 chip、S31 的侧栏与「重来」列、S31 搜索语法的 `is:hard`�
 
 ### 6.4 白板页（S51）
 
-白板是「插件提供数据、宿主绘页面」的第一个实例。契约不动（不加 `board` 节点、不加坐标字段）：
+白板是「插件提供数据、宿主绘页面」的第一个实例，也是唯一一处插件能命名坐标的地方。契约**加**了一个
+节点 `board`（纯增量，不升 `apiVersion`；不写 `board` 的插件照旧画它自己的语义节点）：
 
-- 插件 `acme.whiteboard` 声明一个页面 + 一个数据命令，返回节点树：
-  `section` → `grid(columns: 2)` → 若干 `card`，每个 `card` 里是 `text`（笔记标题）、`markdown`（块首行）、
-  `actions`（「回到这一段」）。节点与块的对应由宿主从 `actions` 项的 `value` 里读 `note`/`block`
-  （`contrib.Item{Label, Value, Command}`：`Command` 是槽命令 id，`Value` 是它要的参数）。
-- 宿主把它画成 `kit.Board`：`ui.Grid` 的卡片网格，每张卡可点（命令回填 `navigate`，宿主跳到
-  `#/write/doc/<note>?mode=read` 并把光标放到该块）。
-- 块的 `⋮⋮` 菜单与块检查器各有一项「在白板里定位」（仅当该块出现在当前页面数据里），跳回
-  `#/plugin/acme.whiteboard` 并给节点加一次 `design.ModeSwitch` 高亮。
-- 不做：自由画布（坐标、拖拽、连线）。理由写进 `kit.Board` 注释：`ui.NewCanvas` + `Draw` 能画，
-  但节点会失去键盘、焦点、读屏与 720×520 的降级——那正是 `mygo-components` 禁止的手写理由。
-  自由画布的裁决见 §10。
+```json
+{ "kind": "board", "title": "%section.board%", "width": 1120, "height": 700,
+  "nodes": [
+    { "id": "n1", "note": "n_1", "block": "b_6", "x": 60, "y": 110, "w": 250,
+      "title": "笔记标题", "text": "块首行", "cards": 2 }
+  ],
+  "edges": [["n1", "n2"]] }
+```
+
+- 插件 `acme.whiteboard` 声明一个页面 + 一个数据命令，返回 `section` → `board`。每个 node 指向一个块
+  （`note` 可省，宿主按 `block` 找出笔记），并给出它在板子自己空间里的位置；`title` / `text` / `cards`
+  是插件加载时写的字，宿主用库里现在的样子覆盖。边是节点 id 的对，宿主按数据顺序画，不认命令。
+- 校验（`contrib.ParsePage`）：`width`/`height` ∈ (0, 4000]，坐标必须有限且落在板内，node ≤ 200、
+  edge ≤ 200，`id` 不重、必须有 `block`，边的两端必须是本板的 node。失败 = 页面错误态。
+  板内 node 条目里宿主管不到的字段被忽略（是一行数据，不是页面结构）；页面其余部分照旧拒绝任何
+  `width`/`height`/`position` —— 坐标只属于 `board`，样式仍只属于宿主。
+- 宿主把它画成 `kit.Board`：每个 node 是**真的 `ui.ButtonBase`**，`Absolute()` + `Left/Width` 百分比放到
+  它自己的位置上（Tab 顺序 = 数据顺序，焦点环、读屏、按 Enter 都来自控件）；节点卡面是笔记标题、
+  块首行、卡数徽章与宿主自己的「回到这一段」。节点之间的曲线由宿主在 `Draw` 里画（`StrokePath` 三次
+  贝塞尔，从朝向对方的边出去，控制点在两卡中间），画在卡面之下，没有任何渐变。
+  反向坐标（`b.x < a.x`）从左边出、右边进。
+- 页面取宽版面 `design.BoardWidth`（1120）：图需要段落不用的一列。宿主只按宽度缩放 x/w，y 与高度沿用
+  板子的空间——窗口变窄时是列间距变小，不是卡片压在一起。
+- 点节点 = 宿主跳 `#/write/doc/<note>?mode=read` 并把光标放到该块（`App.openNoteAt`）。块的 `⋮⋮` 菜单与
+  块检查器各有一项「在白板里定位」（仅当该块被当前页面数据的某个 node 指名），跳回
+  `#/plugin/acme.whiteboard`，给节点加一次 `design.ModeSwitch` 高亮，并把节点滚进视野——只滚一次，
+  否则会把读者按住的滚动条抢回来。
+- 最小窗（≤ `design.BreakpointSmall` 760）：同一批节点画成竖排的 `ui.List`，一行一张卡，同样的动作，
+  不横向滚动。**那里不画边**：列表里两行之间的一条线会横穿它连接的文字，而顺序已经说了先后；
+  连接只留在图上。
+- 不做：自由画布——拖拽、缩放、平移、增删改节点、多选都没有；页面只读，节点由插件的数据命令给定。
+  理由写进 `kit.Board` 注释：`ui.NewCanvas` + `Draw` 能画，但节点会失去键盘、焦点、读屏与 760 的降级
+  ——那正是 `mygo-components` 禁止的手写理由。自由画布的其余部分见 §10。
 
 ### 6.5 失败隔离（与 `ui.md` §8 对齐，本文只补可见性）
 
@@ -1463,8 +1486,9 @@ grep -rhoE '^func [A-Z][A-Za-z0-9_]*' "$MYGO"/ui/*.go | sed -E 's/func //' | sor
    per-card step counter；改它需要先定调度契约，见 #227）。
 6. **键位自定义**（#155，1.0 不含）。
 7. **正文尺寸的第二套缩放**（#228 未定；本稿让它只跟随桌面）。
-8. **自由画布白板**（坐标、拖拽、连线、缩放）：`ui.NewCanvas` 能画，但会丢掉键盘、焦点、
-   读屏与最小窗降级；本轮白板是宿主绘制的只读卡片网格（§6.4），不是画布。
+8. **自由画布白板的其余部分**（拖拽、缩放、平移、就地增删节点）：本轮白板是宿主绘制的只读连接图
+   （§6.4）——坐标由插件的数据命令给定，节点是宿主控件，边由宿主画；`ui.NewCanvas` 能画，但会丢掉
+   键盘、焦点、读屏与最小窗降级。
 9. **卡片导出 CSV**（S03 里是禁用项）；**新的归档格式**：`.remitlib` 的进出直接复用既有
    `internal/core/transfer`（`Write`/`Read`），不新造格式、不加字段。
 10. **设置文件的 v2 迁移与偏好注册表**（#221–#225）：本稿只动库配置 `remit.json`。

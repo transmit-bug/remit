@@ -57,8 +57,13 @@ type Tokens struct {
 	// to; PanelWidth is a document's side panel.
 	RailWidth, RailCollapsed, PanelWidth float32
 	// The page measures the full-window screens share; SummaryWidth is a
-	// dialog's, as wide as a short page's sentence.
+	// dialog's, as wide as a short page's sentence, and BoardWidth the column a
+	// board page takes for its graph.
 	ListWidth, SettingsWidth, BrowseWidth, WelcomeWidth, SummaryWidth float32
+	BoardWidth                                                        float32
+	// BoardNodeHeight is a board node's floor and the height its connections
+	// meet it at; BoardEdge is how wide a connection is drawn.
+	BoardNodeHeight, BoardEdge float32
 	// NotesColumnWidth and FilterPaneWidth are the two working columns: a
 	// document's notes list, and the card table's filters. TableFloor is the
 	// narrowest the table goes beside its filters.
@@ -125,6 +130,9 @@ func NewTokens(base *ui.Theme) Tokens {
 		ListWidth: ListWidth, SettingsWidth: SettingsWidth,
 		BrowseWidth: BrowseWidth, WelcomeWidth: WelcomeWidth,
 		SummaryWidth:     SummaryWidth,
+		BoardWidth:       BoardWidth,
+		BoardNodeHeight:  BoardNodeHeight,
+		BoardEdge:        BoardEdge,
 		NotesColumnWidth: NotesColumnWidth, FilterPaneWidth: FilterPaneWidth,
 		TableFloor:       TableFloor,
 		CheckColumnWidth: CheckColumnWidth, CountColumnWidth: CountColumnWidth,

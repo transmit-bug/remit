@@ -4358,6 +4358,10 @@
   "@boardLocate": {
     "description": "The block menu's and the inspector's entry that opens the board at this block's node."
   },
+  "boardOpen": "Back to this paragraph",
+  "@boardOpen": {
+    "description": "A board node's action, printed at the foot of the card: it opens the note the node names, read at its block."
+  },
   "cardType": "Type",
   "@cardType": {
     "description": "The card editor's type selector: the card's type decides the fields under it."

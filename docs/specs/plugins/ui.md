@@ -185,20 +185,44 @@
 | `split` | `ratio: 1\|2`, 恰好两个 `children` | 两栏；窄窗口叠成一栏 |
 | `tabs` | `tabs: [{label, children}]` | 标签页 |
 | `card` | `title?`, `children` | 浮起的一组内容 |
+| `board` | `title?`, `width`, `height`, `nodes`, `edges` | 连接图；唯一能命名坐标的节点（见下） |
+
+**`board`：一张只读的连接图**（`internal/ext/contrib`、`kit.Board`，`ui-redesign-v2` §6.4）
+
+```json
+{ "kind": "board", "title": "%section.board%", "width": 1120, "height": 700,
+  "nodes": [{ "id": "n1", "note": "n_1", "block": "b_6", "x": 60, "y": 110, "w": 250,
+              "title": "笔记标题", "text": "块首行", "cards": 2 }],
+  "edges": [["n1", "n2"]] }
+```
+
+- 一个 node 指向一个块：`block` 必填，`note` 缺省时宿主按 `block` 找出它在哪篇笔记里；
+  `title` / `text` / `cards` 是数据命令当时的字，宿主用库里**现在**的样子覆盖（块被删就显示
+  「这一段已经不在笔记里了」，节点仍留着）。
+- `x` / `y` / `w` 与 `width` / `height` 是板子**自己的空间**（DIP），不是窗口像素：宿主按宽度
+  把 x/w 换算进它有的那一列，y 与高度沿用板子的空间。缩放、平移、拖拽都没有。
+- `edges` 是**节点 id** 的对，宿主按顺序画曲线，不认命令、不认样式。
+- 上限：`nodes` ≤ 200、`edges` ≤ 200、`width`/`height` ≤ 4000；坐标为有限数、落在板内；`id`
+  不重；边的两端必须是本板的 node。任一不满足 = 页面错误态。
+- 宿主为每个 node 画一个真的按钮（Tab 顺序 = 数据顺序，焦点、读屏、回车都是控件的），只有
+  边是画的；**插件一个像素也不画**。最小窗（≤ 760）同一批节点画成竖排列表，同样的动作，
+  不横向滚动，边不画。
 
 **语义叶**：`markdown` · `text` · `stat` · `table` · `list` · `tree` · `form` · `chart` ·
 `callout` · `actions`。
 
 - 只允许 `gap: xs|s|m|l` 与 `tone: neutral|info|warn|danger|success` 两个 token。
 - **禁止** `width` / `height` / `color` / `font` / `margin` / `padding` / `position`、原始
-  HTML/CSS、脚本、自定义绘制。
+  HTML/CSS、脚本、自定义绘制。唯一的例外是 `board` 自己的几何：`width` / `height` / `nodes` /
+  `edges` 只对 `board` 有效，写在别的节点上是错误，不是被忽略的字段。
 - 焦点顺序 = 文档顺序；`section` / `tabs` 必须有标签；不允许键盘陷阱。
-- 上限：深度 ≤ 8，节点 ≤ 500，`table.rows` ≤ 500，单页 JSON ≤ 256 KiB。超限 = 页面错误
-  态，不是空白。
+- 上限：深度 ≤ 8，节点 ≤ 500（一个 `board` 算一个节点，其内另有 200 node / 200 edge 的
+  上限），`table.rows` ≤ 500，单页 JSON ≤ 256 KiB。超限 = 页面错误态，不是空白。
 - 窄窗口：`grid` 收一列，`split` 叠一栏，`stack row` 放不下时换行，`tabs` 保留；
   **720×520 下不允许横向滚动**。
 - 未知节点/叶：就地显示含 `kind` 的错误占位，其余照常渲染；同一 `(plugin, kind)` 只记
-  一条日志。
+  一条日志。`board` 的 node **条目**是一行数据而不是页面结构：宿主管不到的字段被忽略，新版本
+  插件多带的字段不会让整页失败。
 
 ## 6. 文案与设置
 

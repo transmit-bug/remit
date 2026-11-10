@@ -3,79 +3,68 @@
     {
       "children": [
         {
-          "children": [
+          "edges": [
+            ["n1", "n2"],
+            ["n1", "n3"],
+            ["n1", "n5"],
+            ["n4", "n3"]
+          ],
+          "height": 700,
+          "kind": "board",
+          "nodes": [
             {
-              "children": [
-                {
-                  "kind": "text",
-                  "text": "Memory"
-                },
-                {
-                  "kind": "markdown",
-                  "text": "spacing"
-                },
-                {
-                  "items": [
-                    {
-                      "command": "example.whiteboard.about",
-                      "label": "%action.open%",
-                      "value": "note_1/block_1"
-                    }
-                  ],
-                  "kind": "actions"
-                }
-              ],
-              "kind": "card"
+              "block": "block_1",
+              "id": "n1",
+              "note": "note_1",
+              "text": "spacing",
+              "title": "Memory",
+              "w": 250,
+              "x": 60,
+              "y": 110
             },
             {
-              "children": [
-                {
-                  "kind": "text",
-                  "text": "Memory"
-                },
-                {
-                  "kind": "markdown",
-                  "text": "interleaving"
-                },
-                {
-                  "items": [
-                    {
-                      "command": "example.whiteboard.about",
-                      "label": "%action.open%",
-                      "value": "note_1/block_2"
-                    }
-                  ],
-                  "kind": "actions"
-                }
-              ],
-              "kind": "card"
+              "block": "block_2",
+              "id": "n2",
+              "note": "note_1",
+              "text": "interleaving",
+              "title": "Memory",
+              "w": 250,
+              "x": 560,
+              "y": 60
             },
             {
-              "children": [
-                {
-                  "kind": "text",
-                  "text": "Sleep"
-                },
-                {
-                  "kind": "markdown",
-                  "text": "a paragraph that asks nothing"
-                },
-                {
-                  "items": [
-                    {
-                      "command": "example.whiteboard.about",
-                      "label": "%action.open%",
-                      "value": "note_2/block_3"
-                    }
-                  ],
-                  "kind": "actions"
-                }
-              ],
-              "kind": "card"
+              "block": "block_3",
+              "id": "n3",
+              "note": "note_2",
+              "text": "a paragraph that asks nothing",
+              "title": "Sleep",
+              "w": 250,
+              "x": 690,
+              "y": 300
+            },
+            {
+              "block": "block_4",
+              "id": "n4",
+              "note": "note_3",
+              "text": "the testing effect",
+              "title": "Recall",
+              "w": 250,
+              "x": 250,
+              "y": 400
+            },
+            {
+              "block": "block_5",
+              "id": "n5",
+              "note": "note_3",
+              "text": "interleaving",
+              "title": "Recall",
+              "w": 250,
+              "x": 480,
+              "y": 540
             }
           ],
-          "columns": 2,
-          "kind": "grid"
+          "title": "%section.board%",
+          "width": 1120
         }
       ],
       "description": "%section.body%",
