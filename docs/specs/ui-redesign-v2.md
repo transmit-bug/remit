@@ -12,7 +12,7 @@
 > 实现口径与原型 / 本稿有偏差的六处见 §0.4，按代码为准。
 > 基线：`master`（合并已落地），MyGo **v0.8.1**（`go list -m -f '{{.Dir}}' github.com/egoist/mygo`）。
 > 原型：`ref/prototype/`（`DESIGN.md` 说明书 + `index.html`/`styles.css`/`app.js` 可点稿），
-> 主路由静帧在 `ref/prototype/shots/`（40 张 + `shots/index.html` 蓝图；其中 23 张是同一张重复帧，不采用）。
+> 主路由静帧在 `ref/prototype/shots/`（40 张互不相同的截图 + `shots/index.html` 蓝图；`tools/capture.mjs` 一条命令按深链接重拍，每张都带「屏上应有这些字」的断言）。
 > 决策地图：[#201](https://github.com/transmit-bug/remit/issues/201)。UI 地图：[#128](https://github.com/transmit-bug/remit/issues/128)。
 > 执行顺序：[#158](https://github.com/transmit-bug/remit/issues/158)。打磨清单：[#164](https://github.com/transmit-bug/remit/issues/164)。
 
