@@ -93,3 +93,69 @@ func firstCard(lib *Library, blockID core.ID) (core.Card, error) {
 	}
 	return cards[0], nil
 }
+
+// A frozen card's snapshot is part of what the card shows, so the index carries
+// it: a listing read back from the index — the one the window reads, with no
+// card file opened — still holds the words the card was frozen at, and a rebuild
+// of the index derives them again from the card file.
+func TestFrozenSnapshotSurvivesTheIndex(t *testing.T) {
+	now := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
+	dir := t.TempDir()
+	lib, err := Create(dir, Options{Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	note, err := lib.SaveNote(core.Note{Title: "n", Blocks: []core.Block{{Text: "q :: a"}}})
+	if err != nil {
+		t.Fatalf("note: %v", err)
+	}
+	card, err := firstCard(lib, note.Blocks[0].ID)
+	if err != nil {
+		t.Fatalf("card: %v", err)
+	}
+	frozen := card
+	frozen.Ref = frozen.Ref.Freeze(lib, now)
+	if err := lib.SaveCard(frozen); err != nil {
+		t.Fatalf("freeze: %v", err)
+	}
+	if err := lib.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+
+	check := func(how string, lib *Library) {
+		t.Helper()
+		cards := lib.Cards()
+		if len(cards) != 1 || cards[0].ID != card.ID {
+			t.Fatalf("%s: the listing holds %d cards, want the frozen one", how, len(cards))
+		}
+		snapshot := cards[0].Ref.Frozen
+		if snapshot == nil {
+			t.Fatalf("%s: the listing lost the snapshot of %s", how, cards[0].ID)
+		}
+		if snapshot.Text != "q :: a" || !snapshot.At.Equal(now) {
+			t.Errorf("%s: snapshot = %+v, want the block as it was at %v", how, snapshot, now)
+		}
+	}
+
+	reopened, err := Open(dir, Options{Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	if reopened.sources.cards != 0 {
+		t.Errorf("the reopen read %d card files, want the index alone", reopened.sources.cards)
+	}
+	check("after a reopen", reopened)
+	if err := reopened.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+
+	if err := RebuildIndex(dir, Options{Now: func() time.Time { return now }}); err != nil {
+		t.Fatalf("rebuild the index: %v", err)
+	}
+	rebuilt, err := Open(dir, Options{Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatalf("open after the rebuild: %v", err)
+	}
+	defer rebuilt.Close()
+	check("after a rebuild", rebuilt)
+}
