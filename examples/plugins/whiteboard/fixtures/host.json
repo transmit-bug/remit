@@ -13,6 +13,14 @@
       "id": "note_2",
       "title": "Sleep",
       "blocks": [{ "id": "block_3", "text": "a paragraph that asks nothing" }]
+    },
+    {
+      "id": "note_3",
+      "title": "Recall",
+      "blocks": [
+        { "id": "block_4", "text": "the testing effect :: recalling builds memory" },
+        { "id": "block_5", "text": "interleaving :: mixing topics in one session" }
+      ]
     }
   ]
 }

@@ -11649,6 +11649,22 @@ func (msgs Messages) BoardLocate() string {
 	return Catalog.Format(msgs.locale, "boardLocate", nil)
 }
 
+// BoardOpen says "Back to this paragraph"
+// in the language the app shows.
+//
+// A board node's action, printed at the foot of the card: it opens the note
+// the node names, read at its block.
+func BoardOpen() string { return In(i18n.Locale()).BoardOpen() }
+
+// BoardOpen says "Back to this paragraph"
+// in the language of msgs.
+//
+// A board node's action, printed at the foot of the card: it opens the note
+// the node names, read at its block.
+func (msgs Messages) BoardOpen() string {
+	return Catalog.Format(msgs.locale, "boardOpen", nil)
+}
+
 // CardType says "Type"
 // in the language the app shows.
 //

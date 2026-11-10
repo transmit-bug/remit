@@ -96,10 +96,16 @@ func View(c *ui.Context, s *State, d Deps) {
 	tk := design.NewTokens(c.Theme())
 	w, _ := c.Size()
 	narrow := w < narrowWidth
+	// A page that draws a board takes the wide measure: a graph needs the room a
+	// paragraph does not, and the host scales the page's own space into it (§6.4).
+	measure := tk.PaperWidth
+	if hasBoard(s.Tree) {
+		measure = tk.BoardWidth
+	}
 
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
-			ui.Column(c).FillWidth().MaxWidth(tk.PaperWidth).Gap(tk.SpaceL).Label(d.message(c, s.Title)).Children(func() {
+			ui.Column(c).FillWidth().MaxWidth(measure).Gap(tk.SpaceL).Label(d.message(c, s.Title)).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
 					Label(msgs.PluginPageActions()).Children(func() {
 					ui.Text(c, d.message(c, s.Title)).FontSize(tk.TypeH1).Bold()
@@ -191,15 +197,13 @@ func draw(c *ui.Context, s *State, d Deps, n contrib.Node, path string, tk desig
 		if narrow {
 			columns = 1
 		}
-		if isBoard(n.Children) {
-			// A grid whose cards each name a block is a board: the host draws the
-			// places the page listed, and goes there itself (§6.4).
-			drawBoard(c, s, d, n.Children, columns, tk)
-			return
-		}
 		ui.Grid(c).FillWidth().Columns(columns).GapX(gap).GapY(gap).Children(func() {
 			drawChildren(c, s, d, n.Children, path, tk, narrow)
 		})
+	case contrib.KindBoard:
+		// The one node that names a coordinate: the host places its nodes in the
+		// page's space, paints their edges and draws each as a button (§6.4).
+		drawBoard(c, s, d, n, tk)
 	case contrib.KindSplit:
 		if narrow {
 			ui.Column(c).FillWidth().Gap(tk.SpaceL).Children(func() {

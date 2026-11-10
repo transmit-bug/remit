@@ -66,7 +66,7 @@
 | S48 快捷键总表 | 四组键表 | `ui.DialogBase` + `ui.Grid` | v0.8.1 | W8a | `TestKeysHelpListsTheMap` |
 | S49 命令面板 | 分组命令、收窄、执行、焦点还回 | `ui.DialogBase` + `ui.List` | v0.8.1 | 既有；W8a 加分组与插件命令 | `TestPalette`、`TestPaletteCommandsForReading` |
 | S50 插件页·制卡脚本 | 插件给数据，宿主画页头与节点 | 宿主节点：`ui.Grid`/`ui.List`/`ui.Table`/`ui.Tree`/`chart.Plot` 等 + `ui.Spinner` 骨架 | v0.8.1 | W8b 页头；W9 槽位 | `TestPluginPageShowsItsHeaderActions` |
-| S51 插件页·白板 | 块摊成节点网格，点节点回原文 | 组合 `kit.Board`（`ui.Grid` + `ui.List` 语义行；不用 `ui.NewCanvas`） | v0.8.1（见缺口 8） | W8b 起，W9 收口 | `TestWhiteboardOpensTheBlock`、`TestWhiteboardSurvivesAChangedBlock` |
+| S51 插件页·白板 | 块摊成一张连接图，点节点回原文 | 组合 `kit.Board`（节点是真 `ui.ButtonBase`，`Absolute` 放在插件给的位置；边由 `Draw` 画；最小窗落 `ui.List`；不用 `ui.NewCanvas`） | v0.8.1（见缺口 8） | W8b 起，W9 收口 | `TestWhiteboardOpensTheBlock`、`TestWhiteboardSurvivesAChangedBlock`、`TestBoardPaintsOneLinePerConnection` |
 | S52 笔记行菜单 | 不打开笔记也能阅读 / 入队 / 重命名 / 删除 | `ui.PopoverMenuButton` + `ui.DialogBase` + `ui.TextInput` + `ui.AlertDialog` | v0.8.1 | W3a 行菜单；W9 插件项；t23 p2 重命名 / 删除 | `TestNoteRowMenuOffersReadingAndThePluginSlot` |
 
 整窗三条：`TestNoHorizontalScrollAt720`、`TestChineseAtTheMinimumSize`、`TestMinimumSizeControls`。
@@ -89,7 +89,7 @@
    `ParagraphBox` 贴住当前段（`screens/notes/selection.go`）。
 7. **分栏右侧只读** — `richtext`（v0.8.1）一个 `Document` 只能挂一个视图 → 右侧 `ui/markdown.View`。
 8. **白板不是自由画布** — `ui.NewCanvas` / painter 能画，但节点会丢掉键盘、焦点与读屏，也会丢掉
-   720×520 的收栈（v2 §10.1 第 8 条不做）→ `kit.Board` 的只读网格。
+   720×520 的收栈（v2 §10.1 第 8 条不做）→ `kit.Board` 的只读连接图：节点是宿主按钮，只有边是画的。
 9. **导入向导的步骤条** — `ui.Stepper` 是数值步进 → `ui.Badge` + `ui.Divider` 组合（`internal/ui/import.go`）。
 10. **评分分布条（S34）** — `ui.chart` 对四项过重、`ui.Meter` 只有一个值 → 局部 `gradeBar`
     （`internal/ui/screens/recall/history.go:160`）。

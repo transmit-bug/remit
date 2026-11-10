@@ -188,8 +188,10 @@ export type StackDirection = %s;
 
 /**
  * One node of a page. The host draws it: there is no width, height, colour,
- * font, margin, padding or position. Depth <= %d, nodes <= %d, table rows <= %d,
- * one page <= %d bytes; over any of them the page shows its error state.
+ * font, margin, padding or position, except on a board, which names its own
+ * space and its nodes' places in it. Depth <= %d, nodes <= %d, table rows <= %d,
+ * one page <= %d bytes, a board %d nodes and %d edges; over any of them the
+ * page shows its error state.
  */
 export interface Node {
   kind: NodeKind;
@@ -216,6 +218,33 @@ export interface Node {
   fields?: Item[];
   /** A chart's bars. */
   points?: Point[];
+  /** A board's own space, in DIP: the rectangle its nodes were placed in. */
+  width?: number;
+  height?: number;
+  /** A board's places. */
+  nodes?: BoardNode[];
+  /** A board's connections, by node id. */
+  edges?: [string, string][];
+}
+
+/**
+ * One place a board names: the block it stands for and where the page put it.
+ * The host scales the board's space into the room a window has, and draws the
+ * node with its own widget; nothing here is a style. An extra field on a board
+ * node is ignored, so a newer plugin's datum still draws.
+ */
+export interface BoardNode {
+  id: string;
+  /** The note the block lives in; the host finds it by the block alone when empty. */
+  note?: string;
+  block: string;
+  x: number;
+  y: number;
+  w: number;
+  /** The note's title, the block's first line and how many cards it feeds, as the page said them. */
+  title?: string;
+  text?: string;
+  cards?: number;
 }
 
 export interface Tab {
@@ -240,7 +269,8 @@ export interface Point {
 export type PageTree = Node & { kind: "page" };
 
 `, union(kindNames()), union(gapNames()), union(toneNames()), union(directionNames()),
-		contrib.MaxDepth, contrib.MaxNodes, contrib.MaxTableRows, contrib.MaxPageBytes)
+		contrib.MaxDepth, contrib.MaxNodes, contrib.MaxTableRows, contrib.MaxPageBytes,
+		contrib.MaxBoardNodes, contrib.MaxBoardEdges)
 
 	fmt.Fprintf(&b, `// ─── the host a plugin reaches ─────────────────────────────────────────────
 // A function below is there only when the manifest declared its capability; a

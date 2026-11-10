@@ -177,6 +177,118 @@ func TestPageRefusesStyleFields(t *testing.T) {
 	}
 }
 
+// A board is the one node that names a coordinate: its own space, the places in
+// it and the lines between them, read as the host will place and paint them.
+func TestParsePageReadsABoard(t *testing.T) {
+	page, err := contrib.ParsePage([]byte(`{"kind":"page","children":[
+	  {"kind":"board","title":"%section.board%","width":1120,"height":700,
+	   "nodes":[
+	    {"id":"n1","note":"note_1","block":"block_1","x":60,"y":110,"w":250,"title":"Memory","text":"spacing","cards":2},
+	    {"id":"n2","note":"note_1","block":"block_2","x":560,"y":60,"w":250,"future":true}
+	   ],
+	   "edges":[["n1","n2"]]}]}`))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	board := page.Children[0]
+	if board.Kind != contrib.KindBoard {
+		t.Fatalf("board = %+v", board)
+	}
+	if board.Width != 1120 || board.Height != 700 {
+		t.Errorf("the board's space is %gx%g", board.Width, board.Height)
+	}
+	if len(board.Nodes) != 2 || len(board.Edges) != 1 {
+		t.Fatalf("the board has %d nodes and %d edges", len(board.Nodes), len(board.Edges))
+	}
+	first := board.Nodes[0]
+	if first.ID != "n1" || first.Note != "note_1" || first.Block != "block_1" || first.Cards != 2 {
+		t.Errorf("the first node is %+v", first)
+	}
+	if first.X != 60 || first.Y != 110 || first.W != 250 {
+		t.Errorf("the first node is at %g,%g %g wide", first.X, first.Y, first.W)
+	}
+	// A node's own fields are data: one this host does not know is ignored, so a
+	// newer plugin's datum still draws.
+	if second := board.Nodes[1]; second.ID != "n2" || second.X != 560 {
+		t.Errorf("the second node is %+v", second)
+	}
+	if board.Edges[0] != [2]string{"n1", "n2"} {
+		t.Errorf("the edge is %v", board.Edges[0])
+	}
+}
+
+// A board's places and lines are checked against the space it names: a node off
+// the board, an id twice, a line to nowhere, and a board over the contract's
+// count are the page's error, not a frame that pays for them.
+func TestParsePageRefusesABrokenBoard(t *testing.T) {
+	board := func(body string) string {
+		return `{"kind":"page","children":[{"kind":"board",` + body + `}]}`
+	}
+	manyNodes := func(n int) string {
+		var b strings.Builder
+		b.WriteString(`"width":1120,"height":700,"nodes":[`)
+		for i := 0; i < n; i++ {
+			if i > 0 {
+				b.WriteString(",")
+			}
+			fmt.Fprintf(&b, `{"id":"n%d","block":"block_%d","x":0,"y":0,"w":10}`, i, i)
+		}
+		b.WriteString(`]`)
+		return board(b.String())
+	}
+	manyEdges := func(n int) string {
+		var b strings.Builder
+		b.WriteString(`"width":1120,"height":700,"nodes":[{"id":"a","block":"b1","x":0,"y":0,"w":10},{"id":"b","block":"b2","x":0,"y":0,"w":10}],"edges":[`)
+		for i := 0; i < n; i++ {
+			if i > 0 {
+				b.WriteString(",")
+			}
+			b.WriteString(`["a","b"]`)
+		}
+		b.WriteString(`]`)
+		return board(b.String())
+	}
+
+	for _, tc := range []struct {
+		name string
+		raw  string
+		says string
+	}{
+		{"no width", board(`"height":700,"nodes":[]`), "width"},
+		{"no height", board(`"width":1120,"nodes":[]`), "height"},
+		{"a space too large", board(`"width":9000,"height":700`), "at most"},
+		{"a node without an id", board(`"width":1120,"height":700,"nodes":[{"block":"b1","x":0,"y":0,"w":10}]`), "id"},
+		{"a node without a block", board(`"width":1120,"height":700,"nodes":[{"id":"a","x":0,"y":0,"w":10}]`), "block"},
+		{"an id twice", board(`"width":1120,"height":700,"nodes":[
+		  {"id":"a","block":"b1","x":0,"y":0,"w":10},
+		  {"id":"a","block":"b2","x":20,"y":0,"w":10}]`), "already"},
+		{"a node off the board", board(`"width":1120,"height":700,"nodes":[{"id":"a","block":"b1","x":-1,"y":0,"w":10}]`), "off the board"},
+		{"a node wider than the board", board(`"width":100,"height":700,"nodes":[{"id":"a","block":"b1","x":90,"y":0,"w":20}]`), "outside"},
+		{"a node below the board", board(`"width":1120,"height":100,"nodes":[{"id":"a","block":"b1","x":0,"y":120,"w":10}]`), "outside"},
+		{"a node of no width", board(`"width":1120,"height":700,"nodes":[{"id":"a","block":"b1","x":0,"y":0,"w":0}]`), "width"},
+		{"a coordinate past a float", board(`"width":1120,"height":700,"nodes":[{"id":"a","block":"b1","x":1e40,"y":0,"w":10}]`), "x"},
+		{"an edge to nowhere", board(`"width":1120,"height":700,
+		  "nodes":[{"id":"a","block":"b1","x":0,"y":0,"w":10}],"edges":[["a","b"]]`), "edges"},
+		{"an edge of one end", board(`"width":1120,"height":700,
+		  "nodes":[{"id":"a","block":"b1","x":0,"y":0,"w":10}],"edges":[["a"]]`), "edges"},
+		{"too many nodes", manyNodes(contrib.MaxBoardNodes + 1), "nodes"},
+		{"too many edges", manyEdges(contrib.MaxBoardEdges + 1), "edges"},
+		{"a width on another node", `{"kind":"page","children":[{"kind":"grid","columns":1,"width":8}]}`, "width"},
+		{"nodes on another node", `{"kind":"page","children":[{"kind":"grid","columns":1,"nodes":[]}]}`, "nodes"},
+		{"the board's edges on another node", `{"kind":"page","children":[{"kind":"grid","columns":1,"edges":[]}]}`, "edges"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := contrib.ParsePage([]byte(tc.raw))
+			if err == nil {
+				t.Fatalf("the host accepted %s", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.says) {
+				t.Errorf("error %q does not say %q", err, tc.says)
+			}
+		})
+	}
+}
+
 // Tabs and a tree are the two nodes whose children are not plain children; both
 // read and both count against the depth.
 func TestParsePageReadsTabsAndTrees(t *testing.T) {

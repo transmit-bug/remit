@@ -51,6 +51,16 @@ const (
 	// WelcomeWidth is the start page's wider card: the one place a door is
 	// worth more than a sentence.
 	WelcomeWidth float32 = 640
+	// BoardWidth is a board page's measure: a graph needs the room a paragraph
+	// does not, so the page holding one takes the window's widest column and the
+	// host scales the board's own space into it (ui-redesign-v2 §6.4).
+	BoardWidth float32 = 1120
+	// BoardNodeHeight is a board node's floor, and where its connections meet it:
+	// one token for both, so an edge lands on the card it joins.
+	BoardNodeHeight float32 = 104
+	// BoardEdge is how wide a connection is drawn: a hairline reads as a
+	// separator, and a connection is not a separator.
+	BoardEdge float32 = 1.5
 	// SummaryWidth is the completed review card inside ReviewWidth, and
 	// MessageWidth is a short page's sentence and action.
 	SummaryWidth float32 = 520

@@ -46,7 +46,6 @@ const boardContributes = `{
       "command.locate": "Locate this block",
       "category.board": "Board",
       "section.board": "Places",
-      "action.open": "Back to this block",
       "toast.located": "Located"
     },
     "zh-Hans": {
@@ -54,7 +53,6 @@ const boardContributes = `{
       "command.locate": "定位这一段",
       "category.board": "白板",
       "section.board": "位置",
-      "action.open": "回到这一段",
       "toast.located": "已定位"
     }
   }
@@ -78,25 +76,42 @@ func placesOf(notes ...core.Note) []boardPlace {
 	return out
 }
 
-// boardTree is a whiteboard page's data as the contract allows it: a grid of
-// cards, each naming the block it stands for through an action's value, with the
-// note's title and the block's first line beside it. No coordinate, no node kind
-// of its own (ui-redesign-v2 §6.4).
+// boardTree is a whiteboard page's data as the contract allows it: a board of the
+// places, each node naming the block it stands for and where it sits, with a line
+// from each node to the next. The words beside a node are the page's own, and the
+// host reads the place from the node — a board names a coordinate, never a pixel
+// (ui-redesign-v2 §6.4).
 func boardTree(places []boardPlace) string {
-	cards := make([]string, len(places))
+	nodes := make([]string, len(places))
+	var edges []string
 	for i, place := range places {
-		cards[i] = fmt.Sprintf(`{"kind":"card","children":[
-			{"kind":"text","text":%s},
-			{"kind":"markdown","text":%s},
-			{"kind":"actions","items":[{"label":"%%action.open%%","value":%s,"command":"acme.board.locate"}]}
-		]}`, quote(place.note), quote(place.block), quote(place.note+"/"+place.block))
+		nodes[i] = fmt.Sprintf(`{"id":%s,"note":%s,"block":%s,"x":%d,"y":%d,"w":%d,"title":%s,"text":%s}`,
+			quote("n"+place.block), quote(place.note), quote(place.block),
+			boardX(i), boardY(i), boardNodeW, quote(place.note), quote(place.block))
+		if i > 0 {
+			edges = append(edges, fmt.Sprintf(`[%s,%s]`, quote("n"+places[i-1].block), quote("n"+place.block)))
+		}
 	}
 	return fmt.Sprintf(`{"kind":"page","children":[
 		{"kind":"section","title":"%%section.board%%","children":[
-			{"kind":"grid","columns":2,"children":[%s]}
+			{"kind":"board","title":"%%section.board%%","width":%d,"height":%d,
+			 "nodes":[%s],"edges":[%s]}
 		]}
-	]}`, strings.Join(cards, ","))
+	]}`, boardW, boardH, strings.Join(nodes, ","), strings.Join(edges, ","))
 }
+
+// The board a test's page draws: two columns of spots in a space of its own.
+const (
+	boardW     = 1120
+	boardH     = 700
+	boardNodeW = 250
+)
+
+// boardX and boardY place the i'th node of a test's board: two columns, three
+// spots each, so a pair of neighbouring nodes shares a line.
+func boardX(i int) int { return 60 + (i%2)*500 }
+
+func boardY(i int) int { return 60 + (i/2)*200 }
 
 // quote writes one string as JSON.
 func quote(id core.ID) string {
@@ -322,11 +337,12 @@ func TestWhiteboardSurvivesAChangedBlock(t *testing.T) {
 func TestInspectorOffersTheWhiteboardWhenANodeExists(t *testing.T) {
 	a, seed, _ := boardApp(t)
 	// The inspector's entry runs from a handler; the test is the handler.
+	target := seed.memory.Blocks[1].ID
 	trip := false
 	tt := ui.NewTester(func(c *ui.Context) {
 		if trip {
 			trip = false
-			a.LocateOnBoard(c, seed.memory.Blocks[1].ID)
+			a.LocateOnBoard(c, target)
 		}
 		a.View(c)
 	}, 1024, 720)
@@ -362,10 +378,35 @@ func TestInspectorOffersTheWhiteboardWhenANodeExists(t *testing.T) {
 	if tt.FramePending() {
 		t.Error("the board keeps asking for frames after the pointer settled")
 	}
-	// A second trip replays the pointer rather than staying still.
+	// A second trip replays the pointer rather than staying still, and brings the
+	// node it was asked for into view: a board's lowest node sits below the fold,
+	// and a highlight nobody can see is not an answer.
+	last := seed.writing.Blocks[len(seed.writing.Blocks)-1]
+	low := oneLine(last.Text)
+	before, ok := tt.Find(low)
+	if !ok {
+		t.Fatalf("the board does not draw the last node; texts %q", tt.Texts())
+	}
+	target = last.ID
 	trip = true
 	tt.Frame()
-	if state := a.pageState(ref); state.HighlightRun != 2 {
-		t.Errorf("the second trip ran the pointer %d times, want 2", state.HighlightRun)
+	tt.Frame()
+	if state := a.pageState(ref); state.HighlightRun != 2 || state.Highlight != string(last.ID) {
+		t.Errorf("the second trip points at %q (run %d), want the last node",
+			state.Highlight, state.HighlightRun)
+	}
+	after, ok := tt.Find(low)
+	if !ok {
+		t.Fatalf("the board lost the node the trip asked for; texts %q", tt.Texts())
+	}
+	if after.Y == before.Y {
+		t.Errorf("the trip left the node at %.1f, where it already was", after.Y)
+	}
+	if after.Y < 0 || after.Y+after.H > 720 {
+		t.Errorf("the located node is at %.1f..%.1f, outside the window", after.Y, after.Y+after.H)
+	}
+	tt.Advance(300 * time.Millisecond)
+	if tt.FramePending() {
+		t.Error("the board keeps asking for frames after the second trip settled")
 	}
 }
