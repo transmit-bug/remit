@@ -52,8 +52,9 @@ type Options struct {
 	// mygo.Dialog's file picker (multi-select) unless a test replaces it.
 	ChooseMarkdown func() ([]string, error)
 	// ImportMarkdown imports the Markdown files at path into the open
-	// library. It is importmd.Import unless a test replaces it.
-	ImportMarkdown func(path string) (importmd.Report, error)
+	// library, with the options the wizard's preview was set to. It is
+	// importmd.Import unless a test replaces it.
+	ImportMarkdown func(path string, opts importmd.Options) (importmd.Report, error)
 	// ChooseExportFolder picks the folder an export writes into, mygo.Dialog's
 	// folder picker unless a test replaces it.
 	ChooseExportFolder func(title string) (string, error)

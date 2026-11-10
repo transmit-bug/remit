@@ -352,7 +352,7 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 |---|---|---|---|---|---|---|---|---|---|
 | S01 | 欢迎 | — | — | 启动（无库） | 页 | `App.start` / `openErr` / 最近库（新） | 打开库、新建库、导入 | — | 无最近库时只留三个入口；库打不开时顶部 banner + 「换一个」 |
 | S02 | 导入向导 | 浮层 | — | 顶栏 `⋯` → 导入 | 浮层 | `importmd` / `importanki` / `.remitlib` 报告 | 选来源 → 预览 → 完成 | `Esc` | 空目录：预览计数全 0，下一步禁用并写明原因 |
-| S03 | 导出 | 浮层 | — | 顶栏 `⋯` → 导出 | 浮层 | `Library.Notes` + `SaveNote` 渲染；`.remitlib` 走 `transfer.Write` | Markdown 目录 / `.remitlib` / 卡片 CSV | `Esc` | 无笔记时两项禁用（CSV 永久禁用并写明原因） |
+| S03 | 导出 | 浮层 | — | 顶栏 `⋯` → 导出 | 浮层 | `Library.Notes` + `SaveNote` 渲染；`.remitlib` 走 `transfer.Write`；卡片 CSV 走 `QueryCards` + 卡片插件的两面 | Markdown 目录 / `.remitlib` / 卡片 CSV | `Esc` | 无笔记时 Markdown 与 `.remitlib` 禁用，无卡片时 CSV 禁用（各写明原因） |
 | S04 | 今日 | 今日 | — | `#/today` · `remit://today` | 页 | `queue.Today`（B1） | 开始、打开某篇、复习 | `⌘K` | 全空：图标 + 一句 + 「加入一篇笔记」 |
 | S05 | 写·笔记 | 写 | 笔记 | `#/write/notes?tag=` | 页 | `QueryNoteRows`（B5） | 新建、打开、阅读、行菜单 | — | 无匹配：一句 + 清空筛选 |
 | S06 | 写·搜索 | 写 | 搜索 | `#/write/search?q=` · `remit://search` | 页 | `Library.Search` | 打开笔记 / 卡片 | `⌘F` | 未输入：一句说明匹配范围 |
@@ -434,23 +434,26 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 - 版式：`ui.DialogBase`，宽 `SettingsWidth`；三步（步骤条用 `ui.Badge`+`ui.Divider` 组合，
   没有官方 stepper 视觉 → 记为一次组合，理由：`ui.Stepper` 是数值步进不是流程步骤）。
 - 元素：步骤 1 三个来源行（`.remitlib` / Markdown 目录 / Anki `.apkg`）；步骤 2 计数表
-  （`ui.Table` 两列：项 / 值）+ 两个 `ui.Switch`（保留现有笔记、导入后重建索引）；步骤 3 空态式完成页。
+  （`ui.Table` 两列：项 / 值）+ 三个 `ui.Switch`（保留现有笔记、导入后重建索引、加入阅读队列）；
+  `.remitlib` 落在自己的目录、Anki 按 GUID 匹配，二者都在第二步写一行说明为什么没有
+  「保留现有笔记」；步骤 3 空态式完成页。
 - 动作：`Deps.ChooseArchive` / `ChooseMarkdown` / `ChooseAnki` → `Deps.Import…`：Markdown 与 Anki 走
   既有 `importmd` / `importanki`；`.remitlib` 走既有 `transfer.Read`
   （`internal/core/transfer/transfer.go:78`）解到新目录后重开库（`Deps.OpenLibraryAt`）。
   步骤 2 的 `Next` 在计数为 0 时 `Disabled(true)`，下方 `ui.Text` 写明「没有可导入的内容」。
 - 数据：`importmd.Report` / `importanki.Report`（既有类型）。
 - 状态：导入中 `ui.Progress`（不定长）；失败 → 就地 `ui.callout` danger + 「重试」，不关对话框。
-- 验收：`TestImportWizardWalksThreeSteps`、`TestImportWizardRefusesAnEmptySource`。
+- 验收：`TestImportWizardWalksThreeSteps`、`TestImportWizardRefusesAnEmptySource`、
+  `TestImportMarkdownKeepsExistingNotes`、`TestImportMarkdownOverwritesWhenKeepingIsOff`。
 
 **S03 导出**
 - 版式：`ui.DialogBase` 宽 `SummaryWidth`；`ui.RadioGroup` 三项（Markdown 目录 / `.remitlib` /
   卡片 CSV）+ 一句说明 + 主按钮。
-- 动作：`Deps.ExportMarkdown`（既有 `exportAllMarkdown` / `exportNoteMarkdown` 的重组）与
-  `Deps.ExportLibrary`（**新增** handler，包 `transfer.Write`，`internal/core/transfer/transfer.go:22`）；
-  卡片 CSV 是**禁用**项，原因见 §4.13（1.0 不做）。
+- 动作：`Deps.ExportMarkdown`（既有 `exportAllMarkdown` / `exportNoteMarkdown` 的重组）、
+  `Deps.ExportLibrary`（**新增** handler，包 `transfer.Write`，`internal/core/transfer/transfer.go:22`），
+  与卡片 CSV（`cards.csv`：表头一行，每张卡片一行，`encoding/csv` 转义；空库禁用，原因见 §4.13）。
 - 状态：导出中按钮禁用并显示 `ui.Spinner`；完成 `c.Toast` + 动作「打开文件夹」。
-- 验收：`TestExportWritesAndReports`、`TestExportRefusesTheCSVItDoesNotHave`。
+- 验收：`TestExportWritesAndReports`、`TestExportWritesTheCardCSV`、`TestExportRefusesTheCSVWithoutCards`。
 
 ### 4.2 今日（S04）
 
@@ -849,7 +852,7 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 | 「开始阅读」 | S23 | 队列空 | 空态里就是「加入一篇」 |
 | 「下一步」 | S02 | 预览计数为 0 | 一行「没有可导入的内容」 |
 | Markdown 目录 | S03 | 库为空 | 一行「库里还没有笔记」 |
-| 卡片 CSV | S03 | 永久（1.0 不做，见 §10.1） | 选项下方一行「1.0 不做卡片 CSV」 |
+| 卡片 CSV | S03 | 库里没有卡片 | 选项下方一行「库里还没有卡片」 |
 | 删除卡片 | S18 | 该块无卡 | 一行「这一段还不是卡」 |
 | 「插件动作」 | S31 | 该槽无项（含全部隐藏） | 紧跟一行「没有插件提供这一动作」 |
 | 「修改键位」 | S42 | 永久（1.0 不含 #155） | 一行「自定义键位不在 1.0，见 #155」 |
@@ -1465,7 +1468,7 @@ grep -rhoE '^func [A-Z][A-Za-z0-9_]*' "$MYGO"/ui/*.go | sed -E 's/func //' | sor
 7. **正文尺寸的第二套缩放**（#228 未定；本稿让它只跟随桌面）。
 8. **自由画布白板**（坐标、拖拽、连线、缩放）：`ui.NewCanvas` 能画，但会丢掉键盘、焦点、
    读屏与最小窗降级；本轮白板是宿主绘制的只读卡片网格（§6.4），不是画布。
-9. **卡片导出 CSV**（S03 里是禁用项）；**新的归档格式**：`.remitlib` 的进出直接复用既有
+9. **新的归档格式**：`.remitlib` 的进出直接复用既有
    `internal/core/transfer`（`Write`/`Read`），不新造格式、不加字段。
 10. **设置文件的 v2 迁移与偏好注册表**（#221–#225）：本稿只动库配置 `remit.json`。
 11. **`status.item` 槽的接收方**（需 `apiVersion` 升级）。

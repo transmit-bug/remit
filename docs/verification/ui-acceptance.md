@@ -103,22 +103,22 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 
 - 代码：`internal/ui/import.go`（`importView`、`importSteps`、`importPreviewStep`）。
 - 目的：把三种来源（`.remitlib` / Markdown 目录 / Anki `.apkg`）带进库，并在写之前给人看计数。
-- 元素：`ui.DialogBase` + 步骤条（`ui.Badge` + `ui.Divider` 组合，理由：`ui.Stepper` 是数值步进）+ 三个来源行 + 预览 `ui.Table`（项 / 值）+ 两个 `ui.Switch` + 完成页。
-- 动作：`ChooseArchive` / `ChooseMarkdown` / `ChooseAnki` → 预览 → 下一步（计数 0 时 `Disabled` 并写原因）→ 写库 → 重开库。
+- 元素：`ui.DialogBase` + 步骤条（`ui.Badge` + `ui.Divider` 组合，理由：`ui.Stepper` 是数值步进）+ 三个来源行 + 预览 `ui.Table`（项 / 值）+ 三个 `ui.Switch`（保留现有笔记 / 重建索引 / 加入阅读队列）+ 完成页。
+- 动作：`ChooseArchive` / `ChooseMarkdown` / `ChooseAnki` → 预览 → 下一步（计数 0 时 `Disabled` 并写原因）→ 写库 → 重开库。Markdown 把开关交给 `importmd.Options.KeepExisting`；`.remitlib` 落自己的目录、Anki 按 GUID 匹配，两者各写一行说明为什么没有那个开关。
 - 键：`Esc` 关。
-- 尺寸：`SettingsWidth` 内的对话框；720×520 无专门测试。
-- 守卫：`TestImportWizardWalksThreeSteps`、`TestImportWizardRefusesAnEmptySource`、`TestImportWizardReportsAFailure`、`TestImportWizardUnpacksAnArchive`（`internal/ui/import_test.go`）；Markdown 路径 `TestImportMarkdownFromTheWizard`、`TestImportMarkdownFailure`（`internal/ui/importmd_test.go`）。
-- 状态：**covered**。口径差：spec 第二个开关是「保留现有笔记」，代码是 `ImportQueue`「加入阅读队列」（`import.go:445`，缺口 #9）。
+- 尺寸：`SettingsWidth` 内的对话框；720×520 由 `TestImportWizardKeepsItsOptionsAtTheMinimumSize` 守。
+- 守卫：`TestImportWizardWalksThreeSteps`、`TestImportWizardRefusesAnEmptySource`、`TestImportWizardReportsAFailure`、`TestImportWizardUnpacksAnArchive`、`TestImportWizardSaysAnArchiveKeepsTheLibrary`、`TestImportWizardKeepsItsOptionsAtTheMinimumSize`（`internal/ui/import_test.go`）；Markdown 路径 `TestImportMarkdownFromTheWizard`、`TestImportMarkdownFailure`、`TestImportMarkdownKeepsExistingNotes`、`TestImportMarkdownOverwritesWhenKeepingIsOff`（`internal/ui/importmd_test.go`）；导入器本身 `TestImportKeepsTheNotesItFinds`、`TestImportOverwritesWhenNotKeeping`（`internal/core/importmd/import_test.go`）。
+- 状态：**covered**。缺口 #9 关闭：spec 的「保留现有笔记」与原有的「加入阅读队列」并存。
 
 ## S03 · 导出
 
 - 代码：`internal/ui/export.go`。
-- 目的：把库写成 Markdown 目录或 `.remitlib`，并说清哪一个不能写。
+- 目的：把库写成 Markdown 目录、`.remitlib` 或卡片 CSV，并说清哪一个不能写。
 - 元素：`ui.DialogBase`（`SummaryWidth`）+ `ui.RadioGroup` 三项（Markdown / `.remitlib` / 卡片 CSV）+ 每项下的一行说明或禁用原因 + 取消 / 主按钮。
-- 动作：`runExport` → `pickFolder` → `importmd.Export` 或 `writeArchive`；成功 `c.Toast`；空库两项都禁用并写原因，CSV 永久禁用。
+- 动作：`runExport` → `pickFolder` → `importmd.Export`、`writeArchive` 或 `writeCards`（`cards.csv`：表头 `id,note,block,type,prompt,answer,status,due,interval,lapses`，每张卡片一行，`encoding/csv` 负责逗号、引号与换行）；成功 `c.Toast`；空库时 Markdown 与 `.remitlib` 禁用，无卡片时 CSV 禁用，各自写原因。
 - 键：`Esc` 关。
-- 尺寸：`SummaryWidth` 对话框；两档宽无专门测试。
-- 守卫：`TestExportWritesAndReports`、`TestExportRefusesTheCSVItDoesNotHave`（§9.1 点名）；另 `TestExportWritesTheLibraryArchive`、`TestExportDisabledOnAnEmptyLibrary`（`internal/ui/export_test.go`）。
+- 尺寸：`SummaryWidth` 对话框；720×520 由 `TestExportChoicesFitTheSmallestWindow` 守。
+- 守卫：`TestExportWritesAndReports`（§9.1 点名）、`TestExportWritesTheCardCSV`、`TestExportRefusesTheCSVWithoutCards`、`TestCardCSVEscapesWhatItCarries`、`TestExportChoicesFitTheSmallestWindow`；另 `TestExportWritesTheLibraryArchive`、`TestExportDisabledOnAnEmptyLibrary`（`internal/ui/export_test.go`）。
 - 状态：**covered**。导出中的 `ui.Spinner` 未实现、无测试（§4.1 只要求「按钮禁用并显示」，主按钮已禁用）。
 
 ## S04 · 今日

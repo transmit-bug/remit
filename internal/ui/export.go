@@ -1,16 +1,23 @@
 package ui
 
 import (
+	"encoding/csv"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/importmd"
+	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/core/transfer"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
@@ -23,8 +30,33 @@ type exportFormat uint8
 const (
 	exportMarkdown exportFormat = iota // one .md file per note
 	exportArchive                      // the whole library as a .remitlib
-	exportCards                        // a card CSV, which 1.0 does not write
+	exportCards                        // the card table as a CSV file
 )
+
+// cardCSVName is what a card export is called: the name the export dialog and
+// its report use, and the one a spreadsheet tool expects for a card table.
+const cardCSVName = "cards.csv"
+
+// cardCSVHeader is the first line of a card export: one column per cardCSVRow
+// field, in that order, so a spreadsheet names them without a legend.
+var cardCSVHeader = []string{
+	"id", "note", "block", "type", "prompt", "answer", "status", "due", "interval", "lapses",
+}
+
+// cardCSVRow is one card as a CSV line: what identifies it, what it asks, and
+// the schedule it is on. The field order is cardCSVHeader's.
+type cardCSVRow struct {
+	ID       core.ID
+	Note     string
+	Block    core.ID
+	Type     string
+	Prompt   string
+	Answer   string
+	Status   core.Status
+	Due      time.Time
+	Interval int
+	Lapses   int
+}
 
 // exportState is the export dialog: open or not, and which format it writes. The
 // choice is the state; the write happens in the handler that closes it.
@@ -42,14 +74,15 @@ func (a *App) openExport(c *ui.Context) {
 }
 
 // exportDisabled is why a format cannot be written now, and "" when it can: the
-// library holds a note, and the format exists at all. A disabled choice carries
-// its reason beside it rather than leaving a control that does nothing.
+// library holds what the format writes. A disabled choice carries its reason
+// beside it rather than leaving a control that does nothing.
 func (a *App) exportDisabled(c *ui.Context, format exportFormat) string {
 	msgs := m(c)
 	if format == exportCards {
-		// Card CSV is not in 1.0 (§10.1): the option stays visible, with the
-		// reason it is not offered, so the window does not read as unfinished.
-		return msgs.ExportNoCSV()
+		if len(a.data.cards) == 0 {
+			return msgs.ExportNoCards()
+		}
+		return ""
 	}
 	if len(a.data.notes) == 0 {
 		return msgs.ExportEmptyLibrary()
@@ -58,7 +91,7 @@ func (a *App) exportDisabled(c *ui.Context, format exportFormat) string {
 }
 
 // exportView draws the export dialog over the window: the three formats, why one
-// is not offered, and the one action that writes.
+// cannot be written, and the one action that writes.
 func (a *App) exportView(c *ui.Context, tk design.Tokens) {
 	if !a.export.open {
 		return
@@ -73,8 +106,8 @@ func (a *App) exportView(c *ui.Context, tk design.Tokens) {
 
 		panel.Children(func() {
 			ui.Text(c, msgs.ExportTitle()).FontSize(tk.TypeH2).Bold()
-			// One radio per format, each with what it writes under it. The
-			// disabled ones say why below the group.
+			// One radio per format, each with what it writes under it — or, when
+			// it cannot be written now, why.
 			ui.RadioGroup(c, func() {
 				a.exportChoice(c, tk, msgs, exportMarkdown, msgs.ExportMarkdown(), msgs.ExportMarkdownHint())
 				a.exportChoice(c, tk, msgs, exportArchive, msgs.ExportArchive(), msgs.ExportArchiveHint())
@@ -118,8 +151,11 @@ func (a *App) runExport(c *ui.Context) {
 		return
 	}
 	title := msgs.ExportMarkdown()
-	if a.export.format == exportArchive {
+	switch a.export.format {
+	case exportArchive:
 		title = msgs.ExportArchive()
+	case exportCards:
+		title = msgs.ExportCards()
 	}
 	dir, err := a.pickFolder(title)
 	if err != nil {
@@ -129,8 +165,12 @@ func (a *App) runExport(c *ui.Context) {
 	if dir == "" {
 		return
 	}
-	if a.export.format == exportArchive {
+	switch a.export.format {
+	case exportArchive:
 		a.writeArchive(c, dir)
+		return
+	case exportCards:
+		a.writeCards(c, dir)
 		return
 	}
 	report, err := importmd.Export(dir, a.lib)
@@ -188,4 +228,101 @@ func archiveName(dir string) string {
 		base = "remit"
 	}
 	return fmt.Sprintf("%s.remitlib", base)
+}
+
+// writeCards writes the card table into a CSV in dir: the one export whose
+// rows the window composes, because what a card asks is what the card plugin
+// renders and no file holds it.
+func (a *App) writeCards(c *ui.Context, dir string) {
+	msgs := m(c)
+	rows, err := a.cardCSVRows()
+	if err != nil {
+		slog.Error("remit: read the cards to export", "err", err)
+		c.Toast(msgs.ExportFailed(err.Error()))
+		return
+	}
+	path := filepath.Join(dir, cardCSVName)
+	file, err := os.Create(path)
+	if err != nil {
+		slog.Error("remit: create a card export", "path", path, "err", err)
+		c.Toast(msgs.ExportFailed(err.Error()))
+		return
+	}
+	writeErr := writeCardCSV(file, rows)
+	if err := errors.Join(writeErr, file.Close()); err != nil {
+		slog.Error("remit: write a card export", "path", path, "err", err)
+		c.Toast(msgs.ExportFailed(err.Error()))
+		return
+	}
+	slog.Info("remit: exported the card table", "path", path, "rows", len(rows))
+	a.export.open = false
+	a.exportReported(c, msgs.ExportCardsReport(cardCSVName, len(rows)), dir)
+}
+
+// cardCSVRows is every card the library holds as an export line, in the order
+// the card table reads them: due first, which is the order a schedule is
+// reviewed in.
+func (a *App) cardCSVRows() ([]cardCSVRow, error) {
+	summaries, _, err := a.lib.QueryCards(store.CardQuery{})
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]cardCSVRow, 0, len(summaries))
+	for _, summary := range summaries {
+		row := cardCSVRow{
+			ID:       summary.ID,
+			Block:    summary.Block,
+			Type:     a.typeName(summary.Type),
+			Status:   summary.Status,
+			Due:      summary.Due,
+			Interval: summary.IntervalDays,
+			Lapses:   summary.Lapses,
+		}
+		if card, ok := a.data.card(summary.ID); ok {
+			row.Prompt, row.Answer, _ = a.faces(card)
+		}
+		if summary.Note != "" {
+			row.Note = a.data.titleOf(summary.Note)
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
+}
+
+// writeCardCSV writes the header and one line per card, UTF-8 CSV as
+// encoding/csv reads back: a field holding a comma, a quote or a line break is
+// quoted, and a quote inside it is doubled.
+func writeCardCSV(w io.Writer, rows []cardCSVRow) error {
+	out := csv.NewWriter(w)
+	if err := out.Write(cardCSVHeader); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if err := out.Write([]string{
+			string(row.ID),
+			row.Note,
+			string(row.Block),
+			row.Type,
+			row.Prompt,
+			row.Answer,
+			row.Status.String(),
+			dueStamp(row.Due),
+			strconv.Itoa(row.Interval),
+			strconv.Itoa(row.Lapses),
+		}); err != nil {
+			return err
+		}
+	}
+	out.Flush()
+	return out.Error()
+}
+
+// dueStamp is a card's due moment as the CSV carries it: RFC 3339 in UTC, so a
+// spreadsheet sorts it and another tool reads it back without a guess. A card
+// with no due moment says nothing rather than a made-up date.
+func dueStamp(at time.Time) string {
+	if at.IsZero() {
+		return ""
+	}
+	return at.UTC().Format(time.RFC3339)
 }

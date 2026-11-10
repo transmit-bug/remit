@@ -13,6 +13,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/importmd"
 	"github.com/transmit-bug/remit/internal/core/transfer"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
@@ -55,10 +56,12 @@ type importWizard struct {
 	// unmatched is why the last picker answer could not be used, shown on the
 	// step that asks for one.
 	unmatched string
-	// rebuild indexes the library again once the run wrote, and queue adds the
-	// notes it brought to the reading queue. Both are on by default: they are
-	// what a reading library wants of an import.
-	rebuild, queue bool
+	// rebuild indexes the library again once the run wrote, keep leaves a note
+	// the library already holds as it is instead of writing the file over it,
+	// and queue adds the notes it brought to the reading queue. All three are on
+	// by default: an import is not meant to lose a note the user edited, and
+	// indexing and queuing are what a reading library wants of a source.
+	rebuild, keep, queue bool
 	// written is what the run wrote, for the page that closes it; failed is why
 	// it did not, shown where the run was started with the dialog still open.
 	written importWritten
@@ -70,7 +73,7 @@ type importWizard struct {
 // importWritten is what one run of the wizard wrote, in the counts the importers
 // report.
 type importWritten struct {
-	notes, cards, reviews, skipped int
+	notes, cards, reviews, kept, skipped int
 	// opened is the folder a .remitlib was unpacked into: that import writes a
 	// library of its own rather than notes into the one open.
 	opened string
@@ -79,7 +82,7 @@ type importWritten struct {
 // openImport starts the wizard at its first step, with nothing chosen.
 func (a *App) openImport(c *ui.Context) {
 	a.anim.wizard++
-	a.wizard = importWizard{open: true, step: importStepSource, rebuild: true, queue: true}
+	a.wizard = importWizard{open: true, step: importStepSource, rebuild: true, keep: true, queue: true}
 	a.wizard.focus.Focus(c)
 }
 
@@ -132,6 +135,7 @@ func (a *App) importPreview(c *ui.Context) [][2]string {
 	msgs := m(c)
 	w := &a.wizard
 	source, destination := "", a.dir
+	existing := msgs.ImportExistingNotApplicable()
 	switch w.source {
 	case importFromArchive:
 		// An archive is a library of its own: it lands in a folder beside
@@ -142,12 +146,17 @@ func (a *App) importPreview(c *ui.Context) [][2]string {
 		}
 	case importFromMarkdown:
 		source = msgs.ImportFromMarkdown()
+		existing = msgs.ImportExistingOverwritten()
+		if w.keep {
+			existing = msgs.ImportExistingKept()
+		}
 	case importFromAnki:
 		source = msgs.ImportFromAnki()
 	}
 	return [][2]string{
 		{msgs.ImportRowSource(), source},
 		{msgs.ImportRowFiles(), fmt.Sprint(len(w.paths))},
+		{msgs.ImportRowExisting(), existing},
 		{msgs.ImportRowDestination(), shortPath(destination)},
 	}
 }
@@ -181,13 +190,14 @@ func (a *App) runImport(c *ui.Context) {
 	case importFromMarkdown:
 		var written importWritten
 		for _, path := range w.paths {
-			report, err := a.importMd(path)
+			report, err := a.importMd(path, importmd.Options{KeepExisting: w.keep})
 			if err != nil {
 				slog.Error("remit: import Markdown", "path", path, "err", err)
 				w.failed = err.Error()
 				return
 			}
 			written.notes += report.Notes
+			written.kept += report.Kept
 			written.skipped += report.Skipped
 			logWarnings("Markdown import", report.Warnings)
 		}
@@ -238,7 +248,8 @@ func (a *App) finishImport(c *ui.Context) {
 	a.reload()
 	w.step = importStepDone
 	slog.Info("remit: imported a source", "source", w.source, "files", len(w.paths),
-		"notes", w.written.notes, "cards", w.written.cards, "skipped", w.written.skipped)
+		"notes", w.written.notes, "cards", w.written.cards, "kept", w.written.kept,
+		"skipped", w.written.skipped)
 }
 
 // logWarnings puts an importer's warnings in the log: there can be a hundred of
@@ -426,7 +437,7 @@ func (a *App) importSourceRow(c *ui.Context, tk design.Tokens, icon, name, hint 
 }
 
 // importPreviewStep is the second step: what the source holds, where the run
-// writes, the two options, and the one action that writes.
+// writes, the options it takes, and the one action that writes.
 func (a *App) importPreviewStep(c *ui.Context, tk design.Tokens, msgs locales.Messages) {
 	preview := a.importPreview(c)
 	columns := []ui.TableColumn{{Title: msgs.ImportRowItem()}, {Title: msgs.ImportRowValue()}}
@@ -437,10 +448,22 @@ func (a *App) importPreviewStep(c *ui.Context, tk design.Tokens, msgs locales.Me
 			value.TextColor(tk.TextMuted)
 		}
 	}).Label(msgs.ImportStepPreview())
-	// The archive is a library of its own and rebuilds its index as it opens, so
-	// the two options below belong to the imports that write into this one.
-	if a.wizard.source != importFromArchive {
+	// An archive is a library of its own, and it always lands beside this one
+	// rather than in it: the options below belong to the imports that write into
+	// the library open.
+	switch a.wizard.source {
+	case importFromArchive:
+		ui.Text(c, msgs.ImportKeepArchive()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+	case importFromAnki:
+		ui.Text(c, msgs.ImportKeepAnki()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 		ui.Form(c, func() {
+			ui.Field(c, msgs.ImportRebuild(), func() { ui.Switch(c, &a.wizard.rebuild) })
+			ui.Field(c, msgs.ImportQueue(), func() { ui.Switch(c, &a.wizard.queue) })
+		})
+	default:
+		ui.Form(c, func() {
+			ui.Field(c, msgs.ImportKeep(), func() { ui.Switch(c, &a.wizard.keep) }).
+				Description(msgs.ImportKeepHint())
 			ui.Field(c, msgs.ImportRebuild(), func() { ui.Switch(c, &a.wizard.rebuild) })
 			ui.Field(c, msgs.ImportQueue(), func() { ui.Switch(c, &a.wizard.queue) })
 		})
@@ -471,7 +494,7 @@ func (a *App) importPreviewStep(c *ui.Context, tk design.Tokens, msgs locales.Me
 // importDoneStep is the third step: what the run wrote, and the one way out.
 func (a *App) importDoneStep(c *ui.Context, tk design.Tokens, msgs locales.Messages) {
 	written := a.wizard.written
-	sentence := msgs.ImportMdReport(written.notes, written.skipped)
+	sentence := msgs.ImportMdReport(written.notes, written.kept, written.skipped)
 	if a.wizard.source == importFromAnki {
 		sentence = msgs.ImportReport(written.notes, written.cards, written.reviews, written.skipped)
 	}

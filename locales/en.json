@@ -1414,13 +1414,17 @@
       }
     }
   },
-  "importMdReport": "Imported {notes} notes, skipped {skipped}.",
+  "importMdReport": "Imported {notes} notes, kept {kept}, skipped {skipped}.",
   "@importMdReport": {
-    "description": "What a Markdown import wrote.",
+    "description": "What a Markdown import wrote, how many existing notes it left as they were, and how many files said nothing new.",
     "placeholders": {
       "notes": {
         "type": "int",
         "example": "3"
+      },
+      "kept": {
+        "type": "int",
+        "example": "2"
       },
       "skipped": {
         "type": "int",
@@ -1488,15 +1492,15 @@
   },
   "exportCards": "A card CSV",
   "@exportCards": {
-    "description": "Export format: a card table as CSV, which this version does not write."
+    "description": "Export format: the card table as a CSV file for other tools."
   },
-  "exportCardsHint": "The card table as a spreadsheet.",
+  "exportCardsHint": "The card table as a spreadsheet, one row per card.",
   "@exportCardsHint": {
-    "description": "What the card CSV export would write, under its choice."
+    "description": "What the card CSV export writes, under its choice."
   },
-  "exportNoCSV": "Card CSV is not in 1.0. The card table waits for its own slice.",
-  "@exportNoCSV": {
-    "description": "Why the card CSV export is disabled, shown beside the choices."
+  "exportNoCards": "The library has no cards yet.",
+  "@exportNoCards": {
+    "description": "Why the card CSV export is disabled: the library holds no card to write."
   },
   "exportEmptyLibrary": "The library has no notes yet.",
   "@exportEmptyLibrary": {
@@ -1517,6 +1521,20 @@
       "name": {
         "type": "String",
         "example": "Remit.remitlib"
+      }
+    }
+  },
+  "exportCardsReport": "Wrote {name} with {rows} cards.",
+  "@exportCardsReport": {
+    "description": "What a card CSV export wrote: the file's name and how many rows it holds.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "cards.csv"
+      },
+      "rows": {
+        "type": "int",
+        "example": "412"
       }
     }
   },
@@ -1599,6 +1617,38 @@
   "importQueue": "Add the imported notes to the reading queue",
   "@importQueue": {
     "description": "An import option: queue the notes the import brought for reading."
+  },
+  "importKeep": "Keep existing notes",
+  "@importKeep": {
+    "description": "An import option: leave a note the library already holds as it is instead of writing the file over it."
+  },
+  "importKeepHint": "A note the library already holds is left as it is. Off, the file replaces that note.",
+  "@importKeepHint": {
+    "description": "What the keep-existing option does, under its switch."
+  },
+  "importKeepAnki": "Anki notes are matched by their GUID, and a note the library already holds is never overwritten.",
+  "@importKeepAnki": {
+    "description": "Why the keep-existing option does not apply to an Anki package."
+  },
+  "importKeepArchive": "An archive opens as a library of its own, so the notes here are kept as they are.",
+  "@importKeepArchive": {
+    "description": "Why the keep-existing option does not apply to a .remitlib archive."
+  },
+  "importRowExisting": "Existing notes",
+  "@importRowExisting": {
+    "description": "The import preview's row naming what the run does with notes the library already holds."
+  },
+  "importExistingKept": "Kept as they are",
+  "@importExistingKept": {
+    "description": "The preview's answer when existing notes are kept: the import writes nothing over them."
+  },
+  "importExistingOverwritten": "Replaced by the files",
+  "@importExistingOverwritten": {
+    "description": "The preview's answer when existing notes are written over: the files are the note's new saying."
+  },
+  "importExistingNotApplicable": "Not applicable",
+  "@importExistingNotApplicable": {
+    "description": "The preview's answer when the source cannot replace a note the library holds."
   },
   "importRowItem": "Item",
   "@importRowItem": {

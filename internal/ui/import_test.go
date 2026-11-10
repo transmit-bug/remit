@@ -213,6 +213,15 @@ func TestImportWizardWalksThreeSteps(t *testing.T) {
 			t.Errorf("the preview offers no %q option; texts %q", option, tt.Texts())
 		}
 	}
+	// An Anki note is matched by its GUID, so keeping existing notes is not a
+	// choice this source has: the step names the reason instead of a switch
+	// that would do nothing.
+	if !tt.HasText(msgs.ImportKeepAnki()) {
+		t.Errorf("the preview does not say why keeping is not a choice; texts %q", tt.Texts())
+	}
+	if _, ok := tt.AccessByRole(ui.RoleSwitch, msgs.ImportKeep()); ok {
+		t.Error("the Anki preview offers a keep switch the import cannot obey")
+	}
 
 	// The third step: the write, and what it wrote.
 	if err := tt.Click(msgs.ImportRun()); err != nil {
@@ -382,5 +391,42 @@ func TestImportWizardUnpacksAnArchive(t *testing.T) {
 	}
 	if !tt.HasText(msgs.ImportArchiveDone(shortPath(unpacked))) {
 		t.Errorf("the write is not reported; texts %q", tt.Texts())
+	}
+}
+
+// An archive never writes into the library open, so the wizard says so rather
+// than offering a choice the run cannot take.
+func TestImportWizardSaysAnArchiveKeepsTheLibrary(t *testing.T) {
+	msgs := locales.In("en")
+	source := t.TempDir()
+	seedLibrary(t, source)
+	backup := filepath.Join(t.TempDir(), "backup.remitlib")
+	file, err := os.Create(backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := transfer.Write(source, file); err != nil {
+		t.Fatalf("write the archive: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	seedLibrary(t, dir)
+	a := NewApp(Options{LibraryDir: dir, ChooseArchive: func() (string, error) { return backup, nil }})
+
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	wizardFromPalette(t, tt, msgs)
+	if err := tt.Click(msgs.ImportFromArchive()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !tt.HasText(msgs.ImportKeepArchive()) {
+		t.Errorf("the preview does not say the library here is kept; texts %q", tt.Texts())
+	}
+	if _, ok := tt.AccessByRole(ui.RoleSwitch, msgs.ImportKeep()); ok {
+		t.Error("the archive preview offers a keep switch the import cannot obey")
 	}
 }
