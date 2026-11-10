@@ -179,9 +179,6 @@ func shortPath(path string) string {
 	return path
 }
 
-// runImport writes what the source holds, through the importer that owns its
-// format, and moves to the page that reports it. A failure stays on the preview
-// with its reason: the dialog closes on a write, not on an error.
 // runImport starts the write. The importer runs off the frame — an Anki package
 // or a folder of Markdown takes long enough that the window has to keep
 // drawing — and the preview step shows an activity bar until the answer is
