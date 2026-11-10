@@ -26,7 +26,13 @@ import (
 // the notebook's excerpt filter read it instead of re-reading block text), the
 // cards table carries a due-date override the user set by hand, and the assets
 // table answers the assets page from the index.
-const schemaVersion = "12"
+//
+// 13: a card carries the note its block lives in, so the excerpt tree counts a
+// library's cards by note from an index instead of joining a hundred thousand
+// blocks, and the card page reads the note as a column instead of running a
+// correlated subquery per row. The indexes below let a page stop after its own
+// rows: cards by creation, notes by save.
+const schemaVersion = "13"
 
 // schema is the index. It holds nothing the text sources do not: every table
 // here can be dropped and rebuilt from notes, cards and reviews (ADR 0003). It
@@ -51,6 +57,11 @@ CREATE TABLE notes (
 	title   TEXT NOT NULL,
 	updated INTEGER NOT NULL DEFAULT 0
 );
+-- The notebook's two date orders, so a page reads its own rows and stops: the
+-- list opens newest save first, and the other order asks for oldest first. One
+-- index satisfies one direction only, and the table is small beside blocks.
+CREATE INDEX notes_updated ON notes (updated DESC, id);
+CREATE INDEX notes_created ON notes (updated, id);
 CREATE TABLE blocks (
 	note_id  TEXT NOT NULL,
 	position INTEGER NOT NULL,
@@ -58,7 +69,9 @@ CREATE TABLE blocks (
 	text     TEXT NOT NULL,
 	PRIMARY KEY (note_id, position)
 );
-CREATE INDEX blocks_id ON blocks (id);
+-- The note and the position ride along so a block ID resolves to the note that
+-- holds it as an index-only range read, in the tie-break order callers ask for.
+CREATE INDEX blocks_id ON blocks (id, note_id, position);
 CREATE TABLE cards (
 	id          TEXT PRIMARY KEY,
 	block_id    TEXT NOT NULL,
@@ -76,6 +89,11 @@ CREATE TABLE cards (
 	fields      TEXT NOT NULL DEFAULT '{}',
 	fields_text TEXT NOT NULL DEFAULT '',
 	ordinal     INTEGER NOT NULL DEFAULT 0,
+	-- note_id is the note the card's block lives in, resolved with the tie-break
+	-- NoteOfBlock uses and emptied when no note holds the block any more. It is
+	-- kept where live is (putCard and resolveBlocks), so a card's source and its
+	-- note never disagree.
+	note_id     TEXT NOT NULL DEFAULT '',
 	-- due and due_set are a due date the user set by hand, and when they set it:
 	-- the one schedule fact a card file carries, because a review log cannot
 	-- name a card's postponed date without a new event kind (see bulk.go).
@@ -83,6 +101,11 @@ CREATE TABLE cards (
 	due_set     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX cards_block ON cards (block_id);
+-- The card table's default order, so its page reads its own rows and stops.
+CREATE INDEX cards_created ON cards (created, id);
+-- Counting a library's cards per note, which the excerpt tree does for every
+-- note it draws.
+CREATE INDEX cards_note ON cards (note_id);
 CREATE TABLE links (
 	note_id   TEXT NOT NULL,
 	block_id  TEXT NOT NULL,
@@ -503,6 +526,13 @@ const cardIntervalDays = `(CASE
 // fromCards joins the schedule a card's log gives it, if it has one.
 const fromCards = ` FROM cards c LEFT JOIN card_state s ON s.card_id = c.id`
 
+// cardNoteOfBlock is the note a card's block lives in, resolved as the card is
+// written so the excerpt tree counts cards by note from an index and a card page
+// reads its note as a column. A block in two notes — a copied file — resolves to
+// the one NoteOfBlock names, and a block no note holds resolves to none.
+const cardNoteOfBlock = `COALESCE((SELECT b.note_id FROM blocks b WHERE b.id = ?
+	ORDER BY b.note_id, b.position LIMIT 1), '')`
+
 func putCard(e execer, row cardRow) error {
 	frozen, frozenText, frozenAt := 0, "", int64(0)
 	if row.card.Ref.Frozen != nil {
@@ -529,12 +559,12 @@ func putCard(e execer, row cardRow) error {
 	_, err = e.Exec(
 		`INSERT OR REPLACE INTO cards
 		 (id, block_id, status, stored, created, frozen, frozen_text, frozen_at, live,
-		  type, producer_id, producer_version, edited, fields, fields_text, ordinal, due, due_set)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		  type, producer_id, producer_version, edited, fields, fields_text, ordinal, note_id, due, due_set)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, `+cardNoteOfBlock+`, ?, ?)`,
 		string(row.card.ID), string(row.card.Ref.Block), row.card.Status.String(), row.stored.String(),
 		row.created.UnixNano(), frozen, frozenText, frozenAt, live,
 		string(row.card.Type), row.card.Producer.ID, row.card.Producer.Version, edited, string(fields),
-		cardFieldsText(row.card.Fields), row.card.Ordinal, due, dueSet)
+		cardFieldsText(row.card.Fields), row.card.Ordinal, string(row.card.Ref.Block), due, dueSet)
 	return err
 }
 
@@ -569,7 +599,9 @@ func deleteCard(e execer, card core.ID) error {
 }
 
 // resolveBlocks re-derives whether the cards rendering from the given blocks
-// still have a source: a note save can add, move or delete them all at once.
+// still have a source, and which note that source lives in: a note save can
+// add, move or delete them all at once. The two travel together because they
+// are the same question — which note holds this card's block — asked now.
 func resolveBlocks(e execer, blocks []core.ID) error {
 	if len(blocks) == 0 {
 		return nil
@@ -580,7 +612,9 @@ func resolveBlocks(e execer, blocks []core.ID) error {
 			SET live = CASE
 				WHEN frozen = 1 THEN 1
 				WHEN EXISTS (SELECT 1 FROM blocks b WHERE b.id = cards.block_id) THEN 1
-				ELSE 0 END
+				ELSE 0 END,
+			note_id = COALESCE((SELECT b.note_id FROM blocks b WHERE b.id = cards.block_id
+				ORDER BY b.note_id, b.position LIMIT 1), '')
 			WHERE block_id = ?`, string(block))
 		if err != nil {
 			return err

@@ -241,7 +241,9 @@ func (x *index) noteTitles() (map[core.ID]string, map[core.ID]int, error) {
 		return nil, nil, err
 	}
 
-	rows, err = x.db.Query(`SELECT b.note_id, COUNT(c.id) FROM blocks b JOIN cards c ON c.block_id = b.id GROUP BY b.note_id`)
+	// The cards a tree node carries, by the note each one resolved to: one walk
+	// of the index, not a join of every block in the library.
+	rows, err = x.db.Query(`SELECT note_id, COUNT(*) FROM cards WHERE note_id <> '' GROUP BY note_id`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("store: note cards query: %w", err)
 	}
