@@ -10,6 +10,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
@@ -254,6 +255,10 @@ func TestGutterBadgeSaysWhenACardStoppedFollowing(t *testing.T) {
 	notesMode(t, a, tt)
 	// The seeded library froze "Writing cards"' first card at old words.
 	openNote(t, tt, "Writing cards")
+	// A note opens with the caret at its end, and the gutter is drawn beside the
+	// paragraphs on screen, so the first paragraph is brought into view: how many
+	// lines a font gives the note must not decide whether its badge exists.
+	a.notes.Doc.SetSelection(0, 0)
 	tt.Frame()
 
 	if !tt.HasText("!1") {
@@ -269,5 +274,37 @@ func TestGutterBadgeSaysWhenACardStoppedFollowing(t *testing.T) {
 	}
 	if badge.X >= body.X {
 		t.Errorf("the badge at %v is not in the paper's gutter, left of the writing at %v", badge.X, body.X)
+	}
+}
+
+// A review rewrites what the window reads: the card's lifecycle comes from the
+// log and the window retakes its snapshot from the index. The frozen card keeps
+// its snapshot through that, so its paragraph still says it stopped following.
+func TestTheFrozenBadgeSurvivesAReview(t *testing.T) {
+	a, seed, tt := openApp(t)
+	notesMode(t, a, tt)
+	openNote(t, tt, "Writing cards")
+	a.notes.Doc.SetSelection(0, 0)
+	tt.Frame()
+
+	if err := a.Library().Review(seed.frozen.ID, schedule.Good, time.Now()); err != nil {
+		t.Fatalf("review the frozen card: %v", err)
+	}
+	a.reload()
+	a.notes.Doc.SetSelection(0, 0)
+	tt.Frame()
+
+	if !tt.HasText("!1") {
+		t.Fatalf("the review took the frozen badge away; texts %q", tt.Texts())
+	}
+	// The window's own snapshot comes from the index, not from the card file.
+	var snapshot *core.Snapshot
+	for _, card := range a.data.cards {
+		if card.ID == seed.frozen.ID {
+			snapshot = card.Ref.Frozen
+		}
+	}
+	if snapshot == nil || snapshot.Text != "A good card asks :: one question at a time." {
+		t.Fatalf("the window's snapshot of the frozen card is %+v, want the words it was frozen at", snapshot)
 	}
 }
