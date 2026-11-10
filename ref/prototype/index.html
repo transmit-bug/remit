@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Remit · 功能原型</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app" id="app" data-rail="full" data-screen="app">
+  <aside class="rail" aria-label="主导航">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><span></span></span>
+      <span class="brand-name">Remit</span>
+    </div>
+    <div class="rail-scroll">
+      <nav class="rail-nav" id="rail-nav"></nav>
+    </div>
+    <div class="rail-foot" id="rail-foot"></div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="rail-toggle" type="button" aria-label="收起或展开导航"></button>
+      <div class="crumb" id="crumb"></div>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </header>
+    <nav class="subnav" id="subnav" aria-label="分区导航"></nav>
+    <main class="stage" id="stage" tabindex="-1"></main>
+    <footer class="statusbar" id="statusbar" hidden></footer>
+  </div>
+</div>
+
+<section class="session" id="session" hidden aria-label="会话"></section>
+
+<dialog id="palette" class="palette" aria-label="搜索与命令">
+  <div class="palette-head">
+    <span class="palette-icon" id="palette-icon"></span>
+    <input id="palette-input" class="palette-input" type="text" autocomplete="off" spellcheck="false"
+           placeholder="搜索笔记、卡片，或输入命令" aria-label="搜索或输入命令">
+    <span class="kbd">Esc</span>
+  </div>
+  <ul class="palette-list" id="palette-list" role="listbox" aria-label="结果"></ul>
+  <div class="palette-foot">
+    <span><span class="kbd">↑↓</span> 选择</span>
+    <span><span class="kbd">↵</span> 打开</span>
+    <span><span class="kbd">⌘K</span> 切换</span>
+  </div>
+</dialog>
+
+<dialog id="modal" class="modal" aria-label="对话框"></dialog>
+
+<div class="menu" id="menu" hidden role="menu"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
