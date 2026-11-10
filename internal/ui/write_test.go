@@ -13,9 +13,9 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// writePage opens one of the write area's pages by its tab: the notebook is
-// where the area's key lands, and its list and the five pages beside it are one
-// click away in the sub-navigation.
+// writePage opens one of the write area's pages by its tab: the notes page is
+// where the area's key lands, and the five pages beside it are one click away in
+// the sub-navigation.
 func writePage(t *testing.T, tt *ui.Tester, page string) {
 	t.Helper()
 	tt.Key(ui.Cmd, ui.Key2)
@@ -433,10 +433,10 @@ func TestTemplateStartsANoteWithoutTheMarker(t *testing.T) {
 		a.notes.Draft.Blocks[0].Text != "Chapter asks :: chapter answers" {
 		t.Fatalf("the copy lost the template's text: %+v", a.notes.Draft.Blocks)
 	}
-	// The copy is the note the notebook shows, and the template is still a
+	// The copy is the note the document shows, and the template is still a
 	// template.
-	if !tt.HasText("Untitled note") {
-		t.Errorf("the copy is not the note on screen; texts %q", tt.Texts())
+	if field, ok := tt.Access(msgs.NoteTitle()); !ok || field.Value != "Untitled note" {
+		t.Errorf("the copy is not the note on screen: the title reads %q; texts %q", field.Value, tt.Texts())
 	}
 	if _, ok := a.data.note(templateID); !ok {
 		t.Error("the template is gone after starting a note from it")

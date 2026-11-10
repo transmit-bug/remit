@@ -114,6 +114,7 @@ func TestTheExamplePluginsCommandsRun(t *testing.T) {
 	tt := exampleContributionApp(t, "")
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
+	openNote(t, tt, "Memory and recall")
 
 	if err := tt.Click("More"); err != nil {
 		t.Fatalf("the window's overflow menu: %v", err)
@@ -184,8 +185,9 @@ func TestAMenuItemsWhenDecidesWhereItShows(t *testing.T) {
 	}
 	tt.CloseMenu()
 
-	tt.Key(ui.Cmd, ui.Key2) // notes: a note is open, so its slot item shows
+	tt.Key(ui.Cmd, ui.Key2) // notes
 	tt.Advance(320 * time.Millisecond)
+	openNote(t, tt, "Memory and recall") // a note is open, so its slot item shows
 	if err := tt.Click("More"); err != nil {
 		t.Fatalf("the window's overflow menu: %v", err)
 	}

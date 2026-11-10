@@ -168,10 +168,11 @@ func displaySize(tk design.Tokens, w float32) float32 {
 	return tk.TypeDisplay
 }
 
-// paperGutter is the room beside the paper's text: the paper's own gutter, the
-// narrow one on a small window, where the notes column has already taken its
-// share and a 48 DIP margin would leave the paragraph a handful of words. Only
-// reading tightens it: the writing mode hangs the block handles in its margin.
+// paperGutter is the room beside the paper's text: the paper's own gutter, or
+// the narrow one on a window at BreakpointSmall or below, where a 48 DIP margin
+// would leave the paragraph a handful of words. The writing keeps it too: at that
+// width its block handles have left the margin for a row above the text, so the
+// margin has nothing to hold.
 func paperGutter(tk design.Tokens, w float32) float32 {
 	if w <= design.BreakpointSmall {
 		return tk.GutterNarrow

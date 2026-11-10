@@ -437,9 +437,13 @@ func TestZhHansAtMinimum(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
-	for _, label := range []string{"笔记", "搜索", "笔记本", "笔记标题"} {
+	for _, label := range []string{"笔记", "搜索", "新建笔记"} {
 		assertControl(t, tt, 720, 520, label)
 	}
+	// A note opens from the list into the document, whose title is the paper's
+	// first control.
+	openNote(t, tt, "Memory and recall")
+	assertControl(t, tt, 720, 520, "笔记标题")
 
 	cardsPage(t, tt, "zh-Hans")
 	for _, label := range []string{"卡片", "语法", "筛选", "提示", "到期"} {

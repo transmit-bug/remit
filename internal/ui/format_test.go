@@ -17,7 +17,9 @@ import (
 // buttons with a bool would not.
 func TestFormatBarBoldsTheSelection(t *testing.T) {
 	msgs := locales.In("en")
-	a, tt, _ := headedNote(t, 1024, 720)
+	// Wide enough for the panel beside the paper: the writing view is the one
+	// that holds it.
+	a, tt, _ := headedNote(t, 1440, 900)
 
 	if err := tt.Click(msgs.NoteBody()); err != nil {
 		t.Fatalf("the document is not typeable: %v", err)
@@ -41,13 +43,13 @@ func TestFormatBarBoldsTheSelection(t *testing.T) {
 	}
 }
 
-// The notebook shows the note written in, written beside the same note as it
+// The document shows the note written in, written beside the same note as it
 // reads, or read whole — one switch, three panes.
 func TestViewModesSwitchPanes(t *testing.T) {
 	msgs := locales.In("en")
-	a, tt, _ := headedNote(t, 1024, 720)
-	tt.Key(ui.Cmd, ui.Key2)
-	tt.Frame()
+	// Wide enough for the panel beside the paper: the writing view is the one
+	// that holds it.
+	a, tt, _ := headedNote(t, 1440, 900)
 
 	if err := tt.Click(msgs.ViewRead()); err != nil {
 		t.Fatalf("the view switch has no reading mode: %v", err)
@@ -99,6 +101,6 @@ func TestViewModesSwitchPanes(t *testing.T) {
 		t.Errorf("the note's panel did not come back; texts %q", tt.Texts())
 	}
 	if a.notes.View != notes.Edit {
-		t.Errorf("the notebook is in view %v, want writing", a.notes.View)
+		t.Errorf("the document is in view %v, want writing", a.notes.View)
 	}
 }

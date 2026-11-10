@@ -1,9 +1,13 @@
-// Package notes is the write area: the notebook — the notes list, the note
-// written in, read beside its own source or read whole, and the panel beside it
-// — and the five pages beside the notebook that answer what the library holds:
-// the notes list with its search, filters and order (S05), the search over notes
-// and cards (S06), the tags (S07), the assets (S08), the templates (S09) and the
-// excerpt tree (S10).
+// Package notes is the write area: the document — the note written in, read
+// beside its own source or read whole, with the metrics of its blocks in the
+// gutter and its panel beside it — and the five pages that answer what the
+// library holds: the notes list with its search, filters and order (S05), the
+// search over notes and cards (S06), the tags (S07), the assets (S08), the
+// templates (S09) and the excerpt tree (S10).
+//
+// The document is the paper and the panel, nothing else: the notes list is its
+// own page, and a note opens from it into the document, which the sub-navigation
+// leaves for the breadcrumb to leave (S11–S13).
 //
 // Every one of them reads its rows through Deps and reports what the user chose;
 // the app derives the rows from the store, so a frame asks it for nothing.
@@ -44,12 +48,11 @@ const (
 	Read
 )
 
-// Note is one note as the notebook lists it: the note itself, how many cards it
-// feeds, and the tags it carries.
+// Note is one note as the document holds it: the note itself and how many cards
+// it feeds.
 type Note struct {
 	core.Note
 	Cards int
-	Tags  []string
 }
 
 // Backlink is a note that points at the note open now, the paragraph that
@@ -172,8 +175,6 @@ type State struct {
 	Draft core.Note
 	// Loaded is the note the draft holds.
 	Loaded string
-	// Width is the notes column, as the divider left it.
-	Width float32
 	// View is how the note shows: written in, beside its source, or read whole.
 	View ViewMode
 	// FindOpen is the in-document find bar.
@@ -211,57 +212,59 @@ type State struct {
 	search       ui.Handle         // the search page's field, for a link or ⌘F
 	treeOpen     map[core.ID]*bool // which excerpt-tree nodes are open
 
-	docNote       core.ID // the note the document holds
-	docText       string  // the text the document was last built from
-	deps          *Deps   // the screen's seams, for work a build pass hands to the next
-	title         ui.Handle
-	body          ui.Handle
-	linkOpen      bool    // the popover a link's address is typed in is up
-	linkURL       string  // what that popover holds
-	findQuery     string  // what the find bar looks for
-	findCurrent   int     // which match is shown
-	findJumped    string  // the query the selection was last put on
-	saveFailed    bool    // the last write did not reach the store
-	jumpTo        int     // a paragraph of the note to put the caret in, 1-based; 0 for none
-	focus         bool    // the title takes the caret in the next pass
-	readShare     float32 // the document's percentage when written beside its source
-	panel         panelMode
-	panelTab      PanelTab
-	panelFocus    ui.Handle            // the panel itself, which takes the focus as it opens
-	panelWant     bool                 // the panel was just asked for: it takes the focus next pass
-	backlinks     ui.ListState         // the panel's backlink rows
-	backlinkChose int                  // the backlink row chosen, -1 for none
-	outline       ui.OutlineState[int] // the note's headings, as the panel lists them
-	outlineChosen int                  // the row the user chose in the outline, -1 for none
-	outlineFor    core.ID              // the note the outline was opened for
-	outlineShape  int                  // how many headings that note had
-	pendingJump   int                  // where a panel row asks the caret to go, -1 for none
-	blockHover    int                  // the visible paragraph under the pointer, -1 for none
-	selectOpen    bool                 // the selection's action bar is up
-	selectRange   [2]int               // the selection the bar acts on
-	selectBlock   core.ID              // the paragraph that selection is in
-	selectSkipped [2]int               // the selection whose bar was dismissed
-	inspect       *Inspector           // the paragraph the block inspector shows, nil while closed
-	inspectOpen   bool                 // the block inspector dialog is up
-	readBlock     int                  // the paragraph read mode is on, -1 before one is chosen
-	blockMenus    map[int]bool         // the visible paragraphs whose block menu is open
-	blockDelete   int                  // the paragraph a delete awaits confirmation for, -1 for none
-	blockLost     int                  // the cards that delete would leave without a source
-	renameNote    core.ID              // the note a rename is typed for, "" for none
-	renameText    string               // the title the rename holds
-	renameField   ui.Handle            // the field the rename types in
-	deleteNote    core.ID              // the note a delete awaits confirmation for, "" for none
-	deleteCards   int                  // the cards that delete would leave without a source
-	slashOpen     bool                 // the block insertion menu is up
-	slashSeen     bool                 // the current slash query already opened its menu
-	slashQuery    string               // what filters the slash menu
-	slashStart    int                  // where the slash query starts in the document
-	slashEnd      int                  // where it ends, at the caret that chose a command
-	slashChoice   int                  // the chosen slash command, -1 until one is taken
-	slashTake     bool                 // Enter or a click took the chosen command
-	slashMatches  []slashCommand       // the commands the query leaves
-	tables        map[string]string    // table source by the attachment reference that stands for it
-	tableWord     string               // the localized name a table placeholder shows
+	docNote        core.ID // the note the document holds
+	docText        string  // the text the document was last built from
+	deps           *Deps   // the screen's seams, for work a build pass hands to the next
+	title          ui.Handle
+	body           ui.Handle
+	linkOpen       bool    // the popover a link's address is typed in is up
+	linkURL        string  // what that popover holds
+	findQuery      string  // what the find bar looks for
+	findCurrent    int     // which match is shown
+	findJumped     string  // the query the selection was last put on
+	saveFailed     bool    // the last write did not reach the store
+	jumpTo         int     // a paragraph of the note to put the caret in, 1-based; 0 for none
+	focus          bool    // the title takes the caret in the next pass
+	readShare      float32 // the document's percentage when written beside its source
+	panel          panelMode
+	panelTab       PanelTab
+	panelFocus     ui.Handle            // the panel itself, which takes the focus as it opens
+	panelWant      bool                 // the panel was just asked for: it takes the focus next pass
+	backlinks      ui.ListState         // the panel's backlink rows
+	backlinkChose  int                  // the backlink row chosen, -1 for none
+	outline        ui.OutlineState[int] // the note's headings, as the panel lists them
+	outlineChosen  int                  // the row the user chose in the outline, -1 for none
+	outlineFor     core.ID              // the note the outline was opened for
+	outlineShape   int                  // how many headings that note had
+	pendingJump    int                  // where a panel row asks the caret to go, -1 for none
+	blockHover     int                  // the visible paragraph under the pointer, -1 for none
+	selectOpen     bool                 // the selection's action bar is up
+	selectRange    [2]int               // the selection the bar acts on
+	selectBlock    core.ID              // the paragraph that selection is in
+	selectSkipped  [2]int               // the selection whose bar was dismissed
+	inspect        *Inspector           // the paragraph the block inspector shows, nil while closed
+	inspectOpen    bool                 // the block inspector dialog is up
+	readBlock      int                  // the paragraph read mode is on, -1 before one is chosen
+	blockMenus     map[int]bool         // the visible paragraphs whose block menu is open
+	blockRowHandle ui.Handle            // the compact block row, whose place the menu reads
+	blockRowDrawn  bool                 // the compact row was built this pass
+	blockDelete    int                  // the paragraph a delete awaits confirmation for, -1 for none
+	blockLost      int                  // the cards that delete would leave without a source
+	renameNote     core.ID              // the note a rename is typed for, "" for none
+	renameText     string               // the title the rename holds
+	renameField    ui.Handle            // the field the rename types in
+	deleteNote     core.ID              // the note a delete awaits confirmation for, "" for none
+	deleteCards    int                  // the cards that delete would leave without a source
+	slashOpen      bool                 // the block insertion menu is up
+	slashSeen      bool                 // the current slash query already opened its menu
+	slashQuery     string               // what filters the slash menu
+	slashStart     int                  // where the slash query starts in the document
+	slashEnd       int                  // where it ends, at the caret that chose a command
+	slashChoice    int                  // the chosen slash command, -1 until one is taken
+	slashTake      bool                 // Enter or a click took the chosen command
+	slashMatches   []slashCommand       // the commands the query leaves
+	tables         map[string]string    // table source by the attachment reference that stands for it
+	tableWord      string               // the localized name a table placeholder shows
 }
 
 // FocusSearch puts the caret in the search page's field. A link from outside
@@ -276,7 +279,6 @@ func (s *State) ClearFilters() { s.Query, s.TagFilter, s.Filter = "", "", Filter
 // with.
 func New() State {
 	return State{
-		Width:          design.NotesColumnWidth,
 		readShare:      defaultReadShare,
 		outlineChosen:  -1,
 		backlinkChose:  -1,
@@ -295,8 +297,12 @@ func New() State {
 type Deps struct {
 	// Notes are the library's notes, newest first, as the list shows them.
 	Notes func() []Note
-	// Tags counts how many notes carry each tag: the filter row's chips.
-	Tags func() map[string]int
+	// Stage is the room the document has this frame: the window less the rail
+	// the frame keeps beside the stage. The panel rule is computed from it, so
+	// the paper never gives up its measure to keep a second column. Nil means
+	// the screen was handed the whole window, as a document drawn without a
+	// frame is.
+	Stage func() float32
 	// Backlinks are the notes that point at the note open now.
 	Backlinks func() []Backlink
 	// Cards lists the note's card-bearing paragraphs, as the block menu's
@@ -410,35 +416,33 @@ type Deps struct {
 	OpenCard func(core.ID)
 }
 
-// View draws the notebook: the notes on the left, and on the right the note
-// written in, read beside its own source, or read whole. The notes column is a
-// split's pane, so its width is the user's and a double click puts it back;
-// the panel is the note's second column, and a window too narrow for both
-// shows it floating over the paper instead.
+// View draws the document: the paper, and beside it the panel when the stage
+// has room — the outline or the notes that point at the note. The stage holds
+// nothing else: the notes list is a page of its own (S05), and the panel is a
+// column only when the paper keeps its measure beside it, floating over the
+// paper on a stage too narrow for both.
 func View(c *ui.Context, s *State, d Deps) {
 	tk := design.NewTokens(c.Theme())
 	s.deps = &d
+	s.blockRowDrawn = false
 	w, _ := c.Size()
-	ui.Split(c, &s.Width, func() {
-		s.notesList(c, tk, d)
-	}, func() {
-		ui.Column(c).Grow(1).MinWidth(0).Children(func() {
-			switch s.View {
-			case Read:
-				s.readView(c, tk, d)
-			case Split:
-				// The note written beside the same note read: half the room each,
-				// so two places can be compared.
-				ui.SplitPercent(c, &s.readShare, func() {
-					s.editorView(c, tk, d)
-				}, func() {
-					s.secondPane(c, tk, d)
-				}).SplitReset(defaultReadShare).Fill()
-			default:
-				s.writeArea(c, tk, d, w)
-			}
-		})
-	}).SplitReset(design.NotesColumnWidth).Fill()
+	stage := stageOf(d, w)
+	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
+		switch s.View {
+		case Read:
+			s.readView(c, tk, d)
+		case Split:
+			// The note written beside the same note read: half the room each,
+			// so two places can be compared.
+			ui.SplitPercent(c, &s.readShare, func() {
+				s.editorView(c, tk, d)
+			}, func() {
+				s.secondPane(c, tk, d)
+			}).SplitReset(defaultReadShare).Fill()
+		default:
+			s.writeArea(c, tk, d, stage)
+		}
+	})
 
 	// A row chosen in the panel moves the caret after the pass: the editor above
 	// keeps its own view state, and a jump made inside the build is written back
@@ -451,25 +455,41 @@ func View(c *ui.Context, s *State, d Deps) {
 	s.inspectorView(c, tk, d)
 }
 
-// writeArea is the note written in, with its panel beside it when the window
-// has room for both. The panel is a column of its own at PanelWidth, giving
-// way to the paper's floor rather than squeezing the writing out; a window too
-// narrow for the two shows it floating over the paper, which is the same panel
-// with the same rows (S21/S22).
-func (s *State) writeArea(c *ui.Context, tk design.Tokens, d Deps, w float32) {
-	if !s.panelShown(w) {
+// stageOf is the room the document was given: the stage the frame reports, and
+// the window's own width for a screen drawn without a frame around it.
+func stageOf(d Deps, w float32) float32 {
+	if d.Stage != nil {
+		return d.Stage()
+	}
+	return w
+}
+
+// panelFits reports whether a stage this wide holds the paper at its measure and
+// the panel beside it, each keeping the room beside the text. It is computed
+// from the room, not from a breakpoint: the paper is what the user writes in, so
+// it never narrows to make room for a panel that could float over it instead.
+func panelFits(tk design.Tokens, stage float32) bool {
+	return stage >= tk.PaperWidth+tk.PanelWidth+2*tk.Gutter
+}
+
+// writeArea is the note written in, with its panel beside it when the stage has
+// room for both. The panel is a column of its own at PanelWidth only while the
+// paper keeps its measure and its gutters beside it; a narrower stage shows it
+// floating over the paper, the same rows drawn by the same panelBody (S21/S22).
+func (s *State) writeArea(c *ui.Context, tk design.Tokens, d Deps, stage float32) {
+	fits := panelFits(tk, stage)
+	if !s.panelShown(fits) {
 		s.editorView(c, tk, d)
 		return
 	}
-	if w <= design.BreakpointNarrow {
+	if !fits {
 		s.editorView(c, tk, d)
 		s.panelOverlay(c, tk, d)
 		return
 	}
 	// The panel is a column of its own at the design's width, so its rows — the
-	// tabs and the close — fit at every window it shows in; the paper takes the
-	// rest and the notes column, which is a split, is how a narrow window gives
-	// the writing more room.
+	// tabs and the close — fit at every stage it shows in; the paper takes the
+	// rest of the row, centred at its own measure.
 	ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Stretch).Children(func() {
 		s.editorView(c, tk, d)
 		ui.Divider(c).Shrink(0).AlignSelf(ui.Stretch)
@@ -477,10 +497,11 @@ func (s *State) writeArea(c *ui.Context, tk design.Tokens, d Deps, w float32) {
 	})
 }
 
-// panelOverlay shows the note's panel over the paper on a window too narrow for
+// panelOverlay shows the note's panel over the paper on a stage too narrow for
 // a second column: a drawer at the window's edge, dismissed with Escape or a
 // press beside it. The focus goes into it as it opens and back to the top bar's
-// button as it closes.
+// button as it closes. It is the same panelBody the column draws, so the two
+// places the panel can be are one panel.
 func (s *State) panelOverlay(c *ui.Context, tk design.Tokens, d Deps) {
 	msgs := locales.In(c.Locale())
 	ui.Overlay(c, func() {
@@ -488,11 +509,16 @@ func (s *State) panelOverlay(c *ui.Context, tk design.Tokens, d Deps) {
 			Justify(ui.End).Background(tk.Scrim).Modal()
 		back.Children(func() {
 			panel := ui.Column(c).Width(tk.PanelWidth).FillHeight().Shrink(0).
-				Background(tk.Surface).Role(ui.RoleDialog).Label(msgs.PanelTitle())
+				Background(tk.Surface).BorderWidth(0, 0, 0, tk.Hairline).
+				BorderColor(tk.Border).Role(ui.RoleDialog).Label(msgs.PanelTitle())
+			panel.Children(func() { s.panelBody(c, tk, d) })
+			// The drawer takes the window's keyboard while it shows, so the key
+			// that opened it is declared again on the panel itself: the same key
+			// closes what it opened.
+			panel.OnShortcut(ui.Cmd|ui.Shift, ui.KeyP, func() { s.closePanel(c) })
 			if panel.PressedOutside() || back.OverlayShortcut(0, ui.KeyEscape) {
 				s.closePanel(c)
 			}
-			s.panelBody(c, tk, d)
 		})
 	})
 }
@@ -649,26 +675,26 @@ func (s *State) paragraphAt(offset int) int {
 	return max(0, index-1)
 }
 
-// panelShown reports whether the note's panel shows this frame: a column on a
-// window wide enough for the paper and the panel, and the same panel floating
-// over the paper below that. A narrow window closes it until the user asks for
-// it, so the writing starts with the room the whole window gives.
-func (s *State) panelShown(w float32) bool {
+// panelShown reports whether the note's panel shows this frame: when the user
+// asked for it, or — unless they closed it — when the stage has room for the
+// paper and the panel side by side. A stage too narrow opens it as an overlay
+// when it is asked for, so the paper keeps its measure either way.
+func (s *State) panelShown(fits bool) bool {
 	switch s.panel {
 	case panelOpen:
 		return true
 	case panelClosed:
 		return false
 	}
-	return w > design.BreakpointNarrow
+	return fits
 }
 
-// TogglePanel opens or closes the note's panel, whatever the window's width.
-// The panel takes the focus as it opens; closing it gives the focus back to the
-// top bar's button, which is what opened it from the keyboard.
-func (s *State) TogglePanel(c *ui.Context) {
-	w, _ := c.Size()
-	if s.panelShown(w) {
+// TogglePanel opens or closes the note's panel, wherever the stage puts it: a
+// column when it fits, an overlay over the paper when it does not. The panel
+// takes the focus as it opens; closing it gives the focus back to the top bar's
+// button, which is what opened it from the keyboard.
+func (s *State) TogglePanel(c *ui.Context, tk design.Tokens, stage float32) {
+	if s.panelShown(panelFits(tk, stage)) {
 		s.closePanel(c)
 		return
 	}
@@ -689,6 +715,8 @@ func (s *State) ShowPanel(tab PanelTab) { s.panel, s.panelTab, s.panelWant = pan
 // a note just written wants.
 func (s *State) FocusTitle() { s.focus = true }
 
-// PanelVisible reports whether the note's panel shows in a window this wide, so
+// PanelVisible reports whether the note's panel shows on a stage this wide, so
 // the top bar's button can say so.
-func (s *State) PanelVisible(w float32) bool { return s.panelShown(w) }
+func (s *State) PanelVisible(tk design.Tokens, stage float32) bool {
+	return s.panelShown(panelFits(tk, stage))
+}

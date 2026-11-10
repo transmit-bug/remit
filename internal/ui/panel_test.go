@@ -35,7 +35,7 @@ func headedNote(t *testing.T, w, h int) (*App, *ui.Tester, core.Note) {
 // Choosing an outline entry puts the caret on that paragraph, which is what
 // scrolls it into view.
 func TestOutlineJumpsToItsParagraph(t *testing.T) {
-	a, tt, _ := headedNote(t, 1024, 720)
+	a, tt, _ := headedNote(t, 1440, 900)
 
 	if err := tt.Click("The second part"); err != nil {
 		t.Fatalf("the outline does not offer the heading: %v", err)
@@ -52,7 +52,7 @@ func TestOutlineJumpsToItsParagraph(t *testing.T) {
 // The outline marks the heading the caret is under, so a long note says where
 // the writer is. A hand-built list of buttons had no current row at all.
 func TestOutlineFollowsTheCaret(t *testing.T) {
-	a, tt, _ := headedNote(t, 1024, 720)
+	a, tt, _ := headedNote(t, 1440, 900)
 
 	// The editor opens with the caret at the end, under the second heading.
 	if got := a.notes.OutlineCurrent; got != 1 {
@@ -79,8 +79,9 @@ func TestBacklinkOpensTheSourceAtItsParagraph(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Back to the headed note, and to its backlinks.
-	openNote(t, tt, "Headed")
 	a.reload()
+	notesMode(t, a, tt)
+	openNote(t, tt, "Headed")
 	tt.Key(ui.Cmd|ui.Shift, ui.KeyB)
 
 	label := msgs.BacklinkAt("Habits", 2)
@@ -103,7 +104,7 @@ func TestBacklinkOpensTheSourceAtItsParagraph(t *testing.T) {
 // The panel scrolls on its own: the carets and the document stay where they
 // were, and the rows it holds are inside its own scroll region.
 func TestPanelScrollsOnItsOwn(t *testing.T) {
-	a, tt, _ := headedNote(t, 1024, 720)
+	a, tt, _ := headedNote(t, 1440, 900)
 
 	_, caretBefore := a.notes.Doc.Selection()
 	before, ok := tt.Find("Note") // the document's own box

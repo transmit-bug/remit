@@ -21,10 +21,12 @@ func TestDailyNoteOpensToday(t *testing.T) {
 	tt.Key(ui.Cmd, ui.KeyD)
 	tt.Advance(320 * time.Millisecond)
 	if a.mode != modeNotes {
-		t.Fatalf("⌘D left the notebook for %v", a.mode)
+		t.Fatalf("⌘D left the document for %v", a.mode)
 	}
-	if !tt.HasText(today) {
-		t.Fatalf("today's note is not on screen; texts %q", tt.Texts())
+	// The paper's title field holds the note's name: the day is the name today's
+	// note has.
+	if field, ok := tt.Access("Note title"); !ok || field.Value != today {
+		t.Fatalf("today's note is not on the paper: the title reads %q; texts %q", field.Value, tt.Texts())
 	}
 	note, ok := a.Library().Note(core.ID(a.notes.Loaded))
 	if !ok || note.Title != today {

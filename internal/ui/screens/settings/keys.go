@@ -56,6 +56,7 @@ func shortcutMap(msgs locales.Messages) []keyGroup {
 			{msgs.SettingsKeysEditCard(), [][]string{{"E"}}},
 		}},
 		{name: msgs.SettingsKeysDocument(), rows: []keyRow{
+			{msgs.SettingsKeysPanel(), [][]string{{cmd, shift, "P"}}},
 			{msgs.SettingsKeysOutline(), [][]string{{cmd, shift, "O"}}},
 			{msgs.SettingsKeysBacklinks(), [][]string{{cmd, shift, "B"}}},
 		}},

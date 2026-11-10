@@ -114,14 +114,17 @@ func TestSelectionBarExcerptsTheWholeBlock(t *testing.T) {
 	}
 }
 
-// The smallest window keeps the paper's gutter: the badge and the handle stay
-// left of the writing and inside the window, so a paragraph can still be found
-// and changed where the writing is narrow.
+// The smallest stage keeps the paragraph's controls inside the paper and above
+// the writing: the gutter has no room beside a 720-wide window, so the badge and
+// the handle sit in one compact row over the text, clipped by nothing.
 func TestPaperKeepsGutterAtMinimumSize(t *testing.T) {
 	msgs := locales.In("en")
 	f := newFake()
 	s, tt := at(t, f, 720, 520)
-	s.Doc.SetSelection(0, 0)
+	// The row a narrow stage shows is the caret's paragraph's: the caret goes
+	// to the paragraph that carries a card.
+	at := runeIndex(s.Doc.Text().String(), "the gaps")
+	s.Doc.SetSelection(at, at)
 	tt.Frame()
 
 	body, ok := tt.Find(msgs.NoteBody())
@@ -143,12 +146,13 @@ func TestPaperKeepsGutterAtMinimumSize(t *testing.T) {
 		if control.box.W <= 0 || control.box.H <= 0 {
 			t.Errorf("the %s has an empty box %+v", control.name, control.box)
 		}
-		if control.box.X < 0 {
-			t.Errorf("the %s starts outside the window at %v", control.name, control.box.X)
+		if control.box.X < 0 || control.box.X+control.box.W > 720 {
+			t.Errorf("the %s at %v..%v is outside the window", control.name,
+				control.box.X, control.box.X+control.box.W)
 		}
-		if control.box.X+control.box.W > body.X {
+		if control.box.Y+control.box.H > body.Y+1 {
 			t.Errorf("the %s ending at %v covers the writing starting at %v",
-				control.name, control.box.X+control.box.W, body.X)
+				control.name, control.box.Y+control.box.H, body.Y)
 		}
 	}
 }
@@ -216,7 +220,7 @@ func TestPanelSwitchesToBacklinks(t *testing.T) {
 		Note: "note-2", NoteTitle: "Writing cards", Block: "block-9", Paragraph: 2,
 		Text: "see [[Memory and recall]]", Cards: 2, Excerptable: true,
 	}}
-	s, tt := at(t, f, 1024, 720)
+	s, tt := at(t, f, 1440, 900)
 	if _, ok := tt.Find(msgs.BacklinksTab(1)); !ok {
 		t.Fatalf("the panel has no backlinks tab; texts %q", tt.Texts())
 	}
@@ -320,7 +324,12 @@ func TestInspectorShowsTheThreeRoles(t *testing.T) {
 		t.Run(size.name, func(t *testing.T) {
 			f := newFake()
 			f.shown = map[core.ID]notes.Inspector{"block-2": inspectorOf(false)}
-			_, tt := at(t, f, size.w, size.h)
+			s, tt := at(t, f, size.w, size.h)
+			// The paragraph's badge is in the gutter where the stage keeps one
+			// and in the caret's compact row where it does not.
+			at := runeIndex(s.Doc.Text().String(), "the gaps")
+			s.Doc.SetSelection(at, at)
+			tt.Frame()
 
 			if err := tt.Click(msgs.CardOnParagraph(1, 2)); err != nil {
 				t.Fatalf("open the inspector: %v", err)

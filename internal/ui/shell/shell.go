@@ -123,6 +123,17 @@ func collapsed(c *ui.Context, st *State) bool {
 	return st.Folded || narrow(c)
 }
 
+// RailWidth is the rail's width in a window this wide: the column the labels
+// need, or the icon strip when the user folded it or the window is at
+// BreakpointNarrow or below. It is the room every page subtracts from the window
+// to know the stage it was given.
+func RailWidth(w float32, folded bool) float32 {
+	if folded || w <= design.BreakpointNarrow {
+		return design.RailCollapsed
+	}
+	return design.RailWidth
+}
+
 // narrow reports whether the window is at design.BreakpointNarrow or below. The
 // rail is the icon strip there whatever the user chose, so its fold controls
 // wait for a window wide enough for them to change anything: a control that

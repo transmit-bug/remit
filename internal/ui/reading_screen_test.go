@@ -290,14 +290,15 @@ func TestReadingCountsReachAService(t *testing.T) {
 }
 
 // The screen is reachable from the palette, so a note can be queued from the
-// notebook with no pointer and no second entry.
+// document with no pointer and no second entry.
 func TestPaletteCommandsForReading(t *testing.T) {
 	msgs := locales.In("en")
 	a, _, tt := openApp(t)
-	// The command acts on the note open in the notebook, so the notebook shows
-	// it first.
+	// The command acts on the note open in the document, so a note is opened
+	// first.
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
+	openNote(t, tt, "A daily habit")
 
 	tt.Key(ui.Cmd, ui.KeyK)
 	if err := tt.Click(msgs.ActionAddReading()); err != nil {
@@ -391,8 +392,8 @@ func TestReadingQueueAddsANoteFromTheList(t *testing.T) {
 		t.Fatalf("the empty queue offers no way to add: %v", err)
 	}
 	tt.Advance(320 * time.Millisecond)
-	if a.area != areaWrite || a.sub != subNotes {
-		t.Fatalf("Add went to %v/%v, want the notes list", a.area, a.sub)
+	if a.area != areaWrite || a.sub != subNoteList {
+		t.Fatalf("Add went to %v/%v, want the notes page", a.area, a.sub)
 	}
 	if !tt.HasText(seed.memory.Title) {
 		t.Fatalf("the notes list does not show the library; texts %q", tt.Texts())

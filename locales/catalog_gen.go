@@ -121,20 +121,6 @@ func (msgs Messages) NewFromTemplate() string {
 	return Catalog.Format(msgs.locale, "newFromTemplate", nil)
 }
 
-// Notebook says "Notebook"
-// in the language the app shows.
-//
-// Sidebar section holding the notes list.
-func Notebook() string { return In(i18n.Locale()).Notebook() }
-
-// Notebook says "Notebook"
-// in the language of msgs.
-//
-// Sidebar section holding the notes list.
-func (msgs Messages) Notebook() string {
-	return Catalog.Format(msgs.locale, "notebook", nil)
-}
-
 // UntitledNote says "Untitled note"
 // in the language the app shows.
 //
@@ -4469,6 +4455,20 @@ func (msgs Messages) KeysFindInNote() string {
 	return Catalog.Format(msgs.locale, "keysFindInNote", nil)
 }
 
+// KeysPanel says "Note panel"
+// in the language the app shows.
+//
+// Keyboard help: the key that opens and closes the note panel.
+func KeysPanel() string { return In(i18n.Locale()).KeysPanel() }
+
+// KeysPanel says "Note panel"
+// in the language of msgs.
+//
+// Keyboard help: the key that opens and closes the note panel.
+func (msgs Messages) KeysPanel() string {
+	return Catalog.Format(msgs.locale, "keysPanel", nil)
+}
+
 // KeysOutline says "Outline panel"
 // in the language the app shows.
 //
@@ -8583,6 +8583,20 @@ func SettingsKeysEditCard() string { return In(i18n.Locale()).SettingsKeysEditCa
 // Shortcut row: opening the card's editor.
 func (msgs Messages) SettingsKeysEditCard() string {
 	return Catalog.Format(msgs.locale, "settingsKeysEditCard", nil)
+}
+
+// SettingsKeysPanel says "Note panel"
+// in the language the app shows.
+//
+// Shortcut row: the document panel, outline or backlinks.
+func SettingsKeysPanel() string { return In(i18n.Locale()).SettingsKeysPanel() }
+
+// SettingsKeysPanel says "Note panel"
+// in the language of msgs.
+//
+// Shortcut row: the document panel, outline or backlinks.
+func (msgs Messages) SettingsKeysPanel() string {
+	return Catalog.Format(msgs.locale, "settingsKeysPanel", nil)
 }
 
 // SettingsKeysOutline says "Outline panel"

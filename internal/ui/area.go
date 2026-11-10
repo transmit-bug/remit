@@ -28,9 +28,12 @@ type subID uint8
 
 const (
 	subNone subID = iota
-	// The write area: the notebook, and the six list pages its
-	// sub-navigation shows beside it.
+	// subNotes is the document: a note open, written in or read whole. It is a
+	// detail state of the write area rather than one of its pages — a note is
+	// entered from the notes list and left by the breadcrumb — so the
+	// sub-navigation does not show it.
 	subNotes
+	// The write area's pages, which its sub-navigation shows.
 	subNoteList
 	subSearch
 	subTags
@@ -79,14 +82,13 @@ const (
 )
 
 // subsOf is the pages an area has, in the order its sub-navigation shows them.
-// An empty list hides the row and gives its height back to the stage.
+// An empty list hides the row and gives its height back to the stage. A detail
+// state — the document of a note — is not one of them: what is entered from a
+// list is left the way it was entered.
 func subsOf(area areaID) []subID {
 	switch area {
 	case areaWrite:
-		// The document comes first: it is where the area opens, and where the
-		// key and the rail go. Its tab goes when the document gets a route of
-		// its own (#201, W3b).
-		return []subID{subNotes, subNoteList, subSearch, subTags, subAssets, subTemplates, subTree}
+		return []subID{subNoteList, subSearch, subTags, subAssets, subTemplates, subTree}
 	case areaRead:
 		return []subID{subReadQueue, subReadArchive}
 	case areaRecall:
@@ -113,8 +115,13 @@ func defaultSub(area areaID) subID {
 }
 
 // hasSub reports whether area shows sub; a request for a page it does not have
-// opens the area at its first page instead of nowhere.
+// opens the area at its first page instead of nowhere. The document is the write
+// area's detail state: a note enters it and the breadcrumb leaves it, so it is
+// not a page of the sub-navigation but it is a place the area can be.
 func hasSub(area areaID, sub subID) bool {
+	if area == areaWrite && sub == subNotes {
+		return true
+	}
 	for _, candidate := range subsOf(area) {
 		if candidate == sub {
 			return true
@@ -122,6 +129,10 @@ func hasSub(area areaID, sub subID) bool {
 	}
 	return false
 }
+
+// documentOpen reports whether the window is on a note: the write area's detail
+// state, which hides the area's pages and gives the stage their height.
+func (a *App) documentOpen() bool { return a.area == areaWrite && a.sub == subNotes }
 
 // areaName is the area as the plugin contract and the rail read it: a stable,
 // lowercase id.
@@ -282,8 +293,13 @@ func subName(sub subID) string {
 }
 
 // subOfName is the page an id names within area, or the area's first page when
-// the id names none of its own.
+// the id names none of its own. The document answers to its own name: a link
+// that names a note's page lands in it rather than on the list it was opened
+// from.
 func subOfName(area areaID, name string) subID {
+	if area == areaWrite && name == subName(subNotes) {
+		return subNotes
+	}
 	for _, candidate := range subsOf(area) {
 		if subName(candidate) == name {
 			return candidate

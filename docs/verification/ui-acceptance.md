@@ -38,16 +38,17 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 | 条 | spec 要求 | 代码 | 判定 |
 |---|---|---|---|
 | ① | ≤980 轨道 64、label 传空、Tooltip 补名、Badge 仍显示 | `shell/rail.go` | 已实现，有测试 |
-| ② | ≤980 文档面板收起、顶栏面板按钮改开 `ui.Overlay` | `notes/notes.go` + `notes/panel.go` | 已实现（`TestPanelBecomesAnOverlayWhenNarrow`、`TestNarrowWindowDropsThePanel`） |
-| ③ | ≤760 纸面边距 48 → 20、`TypeDisplay 34 → 30` | `notes/read.go` 的 `paperGutter` / `displaySize`：阅读态 ≤760 用 `GutterNarrow 20`，页面标题（读写两态）用 `DisplayNarrow 30`；写作态不收紧，沟槽挂在左侧边距里 | 已实现（t21）；边距本身无专门测试，最小窗由 `TestChineseAtTheMinimumSize` 画一遭 |
+| ② | 文档面板成列的宽度由舞台算出（纸面 + 面板 + 两条 `Gutter`），否则顶栏按钮（`⌘⇧P`）开 `ui.Overlay` | `notes/notes.go` 的 `panelFits` / `Deps.Stage` + `notes/panel.go` | 已实现（`TestPanelBecomesAnOverlayAt1024`、`TestPaperKeepsItsMeasureAt1024`、`TestPanelShortcutIsCmdShiftP`、`TestPanelBecomesAnOverlayWhenNarrow`）；1024 的舞台放不下，所以那里是浮层 |
+| ③ | ≤760 纸面边距 48 → 20、`TypeDisplay 34 → 30` | `notes/read.go` 的 `paperGutter` / `displaySize`：读写两态 ≤760 都用 `GutterNarrow 20`（写作态的沟槽已改为段落上方一行，边距不再需要给它让位），标题用 `DisplayNarrow 30` | 已实现（`TestGutterMovesAboveTheParagraphAt760`、最小窗由 `TestChineseAtTheMinimumSize` 画一遭） |
 | ④ | ≤760 复习评分改两列 `ui.Grid` | `grades`（`internal/ui/screens/review/review.go`）在 `BreakpointSmall` 及以下用 `ui.Grid` 两列，四档仍在 | 已实现，`TestGradesTakeTwoColumnsAtTheMinimumSize` |
-| ⑤ | ≤760 块沟槽从左侧 48 沟槽改为段落上方一行 | 代码保留 48 沟槽，改由 `TestPaperKeepsGutterAtMinimumSize` / `TestBlockHandlesAtMinimumSize` 守「最小窗仍可点」 | **口径改判**（缺口 #8） |
+| ⑤ | ≤760 块沟槽从左侧 48 沟槽改为段落上方一行 | `notes/blocks.go` 的 `compactBlockRow`：≤760 在纸面里画一行「第 N 段 + 徽章 + `+` + `⋮⋮`」，菜单高度按行下方的余量收；>760 仍是 48 沟槽（`blockHandles`） | 已实现（`TestGutterMovesAboveTheParagraphAt760`、`TestPaperKeepsGutterAtMinimumSize`、`TestBlockHandlesAtMinimumSize`） |
 
 ### 组件闸门（`docs/specs/ui-composition.md` §4 + §9.1）
 
 | 闸门 | 断言的能力 | 测试 | 状态 |
 |---|---|---|---|
-| Split 拖动 | 拖分隔条 → 笔记列宽变；窗口变化后记住 | `TestSplitResizesTheNotesColumn`、`TestThreeColumnsAtTheDefaultSize`（`internal/ui/notes_layout_test.go`）、`TestPanelTakesAColumnOnAWideWindow`（`internal/ui/workbench_test.go`） | 有 |
+| 并排两栏 | 纸面保 760 时面板才成列；舞台放不下就浮层，纸面不变 | `TestPaperKeepsItsMeasureAt1024`、`TestPanelBecomesAnOverlayAt1024`（`internal/ui/notes_layout_test.go`）、`TestPanelTakesAColumnOnAWideWindow`（`internal/ui/workbench_test.go`） | 有 |
+| 分栏拖动（S13） | 拖分隔条 → 左右两半的宽度变，双击复位 50 | `ui.SplitPercent` + `SplitReset(50)`（`notes/notes.go` 的 `Split` 态），无专门拖动测试 | MyGo 组件（manual） |
 | Outline 当前节 | 光标进入某标题 → 大纲把它标为当前 | `TestOutlineFollowsTheCaret`、`TestOutlineJumpsToItsParagraph`（`internal/ui/panel_test.go`） | 有 |
 | Table 排序 | 点表头 → 行序变化，再点反向 | `TestBrowseSortsByColumn`（`internal/ui/recall_test.go`，闸门名） | 有 |
 | Autocomplete 收窄 | 输入收窄候选、Enter 选中、Esc 取消 | `TestRelinkNarrowsAsYouType`、`TestRelinkPickerAtMinimumInChinese`（`internal/ui/recall_test.go`、`internal/ui/relink_test.go`）；候选本身 `TestCandidates`/`TestQuery`/`TestChoose`/`TestClose`/`TestEmpty`（`internal/ui/screens/relink/relink_test.go`） | 有 |
@@ -140,7 +141,7 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 - 动作：行 → 打开文档；「阅读」→ 阅读态；`⋯` → S52；排序 / 筛选 → `Deps.Set…`；新建 → `Deps.NewNote`。
 - 键：无专属（`⌘N` 新建，全局）。
 - 尺寸：`ListWidth 860`；720×520 由 `TestWritePagesAtTheMinimumSize` 守，zh-Hans 由 `TestWritePagesInChinese` 守。
-- 守卫：`TestNotesListShowsSummaryAndCards`、`TestNotesListFiltersByTag`、`TestNotesSortCyclesAndSurvivesReload`（`internal/ui/write_test.go`）；另 `TestNotesListFilterKeepsOnlyNotesWithCards`、`TestNotesList`（`internal/ui/sidebar_test.go`）。
+- 守卫：`TestNotesListShowsSummaryAndCards`、`TestNotesListFiltersByTag`、`TestNotesSortCyclesAndSurvivesReload`（`internal/ui/write_test.go`）；另 `TestNotesListFilterKeepsOnlyNotesWithCards`。
 - 状态：**covered**。
 
 ## S06 · 写 · 搜索
@@ -313,9 +314,9 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 - 代码：`internal/ui/screens/notes/outline.go`、`internal/ui/screens/notes/panel.go`。
 - 目的：这篇有哪些节，以及现在写在哪一节。
 - 元素：`ui.Column` 固定 `PanelWidth 288`（`writeArea` 里的 `ui.Row` + `ui.Divider`，不是可拖的 `ui.Split`）、顶部 `ui.Segmented`（大纲 / 反链 N）+ 收起按钮（`.Tooltip`）、`ui.Outline`（当前节用强调色）；空 →「这篇还没有标题」+ 一句。
-- 动作：点行 → `pendingJump` 滚到该段；分段切换 → 写 `PanelTab`；`⌘⇧P` 开关；≤980 → `ui.Overlay`。
+- 动作：点行 → `pendingJump` 滚到该段；分段切换 → 写 `PanelTab`；`⌘⇧P` 开关；舞台放不下纸面 + 面板时 → `ui.Overlay`。
 - 键：`⌘⇧P`、`Esc`（Overlay）。
-- 尺寸：固定 288（不可拖；v2 §2.2 写的 `ui.Split` 未采用，`writeArea` 是 `ui.Row` + 固定列）；≤980 收进 Overlay（`TestPanelBecomesAnOverlayWhenNarrow`、`TestNarrowWindowDropsThePanel`）。
+- 尺寸：固定 288（不可拖；v2 §2.2 写的 `ui.Split` 未采用，`writeArea` 是 `ui.Row` + 固定列）；成列与否由 `panelFits` 从舞台宽度算（1024 是浮层，1440 是列）。
 - 守卫：`TestOutlineFollowsTheCaret`、`TestOutlineJumpsToItsParagraph`、`TestPanelScrollsOnItsOwn`（`internal/ui/panel_test.go`）、`TestPanelTakesAColumnOnAWideWindow`（`internal/ui/workbench_test.go`）。
 - 状态：**covered**。
 

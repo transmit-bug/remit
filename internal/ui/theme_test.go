@@ -110,7 +110,7 @@ func TestEveryModeInBothAppearances(t *testing.T) {
 				assertShows(t, tt, "Show answer")
 				tt.Key(ui.Cmd, ui.Key2)
 				tt.Advance(320 * time.Millisecond) // the card's exit
-				assertShows(t, tt, "Notebook")
+				assertShows(t, tt, "New note")
 
 				cardsPage(t, tt, "en")
 				assertShows(t, tt, "Cards")

@@ -213,7 +213,7 @@ func TestNoHorizontalScrollAt720(t *testing.T) {
 		want string
 	}{
 		{ui.Key1, msgs.TodayBudget()},
-		{ui.Key2, msgs.Notebook()},
+		{ui.Key2, msgs.NewNote()},
 		{ui.Key3, msgs.ReadQueueEmpty()},
 		{ui.Key4, msgs.RecallStart()},
 		{ui.Key5, msgs.StatsTitle()},

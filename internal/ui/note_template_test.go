@@ -28,10 +28,10 @@ func saveTemplate(t *testing.T, a *App) core.ID {
 	return template.ID
 }
 
-// With a template in the library the notebook hides it from the list and offers
-// it beside the new-note button; the copy it starts is in the list, holds the
-// template's text under new IDs, and the template is still there for the next
-// note.
+// With a template in the library the notes page hides it from the list and
+// offers it beside the new-note button; the copy it starts is the note on
+// screen, holds the template's text under new IDs, and the template is still
+// there for the next note.
 func TestNewNoteFromTemplate(t *testing.T) {
 	msgs := locales.In("en")
 	a, _ := newTestApp(t)
@@ -72,8 +72,8 @@ func TestNewNoteFromTemplate(t *testing.T) {
 	}
 	// The copy is on screen with its paragraph (the editor draws the card
 	// marker, not the raw ::), and the file on disk holds the words.
-	if !tt.HasText("Untitled note") {
-		t.Fatalf("the copy is not in the list; texts %q", tt.Texts())
+	if field, ok := tt.Access(msgs.NoteTitle()); !ok || field.Value != "Untitled note" {
+		t.Fatalf("the copy is not the note on screen: the title reads %q; texts %q", field.Value, tt.Texts())
 	}
 	source, err := os.ReadFile(filepath.Join(a.dir, "notes", "untitled-note-"+string(copied.ID)+".md"))
 	if err != nil {
@@ -89,11 +89,14 @@ func TestNewNoteFromTemplate(t *testing.T) {
 		t.Fatalf("the selection is %q, want the copy %q", got, copied.ID)
 	}
 
-	// The template survives, still hidden from the list, still offered again.
+	// The template survives, still hidden from the list, still offered again on
+	// the notes page the copy was started from.
 	template, ok := a.data.note(templateID)
 	if !ok || len(template.Blocks) != 2 {
 		t.Fatalf("the template did not survive the copy")
 	}
+	tt.Key(ui.Cmd, ui.Key2)
+	tt.Advance(320 * time.Millisecond)
 	if err := tt.Click(msgs.NewFromTemplate()); err != nil {
 		t.Fatalf("the template menu did not open again: %v", err)
 	}
@@ -110,7 +113,7 @@ func TestNewNoteFromTemplate(t *testing.T) {
 	}
 }
 
-// No templates, no door: the notebook row is the plain new-note button, and
+// No templates, no door: the notes page's row is the plain new-note button, and
 // nothing about the search or the list changes.
 func TestNoTemplatesNoMenu(t *testing.T) {
 	msgs := locales.In("en")

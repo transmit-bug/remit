@@ -210,7 +210,7 @@ func TestReviewStatusBarCarriesTheKeys(t *testing.T) {
 // The whole review flow runs on keys: reveal, grade, undo, suspend, edit and
 // leave — with no pointer and nothing else on screen.
 func TestReviewIsKeyboardOnly(t *testing.T) {
-	_, _, tt := openApp(t)
+	a, seed, tt := openApp(t)
 	recallQueue(tt)
 
 	// Reveal, grade, and take the grade back.
@@ -237,12 +237,25 @@ func TestReviewIsKeyboardOnly(t *testing.T) {
 		t.Errorf("suspend did not take the card out of the queue; texts %q", tt.Texts())
 	}
 
-	// Edit the note behind the card, then leave.
+	// Edit the note behind the card on screen, then leave.
+	cardID, ok := a.review.Current()
+	if !ok {
+		t.Fatal("the session holds no card")
+	}
+	card, ok := a.data.card(cardID)
+	if !ok {
+		t.Fatal("the card on screen is not in the snapshot")
+	}
+	note, ok := a.data.noteOfBlock(card.Ref.Block)
+	if !ok {
+		t.Fatal("the card on screen has no note")
+	}
 	tt.Key(0, ui.KeyE)
 	tt.Advance(320 * time.Millisecond)
-	if !tt.HasText("Notebook") || !tt.HasText("Memory and recall") {
+	if !tt.HasText("Note title") || a.notes.Loaded != string(note) {
 		t.Fatalf("E did not open the note; texts %q", tt.Texts())
 	}
+	_ = seed
 	recallQueue(tt)
 	tt.Advance(320 * time.Millisecond)
 	tt.Key(0, ui.KeyEscape)
@@ -252,8 +265,8 @@ func TestReviewIsKeyboardOnly(t *testing.T) {
 	}
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
-	if !tt.HasText("Notebook") {
-		t.Errorf("Cmd+2 did not open the notebook; texts %q", tt.Texts())
+	if !tt.HasText("New note") {
+		t.Errorf("Cmd+2 did not open the notes page; texts %q", tt.Texts())
 	}
 	if tt.FramePending() {
 		t.Error("view still requests frames after it should settle")
@@ -395,7 +408,7 @@ func TestReviewKeys(t *testing.T) {
 
 	// E opens the note the card came from.
 	tt.Key(0, ui.KeyE)
-	if !tt.HasText("Notebook") || a.notes.Loaded != string(seed.writing.ID) {
+	if !tt.HasText("Note title") || a.notes.Loaded != string(seed.writing.ID) {
 		t.Fatalf("E did not open the card's note; texts %q", tt.Texts())
 	}
 

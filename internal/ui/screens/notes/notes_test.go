@@ -24,12 +24,12 @@ var sizes = []struct {
 // actions the screen asked for, with no store behind them.
 type fake struct {
 	library   []notes.Note
-	tags      map[string]int
 	backlinks []notes.Backlink
 	groups    []notes.CardGroup
 	badges    []notes.Badge
 	marks     map[core.ID]notes.Mark
 	due       int
+	stage     func() float32
 
 	reloads   int
 	reviews   int
@@ -58,7 +58,7 @@ type fake struct {
 func (f *fake) deps() notes.Deps {
 	d := notes.Deps{
 		Notes:     func() []notes.Note { return f.library },
-		Tags:      func() map[string]int { return f.tags },
+		Stage:     f.stage,
 		Backlinks: func() []notes.Backlink { return f.backlinks },
 		Cards:     func(core.Note) []notes.CardGroup { return f.groups },
 		Badges:    func(core.Note) []notes.Badge { return f.badges },
@@ -112,26 +112,25 @@ func (f *fake) deps() notes.Deps {
 }
 
 // notebook is the library the screen is handed: a note with headings and cards,
-// and a second one the list can switch to.
+// and a second one the document does not show.
 var notebook = []notes.Note{
 	{Note: core.Note{ID: "note-1", Title: "Memory and recall", Blocks: []core.Block{
 		{ID: "block-1", Text: "# The first part"},
 		{ID: "block-2", Text: "spacing :: the gaps"},
 		{ID: "block-3", Text: "## The second part"},
 		{ID: "block-4", Text: "testing :: recall"},
-	}}, Cards: 2, Tags: []string{"memory"}},
+	}}, Cards: 2},
 	{Note: core.Note{ID: "note-2", Title: "Writing cards", Blocks: []core.Block{
 		{ID: "block-5", Text: "A good card asks :: one question with one answer."},
 		{ID: "block-6", Text: "Cards point at blocks."},
 	}}},
 }
 
-// newFake is the notebook's app: the seeded library, two tags, one card group
-// and four cards due.
+// newFake is the document's app: the seeded library, one card group and four
+// cards due.
 func newFake() *fake {
 	return &fake{
 		library: notebook,
-		tags:    map[string]int{"memory": 1, "writing": 1},
 		groups:  []notes.CardGroup{{Paragraph: 2, Cards: []core.Card{{ID: "card-1"}}}},
 		badges:  []notes.Badge{{Paragraph: 2, Cards: 1, State: notes.BadgeNew}},
 		due:     4,
@@ -150,112 +149,76 @@ func at(t *testing.T, f *fake, w, h int) (*notes.State, *ui.Tester) {
 	return &s, tt
 }
 
-// The notebook draws its panes at both the sizes the window opens at: the notes
-// list, the note written in, and — when the window has room — the panel with the
-// outline and the cards the note feeds. The smallest window drops the panel so
-// that the document keeps room to be typed.
+// The document draws its paper at both the sizes the window opens at, and the
+// panel beside it only on a stage wide enough for the two columns: the smallest
+// stage leaves the panel down, so the writing keeps the room it is given.
 func TestPanes(t *testing.T) {
 	msgs := locales.In("en")
 	f := newFake()
 	for _, size := range sizes {
 		t.Run(size.name, func(t *testing.T) {
-			_, tt := at(t, f, size.w, size.h)
-			for _, text := range []string{
-				msgs.Notebook(), msgs.Today(), "4",
-				"Memory and recall", "Writing cards",
-				msgs.NoteTitle(), msgs.NoteBody(),
-			} {
+			s, tt := at(t, f, size.w, size.h)
+			// The gutter's badges follow the paragraphs on screen; the compact
+			// row a narrow stage shows instead follows the caret, so the caret
+			// goes to the paragraph that carries one.
+			at := runeIndex(s.Doc.Text().String(), "the gaps")
+			s.Doc.SetSelection(at, at)
+			tt.Frame()
+			for _, text := range []string{msgs.NoteTitle(), msgs.NoteBody()} {
 				if !tt.HasText(text) {
 					t.Fatalf("missing %q; texts %q", text, tt.Texts())
 				}
 			}
-			// The panel and the cards it lists take a column only when the
-			// window has room for them.
-			_, panel := tt.Find(msgs.Close())
-			if size.w < 900 {
-				if panel {
-					t.Error("the panel is open on the smallest window")
-				}
-				return
+			// The notes list is a page of its own: the document holds no column
+			// of notes beside the paper.
+			if tt.HasText("Writing cards") {
+				t.Errorf("the document lists another note; texts %q", tt.Texts())
 			}
-			if !panel {
-				t.Fatalf("the panel is missing; texts %q", tt.Texts())
+			// The panel is a column only where the paper keeps its measure beside
+			// it, which neither of these stages is.
+			if _, ok := tt.Find(msgs.Close()); ok {
+				t.Errorf("the panel is open on a stage too narrow for it; texts %q", tt.Texts())
 			}
-			for _, text := range []string{"The first part", "The second part"} {
-				if !tt.HasText(text) {
-					t.Fatalf("missing %q; texts %q", text, tt.Texts())
-				}
-			}
-			// The paragraph's cards are its gutter badge, wherever the window
-			// puts the panel: the badge strip above the document is gone.
+			// The paragraph's cards are its gutter badge, wherever the stage puts
+			// the panel: the badge strip above the document is gone.
 			if _, ok := tt.Find(msgs.CardOnParagraph(1, 2)); !ok {
 				t.Errorf("the paragraph has no badge; texts %q", tt.Texts())
-			}
-			if !tt.HasText(msgs.NoteBody()) {
-				t.Errorf("the document is not drawn; texts %q", tt.Texts())
 			}
 			if tt.FramePending() {
 				t.Error("view still requests frames after it should settle")
 			}
 		})
 	}
+
+	t.Run("wide", func(t *testing.T) {
+		_, tt := at(t, f, 1440, 900)
+		if _, ok := tt.Find(msgs.Close()); !ok {
+			t.Fatalf("a wide stage holds no panel; texts %q", tt.Texts())
+		}
+		for _, text := range []string{"The first part", "The second part"} {
+			if !tt.HasText(text) {
+				t.Fatalf("missing %q; texts %q", text, tt.Texts())
+			}
+		}
+	})
 }
 
-// Choosing a note in the list opens it: the draft follows the choice and the
-// document shows that note's text.
-func TestChoosingANote(t *testing.T) {
+// The draft follows the note the app chose, and the document shows that note's
+// text: a choice made in the notes page is what the document reads.
+func TestDraftFollowsTheChosenNote(t *testing.T) {
 	f := newFake()
 	s, tt := at(t, f, 1024, 720)
-	if err := tt.Click("Writing cards"); err != nil {
-		t.Fatal(err)
-	}
+	s.Selected = "note-2"
 	tt.Frame()
 
-	if s.Selected != "note-2" || s.Loaded != "note-2" {
-		t.Fatalf("the notebook holds %q / %q, want the note chosen", s.Selected, s.Loaded)
+	if s.Loaded != "note-2" {
+		t.Fatalf("the document holds %q, want the note chosen", s.Loaded)
 	}
 	if text := s.Doc.Text().String(); !strings.Contains(text, "A good card asks") {
 		t.Errorf("the document holds %q, want the note chosen", text)
 	}
-	if tt.HasText("The first part") {
-		t.Errorf("the outline still lists the note chosen before; texts %q", tt.Texts())
-	}
-}
-
-// The search narrows the list by title and by the note's first line, and a tag
-// chip narrows it to the notes that carry the tag; choosing the chip again puts
-// the library back.
-func TestSearchAndTagFilter(t *testing.T) {
-	f := newFake()
-	s, tt := at(t, f, 1024, 720)
-
-	s.Query = "good card"
-	tt.Frame()
-	if !tt.HasText("Writing cards") || tt.HasText("Memory and recall") {
-		t.Fatalf("the search kept the wrong notes; texts %q", tt.Texts())
-	}
-
-	s.Query = ""
-	tt.Frame()
-	if err := tt.Click("#memory"); err != nil {
-		t.Fatalf("the filter has no chip: %v", err)
-	}
-	tt.Frame()
-	if s.TagFilter != "memory" {
-		t.Fatalf("the filter is %q, want memory", s.TagFilter)
-	}
-	if !tt.HasText("Memory and recall") || tt.HasText("Writing cards") {
-		t.Fatalf("the tag kept the wrong notes; texts %q", tt.Texts())
-	}
-	if err := tt.Click("#memory"); err != nil {
-		t.Fatal(err)
-	}
-	tt.Frame()
-	if s.TagFilter != "" {
-		t.Errorf("the filter is still %q", s.TagFilter)
-	}
-	if !tt.HasText("Writing cards") {
-		t.Errorf("choosing the chip again did not bring the note back; texts %q", tt.Texts())
+	if tt.HasText("# The first part") {
+		t.Errorf("the document still shows the note chosen before; texts %q", tt.Texts())
 	}
 }
 
@@ -263,7 +226,8 @@ func TestSearchAndTagFilter(t *testing.T) {
 // scrolls it into view, and the document takes the focus.
 func TestOutlineJumpsToItsParagraph(t *testing.T) {
 	f := newFake()
-	s, tt := at(t, f, 1024, 720)
+	// Wide enough for the panel beside the paper: the outline is a column.
+	s, tt := at(t, f, 1440, 900)
 
 	if err := tt.Click("The second part"); err != nil {
 		t.Fatalf("the outline does not offer the heading: %v", err)
@@ -408,8 +372,9 @@ func TestBlockMenuDuplicatesParagraph(t *testing.T) {
 	}
 }
 
-// The gutter keeps its room when the window is at its smallest, so a block can
-// still be added without covering the writing.
+// A window at its smallest keeps the paragraph's controls: they leave the
+// gutter, which has no room there, for a compact row above the text inside the
+// paper, so a block can still be added without covering the writing.
 func TestBlockHandlesAtMinimumSize(t *testing.T) {
 	msgs := locales.In("en")
 	f := newFake()
@@ -420,14 +385,17 @@ func TestBlockHandlesAtMinimumSize(t *testing.T) {
 	if !ok {
 		t.Fatalf("the note body is missing; texts %q", tt.Texts())
 	}
-	tt.Move(body.X-44, body.Y+12)
-	tt.Frame()
-	handle, ok := tt.Find(msgs.AddBlockBelow())
+	add, ok := tt.Find(msgs.AddBlockBelow())
 	if !ok {
 		t.Fatalf("the smallest window hides the block handle; texts %q", tt.Texts())
 	}
-	if handle.X >= body.X {
-		t.Errorf("the handle at x %.1f covers the writing at x %.1f", handle.X, body.X)
+	// The row is above the writing, not beside it: nothing covers the paper's
+	// text, and nothing hangs off the window's edge.
+	if add.Y+add.H > body.Y+1 {
+		t.Errorf("the handle at y %v is not above the writing starting at %v", add.Y, body.Y)
+	}
+	if add.X < body.X-1 {
+		t.Errorf("the handle at x %v is left of the paper at %v: it is a gutter", add.X, body.X)
 	}
 }
 

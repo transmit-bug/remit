@@ -16,6 +16,10 @@ const (
 	// blockHandle is the height of one paragraph's handle, lined up with its
 	// first line.
 	blockHandle float32 = 24
+	// menuHeight is how tall a paragraph's menu grows before it scrolls, and
+	// menuGap the room kept between its last row and what is around it.
+	menuHeight float32 = 360
+	menuGap    float32 = 4
 )
 
 // blockAction is a change a block handle asks for. It is applied after the
@@ -93,7 +97,8 @@ func (s *State) blockHighlight(c *ui.Context, tk design.Tokens, boxes []richtext
 // and the drag handle below it. The gutter is the paper's own room, sized by the
 // theme, so the writing is never covered; the menu button stays while its menu
 // is open, so moving the pointer into the menu does not make its anchor
-// disappear.
+// disappear. A window too narrow to keep that room draws compactBlockRow above
+// the text instead.
 func (s *State) blockHandles(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps, action *blockAction) {
 	boxes := s.Doc.VisibleParagraphs()
 	active := activeBlock(boxes, s.caret(), s.blockHover)
@@ -160,6 +165,57 @@ func (s *State) blockHandles(c *ui.Context, tk design.Tokens, msgs locales.Messa
 	s.blockHover = hovered
 }
 
+// compactBlockRow is the block gutter of a window too narrow to keep one: the
+// current paragraph's badge, its add and its menu in one row above the paper's
+// text. It stands in flow, inside the paper, so the controls are neither clipped
+// by the window's edge nor laid over the writing. v0.8.1's editor lays its
+// paragraphs out itself and leaves no room inside one, so the row names the
+// paragraph it acts on and sits above the text rather than inside it; the
+// paragraph is the one the caret is in.
+func (s *State) compactBlockRow(c *ui.Context, tk design.Tokens, msgs locales.Messages, d Deps, action *blockAction) {
+	if len(s.Draft.Blocks) == 0 {
+		return
+	}
+	index := max(0, s.caretParagraph()-1)
+	block, has := s.blockOfParagraph(index)
+	start := s.OffsetOfParagraph(index + 1)
+	if start < 0 {
+		start = 0
+	}
+	box := richtext.ParagraphBox{Index: index, Start: start}
+	badge, hasBadge := blockBadges(d, s.Draft)[index+1]
+
+	s.blockRowDrawn = true
+	ui.Row(c.Key(fmt.Sprintf("block-row-%d", index))).Bind(&s.blockRowHandle).
+		AlignItems(ui.Center).Gap(tk.SpaceS).Padding(0, 0, tk.SpaceXS, 0).Children(func() {
+		ui.Text(c, msgs.ReadingParagraph(index+1)).FontSize(tk.TypeCaption).
+			TextColor(tk.TextFaint).SingleLine()
+		if hasBadge && has {
+			s.gutterBadge(c, tk, msgs, d, badge, block.ID)
+		}
+		plus := blockButton(c, tk, fmt.Sprintf("block-row-add-%d", index), "plus", msgs.AddBlockBelow()).
+			Tooltip(msgs.AddBlockBelow())
+		if plus.Clicked() {
+			*action = blockAction{kind: blockActionInsert, start: box.Start}
+		}
+		grip := blockButton(c, tk, fmt.Sprintf("block-row-menu-%d", index), "grip-vertical", msgs.BlockActionsFor(index+1)).
+			Tooltip(msgs.BlockActionsFor(index + 1))
+		open := s.blockMenus[index]
+		if grip.Clicked() {
+			open = !open
+		}
+		s.blockMenu(c, tk, msgs, d, box, grip, &open, action)
+		if open {
+			if s.blockMenus == nil {
+				s.blockMenus = map[int]bool{}
+			}
+			s.blockMenus[index] = true
+		} else {
+			delete(s.blockMenus, index)
+		}
+	})
+}
+
 // blockMenu is one block's menu in a popover. It is not a PopoverMenuButton
 // because the grip is also the drag handle, and a menu button takes the
 // pointer away from the drag. Its rows are ordinary buttons, so click, Enter
@@ -170,7 +226,7 @@ func (s *State) blockMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 		return blockMenuRow(c, tk, fmt.Sprintf("block-menu-%d-%s", box.Index, key), label, selected, disabled, danger)
 	}
 	menu := ui.Popover(c, anchor, open, func() {
-		ui.Scroll(c).MaxHeight(360).Children(func() {
+		ui.Scroll(c).MaxHeight(s.menuRoom(c)).Children(func() {
 			ui.Column(c).Role(ui.RoleMenu).MinWidth(220).Padding(tk.SpaceXS).Gap(1).Children(func() {
 				if row("add", msgs.AddBlockBelow(), false, false, false).Clicked() {
 					*action = blockAction{kind: blockActionInsert, start: box.Start}
@@ -267,6 +323,24 @@ func (s *State) blockMenu(c *ui.Context, tk design.Tokens, msgs locales.Messages
 	if menu.Valid() {
 		kit.ArrivePanel(menu, 0)
 	}
+}
+
+// menuRoom is how tall a paragraph's menu may be: its own limit, or the room
+// under the row that opened it, so no row is left below the window's edge. A
+// popover the app builds is not one MyGo shortens to the room as it shortens its
+// own menus, so the app says how tall it may grow; the row's place is the last
+// frame's, which is where this frame's menu starts.
+func (s *State) menuRoom(c *ui.Context) float32 {
+	if !s.blockRowDrawn {
+		return menuHeight
+	}
+	row := s.blockRowHandle.Bounds(c)
+	if row.H <= 0 {
+		return menuHeight
+	}
+	_, h := c.Size()
+	room := h - (row.Y + row.H) - 2*menuGap
+	return max(min(menuHeight, room), 0)
 }
 
 // blockMenuRow is one line of a block menu. The selected style is tinted, and

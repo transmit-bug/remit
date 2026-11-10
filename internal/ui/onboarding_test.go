@@ -180,7 +180,7 @@ func TestFirstRun(t *testing.T) {
 		t.Fatalf("the remembered library did not open on today; texts %q", tt.Texts())
 	}
 
-	// The notebook says it is empty.
+	// The notes page says it is empty.
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Frame()
 	if !tt.HasText("No notes yet.") {
@@ -198,7 +198,7 @@ func TestFirstRun(t *testing.T) {
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
-	if !tt.HasText("Untitled note") || !tt.HasText("Note title") {
+	if !tt.HasText("Untitled note") {
 		t.Fatalf("the new note did not survive a restart; texts %q", tt.Texts())
 	}
 	tt.Advance(320 * time.Millisecond) // the screen's entrance
