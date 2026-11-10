@@ -243,6 +243,7 @@ const state = {
   reviewScope: { kind: 'all', value: '' },
   importStep: 0,
   importKind: '',
+  exportKind: 'md',
   relinkCard: null,
   relinkNote: '',
   archived: new Set(),
@@ -1795,7 +1796,9 @@ function toast(text, actionLabel, action) {
 function openModal(html) {
   const d = $('#modal');
   d.innerHTML = html;
-  d.showModal();
+  // A step that changes the dialog in place reuses the open one: showModal()
+  // on an already-open dialog throws, and the flow would stop at step one.
+  if (!d.open) d.showModal();
 }
 
 function closeModal() { const d = $('#modal'); if (d.open) d.close(); }
@@ -2038,6 +2041,31 @@ function openImport() {
     <div class="modal-head"><h2>导入</h2><p>整库、一堆 Markdown，或一份 Anki 集合。</p></div>
     <div class="modal-body">${stepper}${body}</div>
     <div class="modal-foot">${foot}</div>`);
+}
+
+function openExport() {
+  const KINDS = [
+    ['md', 'Markdown 目录', '每篇笔记一个 .md，块 ID 留在正文里；图片按 assets/ 落盘。'],
+    ['lib', '.remitlib 归档', '整库一个文件：明文、资产与调度史，可原样再导入。'],
+    ['csv', '卡片 CSV', '表头一行，每张卡片一行；逗号、引号与换行由 CSV 转义。'],
+  ];
+  const kind = state.exportKind;
+  const csvEmpty = CARDS.length === 0;
+  const chosen = KINDS.find((k) => k[0] === kind);
+  const count = kind === 'csv' ? `${CARDS.length} 张卡片` : `${NOTES.length} 篇笔记`;
+
+  openModal(`
+    <div class="modal-head"><h2>导出</h2><p>整库写成一个目录或一个归档；卡片表另存一份 CSV。</p></div>
+    <div class="modal-body">
+      <div class="od-cluster">${KINDS.map(([id, title]) => chip(title, kind === id,
+        `data-export-kind="${id}"${id === 'csv' && csvEmpty ? ' disabled' : ''}`)).join('')}</div>
+      <p class="dim" style="font-size:var(--t-label);line-height:1.7;margin-top:12px">
+        ${chosen[2]}${kind === 'csv' && csvEmpty ? ' 库里还没有卡片，这一项不可选。' : ''}</p>
+    </div>
+    <div class="modal-foot"><span class="dim" style="font-size:var(--t-label)">本次写 ${count}</span>
+      <span class="push"></span>
+      <button class="btn" type="button" data-dlg="close">取消</button>
+      <button class="btn btn--primary" type="button" data-dlg="export" ${kind === 'csv' && csvEmpty ? 'disabled' : ''}>导出</button></div>`);
 }
 
 function openPluginDetail(id) {
@@ -2474,6 +2502,8 @@ function bind() {
 
     const scopeKind = t.closest('[data-scopekind]');
     if (scopeKind) { state.reviewScope = { kind: scopeKind.dataset.scopekind, value: '' }; return openScope(); }
+    const exportKind = t.closest('[data-export-kind]');
+    if (exportKind) { state.exportKind = exportKind.dataset.exportKind; return openExport(); }
     const scopeVal = t.closest('[data-scope-value]');
     if (scopeVal) { state.reviewScope.value = scopeVal.dataset.scopeValue; return openScope(); }
     const scopeStart = t.closest('[data-scope-start]');
@@ -2724,6 +2754,15 @@ function bind() {
         closeModal(); render(); return toast('卡片已保存');
       }
       if (k === 'bulk-type-go') { closeModal(); render(); return toast('已改类型'); }
+      if (k === 'export') {
+        const what = state.exportKind === 'csv'
+          ? `${CARDS.length} 张卡片写到 cards.csv`
+          : state.exportKind === 'lib'
+            ? `整库写到 ${state.noteId ? noteById(state.noteId).title : 'remit'}.remitlib`
+            : `${NOTES.length} 篇笔记写到 Markdown 目录`;
+        closeModal();
+        return toast(`已导出：${what}`, '打开文件夹', () => {});
+      }
       if (k === 'delete-block') { closeModal(); const bid = dlg.dataset.block; hardDeleteBlock(bid); return toast('已删除，卡片转为断链'); }
       if (k === 'delete-card') {
         const i = CARDS.findIndex((c) => c.note === state.noteId && c.block === dlg.dataset.block);
