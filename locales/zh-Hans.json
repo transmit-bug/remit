@@ -271,6 +271,7 @@
   "importNext": "下一步",
   "importBack": "上一步",
   "importRun": "导入",
+  "importRunning": "正在导入…",
   "importEmptySource": "这个来源没有可导入的内容。",
   "importRebuild": "导入后重建索引",
   "importQueue": "把导入的笔记加入阅读队列",

@@ -170,7 +170,7 @@ func TestImportWizardWalksThreeSteps(t *testing.T) {
 	seedLibrary(t, dir)
 	pkg := buildAPKG(t)
 
-	a := NewApp(Options{LibraryDir: dir, ChooseAnki: func() (string, error) { return pkg, nil }})
+	a := wizardApp(Options{LibraryDir: dir, ChooseAnki: func() (string, error) { return pkg, nil }})
 	notes, cards := len(a.Library().Notes()), len(a.Library().Cards())
 
 	var logged bytes.Buffer
@@ -272,7 +272,7 @@ func TestImportWizardRefusesAnEmptySource(t *testing.T) {
 	dir := t.TempDir()
 	seedLibrary(t, dir)
 	picked := 0
-	a := NewApp(Options{
+	a := wizardApp(Options{
 		LibraryDir:     dir,
 		ChooseMarkdown: func() ([]string, error) { picked++; return nil, nil },
 	})
@@ -316,7 +316,7 @@ func TestImportWizardReportsAFailure(t *testing.T) {
 	msgs := locales.In("en")
 	dir := t.TempDir()
 	seedLibrary(t, dir)
-	a := NewApp(Options{
+	a := wizardApp(Options{
 		LibraryDir: dir,
 		ChooseAnki: func() (string, error) { return "/tmp/broken.apkg", nil },
 		ImportAnki: func(string) (importanki.Report, error) {
@@ -368,7 +368,7 @@ func TestImportWizardUnpacksAnArchive(t *testing.T) {
 
 	dir := t.TempDir()
 	seedLibrary(t, dir)
-	a := NewApp(Options{LibraryDir: dir, ChooseArchive: func() (string, error) { return backup, nil }})
+	a := wizardApp(Options{LibraryDir: dir, ChooseArchive: func() (string, error) { return backup, nil }})
 
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
@@ -414,7 +414,7 @@ func TestImportWizardSaysAnArchiveKeepsTheLibrary(t *testing.T) {
 
 	dir := t.TempDir()
 	seedLibrary(t, dir)
-	a := NewApp(Options{LibraryDir: dir, ChooseArchive: func() (string, error) { return backup, nil }})
+	a := wizardApp(Options{LibraryDir: dir, ChooseArchive: func() (string, error) { return backup, nil }})
 
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
@@ -429,4 +429,84 @@ func TestImportWizardSaysAnArchiveKeepsTheLibrary(t *testing.T) {
 	if _, ok := tt.AccessByRole(ui.RoleSwitch, msgs.ImportKeep()); ok {
 		t.Error("the archive preview offers a keep switch the import cannot obey")
 	}
+}
+
+// The write leaves the frame: the preview step becomes an activity bar while the
+// importer works, so the window keeps drawing through a long package, the run
+// cannot be started twice, and the report lands when the answer does.
+func TestImportShowsProgressWhileItRuns(t *testing.T) {
+	msgs := locales.In("en")
+	dir := t.TempDir()
+	seedLibrary(t, dir)
+	pkg := buildAPKG(t)
+	release := make(chan struct{})
+	a := NewApp(Options{
+		LibraryDir: dir,
+		ChooseAnki: func() (string, error) { return pkg, nil },
+		ImportAnki: func(string) (importanki.Report, error) {
+			<-release
+			return importanki.Report{Notes: 2, Cards: 3}, nil
+		},
+	})
+
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	wizardFromPalette(t, tt, msgs)
+	if err := tt.Click(msgs.ImportFromAnki()); err != nil {
+		t.Fatalf("the Anki source is not clickable: %v", err)
+	}
+	tt.Frame()
+
+	// The click returns while the importer is still held: the run is off the
+	// frame, not inside it.
+	clicked := make(chan error, 1)
+	go func() { clicked <- tt.Click(msgs.ImportRun()) }()
+	select {
+	case err := <-clicked:
+		if err != nil {
+			t.Fatalf("the preview has no import button: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the run did not leave the frame: the window waited on the importer")
+	}
+	tt.Frame()
+	if !tt.HasText(msgs.ImportRunning()) {
+		t.Fatalf("the running step says nothing about the wait; texts %q", tt.Texts())
+	}
+	if _, ok := tt.AccessByRole(ui.RoleProgress, msgs.ImportRunning()); !ok {
+		t.Error("the running step shows no activity bar")
+	}
+	if _, ok := tt.AccessByRole(ui.RoleButton, msgs.ImportRun()); ok {
+		t.Error("the run can be started again while it is running")
+	}
+
+	close(release)
+	// The answer is applied on the UI thread: wait for it, then draw.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		a.pending.mu.Lock()
+		waiting := len(a.pending.jobs)
+		a.pending.mu.Unlock()
+		if waiting > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the import's answer never reached the window")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	tt.Frame()
+	if !tt.HasText(msgs.ImportReport(2, 3, 0, 0)) {
+		t.Fatalf("the report is not on the window; texts %q", tt.Texts())
+	}
+}
+
+// wizardApp is NewApp with the wizard's background job run on the frame: a test
+// takes an import's answer at once, where the window would take it on a later
+// frame. TestImportShowsProgressWhileItRuns keeps the app's own threading, which
+// is the part the activity bar exists for.
+func wizardApp(o Options) *App {
+	a := NewApp(o)
+	a.runBackground = func(c *ui.Context, job func() func(*ui.Context)) { job()(c) }
+	return a
 }

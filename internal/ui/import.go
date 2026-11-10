@@ -7,12 +7,14 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
+	"github.com/transmit-bug/remit/internal/core/importanki"
 	"github.com/transmit-bug/remit/internal/core/importmd"
 	"github.com/transmit-bug/remit/internal/core/transfer"
 	"github.com/transmit-bug/remit/internal/ui/design"
@@ -66,6 +68,9 @@ type importWizard struct {
 	// it did not, shown where the run was started with the dialog still open.
 	written importWritten
 	failed  string
+	// running is a write that left the frame and has not answered yet: the
+	// preview step draws an activity bar instead of the buttons while it holds.
+	running bool
 	focus   ui.Handle
 	list    ui.ListState
 }
@@ -177,46 +182,59 @@ func shortPath(path string) string {
 // runImport writes what the source holds, through the importer that owns its
 // format, and moves to the page that reports it. A failure stays on the preview
 // with its reason: the dialog closes on a write, not on an error.
+// runImport starts the write. The importer runs off the frame — an Anki package
+// or a folder of Markdown takes long enough that the window has to keep
+// drawing — and the preview step shows an activity bar until the answer is
+// applied on the UI thread. The run reads the options once, so a switch flipped
+// mid-run cannot change what it does.
 func (a *App) runImport(c *ui.Context) {
 	w := &a.wizard
-	if a.lib == nil {
+	if a.lib == nil || w.running {
 		return
 	}
 	w.failed = ""
-	switch w.source {
-	case importFromArchive:
+	w.running = true
+	if w.source == importFromArchive {
 		a.unpackArchive(c)
 		return
-	case importFromMarkdown:
+	}
+	source, paths, keep := w.source, slices.Clone(w.paths), w.keep
+	a.background(c, func() func(*ui.Context) {
 		var written importWritten
-		for _, path := range w.paths {
-			report, err := a.importMd(path, importmd.Options{KeepExisting: w.keep})
+		var err error
+		switch source {
+		case importFromMarkdown:
+			for _, path := range paths {
+				var report importmd.Report
+				if report, err = a.importMd(path, importmd.Options{KeepExisting: keep}); err != nil {
+					slog.Error("remit: import Markdown", "path", path, "err", err)
+					break
+				}
+				written.notes += report.Notes
+				written.kept += report.Kept
+				written.skipped += report.Skipped
+				logWarnings("Markdown import", report.Warnings)
+			}
+		case importFromAnki:
+			var report importanki.Report
+			if report, err = a.importAnki(paths[0]); err == nil {
+				written = importWritten{
+					notes: report.Notes, cards: report.Cards,
+					reviews: report.Reviews, skipped: report.SkippedRows,
+				}
+				logWarnings("Anki import", report.Warnings)
+			}
+		}
+		return func(c *ui.Context) {
+			w.running = false
 			if err != nil {
-				slog.Error("remit: import Markdown", "path", path, "err", err)
 				w.failed = err.Error()
 				return
 			}
-			written.notes += report.Notes
-			written.kept += report.Kept
-			written.skipped += report.Skipped
-			logWarnings("Markdown import", report.Warnings)
+			w.written = written
+			a.finishImport(c)
 		}
-		w.written = written
-	case importFromAnki:
-		path := w.paths[0]
-		report, err := a.importAnki(path)
-		if err != nil {
-			slog.Error("remit: import Anki package", "path", path, "err", err)
-			w.failed = err.Error()
-			return
-		}
-		w.written = importWritten{
-			notes: report.Notes, cards: report.Cards,
-			reviews: report.Reviews, skipped: report.SkippedRows,
-		}
-		logWarnings("Anki import", report.Warnings)
-	}
-	a.finishImport(c)
+	})
 }
 
 // finishImport applies the two options and reports the run: the notes are read
@@ -266,38 +284,45 @@ func logWarnings(what string, warnings []string) {
 // looks for a free folder rather than overwriting anything.
 func (a *App) unpackArchive(c *ui.Context) {
 	path := a.wizard.paths[0]
-	dir, err := freeDir(archiveDir(path))
-	if err != nil {
-		a.wizard.failed = err.Error()
-		return
-	}
+	a.background(c, func() func(*ui.Context) {
+		dir, err := freeDir(archiveDir(path))
+		if err == nil {
+			err = readArchive(path, dir)
+		}
+		return func(c *ui.Context) {
+			a.wizard.running = false
+			if err != nil {
+				slog.Error("remit: unpack a library archive", "path", path, "err", err)
+				a.wizard.failed = err.Error()
+				return
+			}
+			a.OpenLibrary(dir)
+			if a.dir != dir {
+				// The archive read cleanly, but the library in it did not open: the
+				// window keeps the one it had, and the wizard says so rather than
+				// reporting a write that did not become the library.
+				a.wizard.failed = m(c).ImportArchiveUnreadable(shortPath(dir))
+				return
+			}
+			a.wizard.written = importWritten{opened: dir}
+			a.wizard.step = importStepDone
+			slog.Info("remit: unpacked a library archive", "path", path, "dir", dir)
+		}
+	})
+}
+
+// readArchive writes the .remitlib at path into dir.
+func readArchive(path, dir string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		a.wizard.failed = err.Error()
-		return
+		return err
 	}
 	defer f.Close()
 	info, err := f.Stat()
 	if err != nil {
-		a.wizard.failed = err.Error()
-		return
+		return err
 	}
-	if err := transfer.Read(f, info.Size(), dir); err != nil {
-		slog.Error("remit: unpack a library archive", "path", path, "dir", dir, "err", err)
-		a.wizard.failed = err.Error()
-		return
-	}
-	a.OpenLibrary(dir)
-	if a.dir != dir {
-		// The archive read cleanly, but the library in it did not open: the
-		// window keeps the one it had, and the wizard says so rather than
-		// reporting a write that did not become the library.
-		a.wizard.failed = m(c).ImportArchiveUnreadable(shortPath(dir))
-		return
-	}
-	a.wizard.written = importWritten{opened: dir}
-	a.wizard.step = importStepDone
-	slog.Info("remit: unpacked a library archive", "path", path, "dir", dir)
+	return transfer.Read(f, info.Size(), dir)
 }
 
 // archiveDir is where a .remitlib unpacks: a folder of its own named after the
@@ -341,7 +366,10 @@ func (a *App) importView(c *ui.Context, tk design.Tokens) {
 		panel.Children(func() {
 			ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
 				ui.Text(c, msgs.ImportTitle()).FontSize(tk.TypeH2).Bold().Grow(1)
+				// Closing takes the dialog away from a run that is still writing, so
+				// the close waits for the answer like the buttons do.
 				ui.Button(c, "").Label(msgs.ImportClose()).Tooltip(msgs.ImportClose()).
+					Disabled(a.wizard.running).
 					Children(func() { tk.Icon(c, "x", design.IconSmall) }).
 					OnClick(func() { a.wizard.open = false })
 			})
@@ -469,6 +497,17 @@ func (a *App) importPreviewStep(c *ui.Context, tk design.Tokens, msgs locales.Me
 		})
 	}
 	ui.Divider(c)
+	if a.wizard.running {
+		// The write is off the frame and reports counts only when it is done, so
+		// the step shows an activity bar of unknown length until the answer
+		// lands; the buttons wait with it, and the bar names the wait for
+		// assistive technology.
+		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceM).Children(func() {
+			ui.Text(c, msgs.ImportRunning()).FontSize(tk.TypeLabel).TextColor(tk.TextMuted).NoWrap()
+			ui.Progress(c, -1).Grow(1).Label(msgs.ImportRunning())
+		})
+		return
+	}
 	ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceS).Children(func() {
 		// An empty source cannot be imported, and the step says why rather than
 		// leaving a button that does nothing.

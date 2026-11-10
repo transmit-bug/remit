@@ -60,7 +60,7 @@ type Tokens struct {
 	// dialog's, as wide as a short page's sentence, and BoardWidth the column a
 	// board page takes for its graph.
 	ListWidth, SettingsWidth, BrowseWidth, WelcomeWidth, SummaryWidth float32
-	BoardWidth float32
+	BoardWidth                                                        float32
 	// BoardNodeHeight is a board node's floor and the height its connections
 	// meet it at; BoardEdge is how wide a connection is drawn.
 	BoardNodeHeight, BoardEdge float32

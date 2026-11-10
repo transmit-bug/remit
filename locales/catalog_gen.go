@@ -4063,6 +4063,20 @@ func (msgs Messages) ImportRun() string {
 	return Catalog.Format(msgs.locale, "importRun", nil)
 }
 
+// ImportRunning says "Importing…"
+// in the language the app shows.
+//
+// The import wizard's activity line while the write runs off the frame.
+func ImportRunning() string { return In(i18n.Locale()).ImportRunning() }
+
+// ImportRunning says "Importing…"
+// in the language of msgs.
+//
+// The import wizard's activity line while the write runs off the frame.
+func (msgs Messages) ImportRunning() string {
+	return Catalog.Format(msgs.locale, "importRunning", nil)
+}
+
 // ImportEmptySource says "There is nothing in this source to import."
 // in the language the app shows.
 //

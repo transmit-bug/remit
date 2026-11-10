@@ -24,7 +24,7 @@ func TestImportMarkdownFromTheWizard(t *testing.T) {
 	}
 
 	picked := 0
-	a := NewApp(Options{LibraryDir: dir, ChooseMarkdown: func() ([]string, error) {
+	a := wizardApp(Options{LibraryDir: dir, ChooseMarkdown: func() ([]string, error) {
 		picked++
 		return []string{file}, nil
 	}})
@@ -77,7 +77,7 @@ func TestImportMarkdownKeepsExistingNotes(t *testing.T) {
 	if err := os.WriteFile(file, []byte("# Memory and recall\n\nA paragraph the note does not hold.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	a := NewApp(Options{LibraryDir: dir, ChooseMarkdown: func() ([]string, error) {
+	a := wizardApp(Options{LibraryDir: dir, ChooseMarkdown: func() ([]string, error) {
 		return []string{file}, nil
 	}})
 
@@ -123,7 +123,7 @@ func TestImportMarkdownOverwritesWhenKeepingIsOff(t *testing.T) {
 	if err := os.WriteFile(file, []byte("# Memory and recall\n\nA paragraph the note does not hold.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	a := NewApp(Options{LibraryDir: dir, ChooseMarkdown: func() ([]string, error) {
+	a := wizardApp(Options{LibraryDir: dir, ChooseMarkdown: func() ([]string, error) {
 		return []string{file}, nil
 	}})
 
@@ -167,7 +167,7 @@ func TestImportWizardKeepsItsOptionsAtTheMinimumSize(t *testing.T) {
 	if err := os.WriteFile(file, []byte("# Imported\n\nA fresh paragraph.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	a := NewApp(Options{LibraryDir: dir, ChooseMarkdown: func() ([]string, error) {
+	a := wizardApp(Options{LibraryDir: dir, ChooseMarkdown: func() ([]string, error) {
 		return []string{file}, nil
 	}})
 
@@ -196,7 +196,7 @@ func TestImportMarkdownFailure(t *testing.T) {
 	msgs := locales.In("en")
 	dir := t.TempDir()
 	seedLibrary(t, dir)
-	a := NewApp(Options{
+	a := wizardApp(Options{
 		LibraryDir:     dir,
 		ChooseMarkdown: func() ([]string, error) { return []string{"/tmp/broken.md"}, nil },
 		ImportMarkdown: func(string, importmd.Options) (importmd.Report, error) {
