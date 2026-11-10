@@ -1,25 +1,15 @@
 # UI 重设计 v2 · 从 40 屏原型到可实现的切片
 
-> 状态：**implemented（2026-11-10）**。用户已把实现细节授权给工程判断；本稿是 3 合 1 信息架构与
-> 界面的实现口径，§10.2 的三项口径按默认值冻结。
-> 已合并的切片：前端 **W1–W9**（W3a/W3b、W5a/W5b、W8a/W8b）与后端 **B1–B6**，§9.1 的 100 个测试名全部
-> 在仓库里；逐面核对、点名的缺口与三面 `manual` 在
-> [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md)（52 面：covered 49、missing 0、manual 3）。
-> 四处实现口径，按代码为准（各自有测试或注释）：
-> ① 文档面只有纸面与面板：笔记列表（S05）是自成一页的列表页，文档是「写」区域里的一个详情态
-> （子导航在文档里隐藏，面包屑回去；`TestDocumentHasNoNotesColumn`、`TestDocumentIsNotASubnavTab`）。
-> 面板是列还是 `ui.Overlay` 由舞台宽度算出（`panelFits`：纸面 + 面板 + 两条 `Gutter`），
-> 不是断点：1024 的舞台（1024−240）放不下，所以那里是浮层，纸面保住 760
-> （`TestPanelBecomesAnOverlayAt1024`、`TestPaperKeepsItsMeasureAt1024`）；§2.5 ② 已按此改写。
-> ② 720×520 的四档评分全部在场，但排成两列（`ui.Grid`，t23 p2 起；t21 时是一行四档，
-> `TestGradesTakeTwoColumnsAtTheMinimumSize`），即 §2.5 ④。
-> ③ 进度条的常态填充取 `theme.Success`（`kit/progressTone`，t22 起，跟随 `ui.Meter` 自己的
-> Success/Warning/Danger），与 §7.1 把「进度」列在 Mark 强调色下不同；本稿不改，记在这里。
-> ④ 文档面板是固定 288 的列（`writeArea` 的 `ui.Row` + `ui.Divider`，`panel.go` 的 `notePanel`），
-> 不是 §2.2 写的可拖 `ui.Split`：面板是查阅的地方，拖动只留给分栏。
+> 状态：**implemented（2026-11-10，含交付审计后的返工）**。2026-11-10 用户把实现细节授权给工程判断
+> （「不需要问我，按最佳实践」）；本稿据此冻结，§10.2 的三项口径按默认值执行。
+> 已合并的切片：前端 **W1–W9**（W3a/W3b、W5a/W5b、W8a/W8b）与后端 **B1–B6**；§9.1 的 106 个测试名
+> 都在仓库里。审计返工补齐了文档版式、卡片批量、卡片 CSV 与「保留现有笔记」、白板连线；逐面核对、
+> 点名的缺口与三面 `manual` 在 [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md)
+> （52 面：covered 49、missing 0、manual 3；`missing 0` 不等于零偏差，偏差与未做项见该文末表）。
+> 实现口径与原型 / 本稿有偏差的六处见 §0.4，按代码为准。
 > 基线：`master`（合并已落地），MyGo **v0.8.1**（`go list -m -f '{{.Dir}}' github.com/egoist/mygo`）。
 > 原型：`ref/prototype/`（`DESIGN.md` 说明书 + `index.html`/`styles.css`/`app.js` 可点稿），
-> 主路由静帧在 `/tmp/remit-shots/*.png`（`ref/prototype/shots/` 的 23 张为重复/损坏，不采用）。
+> 主路由静帧在 `ref/prototype/shots/`（40 张 + `shots/index.html` 蓝图；其中 23 张是同一张重复帧，不采用）。
 > 决策地图：[#201](https://github.com/transmit-bug/remit/issues/201)。UI 地图：[#128](https://github.com/transmit-bug/remit/issues/128)。
 > 执行顺序：[#158](https://github.com/transmit-bug/remit/issues/158)。打磨清单：[#164](https://github.com/transmit-bug/remit/issues/164)。
 
@@ -80,6 +70,19 @@
 | 归档 / 不再出现 / 推后 | 无 | 阅读会话的 A / D / P 与归档页 | W4 + B2 |
 | 预设 | 保留率在插件策略里，无界面 | 忆 · 预设（写库配置） | W5 + B3 |
 | 插件面 | 8 个槽位，2 个有接收方 | 11 个槽位全有接收方，失败面板可见 | W9 + B6 |
+
+### 0.4 已交付的实现口径（与本稿 / 原型的偏差）
+
+交付审计后按代码定下的六处；每一条都有测试或注释，改口径时连这张表一起改。
+
+| 口径 | 本稿 / 原型 | 已交付的写法 | 证据 |
+|---|---|---|---|
+| 文档版式 | §4.4 的 Workspace：笔记列 + 纸面 + 面板 | 纸面 + 面板。笔记列表（S05）是自成一页的列表，文档是「写」区域里的一个详情态；子导航在文档里隐藏、面包屑回区域 | `notes.View` / `writeArea`、`TestDocumentHasNoNotesColumn`、`TestDocumentIsNotASubnavTab` |
+| 面板成列 | §2.2 写的可拖 `ui.Split`；原型是固定 288 | 固定 288 的列（`ui.Row` + `ui.Divider`），不是 `ui.Split`；成列与否由舞台宽度算（`panelFits` = 纸面 + 面板 + 两条 `Gutter` = 1144），不是断点：1024 的舞台（784）放不下，所以那里是 `ui.Overlay`，约 1384 以上才是列，纸面始终保住 760 | `notes.go` 的 `panelFits` / `panelOverlay`、`TestPanelBecomesAnOverlayAt1024`、`TestPaperKeepsItsMeasureAt1024`、`TestPanelTakesAColumnOnAWideWindow` |
+| ≤760 的评分 | §2.5 ④：四档排两列 | 四档全部在场，`BreakpointSmall` 及以下用 `ui.Grid` 两列，四档仍可点 | `screens/review/review.go` 的 `grades`、`TestGradesTakeTwoColumnsAtTheMinimumSize` |
+| 进度条色调 | §7.1 把「进度」记在 Mark（强调色）下 | 常态填充取 `theme.Success`，档位跟随 `ui.Meter` 自己的 Success/Warning/Danger | `kit/progressTone`（`internal/ui/kit/progress.go`） |
+| 白板 | §6.4：宿主画的连接图 | 节点是真 `ui.ButtonBase`（`Absolute` 放在页面给的坐标）、边由 `Draw` 画在卡面下；拖拽 / 缩放 / 平移 / 就地增删都不提供（页面只读） | `kit.Board`、`TestBoardPlacesItsNodesWhereThePagePutThem`、`TestBoardPaintsOneLinePerConnection`、`TestBoardNodesAreFocusableInDataOrder` |
+| `board` 页面节点 | §6.4 新增的节点种类 | 纯增量、不升 `apiVersion`：不写 `board` 的插件照旧画它自己的语义节点；节点 ≤200、边 ≤200、坐标有限且在板内、边两端必须是本板的 node | `internal/ext/contrib/page.go` 的 `KindBoard` / `BoardNode` / `Validate`、`TestParsePageReadsABoard`、`TestParsePageRefusesABrokenBoard` |
 
 ---
 
@@ -247,9 +250,9 @@ lapses 由重放数出（§5.5），不写进卡片文件。
 | 顶栏：上下文动作 | 分段 + 图标按钮 + `⋯` | `ui.SegmentedBase`（紧凑外观，见 `segmentedChoice`）+ 图标 `ui.Button` + `ui.MenuButton`/`Button.Menu` | 沿用 `internal/ui/window.go` 已有的 `segmentedChoice` 与 `iconButton`。 |
 | 子导航 | 文字 tab + 2px 下划线 + 计数徽章 | `ui.TabsBase` + `ui.Badge` + `DrawOver` 画下划线 | 与 `modeTabs`（`internal/ui/window.go`）同一写法，从顶栏搬到独立一行。 |
 | 舞台 | `Scroll` → 居中 `Column(MaxWidth measure)` | `ui.Scroll` + `ui.Column` | 三类骨架见 §2.4。 |
-| 文档分支 | 左编辑 / 右只读 / 右面板 | `ui.Split`（宽度，非百分比） + `ui.SplitPercent`（分栏 50/50） | 面板宽度默认 `PanelWidth 288`，`SplitReset`。 |
-| 状态行 | 高 30，`Surface` 底，上 hairline，`TypeCaption` | `ui.Row` + `ui.Text` + `ui.Divider`（作为间隔） | 只在文档面（S11–S13）出现，其余面隐藏。 |
-| 面板 | 288 宽的一列，左侧细线，与纸面同级（不浮起） | `ui.Split` 第二栏 + `ui.Segmented`（大纲/反链） + `ui.Outline` / `ui.List` | 窄窗口收进 `ui.Overlay`（§2.6）。 |
+| 文档分支 | 左编辑 / 右只读 / 右面板 | `ui.SplitPercent`（分栏 50/50）+ `ui.Row` + `ui.Divider`（固定 288 的面板列） | §2.2 原写的 `ui.Split`（可拖宽度）未采用，交付见 §0.4；分栏仍是 `SplitPercent` + `SplitReset`。 |
+| 状态行 | 高 30，`Surface` 底，上 hairline，`TypeCaption` | `ui.Row` + `ui.Text` + `ui.Divider`（作为间隔） | 只在文档面（S11–S13）出现：`App.docStatus` 其余面返回空，整行不建。 |
+| 面板 | 288 宽的一列，左侧细线，与纸面同级（不浮起） | `ui.Row` + `ui.Divider`（交付的固定列；`ui.Split` 未采用） + `ui.Segmented`（大纲/反链） + `ui.Outline` / `ui.List` | 舞台放不下就收进 `ui.Overlay`（§0.4 / §2.5 ②）。 |
 | 会话 | 全屏三行：会话栏 / 舞台 / 动作行 | `ui.Column` ×3 + 既有 `screens/review`、`screens/reading` 的骨架 | 隐藏 rail/顶栏/子导航/状态行；`Esc` 退出。 |
 | 浮层 | 菜单 / 对话框 / 面板 | `ui.Popover`、`ui.PopoverMenuButton`、`ui.MenuButton`；`ui.DialogBase`、`ui.Modal`、`ui.AlertDialog`；`ui.Overlay` | 只有浮层带阴影（`tk.ShadowPanel`）。 |
 
@@ -557,7 +560,7 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 - 元素：
   - 纸面：`title` 用 `ui.TextInput`（无边框，`TypeDisplay`），正文 `richtext.EditorBase`（ADR 0005），
     `richtext.Theme` 提供 18/1.85 与三级标题。
-  - 沟槽（48 宽，纸面左侧）：当前/悬停段落的 `+` 与 `⋮⋮`（`ui.ButtonBase` + `Element.Drag/Drop`，既有
+  - 沟槽（48 宽，纸面左侧；≤760 改为段上一行，见 §2.5 ⑤ 的 `compactBlockRow`）：当前/悬停段落的 `+` 与 `⋮⋮`（`ui.ButtonBase` + `Element.Drag/Drop`，既有
     `block-tools.md` 口径）；上方徽章 `ui.ButtonBase`（形状编码状态：`due` 实边、`new` 虚边、
     `later` 淡边、`lost` 前缀 `!`），点击 → S20。
   - 卡片徽章不再放在文档上方：那段 `ScrollHorizontal` 徽章条删除（差异表 §0.3）。
@@ -566,7 +569,9 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 - 数据：既有 `notes.Deps` + `Inspector`/`CardsOf(block)`。
 - 状态：保存失败 → callout + 「重试」（`App.report` 已有 toast，这里加就地提示）。
 - 验收：`TestDocGutterBadgeOpensTheBlockInspector`、`TestBlockMenuMovesParagraphWithItsIdentity`（既有）、
-  `TestSelectionBarClozesTheBlockAndMakesACard`、`TestPaperKeepsGutterAtMinimumSize`。
+  `TestSelectionBarClozesTheBlockAndMakesACard`、`TestPaperKeepsGutterAtMinimumSize`；文档返工后的版式由
+  `TestDocumentHasNoNotesColumn`、`TestPaperKeepsItsMeasureAt1024`、`TestGutterMovesAboveTheParagraphAt760`、
+  `TestDocumentIsNotASubnavTab` 守。
 
 **S12 文档·阅读**
 - 与编辑同屏不同态：无沟槽工具、块编号常显、当前块高亮（`Accent.Alpha(0.10)` + 左侧 2px 竖线），
@@ -715,7 +720,9 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 - 批量动作条：选中数 + 「批量动作」菜单（暂停 / 改到期 / 改类型 / 冻结 / 埋藏同类 / 删除）+「加标签」字段 +「复习所选」（`PrimaryButton`）。未选中时整条常显、控件全禁用，原因写在选中数的位置（禁用控件不显示 tooltip，原因必须是可见文字）。
 - 数据：`Cards func() ([]store.CardSummary, int)`、`Selection` 状态、`Deps.Bulk…`。
 - 空态：无命中 → 一句 + 语法提示；无卡片 → 「还没有卡片」+「在笔记里用 `::` 或选中文字制卡」。
-- 验收：`TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`。
+- 验收：`TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`、
+  `TestCardTableBulkMenuOffersEveryWrite`、`TestCardTableBulkChangesTheType`、`TestCardTableBulkBuriesTheSiblings`、
+  `TestCardTableBulkDeletesAndKeepsTheHistory`、`TestCardTableReviewsOnlyTheRowsTicked`。
 
 **S32 忆·类型**（从 `screens/settings/types.go` 迁出为 `internal/ui/screens/cardtypes`）
 - 主从：左 `ui.List`（类型名 + 卡数）；右：标题行（名 + 内置/插件 `ui.Badge` +「编辑模板」）、

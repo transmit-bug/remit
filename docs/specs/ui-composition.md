@@ -76,13 +76,13 @@
 
 | 测试 | 断言的能力 | 手写版为何失败 | 状态 |
 |---|---|---|---|
-| `TestSplitResizesTheNotesColumn` | 拖分隔条 → 笔记列宽变化；窗口变化后宽度被记住 | 固定宽度不响应拖动 | 有 |
+| `TestPaperKeepsItsMeasureAt1024` | 纸面保 760 的 measure 时面板才成列，舞台放不下就浮层，纸面不变 | 固定三列会把纸面挤成一条 | 有 |
 | `TestOutlineFollowsTheCaret` | 光标进入某标题下 → 大纲把该项标为当前 | 手写列表没有当前节 | 有 |
 | `TestFormatBarBoldsTheSelection` | 选中文本点 B → `doc.Formatting().Bold == FormatOn`，且落盘 | 没有格式条 | 有 |
 | `TestViewModesSwitchPanes` | 编辑/分栏/阅读三个视图各自成立，切换器始终可达 | 面板里没有视图概念 | 有 |
 | `TestMinimumSizeControls` | 命令面板的行在最小窗口可点，且点了会执行 | 手写行缺选择语义 | 有 |
 | `TestPalette` | 输入收窄候选、键盘选中并执行 | 自绘行缺键盘/选择 | 有 |
-| `TestNotebookFillsTheWindowHeight` | 纸面填满工作区，而不是停在内容高度 | 内容高的纸面留下死白 | 有 |
+| `TestTheDocumentFillsTheWindowHeight` | 纸面填满工作区，而不是停在内容高度 | 内容高的纸面留下死白 | 有 |
 | `TestThePageCountsCardsNotBlocks` | 页面只报卡数，不出现“blocks” | 数块会多报，且说的是实现 | 有 |
 | `TestBrowseSortsByColumn` | 点表头 → 行序变化 | 手拼行没有排序 | 有 |
 | `TestRelinkNarrowsAsYouType` | 输入收窄候选、Enter 选中、Esc 取消 | 自绘行缺焦点/键盘 | 有 |
@@ -96,7 +96,8 @@
 `ui.Split` / `SplitPercent` 替换三栏，`ui.Outline` 替换大纲；删掉 `sidebarWidth`/`sidebarNarrow`/
 `panelWidth` 三个手写列宽，宽度改成 split 自己记住的 `notesWidth`/`editorShare`。
 `narrowWindow` + `panelShown` 保留：窄窗口自动收起面板是产品规则，不是布局计算。
-验收：`TestSplitResizesTheNotesColumn`、`TestOutlineFollowsTheCaret`，最小宽度下文档仍可输入。
+验收：`TestOutlineFollowsTheCaret`；笔记列的拖动那条测试随笔记列一起删除，同一道闸门改由 §4 的
+`TestPaperKeepsItsMeasureAt1024` 守。
 
 **S2 · 笔记页工具**（已完成的部分：视图切换、格式条、`⋯` 菜单；未做：字号、导出）
 顶栏：`编辑/分栏/阅读` 视图（分栏用 `Split` + `secondPane` 点亮现成的阅读视图）、
