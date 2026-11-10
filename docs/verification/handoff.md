@@ -86,3 +86,38 @@ whose items 6-8 are the appearance, accessibility and `manual` passes):
 - [ ] Presets: change the retention, close the window, reopen — the value is
       still there; add an unknown key to `remit.json` by hand, reopen, and it has
       not been dropped.
+
+## The audit rework
+
+The tests below already pin the boxes; these checks pin what a real frame, a real
+file and a real spreadsheet do with them. Run each at 1024×720 and at 720×520,
+and once in zh-Hans.
+
+- [ ] Document at 1024: `⌘⇧P` (or the top bar's panel button) opens the panel as
+      a drawer at the window's right edge, over the paper. The paper's line length
+      and left edge do not move while it is open, the title runs on under it, and
+      `Esc` closes it and puts the focus back on the button that opened it.
+      Widen to 1440 and the panel is a column beside the paper, with a hairline
+      between them.
+- [ ] `⌘⇧P` is the chord the help (`⌘/`) and Settings · Keys show for the panel;
+      `⌘⇧O` and `⌘⇧B` still open the same panel on the outline and the backlinks.
+- [ ] Gutter at 760 and below: the caret's paragraph shows one compact row above
+      the writing (paragraph number, badge, `+`, menu); nothing hangs off the
+      window's edge, the menu opens downward and stays inside the window's bottom
+      edge, and no horizontal scrollbar appears.
+- [ ] Card bulk on 忆 · 卡片: check two rows, then 批量动作 — change type (the table
+      redraws with the new type), bury (the paragraph's other card is due
+      tomorrow, the chosen one keeps its date), delete (asks first, names the
+      count, and the review log keeps the history), 复习所选 (the session holds
+      exactly the rows checked). With nothing checked every control is dead and
+      the reason is the visible line where the count would be.
+- [ ] CSV: 导出 → 卡片 CSV writes a `cards.csv` whose header and one-line-per-card
+      rows open cleanly in a spreadsheet, including a card whose prompt holds a
+      comma, a quote and a line break. A library with no cards greys the choice
+      and writes the reason under it.
+- [ ] Connected board (`examples/plugins/whiteboard`): nodes sit where the page
+      put them, one line per edge runs under the cards, Tab reaches every node in
+      the page's data order and Enter opens its paragraph; the block's menu item
+      returns to the board, highlights that node once and scrolls it into view;
+      dragging the canvas or pinching/wheeling to zoom does nothing — the board
+      is read-only.

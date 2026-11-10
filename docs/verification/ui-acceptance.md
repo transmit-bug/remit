@@ -1,12 +1,16 @@
-# UI 验收 · 逐屏（t23 part 2）
+# UI 验收 · 逐屏（t23 part 2，审计返工后复核）
 
-对象：`docs/specs/ui-redesign-v2.md` §3 的 52 个面（S01–S52），一屏一节。核对基准是 part 1 的
-`master` `7b83d5f` 的代码与测试；part 2（`e574b59` 合并）把点名的缺口补上：S01 三门与最近库、
-S52 重命名与删除、§2.5 ④ 的两列评分、两条组件闸门。
-t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过状态列、§2.5 五行、缺口表
-与全表的测试名：变化只有 §2.5 ③／缺口 #6（t21 把 `GutterNarrow` 接上，从「未修」改「已修」），
-其余不变。
-每个测试名都用 `grep -q "^func <名字>(" --include='*_test.go' internal/` 核过，没核到的不写。
+对象：`docs/specs/ui-redesign-v2.md` §3 的 52 个面（S01–S52），一屏一节。核对基准是 `master`
+`58cf0be` 的代码与测试；t23 part 2（`e574b59`）补上了 S01 三门与最近库、S52 重命名与删除、
+§2.5 ④ 的两列评分与两条组件闸门，其后的返工各自补上点名的动作：文档改成「纸面 + 面板」并加
+`⌘⇧P` 与 ≤760 的段上沟槽行（`8366602`）、卡片批量（`10fb795`）、CSV 导出与「保留现有笔记」
+（`003ab4f`）、白板连线（`58cf0be`）。
+本文按审计口径重核过一遍：每个测试名都用 `grep -q "^func <名字>(" --include='*_test.go' internal/`
+逐条核到，没核到的不写。文档返工改掉了三条旧名，本文只写现在的名字：笔记列的「三列」测试随笔记列删除，
+填满高度那条改成 `TestTheDocumentFillsTheWindowHeight`，标签筛选并入 `TestNotesListFiltersByTag`，
+笔记列由 `TestDocumentHasNoNotesColumn` 守。
+冻结依据是 `docs/specs/ui-redesign-v2.md` 开头的状态句（2026-11-10 用户把实现细节授权给工程判断，
+本稿据此冻结），不是某次确认事件；本文只记代码与测试的现状。
 
 状态三值：
 
@@ -15,6 +19,9 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 | `covered` | §9.1 点名的函数在仓库里存在，且断言的就是这屏的行为 |
 | `missing` | 点名函数不存在，或这屏的元素 / 动作在代码里不存在 |
 | `manual` | 有 headless 测试，但只证明了 fake（对话框、真实端口、网络、桌面外观）；结论要人上真平台 |
+
+`covered` 不排除记在「缺口」表里的偏差：那是口径或一个未做的零件（如 #15 的导出中态），
+不是这屏不存在；每一条偏差都在表里写明了证据。
 
 尺寸栏只写这屏自己的要求。通用三档（轨道 240/64、顶栏 60、子导航 44、状态行 30、720×520
 无横向滚动）在「全局验收」里一次写完，逐屏不抄；§2.5 的折叠规则逐条在那一节核对。
@@ -56,7 +63,7 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 | 命令面板 | 输入收窄、键盘选中并执行、焦点还回 | `TestPalette`、`TestPaletteGroupsCommandsNotesAndCards`、`TestPaletteListsPluginCommandsLast`（`internal/ui/palette_test.go`） | 有 |
 | 最小窗控件可点 | 面板行在 720×520 可点且点了会执行 | `TestMinimumSizeControls`（`internal/ui/app_test.go`）、`TestOverlaysAtTheMinimumSizeInChinese`（`internal/ui/shortcuts_test.go`） | 有 |
 | 页只报卡数不报块数 | 页面数字说笔记与卡，不说块；文档状态行报卡数 | `TestThePageCountsCardsNotBlocks`（`internal/ui/write_test.go`，闸门名） | 有 |
-| 纸面填满工作区 | 纸面填满，而非停在内容高度 | `TestNotebookFillsTheWindowHeight`（`internal/ui/notes_layout_test.go`） | 有 |
+| 纸面填满工作区 | 纸面填满，而非停在内容高度 | `TestTheDocumentFillsTheWindowHeight`（`internal/ui/notes_layout_test.go`） | 有 |
 
 ### i18n
 
@@ -70,7 +77,7 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 
 ### 减少动效
 
-`TestReducedMotionSwitchesAtOnce`、`TestMotionSettles`、`TestHoverAndPressKeepTheLayout`（`internal/ui/motion_test.go`）；`design.Press` 0.98 / `design.Hover` 由 `internal/ui/design/motion_test.go` 的 `TestOnlyTheEntranceBounces`、`TestMomentDurations` 定口径。降动效下选择性控件不得因动画不收敛而卡住：`narrowFilter` 用固定宽度而非 Grow，注释写在 `internal/ui/screens/recall/cards.go:521`。
+`TestReducedMotionSwitchesAtOnce`、`TestMotionSettles`、`TestHoverAndPressKeepTheLayout`（`internal/ui/motion_test.go`）；`design.Press` 0.98 / `design.Hover` 由 `internal/ui/design/motion_test.go` 的 `TestOnlyTheEntranceBounces`、`TestMomentDurations` 定口径。降动效下选择性控件不得因动画不收敛而卡住：`narrowFilter` 用固定宽度而非 Grow，注释写在 `internal/ui/screens/recall/cards.go` 的 `narrowFilter`。
 
 ### 人工交接（headless 测不到）
 
@@ -120,7 +127,7 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 - 键：`Esc` 关。
 - 尺寸：`SummaryWidth` 对话框；720×520 由 `TestExportChoicesFitTheSmallestWindow` 守。
 - 守卫：`TestExportWritesAndReports`（§9.1 点名）、`TestExportWritesTheCardCSV`、`TestExportRefusesTheCSVWithoutCards`、`TestCardCSVEscapesWhatItCarries`、`TestExportChoicesFitTheSmallestWindow`；另 `TestExportWritesTheLibraryArchive`、`TestExportDisabledOnAnEmptyLibrary`（`internal/ui/export_test.go`）。
-- 状态：**covered**。导出中的 `ui.Spinner` 未实现、无测试（§4.1 只要求「按钮禁用并显示」，主按钮已禁用）。
+- 状态：**covered**（卡片 CSV 已实现，见缺口 #9 的同一批提交）。偏差：导出同步写入，没有「导出中」态与 `ui.Spinner`（spec §4.1 S03 要求），主按钮只在所选格式不可写时禁用——见缺口 #15。成功后的 toast 带「打开文件夹」（`export.go:217` 的 `c.ToastAction`），但 `TestExportWritesAndReports` 只断言报告文案，没点那个动作。
 
 ## S04 · 今日
 
@@ -163,7 +170,7 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 - 动作：行 → `Deps.OpenTag(tag)`（= S05 的 `tag=` 筛选）。
 - 键：无。
 - 尺寸：`ListWidth`；最小窗由 `TestWritePagesAtTheMinimumSize` 覆盖。
-- 守卫：`TestTagPageOpensTheFilteredList`（`internal/ui/write_test.go`）；列表侧 `TestTagFilterNarrowsTheList`（`internal/ui/tags_test.go`）。
+- 守卫：`TestTagPageOpensTheFilteredList`（`internal/ui/write_test.go`）；列表侧 `TestNotesListFiltersByTag`（`internal/ui/write_test.go`，点一个标签 chip 后行只剩带该标签的笔记）。
 - 状态：**covered**。
 
 ## S08 · 写 · 资产
@@ -201,14 +208,14 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 
 ## S11 · 文档 · 编辑
 
-- 代码：`internal/ui/screens/notes/notes.go`（`ui.Split` + `SplitReset`）、`editor.go`、`blocks.go`、`selection.go`。
+- 代码：`internal/ui/screens/notes/notes.go`（`View`、`writeArea`、`panelFits`）、`editor.go`、`blocks.go`、`selection.go`、`panel.go`。
 - 目的：写。块是位置，身份在块 ID 里。
-- 元素：笔记列 `ui.Split`（`NotesColumnWidth 260`）→ 编辑器 `ui.Split`（面板 `PanelWidth 288`）、标题 `ui.TextInput`（无边框 `TypeDisplay`）、正文 `richtext.EditorBase`、沟槽 48（`+` / `⋮⋮` / 状态徽章）、选区动作条（S15）。
-- 动作：写回经 `Deps.SaveDocument`；块插入 / 移动 / 删除按块 ID；徽章 → S20；保存失败 → 就地提示 + 重试 + toast。
-- 键：`⌘F` 查找、`/` 插入菜单、`⌘⇧P` 面板、`⌘Z`/`⇧⌘Z` 撤销重做。
-- 尺寸：纸面 `PaperWidth 760`；720×520 保沟槽可点（`TestPaperKeepsGutterAtMinimumSize`、`TestBlockHandlesAtMinimumSize`），**未按 §2.5 ⑤ 改到段上一行**（缺口 #8）。
-- 守卫：`TestDocGutterBadgeOpensTheBlockInspector`、`TestPaperKeepsGutterAtMinimumSize`（`internal/ui/screens/notes/workbench_test.go`）、`TestSelectionBarClozesTheBlockAndMakesACard`（`internal/ui/workbench_test.go`）；既有 `TestBlockMenuMovesParagraphWithItsIdentity`、`TestBlockGripDragReorders`（`internal/ui/screens/notes/block_actions_test.go`）；另 `TestSaveFailureOffersRetry`、`TestGutterBadgeSaysWhenACardStoppedFollowing`、`TestBlockHandleAtCaretIsReachable`。
-- 状态：**covered**。
+- 元素：一张纸面（`PaperWidth 760` 居中，`paperGutter` 左右，标题 `ui.TextInput` 无边框 `TypeDisplay`、正文 `richtext.EditorBase`）+ 可选面板（见 S21/S22）+ 选区动作条（S15）；沟槽 >760 是纸面左侧 48（`blockHandles`），≤760 改成段落上方的一行（`compactBlockRow`）。文档里没有笔记列（S05 是自成一页的列表），子导航也隐藏——面包屑回区域。
+- 动作：写回经 `Deps.SaveDocument`；块插入 / 移动 / 删除按块 ID；徽章 → S20；`⌘⇧P` 开合面板（浮层上同一个键关闭）；保存失败 → 就地提示 + 重试 + toast。
+- 键：`⌘F` 查找、`/` 插入菜单、`⌘⇧P` 面板（`⌘⇧O` / `⌘⇧B` 是同一面板两个分段的别名）、`⌘Z`/`⇧⌘Z` 撤销重做。
+- 尺寸：纸面 `PaperWidth 760`；面板成列与否由舞台（窗口 − 轨道）算：`PaperWidth + PanelWidth + 2·Gutter = 1144`，所以 1024（舞台 784）是浮层、约 1384 以上是列。720×520 沟槽在段上一行且控件都在窗内（`TestGutterMovesAboveTheParagraphAt760`、`TestPaperKeepsGutterAtMinimumSize`、`TestBlockHandlesAtMinimumSize`）。
+- 守卫：`TestDocumentHasNoNotesColumn`、`TestPaperKeepsItsMeasureAt1024`、`TestPanelBecomesAnOverlayAt1024`、`TestPanelShortcutIsCmdShiftP`、`TestGutterMovesAboveTheParagraphAt760`、`TestDocumentIsNotASubnavTab`、`TestTheDocumentFillsTheWindowHeight`（`internal/ui/notes_layout_test.go`）；`TestDocGutterBadgeOpensTheBlockInspector`、`TestPaperKeepsGutterAtMinimumSize`（`internal/ui/screens/notes/workbench_test.go`）、`TestBlockHandlesAtMinimumSize`（`internal/ui/screens/notes/notes_test.go`）、`TestSelectionBarClozesTheBlockAndMakesACard`（`internal/ui/workbench_test.go`）；既有 `TestBlockMenuMovesParagraphWithItsIdentity`、`TestBlockGripDragReorders`（`internal/ui/screens/notes/block_actions_test.go`）；另 `TestSaveFailureOffersRetry`、`TestGutterBadgeSaysWhenACardStoppedFollowing`、`TestBlockHandleAtCaretIsReachable`。
+- 状态：**covered**。缺口 #8 关闭：≤760 的沟槽是段上一行（`compactBlockRow`），>760 仍是 48 沟槽；两种摆放都有测试。
 
 ## S12 · 文档 · 阅读
 
@@ -316,8 +323,8 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 - 元素：`ui.Column` 固定 `PanelWidth 288`（`writeArea` 里的 `ui.Row` + `ui.Divider`，不是可拖的 `ui.Split`）、顶部 `ui.Segmented`（大纲 / 反链 N）+ 收起按钮（`.Tooltip`）、`ui.Outline`（当前节用强调色）；空 →「这篇还没有标题」+ 一句。
 - 动作：点行 → `pendingJump` 滚到该段；分段切换 → 写 `PanelTab`；`⌘⇧P` 开关；舞台放不下纸面 + 面板时 → `ui.Overlay`。
 - 键：`⌘⇧P`、`Esc`（Overlay）。
-- 尺寸：固定 288（不可拖；v2 §2.2 写的 `ui.Split` 未采用，`writeArea` 是 `ui.Row` + 固定列）；成列与否由 `panelFits` 从舞台宽度算（1024 是浮层，1440 是列）。
-- 守卫：`TestOutlineFollowsTheCaret`、`TestOutlineJumpsToItsParagraph`、`TestPanelScrollsOnItsOwn`（`internal/ui/panel_test.go`）、`TestPanelTakesAColumnOnAWideWindow`（`internal/ui/workbench_test.go`）。
+- 尺寸：固定 288（不可拖；v2 §2.2 写的 `ui.Split` 未采用，`writeArea` 是 `ui.Row` + 固定列）；成列与否由 `panelFits` 从舞台宽度算（1024 是浮层，1440 是列；阈值 1144 = 760 + 288 + 96）。
+- 守卫：`TestOutlineFollowsTheCaret`、`TestOutlineJumpsToItsParagraph`、`TestPanelScrollsOnItsOwn`（`internal/ui/panel_test.go`）、`TestPanelTakesAColumnOnAWideWindow`（`internal/ui/workbench_test.go`，1440）、`TestPanelBecomesAnOverlayWhenNarrow`（720）、`TestPanelBecomesAnOverlayAt1024`、`TestPanelShortcutIsCmdShiftP`（`internal/ui/notes_layout_test.go`）。
 - 状态：**covered**。
 
 ## S22 · 反链面板
@@ -423,12 +430,12 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 
 - 代码：`internal/ui/screens/recall/cards.go`、`filter.go`。
 - 目的：一张表看全库的卡，能排序、能筛、能批量。
-- 元素：`ui.Split`（左 `FilterPaneWidth 200` 筛选栏；≤窄窗换成顶部 `ui.Select`）、`ui.Table`（首列勾选 `Fixed`、`Sortable`、`CellMenu`、列开关）、工具行（`ui.SearchField` 带 `is:`/`type:`/`tag:`/`note:` + 语法帮助 + 列开关 + `browse.row` 插件动作）、批量条（暂停 / 改到期 / 冻结 / 加标签）。
-- 动作：点表头排序、右键批量、多选批量、语法筛选、开原笔记。
+- 元素：`ui.Split`（左 `FilterPaneWidth 200` 筛选栏；≤窄窗换成顶部 `ui.Select`）、`ui.Table`（首列勾选 `Fixed`、`Sortable`、`CellMenu`、列开关）、工具行（`ui.SearchField` 带 `is:`/`type:`/`tag:`/`note:` + 语法帮助 + 列开关 + `browse.row` 插件动作）、批量条（选中数 + 「批量动作」一个 `ui.PopoverMenuButton`：暂停 / 改到期 / 改类型 / 冻结 / 埋藏同类 / 删除 / 加标签字段 / 复习所选；未选中时整条常显、每个控件禁用，原因写在选中数的位置）。
+- 动作：点表头排序、右键批量、多选批量、语法筛选、开原笔记；改类型写回 `ChangeCardTypes`、埋藏把同段其它卡推到明天、删除先问且保留复习记录、复习所选只进勾中的行。
 - 键：表自己的（↑↓ / Home / End / 空格选中）。
-- 尺寸：`BrowseWidth 1080`；≤ 阈值切 `ui.Select`（`cards.go:524`），zh 最小窗由 `TestRecallPagesAtMinimumInChinese` 守。
-- 守卫：`TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`（`internal/ui/recall_test.go`）；另 `TestCardTableOpensTheNote`、`TestCardTableDrawsTheBrowseRowSlot`（`internal/ui/receivers_test.go`）。
-- 状态：**covered**。
+- 尺寸：`BrowseWidth 1080`；舞台 < `FilterPaneWidth 200 + TableFloor 720` 时筛选栏收起、顶部换成 `narrowFilter` 的 `ui.Select`（`cards.go` 的 `wide`），所以 1024 的舞台（784）就是窄版本、约 1160 以上才有左筛选栏；切换宽度时 `Select` 用固定宽 `NameColumnWidth`（降动效下不收敛的回避，见「减少动效」）；zh 最小窗由 `TestRecallPagesAtMinimumInChinese` 守。
+- 守卫：`TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`、`TestCardTableBulkMenuOffersEveryWrite`、`TestCardTableBulkBarSaysWhyItIsOff`、`TestCardTableBulkChangesTheType`、`TestCardTableBulkBuriesTheSiblings`、`TestCardTableBulkDeletesAndKeepsTheHistory`、`TestCardTableReviewsOnlyTheRowsTicked`（`internal/ui/recall_test.go`）；store 侧 `TestChangeCardTypesKeepsTheSharedFields`、`TestBuryCardsSetsTheSiblingsDueTomorrow`、`TestDeleteCardsKeepsTheReviews`（`internal/core/store/bulk_test.go`）；另 `TestCardTableOpensTheNote`、`TestCardTableDrawsTheBrowseRowSlot`（`internal/ui/receivers_test.go`）。
+- 状态：**covered**。批量菜单与 spec §4.6 S31 的八项一一对应；每一写都有 UI 测试加一条 store 测试。
 
 ## S32 · 忆 · 类型
 
@@ -642,13 +649,13 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 ## S51 · 插件页 · 白板
 
 - 代码：`internal/ui/screens/pluginpage/board.go`、`internal/ui/board.go`、`internal/ui/kit/board.go`。
-- 目的：把一页笔记的块摊成节点网格，点节点回原文。
-- 元素：宿主画的节点网格（`kit.Board`，`ui.Grid` + `ui.List` 语义行，不是自由画布）、`page.header` 动作；空 →「这块画布还没有节点」。
-- 动作：点节点 → 阅读态对应段落；居中 / 定位；从块菜单回白板时高亮。
-- 键：随节点列表。
-- 尺寸：窄窗收栈，720×520 不横向滚动（`TestWhiteboardOpensTheBlock` 的注释即此）。
-- 守卫：`TestWhiteboardOpensTheBlock`、`TestWhiteboardSurvivesAChangedBlock`（§9.1）、`TestTheWhiteboardExampleOpensItsBlock`、`TestTheWhiteboardExampleLocatesItsNode`（`internal/ui/whiteboard_test.go`）、`TestInspectorOffersTheWhiteboardWhenANodeExists`（`internal/ui/board_test.go`）。
-- 状态：**covered**。自由画布（坐标 + 连线）在 §10 推迟，`kit.Board` 的注释记了这一层选择。
+- 目的：把插件页面数据里的块摊成一张连接图，点节点回原文。
+- 元素：宿主画的只读连接图 `kit.Board`：每个节点是真的 `ui.ButtonBase`，`Absolute()` 按页面给的坐标摆（坐标按宽度缩放，y 与卡高不变），宿主自己的「回到这一段」；边由宿主在 `Draw` 里画，在卡面之下。`page.header` 动作；空 →「这块画布还没有节点」；≤760 同一批节点落成竖排 `ui.List`（不画边）。
+- 动作：点节点 → 阅读态对应段落；块菜单 / 块检查器的「在白板里定位」→ 回白板、节点高亮一次并滚进视野（只滚一次）；没有拖拽、缩放、平移、就地增删（页面只读）。
+- 键：随节点列表（Tab 顺序 = 页面数据顺序，焦点环与按 Enter 都来自控件）。
+- 尺寸：宽版面 `design.BoardWidth 1120`；窄窗收栈，720×520 落成竖排 `ui.List` 且不横向滚动（`TestWhiteboardOpensTheBlock` 在最小窗跑一遍，节点上下排）。
+- 守卫：`TestWhiteboardOpensTheBlock`、`TestWhiteboardSurvivesAChangedBlock`、`TestInspectorOffersTheWhiteboardWhenANodeExists`（`internal/ui/board_test.go`）、`TestTheWhiteboardExampleOpensItsBlock`、`TestTheWhiteboardExampleLocatesItsNode`（`internal/ui/whiteboard_test.go`）；组件 `TestBoardPlacesItsNodesWhereThePagePutThem`、`TestBoardPaintsOneLinePerConnection`、`TestBoardNodesAreFocusableInDataOrder`、`TestBoardAtTheSmallestWindowIsAList`、`TestBoardBringsTheLocatedNodeIntoView`（`internal/ui/kit/board_test.go`）；契约 `TestParsePageReadsABoard`、`TestParsePageRefusesABrokenBoard`（`internal/ext/contrib/page_test.go`：节点 ≤200、边 ≤200、坐标有限且在板内、id 不重、边两端在本板）。
+- 状态：**covered**。只读连接图；自由画布（拖拽 / 缩放 / 平移 / 就地增删）在 v2 §10.1 第 8 条不做，`kit.Board` 的注释记了这一层选择。
 
 ## S52 · 笔记行菜单
 
@@ -665,7 +672,7 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 
 ### §9.1 点名而不存在的测试
 
-无：§9.1 的 100 个不重复测试名与 `ui-composition.md` §4 的 10 条闸门，今天全部在仓库里。
+无：§9.1 表里出现 106 个不重复测试名，逐条 `grep -q "^func <名字>(" --include='*_test.go' internal/` 核得到；`ui-composition.md` §4 的 10 条闸门也都有可核的名字（其中两条随文档返工改名，见该表）。
 这一轮补上的五个名字（前三条是 §9.1 点名的 S01 / S52 能力测试，后两条是 `ui-composition.md` §4 的闸门）：
 
 | 名字 | 该红的 bug | 现在守在哪 |
@@ -680,15 +687,16 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 
 | # | 面 / 规则 | 缺什么 | 证据 | 状态 |
 |---|---|---|---|---|
-| 6 | §2.5 ③ 纸面边距 48 → 20 | 阅读态由 `paperGutter` 在 `BreakpointSmall` 及以下返回 `GutterNarrow`，标题由 `displaySize` 返回 `DisplayNarrow` | `internal/ui/screens/notes/read.go:162-180`、`editor.go:57` | **已修**（t21） |
+| 6 | §2.5 ③ 纸面边距 48 → 20 | 读写两态都由 `paperGutter` 在 `BreakpointSmall` 及以下返回 `GutterNarrow`，标题由 `displaySize` 返回 `DisplayNarrow` | `internal/ui/screens/notes/read.go` 的 `paperGutter` / `displaySize`（`editor.go` 与 `read.go` 各调一次） | **已修**（t21） |
 | 7 | §2.5 ④ ≤760 复习评分两列 | `grades` 在 `BreakpointSmall` 及以下用 `ui.Grid` 两列 | `internal/ui/screens/review/review.go`、`TestGradesTakeTwoColumnsAtTheMinimumSize` | **已修** |
-| 8 | §2.5 ⑤ 沟槽改到段上一行 | 代码保留左侧 48 沟槽（口径改判，已由测试固定） | `TestPaperKeepsGutterAtMinimumSize`、`TestBlockHandlesAtMinimumSize` | 口径改判 |
-| 9 | §4.1 S02 步骤 2 开关 | spec 写「保留现有笔记、导入后重建索引」，代码是「重建索引、加入阅读队列」 | `internal/ui/import.go:444-445` | 未修 |
+| 8 | §2.5 ⑤ 沟槽改到段上一行 | ≤760 由 `compactBlockRow` 在纸面里画一行（段号 + 徽章 + `+` + `⋮⋮`），菜单高度按行下余量收；>760 仍是 48 沟槽 | `internal/ui/screens/notes/blocks.go`、`TestGutterMovesAboveTheParagraphAt760`、`TestPaperKeepsGutterAtMinimumSize` | **已修**（`8366602`） |
+| 9 | §4.1 S02 第二个开关 | 「保留现有笔记」`ui.Switch` 写 `importmd.Options.KeepExisting`（同批实现卡片 CSV） | `internal/ui/import.go` 的 `a.importMd(path, importmd.Options{KeepExisting: w.keep})`（`internal/ui/app.go` 注入 `importmd.Import`）、`TestImportMarkdownKeepsExistingNotes`、`TestImportMarkdownOverwritesWhenKeepingIsOff`、`TestImportKeepsTheNotesItFinds` | **已修**（`003ab4f`） |
 | 10 | §4.1 S01 三件元素 | 导入门、最近库列表（`settings.RecentLibraries`）、卡内 danger callout | `internal/ui/screens/start/start.go`、`internal/ui/library.go` | **已修** |
 | 11 | §4.9 S52 | 重命名、删除（含确认）、对应 `Deps` 与 core 写入 | `internal/ui/screens/notes/list.go`、`internal/core/store/library.go` | **已修** |
-| 12 | §3 状态行「只在文档面出现」 | 代码按内容判断（有话才画），不按面 | `internal/ui/shell/status.go:15`、`TestStatusLineOnlyWhenItSaysSomething` | 未修 |
-| 13 | §4.14 `kit.GradeBar` | 没有这个 `kit` 组件；实现是 `internal/ui/screens/recall/history.go:160` 的局部 `gradeBar` | `grep -rn GradeBar internal/ui` 无命中 | 未修 |
+| 12 | §3 状态行「只在文档面出现」 | `docStatus` 只在 `areaWrite` + `subNotes` + 有草稿时给内容，其余面为空 → 整行不建；但守「其余面无状态行」的测试还没写，shell 侧只有「没话不画」 | `internal/ui/notes.go` 的 `docStatus`、`TestStatusLineOnlyWhenItSaysSomething` | 代码已收口，**无专门测试** |
+| 13 | §4.14 `kit.GradeBar` | 没有这个 `kit` 组件；实现是 `internal/ui/screens/recall/history.go:160` 的局部 `gradeBar` | `grep -rn GradeBar internal/ui` 无命中 | 口径差 |
 | 14 | §4.10 把 S05–S10 全归 `ListWidth 860` | S08 在 §4.3 写的是 `BrowseWidth`，代码也是 `BrowseWidth 1080` | `internal/ui/screens/notes/assetspage.go:47` | 口径差 |
+| 15 | §4.1 S03 导出中的 `ui.Spinner` | 导出同步写在点击处理里，没有 exporting 态与 `ui.Spinner`；主按钮只在所选格式不可写时禁用 | `internal/ui/export.go` 的 `exportView` / `runExport`；无测试 | 未做 |
 
 ### 无行为测试的屏
 
@@ -702,5 +710,7 @@ t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过�
 ### 计数
 
 52 个面：`covered` 49、`missing` 0、`manual` 3（S39、S44、S45）。
-§9.1 表里出现 100 个不重复的测试名，全部在仓库里存在；`ui-composition.md` §4 的 10 条闸门也全部有测试。
-未修的缺口只剩口径差（#6、#8、#9、#12、#13、#14），它们不是缺测试，是代码与 spec 的写法还没有对齐。
+`missing` 0 的含义是「这 52 面在代码里都有元素与动作、都有一条守它的测试」，不等于与 spec 零偏差。
+仍未对齐的：#12（代码已收口，缺一条「其余面无状态行」的测试）、#13（`kit.GradeBar` 只在 spec 里存在）、
+#14（S08 的 measure 在 spec 内自相矛盾）、#15（S03 的导出中态与 `ui.Spinner` 未做），
+加上「逐条测试都跑两档宽」这条口径没做，以及 §4 闸门里 S13 的拖动只有 MyGo 组件自身的行为、无专门测试（manual）。没有「待确认 / 未确认」的项：上面每一条都已定论（已修 / 未做 / 口径差）。
