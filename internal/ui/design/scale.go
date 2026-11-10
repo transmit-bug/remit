@@ -57,8 +57,8 @@ const (
 	MessageWidth float32 = 520
 	// PanelWidth is a document's side panel: outline or backlinks.
 	PanelWidth float32 = 288
-	// NotesColumnWidth is the notes column's width until its divider moves.
-	// A document's split starts here and the user's drag is remembered.
+	// NotesColumnWidth is the master column of a two-pane working page — the
+	// card types — until its divider moves; the user's drag is remembered.
 	NotesColumnWidth float32 = 260
 
 	// The statistics calendar: one day's box in the overview's strip and on

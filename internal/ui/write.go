@@ -37,10 +37,10 @@ type writePages struct {
 	tree []notes.TreeNode
 }
 
-// writeView draws the page of the write area the window is on: the notebook,
-// or one of the six list pages its sub-navigation shows beside it.
+// writeView draws the page of the write area the window is on: a note in the
+// document, or one of the six list pages its sub-navigation shows.
 func (a *App) writeView(c *ui.Context) {
-	d := a.notesDeps()
+	d := a.notesDeps(c)
 	switch a.sub {
 	case subNoteList:
 		notes.ListView(c, &a.notes, d)

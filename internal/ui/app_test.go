@@ -24,7 +24,7 @@ func TestAreaShortcutsSwitchAreas(t *testing.T) {
 		want string
 	}{
 		{ui.Key1, msgs.AreaToday(), "", msgs.TodayBudget()},
-		{ui.Key2, msgs.AreaWrite(), msgs.ModeNotes(), msgs.Notebook()},
+		{ui.Key2, msgs.AreaWrite(), msgs.ModeNotes(), msgs.NewNote()},
 		{ui.Key3, msgs.AreaRead(), msgs.QueuePage(), msgs.ReadQueueEmpty()},
 		{ui.Key4, msgs.AreaRecall(), msgs.QueuePage(), msgs.RecallStart()},
 		{ui.Key5, msgs.AreaStats(), msgs.OverviewPage(), msgs.StatsTitle()},
@@ -90,9 +90,13 @@ func TestMinimumSizeControls(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
-	for _, label := range []string{"New note", "Notebook", "A daily habit", "Note title"} {
+	for _, label := range []string{"New note", "A daily habit"} {
 		assertControl(t, tt, 720, 520, label)
 	}
+	// A note is opened from the list; the document it opens is where a card is
+	// made from.
+	openNote(t, tt, "A daily habit")
+	assertControl(t, tt, 720, 520, "Note title")
 
 	// Making a card is a command now, reachable at the smallest window too. A
 	// note opens with the caret at its end, so the paragraph it is in is the
@@ -129,7 +133,7 @@ func TestMinimumSizeControls(t *testing.T) {
 	if tt.HasText("Review cards") {
 		t.Error("the palette stayed open after its row was clicked")
 	}
-	if !tt.HasText("Notebook") {
+	if !tt.HasText("Note title") {
 		t.Error("the palette's action did not run")
 	}
 	tt.Advance(320 * time.Millisecond) // the card's transition
@@ -163,7 +167,7 @@ func TestAppBarAtMinimumSize(t *testing.T) {
 		{msgs.AreaRecall(), msgs.RecallStart()},
 		{msgs.AreaStats(), msgs.StatsTitle()},
 		{msgs.AreaSettings(), msgs.SettingsAppearanceLead()},
-		{msgs.AreaWrite(), msgs.Notebook()},
+		{msgs.AreaWrite(), msgs.NewNote()},
 	} {
 		info, ok := tt.Access(area.name)
 		if !ok {
@@ -179,7 +183,12 @@ func TestAppBarAtMinimumSize(t *testing.T) {
 		}
 	}
 
-	// The document's own controls are in the bar when the notebook is up.
+	// The document's own controls are in the bar once a note is open: the area's
+	// first page is the list, which has none of them.
+	if _, ok := tt.Find(msgs.ViewEdit()); ok {
+		t.Errorf("the notes list offers the document's controls; texts %q", tt.Texts())
+	}
+	openNote(t, tt, "Memory and recall")
 	for _, label := range []string{msgs.ViewEdit(), msgs.ViewSplit(), msgs.ViewRead(), msgs.PanelTitle(), msgs.More()} {
 		assertControl(t, tt, 720, 520, label)
 	}
@@ -201,8 +210,12 @@ func TestDark(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the card's exit
-	if !tt.HasText("Notebook") || !tt.HasText("Note title") {
-		t.Fatalf("dark notes mode is incomplete; texts %q", tt.Texts())
+	if !tt.HasText("New note") {
+		t.Fatalf("the dark notes page is incomplete; texts %q", tt.Texts())
+	}
+	openNote(t, tt, "Writing cards")
+	if !tt.HasText("Note title") {
+		t.Fatalf("the dark document is incomplete; texts %q", tt.Texts())
 	}
 
 	recallQueue(tt)
@@ -288,7 +301,7 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
-	for _, want := range []string{"写", "笔记本"} {
+	for _, want := range []string{"写", "新建笔记"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing Chinese text %q in the notes; texts %q", want, tt.Texts())
 		}
@@ -296,7 +309,7 @@ func TestLocaleSwitchesTheLanguage(t *testing.T) {
 
 	tt.SetLocale("en")
 	tt.Frame()
-	for _, want := range []string{"Write", "Notebook", "New note"} {
+	for _, want := range []string{"Write", "New note"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing English text %q after switching back; texts %q", want, tt.Texts())
 		}

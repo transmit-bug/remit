@@ -41,6 +41,10 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 	}
 
 	w, _ := c.Size()
+	// At BreakpointSmall the block gutter has no room beside the paper, so the
+	// paragraph's controls become a row above the text and the paper keeps only
+	// its narrow margin. Above it, the gutter is the writing's own room.
+	narrow := w <= design.BreakpointSmall
 	edited, retitled := false, false
 	var blockChange blockAction
 	// The band under the frame: the format bar, then the paper itself. The
@@ -50,10 +54,8 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 		s.saveNotice(c, tk, msgs, d)
 		s.formatBar(c, tk)
 		ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Stretch).Justify(ui.Center).Children(func() {
-			// The margin keeps the block gutter's width: the handles hang in it,
-			// so it does not tighten with the window as the reading view's does.
 			ui.Column(c).Grow(1).MaxWidth(tk.PaperWidth).
-				Padding(tk.SpaceXXL, tk.Gutter).Children(func() {
+				Padding(tk.SpaceXXL, paperGutter(tk, w)).Children(func() {
 				title := ui.TextInput(c, &note.Title).FontSize(displaySize(tk, w)).Bold().
 					Placeholder(msgs.NoteTitle()).Bind(&s.title).
 					Label(msgs.NoteTitle()).
@@ -76,6 +78,12 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 					}
 				})
 
+				if narrow {
+					// No room beside the text: the current paragraph's badge and
+					// handles stand in one compact row above it, inside the paper.
+					s.compactBlockRow(c, tk, msgs, d, &blockChange)
+				}
+
 				// EditorBase, not Editor: the paper is the surface, so the editor
 				// brings no box of its own. The wrapping row takes the paste
 				// shortcut and dropped files: a picture pasted or dragged in
@@ -97,7 +105,9 @@ func (s *State) editorView(c *ui.Context, tk design.Tokens, d Deps) {
 					}).Grow(1).MinHeight(tk.Control * 12).Bind(&s.body).Changed() {
 						edited = true
 					}
-					s.blockHandles(c, tk, msgs, d, &blockChange)
+					if !narrow {
+						s.blockHandles(c, tk, msgs, d, &blockChange)
+					}
 					s.selectionBar(c, tk, msgs, d, boxes)
 					s.slashMenu(c, tk, msgs, boxes)
 				})

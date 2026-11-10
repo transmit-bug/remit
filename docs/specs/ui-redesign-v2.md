@@ -5,15 +5,18 @@
 > 已合并的切片：前端 **W1–W9**（W3a/W3b、W5a/W5b、W8a/W8b）与后端 **B1–B6**，§9.1 的 100 个测试名全部
 > 在仓库里；逐面核对、点名的缺口与三面 `manual` 在
 > [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md)（52 面：covered 49、missing 0、manual 3）。
-> 三处实现口径，按代码为准（各自有测试或注释）：
-> ① 1024 宽的文档面是三列（笔记列 + 纸面 + 面板，`TestThreeColumnsAtTheDefaultSize`，早于本轮）；
-> 面板到 `BreakpointNarrow 980` 才收成 `ui.Overlay`，与 §2.5 ② 一致。
+> 四处实现口径，按代码为准（各自有测试或注释）：
+> ① 文档面只有纸面与面板：笔记列表（S05）是自成一页的列表页，文档是「写」区域里的一个详情态
+> （子导航在文档里隐藏，面包屑回去；`TestDocumentHasNoNotesColumn`、`TestDocumentIsNotASubnavTab`）。
+> 面板是列还是 `ui.Overlay` 由舞台宽度算出（`panelFits`：纸面 + 面板 + 两条 `Gutter`），
+> 不是断点：1024 的舞台（1024−240）放不下，所以那里是浮层，纸面保住 760
+> （`TestPanelBecomesAnOverlayAt1024`、`TestPaperKeepsItsMeasureAt1024`）；§2.5 ② 已按此改写。
 > ② 720×520 的四档评分全部在场，但排成两列（`ui.Grid`，t23 p2 起；t21 时是一行四档，
 > `TestGradesTakeTwoColumnsAtTheMinimumSize`），即 §2.5 ④。
 > ③ 进度条的常态填充取 `theme.Success`（`kit/progressTone`，t22 起，跟随 `ui.Meter` 自己的
 > Success/Warning/Danger），与 §7.1 把「进度」列在 Mark 强调色下不同；本稿不改，记在这里。
 > ④ 文档面板是固定 288 的列（`writeArea` 的 `ui.Row` + `ui.Divider`，`panel.go` 的 `notePanel`），
-> 不是 §2.2 写的可拖 `ui.Split`：面板是查阅的地方，拖动只留给笔记列与分栏。
+> 不是 §2.2 写的可拖 `ui.Split`：面板是查阅的地方，拖动只留给分栏。
 > 基线：`master`（合并已落地），MyGo **v0.8.1**（`go list -m -f '{{.Dir}}' github.com/egoist/mygo`）。
 > 原型：`ref/prototype/`（`DESIGN.md` 说明书 + `index.html`/`styles.css`/`app.js` 可点稿），
 > 主路由静帧在 `/tmp/remit-shots/*.png`（`ref/prototype/shots/` 的 23 张为重复/损坏，不采用）。
@@ -267,19 +270,20 @@ lapses 由重放数出（§5.5），不写进卡片文件。
 |---|---|---|
 | Paper | S04 今日、S06 搜索、S36–S38 统计、S39–S46 设置、S50 制卡脚本 | `Scroll` → `Column(FillWidth, AlignItems Center, Padding(SpaceXL))` → `Column(MaxWidth measure)` |
 | List | S05 笔记、S07 标签、S08 资产、S09 模板、S10 摘录树、S23 队列、S24 归档、S27 忆队列、S31 卡片、S32 类型、S33 预设、S34 历史、S35 断链 | `Scroll` → `Column(MaxWidth ListWidth/BrowseWidth)`；行用 `ui.List`，表格用 `ui.Table` |
-| Workspace | S11–S13 文档 | `ui.Split`（笔记列 260） → `ui.Split`（面板 288）/ `SplitPercent`（分栏） |
+| Workspace | S11–S13 文档 | 纸面 760 居中 → 面板 288（仅当舞台容得下纸面 + 面板 + 两条 `Gutter`，否则 `ui.Overlay`）/ `SplitPercent`（分栏）。没有笔记列：S05 是 List 骨架的自有页 |
 | Session | S25 阅读会话、S29 复习、S30 总结 | 三行：会话栏（`ReviewWidth` 内居中）/ 舞台（`Center()`）/ 动作行 |
 
 ### 2.5 折叠规则
 
 | 断点 | 条件 | 动作 |
 |---|---|---|
-| `BreakpointNarrow = 980` | 窗口宽 ≤980 | ① 轨道收成 64：`SidebarItem` 的 label 传空、`.Tooltip(label)` 补名字，计数 Badge 仍显示（只显示一位数，超过 9 显示 `9+`）。② 文档面板收起；顶栏面板按钮改为打开 `ui.Overlay`（同内容，`Esc` 关）。 |
+| `BreakpointNarrow = 980` | 窗口宽 ≤980 | ① 轨道收成 64：`SidebarItem` 的 label 传空、`.Tooltip(label)` 补名字，计数 Badge 仍显示（只显示一位数，超过 9 显示 `9+`）。② 文档面板：舞台（窗口 − 轨道）容得下 `PaperWidth + PanelWidth + 2·Gutter` 才是列，否则是顶栏按钮（`⌘⇧P`）打开的 `ui.Overlay`（同内容，`Esc` 关）；1024 的舞台放不下，所以那里已经是浮层。 |
 | `BreakpointSmall = 760` | 窗口宽 ≤760 | ③ 纸面左右边距 `Gutter 48 → GutterNarrow 20`，`TypeDisplay 34 → DisplayNarrow 30`；measure 不缩。④ 复习评分两列（`ui.Grid` 两列），阅读动作行换行。⑤ 块沟槽从纸面左侧的 48 沟槽改为**段落上方一行**（`+` / `⋮⋮` / 徽章），因为左侧没有余量。 |
-| 720×520（最小窗口） | 由 ①–⑤ 全部生效 | 顶栏尾部动作进 `ui.Toolbar` 的 overflow；子导航仍常驻（`ui.TabsBase` 自己横向滚动）；**整窗不出现横向滚动**（测试 `TestNoHorizontalScrollAt720`）。 |
+| 720×520（最小窗口） | 由 ①–⑤ 全部生效 | 顶栏尾部动作进 `ui.Toolbar` 的 overflow；列表页的子导航仍常驻（`ui.TabsBase` 自己横向滚动），文档隐藏它、把高度让给舞台；**整窗不出现横向滚动**（测试 `TestNoHorizontalScrollAt720`）。 |
 
-声明：折叠是**产品规则**，不是布局计算，因此写在 `design`（断点常量）与屏（`panelShown` 同形）里，
-不写在各屏的 `Width()` 里。
+声明：轨道与纸面的折叠是**产品规则**（`design` 的断点常量）；文档面板不同，它是**布局计算**——
+`deps.Stage` 给出舞台宽度，`panelFits` 拿纸面、面板与两条 `Gutter` 相比，所以 1024 与 1440 的差别
+来自它们各自放得下什么，而不是一个魔数断点。
 
 ### 2.6 焦点顺序
 
@@ -545,8 +549,8 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 ### 4.4 文档（S11–S22）
 
 **S11 文档·编辑**
-- 版式：Workspace：`ui.Split`（笔记列 `NotesColumnWidth 260`，`SplitReset` 同一个值）→ `ui.Split`
-  （面板 `PanelWidth 288`，`SplitReset(PanelWidth)`）。
+- 版式：Workspace：纸面 `PaperWidth 760` 居中（`Column(MaxWidth)` + `paperGutter`），面板 `PanelWidth 288`
+  只在舞台容得下两者时是列；文档里没有笔记列，子导航也隐藏——S05 是自成一页的列表。
 - 元素：
   - 纸面：`title` 用 `ui.TextInput`（无边框，`TypeDisplay`），正文 `richtext.EditorBase`（ADR 0005），
     `richtext.Theme` 提供 18/1.85 与三级标题。
@@ -625,9 +629,11 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
 - 数据：大纲条目由笔记的块派生（既有 `outlineEntries(blocks []core.Block) []outlineEntry`，
   `internal/ui/screens/notes/outline.go:27`），进 `ui.OutlineState[int]`；反链读既有
   `notes.Deps.Backlinks func() []notes.Backlink`（`internal/ui/screens/notes/notes.go` 的 `Deps`）。
-- 状态：`≤980` 收进 `ui.Overlay`（同内容，`Esc` 关）；面板打开时焦点进入面板，关闭时还给顶栏的开关。
-- 验收：`TestPanelSwitchesToBacklinks`、`TestPanelBecomesAnOverlayWhenNarrow`、
-  既有 `TestOutlineFollowsTheCaret`、`TestOutlineJumpsToItsParagraph` 保持绿。
+- 状态：舞台容不下纸面与面板时收进 `ui.Overlay`（同内容，`Esc` 关，`⌘⇧P` 开关）；面板打开时焦点进入
+  面板，关闭时还给顶栏的开关。浮层自己的快捷键在面板上再声明一次，因为对话框收走窗口的键。
+- 验收：`TestPanelSwitchesToBacklinks`、`TestPanelBecomesAnOverlayAt1024`、`TestPanelShortcutIsCmdShiftP`、
+  `TestPanelBecomesAnOverlayWhenNarrow`、既有 `TestOutlineFollowsTheCaret`、`TestOutlineJumpsToItsParagraph`
+  保持绿。
 
 ### 4.5 读（S23–S26）
 
@@ -1358,7 +1364,7 @@ S27 的 chip、S31 的侧栏与「重来」列、S31 搜索语法的 `is:hard`�
 | S08 | `TestAssetsListNamesTheReferencingNotes` |
 | S09 | `TestTemplateStartsANoteWithoutTheMarker`（既有 `TestNewNoteFromTemplate` 的 UI 面） |
 | S10 | `TestExcerptTreeNestsChildren`、`TestExcerptTreeListsOrphans` |
-| S11 | `TestDocGutterBadgeOpensTheBlockInspector`、`TestSelectionBarClozesTheBlockAndMakesACard`、`TestPaperKeepsGutterAtMinimumSize`；既有 `TestBlockMenuMovesParagraphWithItsIdentity`、`TestBlockGripDragReorders` 继续绿 |
+| S11 | `TestDocGutterBadgeOpensTheBlockInspector`、`TestSelectionBarClozesTheBlockAndMakesACard`、`TestPaperKeepsGutterAtMinimumSize`、`TestDocumentHasNoNotesColumn`、`TestPaperKeepsItsMeasureAt1024`、`TestGutterMovesAboveTheParagraphAt760`、`TestDocumentIsNotASubnavTab`；既有 `TestBlockMenuMovesParagraphWithItsIdentity`、`TestBlockGripDragReorders` 继续绿 |
 | S12 | `TestReadModeMarksCardsAndExcerpts`、`TestReadModeExcerptsTheCurrentBlock` |
 | S13 | `TestViewModesSwitchPanes`（既有，扩到三态） |
 | S14 | `TestFindBarCountsMatches` |
@@ -1368,7 +1374,7 @@ S27 的 chip、S31 的侧栏与「重来」列、S31 搜索语法的 `is:hard`�
 | S18 | `TestCardEditorWritesTheFieldsOfItsType` |
 | S19 | `TestCardDetailListsTheScheduleHistory` |
 | S20 | `TestInspectorShowsTheThreeRoles`、`TestInspectorOffersTheWhiteboardWhenANodeExists` |
-| S21/S22 | `TestPanelSwitchesToBacklinks`、`TestPanelBecomesAnOverlayWhenNarrow`、`TestOutlineFollowsTheCaret`（既有） |
+| S21/S22 | `TestPanelSwitchesToBacklinks`、`TestPanelBecomesAnOverlayWhenNarrow`、`TestPanelBecomesAnOverlayAt1024`、`TestPanelShortcutIsCmdShiftP`、`TestOutlineFollowsTheCaret`（既有） |
 | S23 | `TestReadingQueueOpensTheSession`、`TestReadingQueueAddsANoteFromTheList` |
 | S24 | `TestArchiveRestoresANoteToTheQueue`、`TestDismissedNotesStayOutUntilRestored` |
 | S25/S26 | `TestReadingSessionArchivesANote`、`TestReadingSessionPostponesToTomorrow`、`TestReadingSessionDismissesAndTells`；既有 `TestReadingResumesWhereItStopped`、`TestExcerptLeavesTheReaderInPlace` 保持绿 |

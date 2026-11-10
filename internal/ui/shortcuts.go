@@ -73,6 +73,8 @@ func shortcutGroups() []keyGroup {
 			title: func(msgs locales.Messages) string { return msgs.KeysGroupDocument() },
 			keys: []keyRow{
 				{design.Chord(design.KeyCmd, "F"), func(msgs locales.Messages) string { return msgs.KeysFindInNote() }},
+				{design.Chord(design.KeyShift, design.KeyCmd, "P"),
+					func(msgs locales.Messages) string { return msgs.KeysPanel() }},
 				{design.Chord(design.KeyShift, design.KeyCmd, "O"),
 					func(msgs locales.Messages) string { return msgs.KeysOutline() }},
 				{design.Chord(design.KeyShift, design.KeyCmd, "B"),

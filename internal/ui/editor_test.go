@@ -13,8 +13,9 @@ import (
 	"github.com/transmit-bug/remit/internal/settings"
 )
 
-// notesMode opens the editor the way the user does, from the review queue the
-// window opens on.
+// notesMode opens the write area the way the user does, from the review queue
+// the window opens on: ⌘2 lands on the area's first page, the notes list, which
+// is where a note is opened from.
 func notesMode(t *testing.T, a *App, tt *ui.Tester) {
 	t.Helper()
 	tt.Frame()
@@ -22,19 +23,21 @@ func notesMode(t *testing.T, a *App, tt *ui.Tester) {
 	tt.Advance(320 * time.Millisecond) // the review card's exit
 }
 
-// openNote chooses a note from the sidebar, which is a title no field holds
-// while another note is up.
+// openNote opens a note from the notes list, which enters the document: the row
+// is a control, and the document is the note it opens.
 func openNote(t *testing.T, tt *ui.Tester, title string) {
 	t.Helper()
 	if err := tt.Click(title); err != nil {
 		t.Fatalf("choose note %q: %v", title, err)
 	}
+	tt.Advance(320 * time.Millisecond) // the document's entrance
 }
 
 func TestEditNoteTitle(t *testing.T) {
 	a, seed := newTestApp(t)
 	tt := ui.NewTester(a.View, 1024, 720)
 	notesMode(t, a, tt)
+	openNote(t, tt, "A daily habit")
 
 	if err := tt.Click("Note title"); err != nil {
 		t.Fatal(err)
@@ -49,8 +52,10 @@ func TestEditNoteTitle(t *testing.T) {
 	if note.Title != "A better habit" {
 		t.Fatalf("the store holds the title %q; wants %q", note.Title, "A better habit")
 	}
-	if !tt.HasText("A better habit") {
-		t.Fatalf("the sidebar does not show the new title; texts %q", tt.Texts())
+	// The paper's title field is the note's name: what the store holds is what
+	// the field reads, and the old name is nowhere.
+	if field, ok := tt.Access("Note title"); !ok || field.Value != "A better habit" {
+		t.Fatalf("the title field reads %q, want the new title; texts %q", field.Value, tt.Texts())
 	}
 	if tt.HasText("A daily habit") {
 		t.Errorf("the old title is still on screen; texts %q", tt.Texts())

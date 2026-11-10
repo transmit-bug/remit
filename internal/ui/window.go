@@ -48,7 +48,7 @@ func (a *App) overflowMenu(c *ui.Context, menu *ui.Menu) {
 // does not have.
 func (a *App) contextActions(c *ui.Context, tk design.Tokens) {
 	msgs := m(c)
-	if a.area != areaWrite || a.sub != subNotes {
+	if !a.documentOpen() {
 		// The recall queue's scope is the page's own action beside its rows, not
 		// a control in the bar: it changes what the session takes, so it sits
 		// where Start is.
@@ -58,10 +58,12 @@ func (a *App) contextActions(c *ui.Context, tk design.Tokens) {
 	a.viewSwitch(c, tk, msgs)
 	toolbarRule(c, tk)
 	// The panel's own button holds the focus the panel gives back, so closing
-	// it leaves the keyboard where the user opened it.
+	// it leaves the keyboard where the user opened it. Whether the panel is a
+	// column or an overlay is the stage's room, which the button reads too.
 	w, _ := c.Size()
-	iconButton(c, tk, msgs.PanelTitle(), "panel-right", a.notes.PanelVisible(w), func() {
-		a.notes.TogglePanel(c)
+	stage := a.stageWidth(w)
+	iconButton(c, tk, msgs.PanelTitle(), "panel-right", a.notes.PanelVisible(tk, stage), func() {
+		a.notes.TogglePanel(c, tk, stage)
 	}).Bind(&a.notes.PanelToggle)
 }
 
@@ -152,13 +154,13 @@ func (a *App) shortcuts(c *ui.Context) {
 	}
 	c.OnShortcut(ui.Cmd, ui.KeyK, func() { a.openPalette(c) })
 	c.OnShortcut(ui.Cmd, ui.Key1, func() { a.setArea(areaToday, subNone) })
-	c.OnShortcut(ui.Cmd, ui.Key2, func() { a.setArea(areaWrite, subNotes) })
+	c.OnShortcut(ui.Cmd, ui.Key2, func() { a.setArea(areaWrite, defaultSub(areaWrite)) })
 	c.OnShortcut(ui.Cmd, ui.Key3, func() { a.setArea(areaRead, subReadQueue) })
 	c.OnShortcut(ui.Cmd, ui.Key4, func() { a.setArea(areaRecall, subRecallQueue) })
 	c.OnShortcut(ui.Cmd, ui.Key5, func() { a.setArea(areaStats, subStatsOverview) })
 	c.OnShortcut(ui.Cmd, ui.Key6, func() { a.setArea(areaSettings, subSettingsAppearance) })
 	c.OnShortcut(ui.Cmd, ui.KeyF, func() {
-		if a.area == areaWrite && a.sub == subNotes && a.notes.Draft.ID != "" {
+		if a.documentOpen() && a.notes.Draft.ID != "" {
 			// The notebook's find looks in the note that is open; the library's
 			// search is the write area's search page.
 			a.notes.FindOpen = true
@@ -168,6 +170,15 @@ func (a *App) shortcuts(c *ui.Context) {
 	})
 	c.OnShortcut(ui.Cmd, ui.KeyN, func() { a.newNote(c) })
 	c.OnShortcut(ui.Cmd, ui.KeyD, func() { a.openDailyNote(c) })
+	// The document's panel is one key: it opens over the paper on a stage too
+	// narrow for a column and closes the column where there is room. The two
+	// views that open it on one of its tabs are aliases of the same panel.
+	if a.documentOpen() && a.session == sessionNone {
+		c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyP, func() {
+			w, _ := c.Size()
+			a.notes.TogglePanel(c, a.tokens(c), a.stageWidth(w))
+		})
+	}
 	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyO, func() { a.showPanel(notes.PanelOutline) })
 	c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyB, func() { a.showPanel(notes.PanelBacklinks) })
 
@@ -175,7 +186,7 @@ func (a *App) shortcuts(c *ui.Context) {
 	// E takes the paragraph on screen out into a note and M goes back to
 	// writing it. They exist only in the reading view, which has no field to
 	// type into, and they wait while a session has the window.
-	if a.area == areaWrite && a.sub == subNotes && a.session == sessionNone && a.notes.View == notes.Read {
+	if a.documentOpen() && a.session == sessionNone && a.notes.View == notes.Read {
 		c.OnShortcut(0, ui.KeyE, func() { a.excerptReadBlock(c) })
 		c.OnShortcut(0, ui.KeyM, func() { a.notes.View = notes.Edit })
 	}

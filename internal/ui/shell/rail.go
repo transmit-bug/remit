@@ -15,11 +15,8 @@ import (
 func rail(c *ui.Context, tk design.Tokens, st *State, d Deps) {
 	msgs := locales.In(c.Locale())
 	folded := collapsed(c, st)
-	width := tk.RailWidth
-	if folded {
-		width = tk.RailCollapsed
-	}
-	ui.Column(c).Width(width).Shrink(0).AlignItems(ui.Stretch).
+	w, _ := c.Size()
+	ui.Column(c).Width(RailWidth(w, st.Folded)).Shrink(0).AlignItems(ui.Stretch).
 		Background(tk.Surface).BorderWidth(0, tk.Hairline, 0, 0).BorderColor(tk.Border).
 		Children(func() {
 			brand(c, tk, folded)

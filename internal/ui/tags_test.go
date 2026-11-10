@@ -40,48 +40,6 @@ func taggedNotebook(t *testing.T) (*App, *ui.Tester) {
 	return a, tt
 }
 
-// Tags are in the sidebar, and choosing one narrows the list to the notes that
-// carry it; clearing brings the rest back.
-func TestTagFilterNarrowsTheList(t *testing.T) {
-	msgs := locales.In("en")
-	a, tt := taggedNotebook(t)
-
-	for _, chip := range []string{"#learning", "#habit", "#realcode"} {
-		if !tt.HasText(chip) {
-			t.Fatalf("the sidebar has no %q chip; texts %q", chip, tt.Texts())
-		}
-	}
-	for _, gone := range []string{"#notatag", "#noranother"} {
-		if tt.HasText(gone) {
-			t.Errorf("code produced the tag %q", gone)
-		}
-	}
-
-	if err := tt.Click("#habit"); err != nil {
-		t.Fatal(err)
-	}
-	if !tt.HasText("Habit notes") {
-		t.Errorf("the tagged note left the list; texts %q", tt.Texts())
-	}
-	for _, gone := range []string{"Spacing notes", "Code notes"} {
-		if tt.HasText(gone) {
-			t.Errorf("%q is still listed under #habit", gone)
-		}
-	}
-
-	if err := tt.Click(msgs.ClearFilter()); err != nil {
-		t.Fatalf("clear the filter: %v", err)
-	}
-	for _, want := range []string{"Habit notes", "Spacing notes", "Code notes"} {
-		if !tt.HasText(want) {
-			t.Errorf("clearing did not bring %q back; texts %q", want, tt.Texts())
-		}
-	}
-	if a.notes.TagFilter != "" {
-		t.Errorf("the filter is still %q", a.notes.TagFilter)
-	}
-}
-
 // ⌘F looks in the note that is open and nowhere else: the notebook stays, and
 // the match count is the open note's.
 func TestFindStaysInTheOpenDocument(t *testing.T) {
@@ -127,7 +85,7 @@ func TestFindCloses(t *testing.T) {
 	if a.notes.FindOpen {
 		t.Error("the find bar stayed open")
 	}
-	if !tt.HasText("Spacing notes") {
-		t.Errorf("the notebook emptied; texts %q", tt.Texts())
+	if field, ok := tt.Access(locales.In("en").NoteTitle()); !ok || field.Value != "Spacing notes" {
+		t.Errorf("the document emptied; the title reads %q; texts %q", field.Value, tt.Texts())
 	}
 }

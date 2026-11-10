@@ -42,7 +42,7 @@ func (a *App) readDeps(c *ui.Context) read.Deps {
 		Now:      time.Now,
 		Start:    func() { a.startReading("") },
 		Continue: func(id core.ID) { a.startReading(id) },
-		Add:      func() { a.setArea(areaWrite, subNotes) },
+		Add:      func() { a.setArea(areaWrite, subNoteList) },
 		Open:     a.openNote,
 		Restore:  func(id core.ID) { a.restoreReading(c, id) },
 		Reload:   a.reload,

@@ -10,8 +10,9 @@ import (
 
 // notePanel is the note's second column: its outline or the notes that point at
 // it, on one switch, with the control that puts the panel away. It is a rail at
-// PanelWidth, giving way to the paper when the window is narrow — the paper is
-// where the user writes, and the panel is what they consult.
+// PanelWidth, and it is a column only on a stage wide enough for it beside the
+// paper — the paper is where the user writes, and the panel is what they consult,
+// so where the two do not fit the panel floats over the paper instead.
 func (s *State) notePanel(c *ui.Context, tk design.Tokens, d Deps) {
 	ui.Column(c).Width(tk.PanelWidth).Shrink(0).FillHeight().Children(func() {
 		s.panelBody(c, tk, d)
@@ -19,7 +20,7 @@ func (s *State) notePanel(c *ui.Context, tk design.Tokens, d Deps) {
 }
 
 // panelBody builds the panel's content, so that the column and the overlay a
-// narrow window shows are the same panel.
+// narrow stage shows are the same panel.
 func (s *State) panelBody(c *ui.Context, tk design.Tokens, d Deps) {
 	msgs := locales.In(c.Locale())
 	links := d.Backlinks()

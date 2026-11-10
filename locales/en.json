@@ -24,10 +24,6 @@
   "@newNote": {
     "description": "Button that creates a note."
   },
-  "notebook": "Notebook",
-  "@notebook": {
-    "description": "Sidebar section holding the notes list."
-  },
   "untitledNote": "Untitled note",
   "@untitledNote": {
     "description": "Title a new note starts with."
@@ -1716,6 +1712,10 @@
   "@keysFindInNote": {
     "description": "Keyboard help: what the find key does in a note."
   },
+  "keysPanel": "Note panel",
+  "@keysPanel": {
+    "description": "Keyboard help: the key that opens and closes the note panel."
+  },
   "keysOutline": "Outline panel",
   "@keysOutline": {
     "description": "Keyboard help: what the outline key does."
@@ -3269,6 +3269,10 @@
   "settingsKeysEditCard": "Edit the card",
   "@settingsKeysEditCard": {
     "description": "Shortcut row: opening the card's editor."
+  },
+  "settingsKeysPanel": "Note panel",
+  "@settingsKeysPanel": {
+    "description": "Shortcut row: the document panel, outline or backlinks."
   },
   "settingsKeysOutline": "Outline panel",
   "@settingsKeysOutline": {

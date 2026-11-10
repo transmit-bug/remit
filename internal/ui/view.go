@@ -131,6 +131,13 @@ func (a *App) shellDeps(c *ui.Context) shell.Deps {
 	}
 }
 
+// stageWidth is the room the stage has in a window this wide: the window less
+// the rail the frame keeps beside it. A page computes its columns from this,
+// never from the window alone, which is not the room the page was given.
+func (a *App) stageWidth(w float32) float32 {
+	return max(0, w-shell.RailWidth(w, a.shell.Folded))
+}
+
 // railItems are the six areas, each with what its own queue holds: the mixed
 // queue for today, the notes for writing, the due notes for reading, the due
 // cards for recall. A count that is zero is no badge at all.
@@ -206,15 +213,20 @@ func (a *App) pageFor(item shell.Area) (contrib.PageRef, bool) {
 }
 
 // subnavItems are the current area's pages, with what each one holds: the notes
-// the notebook lists, the cards the table lists, the queues' lengths. An empty
-// list hides the row — Today has no pages of its own.
+// the notes page lists, the cards the table lists, the queues' lengths. An empty
+// list hides the row — Today has no pages of its own, and a document is a note
+// entered from the notes page rather than a page beside it, so its row goes and
+// the stage gets the height back.
 func (a *App) subnavItems(c *ui.Context) []shell.Sub {
+	if a.documentOpen() {
+		return nil
+	}
 	msgs := m(c)
 	var out []shell.Sub
 	for _, sub := range subsOf(a.area) {
 		item := shell.Sub{ID: subName(sub), Label: subLabel(msgs, sub)}
 		switch sub {
-		case subNotes:
+		case subNoteList:
 			item.Count = len(a.data.notes)
 		case subRecallQueue:
 			item.Count = a.queueCounts().Cards

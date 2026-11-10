@@ -126,15 +126,32 @@ func (s *State) narrowed() bool {
 	return s.Query != "" || s.TagFilter != "" || s.Filter.Any()
 }
 
-// listHead is the page's name and what the list holds, and the one action that
-// adds to it.
+// listHead is the page's name and what the list holds, and the ways to add to
+// it: an empty note, or a note started from one of the library's templates. The
+// template door shows only when there is a template to start from, so a library
+// with none reads as one button (#154).
 func listHead(c *ui.Context, tk design.Tokens, msgs locales.Messages, total, cards int, d Deps) {
+	templates := []core.Note(nil)
+	if d.Templates != nil {
+		templates = d.Templates()
+	}
 	ui.Row(c).FillWidth().AlignItems(ui.End).Gap(tk.SpaceM).Children(func() {
 		ui.Column(c).Grow(1).Gap(tk.SpaceXS).Children(func() {
 			ui.Text(c, msgs.ModeNotes()).FontSize(tk.TypeH1).Bold()
 			ui.Text(c, msgs.WriteListCount(total, cards)+" · "+msgs.WritePlainText()).
 				FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
 		})
+		if len(templates) > 0 {
+			ui.MenuButton(c, msgs.NewFromTemplate(), func(menu *ui.Menu) {
+				menu.MaxWidth(360)
+				for _, template := range templates {
+					template := template
+					if menu.Item(template.Title).Chosen() {
+						d.NewFromTemplate(c, template.ID)
+					}
+				}
+			}).MinHeight(tk.Control).Label(msgs.NewFromTemplate()).Tooltip(msgs.NewFromTemplate())
+		}
 		if d.NewNote != nil {
 			ui.PrimaryButton(c, msgs.NewNote()).MinHeight(tk.Control).
 				OnClick(func() { d.NewNote(c) })

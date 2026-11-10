@@ -16,6 +16,7 @@ func TestPalette(t *testing.T) {
 	_, _, tt := openApp(t)
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond) // the review card's exit
+	openNote(t, tt, "Memory and recall")
 
 	const field = "Note title"
 	if err := tt.Click(field); err != nil {
@@ -59,8 +60,8 @@ func TestPalette(t *testing.T) {
 	if tt.HasText("Review cards") {
 		t.Error("the palette stayed open after running its action")
 	}
-	if !tt.HasText("Untitled note") {
-		t.Fatalf("New note did not add a note; texts %q", tt.Texts())
+	if field, ok := tt.Access("Note title"); !ok || field.Value != "Untitled note" {
+		t.Fatalf("New note did not add a note: the title reads %q; texts %q", field.Value, tt.Texts())
 	}
 	if !tt.Focused("Note title") {
 		t.Errorf("a new note's title did not take the caret; texts %q", tt.Texts())

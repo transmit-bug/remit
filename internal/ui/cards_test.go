@@ -216,6 +216,7 @@ func TestClozeMakesOneCardPerBlank(t *testing.T) {
 func TestMakeCard(t *testing.T) {
 	_, seed, tt := openApp(t)
 	tt.Key(ui.Cmd, ui.Key2)
+	openNote(t, tt, "A daily habit")
 
 	tt.Key(ui.Cmd, ui.KeyK)
 	tt.Type("make card")

@@ -13,18 +13,18 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// notesView draws the notebook; the screen itself lives in its own package, and
-// this hands it the snapshot the app derived and the actions it owns (ADR 0004).
-func (a *App) notesView(c *ui.Context) {
-	notes.View(c, &a.notes, a.notesDeps())
-}
-
-// notesDeps is what the notebook asks of the app: the notes and cards it reads,
+// notesDeps is what the document asks of the app: the notes and cards it reads,
 // and one function per thing the user can do, each run here on the UI thread.
-func (a *App) notesDeps() notes.Deps {
+// The stage is the room the frame left the document — the window less the rail —
+// which is what the panel rule is computed from.
+func (a *App) notesDeps(c *ui.Context) notes.Deps {
+	// The stage is this frame's, taken now: the screen keeps its deps across
+	// passes, so it holds the room rather than the frame that measured it.
+	w, _ := c.Size()
+	stage := a.stageWidth(w)
 	return notes.Deps{
 		Notes:      func() []notes.Note { return a.notesRows },
-		Tags:       func() map[string]int { return a.data.tags },
+		Stage:      func() float32 { return stage },
 		Backlinks:  func() []notes.Backlink { return a.backlinks },
 		Cards:      a.cardGroups,
 		Badges:     a.blockBadges,
@@ -95,11 +95,10 @@ func (a *App) showPanel(tab notes.PanelTab) {
 	a.notes.ShowPanel(tab)
 }
 
-// noteRows is the snapshot as the notebook's list reads it: each note with how
-// many cards it feeds and the tags it carries. Note templates are left out —
-// they are starting points, not documents; only the list and the notes search
-// hide them (#154). It is derived after every write, so no frame walks the
-// cards.
+// noteRows is the snapshot as the document reads it: each note with how many
+// cards it feeds. Note templates are left out — they are starting points, not
+// documents; only the list and the notes search hide them (#154). It is derived
+// after every write, so no frame walks the cards.
 func (a *App) noteRows() []notes.Note {
 	rows := make([]notes.Note, 0, len(a.data.notes))
 	for _, note := range a.data.notes {
@@ -109,7 +108,6 @@ func (a *App) noteRows() []notes.Note {
 		rows = append(rows, notes.Note{
 			Note:  note,
 			Cards: a.data.cardsInNote(note),
-			Tags:  a.data.noteTags[note.ID],
 		})
 	}
 	return rows

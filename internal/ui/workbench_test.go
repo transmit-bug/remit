@@ -212,18 +212,21 @@ func TestPanelBecomesAnOverlayWhenNarrow(t *testing.T) {
 			if !tt.Focused(msgs.PanelTitle()) {
 				t.Errorf("the focus did not go back to the panel's button; texts %q", tt.Texts())
 			}
-			if a.notes.PanelVisible(720) {
+			if panelUp(a, 720) {
 				t.Error("the panel is still counted as up")
 			}
 		})
 	}
 }
 
-// The panel beside a wide window is a column of its own, and its rows are the
-// note's: the outline, or the notes that point at it.
+// The panel beside a stage wide enough for the paper and the panel is a column
+// of its own, and its rows are the note's: the outline, or the notes that point
+// at it.
 func TestPanelTakesAColumnOnAWideWindow(t *testing.T) {
 	msgs := locales.In("en")
-	a, _, tt := openApp(t)
+	a, _ := newTestApp(t)
+	tt := ui.NewTester(a.View, 1440, 900)
+	settle(tt)
 	notesMode(t, a, tt)
 	openNote(t, tt, "Memory and recall")
 
@@ -241,7 +244,7 @@ func TestPanelTakesAColumnOnAWideWindow(t *testing.T) {
 	if want := design.PanelWidth; panel.W > want+1 {
 		t.Errorf("the panel is %v wide, want at most its %v-rail", panel.W, want)
 	}
-	if !a.notes.PanelVisible(1024) {
+	if !panelUp(a, 1440) {
 		t.Error("the panel is a column but the top bar says it is down")
 	}
 }
