@@ -121,6 +121,59 @@ func TestQueryCardsDescribesEachRow(t *testing.T) {
 	})
 }
 
+// TestQueryCardsNoteFollowsItsBlock is the fact the card row records about its
+// source: the note the block lives in. A save that edits the block away leaves
+// the card with no note, and a save that writes the block back names the note
+// again — the card's reference is its block, so the note comes and goes with it.
+func TestQueryCardsNoteFollowsItsBlock(t *testing.T) {
+	lib, _, clk := newLibrary(t)
+	note := saveNote(t, lib, "Studied", "a :: 1", "b :: 2")
+	for _, block := range note.Blocks {
+		if _, err := firstCard(lib, block.ID); err != nil {
+			t.Fatalf("card: %v", err)
+		}
+	}
+	clk.advance(time.Minute)
+	second := note.Blocks[1].ID
+
+	noteOf := func(t *testing.T) core.ID {
+		t.Helper()
+		rows, _, err := lib.QueryCards(store.CardQuery{})
+		if err != nil {
+			t.Fatalf("QueryCards: %v", err)
+		}
+		for _, row := range rows {
+			if row.Block == second {
+				return row.Note
+			}
+		}
+		t.Fatalf("no card for block %q", second)
+		return ""
+	}
+
+	if _, err := lib.SaveNote(core.Note{ID: note.ID, Title: note.Title, Blocks: note.Blocks[:1]}); err != nil {
+		t.Fatalf("SaveNote without the block: %v", err)
+	}
+	if got := noteOf(t); got != "" {
+		t.Errorf("the card names note %q while its block is edited away, want none", got)
+	}
+
+	clk.advance(time.Minute)
+	if _, err := lib.SaveNote(core.Note{ID: note.ID, Title: note.Title, Blocks: note.Blocks}); err != nil {
+		t.Fatalf("SaveNote with the block back: %v", err)
+	}
+	if got := noteOf(t); got != note.ID {
+		t.Errorf("the card names note %q once its block is back, want %q", got, note.ID)
+	}
+
+	if err := lib.Rebuild(); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	if got := noteOf(t); got != note.ID {
+		t.Errorf("a rebuilt index names note %q, want %q", got, note.ID)
+	}
+}
+
 // TestQueryCardsFiltersTypeRefAndLapses says what the new filters keep: a type, a
 // reference state, and the hard cards a preset's threshold names.
 func TestQueryCardsFiltersTypeRefAndLapses(t *testing.T) {

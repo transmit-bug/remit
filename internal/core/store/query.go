@@ -174,8 +174,9 @@ const noteRowColumns = `n.id, n.title,
 	EXISTS (SELECT 1 FROM links l WHERE l.note_id = n.id AND l.anchor <> '')`
 
 // noteCardCount is how many cards a note's blocks feed, which a row and the
-// order by it both read.
-const noteCardCount = `(SELECT COUNT(*) FROM cards c JOIN blocks b ON b.id = c.block_id WHERE b.note_id = n.id)`
+// order by it both read. The card carries the note its block lives in, so this
+// counts one index range rather than joining every block of the note.
+const noteCardCount = `(SELECT COUNT(*) FROM cards c WHERE c.note_id = n.id)`
 
 // noteRowWhere is the notebook's filter, shared by the count and the page so the
 // total always describes the page.
@@ -318,10 +319,15 @@ func (l *Library) QueryCards(q CardQuery) ([]CardSummary, int, error) {
 	if l.index == nil {
 		return nil, 0, ErrClosed
 	}
-	where, args := cardWhere(q)
-	// The count joins the schedule as the page does: a filter over lapses is a
-	// column of it.
-	total, err := l.index.count(`SELECT COUNT(*)`+fromCards+where, args...)
+	where, args, bySchedule := cardWhere(q)
+	// The schedule is joined only when the filter reads it: counting a hundred
+	// thousand cards must not look up a hundred thousand card_state rows to
+	// answer a number the cards table already holds.
+	from := ` FROM cards c`
+	if bySchedule {
+		from = fromCards
+	}
+	total, err := l.index.count(`SELECT COUNT(*)`+from+where, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -411,10 +417,12 @@ func noteOrder(sort NoteSort) string {
 }
 
 // cardWhere is the filter QueryCards and its count share, so the total always
-// describes the page.
-func cardWhere(q CardQuery) (string, []any) {
+// describes the page. It says whether the filter reads the schedule, which is
+// the only reason to join it.
+func cardWhere(q CardQuery) (string, []any, bool) {
 	var where []string
 	var args []any
+	var bySchedule bool
 	if text := strings.TrimSpace(q.Text); text != "" {
 		like := "%" + escapeLike(text) + "%"
 		where = append(where, `(EXISTS (SELECT 1 FROM blocks b WHERE b.id = c.block_id AND b.text LIKE ? ESCAPE '\')
@@ -454,17 +462,18 @@ func cardWhere(q CardQuery) (string, []any) {
 	if q.MinLapses > 0 {
 		where = append(where, `COALESCE(s.lapses, 0) >= ?`)
 		args = append(args, q.MinLapses)
+		bySchedule = true
 	}
 	if len(where) == 0 {
-		return "", nil
+		return "", nil, bySchedule
 	}
-	return ` WHERE ` + strings.Join(where, ` AND `), args
+	return ` WHERE ` + strings.Join(where, ` AND `), args, bySchedule
 }
 
-// cardNoteID is the note a card's block lives in. A block ID can appear in two
-// notes — a copied file — so the tie-break names one, as NoteOfBlock does.
-const cardNoteID = `COALESCE((SELECT b.note_id FROM blocks b WHERE b.id = c.block_id
-	ORDER BY b.note_id, b.position LIMIT 1), '')`
+// cardNoteID is the note a card's block lives in, as the index resolved it when
+// the card was written. A block ID can appear in two notes — a copied file — so
+// the tie-break names one, as NoteOfBlock does.
+const cardNoteID = `c.note_id`
 
 // cardNoteTitle is the title of the note a card's block lives in, which is the
 // title a card list sorts by: a card has none of its own.
