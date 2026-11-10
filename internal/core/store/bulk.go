@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -10,9 +11,9 @@ import (
 )
 
 // The bulk writes a list makes over what it has selected — suspend, move the due
-// date, freeze, tag — each of them one card file or one note source per id, and
-// each of them idempotent: doing it twice leaves the library as doing it once
-// did.
+// date, freeze, tag, change the type, bury the paragraph's other cards, delete —
+// each of them one card file or one note source per id, and each of them
+// idempotent: doing it twice leaves the library as doing it once did.
 //
 // They answer a report rather than an error alone, because a batch is not one
 // write: a card whose file cannot be written, or an id that names nothing, must
@@ -130,6 +131,150 @@ func (l *Library) SetDue(ids []core.ID, at time.Time) (BulkResult, error) {
 	return out, nil
 }
 
+// ChangeCardTypes renders the cards through another type. A card's field values
+// are its own hand edits: those the new type names are kept, the rest belong to
+// a schema the card no longer has and are dropped. A card whose type or fields
+// cannot be read is reported, and the rest are still written.
+//
+// A type this library does not hold is a failure of every id, not of nothing:
+// what the caller asked for cannot be rendered at all. The write carries no
+// moment — a card file records what a card shows, so nothing here reads a clock.
+func (l *Library) ChangeCardTypes(ids []core.ID, typeID core.ID) (BulkResult, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return BulkResult{}, ErrClosed
+	}
+	typ, ok := l.typeLocked(typeID)
+	if !ok {
+		var out BulkResult
+		for _, id := range ids {
+			out.fail(id, fmt.Errorf("%w: %q", ErrNoType, typeID))
+		}
+		return out, nil
+	}
+	keep := make(map[string]bool, len(typ.Fields))
+	for _, field := range typ.Fields {
+		keep[field] = true
+	}
+	return l.bulkUpdateCardsLocked(ids, func(card core.Card) (core.Card, error) {
+		card.Type = typ.ID
+		card.Fields, card.Edited = keptFields(card.Fields, keep)
+		return card, nil
+	})
+}
+
+// keptFields keeps the values a type still names, and reports whether any are
+// left: a card with no value of its own resolves every field from its block
+// again, which is what an unedited card is.
+func keptFields(fields map[string]string, keep map[string]bool) (map[string]string, bool) {
+	var out map[string]string
+	for field, value := range fields {
+		if !keep[field] {
+			continue
+		}
+		if out == nil {
+			out = make(map[string]string, len(fields))
+		}
+		out[field] = value
+	}
+	return out, len(out) > 0
+}
+
+// BuryCards puts the other cards of the chosen cards' paragraphs off until
+// `until`: the same paragraph asks the same thing twice, so the second card is
+// not worth meeting before the first is learned. The chosen cards keep their
+// date — burying is what the paragraph's other cards get, not what the chosen
+// ones do.
+//
+// It is a due override, the same fact SetDue writes, so no review is added and
+// no history is rewritten. A sibling already due after `until` is left alone: it
+// is not in the way, and pulling it forward would be a schedule regression the
+// user did not ask for. The report names what was written and what failed.
+func (l *Library) BuryCards(ids []core.ID, until time.Time) (BulkResult, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return BulkResult{}, ErrClosed
+	}
+	if until.IsZero() {
+		until = l.now()
+	}
+	chosen := make(map[core.ID]bool, len(ids))
+	blocks := make(map[core.ID]bool, len(ids))
+	var out BulkResult
+	for _, id := range ids {
+		chosen[id] = true
+		meta, ok := l.cards[id]
+		if !ok {
+			out.fail(id, fmt.Errorf("store: no card %q", id))
+			continue
+		}
+		blocks[meta.card.Ref.Block] = true
+	}
+	if len(blocks) == 0 {
+		return out, nil
+	}
+	// Siblings are read from the catalog in id order, so one call writes the
+	// same cards in the same order every time.
+	siblings := make([]core.ID, 0, len(l.cards))
+	for id := range l.cards {
+		siblings = append(siblings, id)
+	}
+	sort.Slice(siblings, func(i, j int) bool { return siblings[i] < siblings[j] })
+	set := l.now().UTC()
+	queueMoved := false
+	for _, id := range siblings {
+		meta := l.cards[id]
+		if chosen[id] || !blocks[meta.card.Ref.Block] {
+			continue
+		}
+		if !time.Unix(0, dueNano(meta)).Before(until) {
+			continue
+		}
+		card := cloneCard(meta.card)
+		card.Due = &core.DueOverride{At: until.UTC(), Set: set}
+		if err := l.saveCard(card); err != nil {
+			out.fail(id, err)
+			continue
+		}
+		// A reviewed card's queue place is its schedule's due moment, so the new
+		// date has to reach it now and not at the next open — SetDue's rule.
+		if current, ok := l.cards[id]; ok && current.state.Reviews > 0 && card.Due.Stands(current.state.LastReview) {
+			current.state.Due = card.Due.At
+			queueMoved = true
+		}
+		out.Applied++
+	}
+	if queueMoved {
+		l.markQueueStale()
+	}
+	return out, nil
+}
+
+// DeleteCards removes the card files the user chose. The review log is
+// append-only, so the history stays where it was written: a delete stops a card
+// from being scheduled, it does not take back what the user learned or how often
+// they missed it.
+//
+// A card that is not there is a failure of that id, not of the batch.
+func (l *Library) DeleteCards(ids []core.ID) (BulkResult, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.index == nil {
+		return BulkResult{}, ErrClosed
+	}
+	var out BulkResult
+	for _, id := range ids {
+		if err := l.deleteCardLocked(id); err != nil {
+			out.fail(id, err)
+			continue
+		}
+		out.Applied++
+	}
+	return out, nil
+}
+
 // AddTagToNotes tags notes: the tag becomes one block at the end of each note
 // whose text does not carry it yet, which is what typing it as its own line
 // writes. A note already carrying the tag is left alone — its file is not
@@ -170,6 +315,12 @@ func (l *Library) AddTagToNotes(ids []core.ID, tag string) (BulkResult, error) {
 func (l *Library) bulkUpdateCards(ids []core.ID, edit func(core.Card) (core.Card, error)) (BulkResult, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	return l.bulkUpdateCardsLocked(ids, edit)
+}
+
+// bulkUpdateCardsLocked is bulkUpdateCards' write, assuming the lock is held: it
+// is what an action that also reads the catalog runs under its own lock.
+func (l *Library) bulkUpdateCardsLocked(ids []core.ID, edit func(core.Card) (core.Card, error)) (BulkResult, error) {
 	if l.index == nil {
 		return BulkResult{}, ErrClosed
 	}

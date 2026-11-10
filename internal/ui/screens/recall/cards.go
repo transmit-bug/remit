@@ -131,6 +131,13 @@ type pick struct {
 	set bool
 }
 
+// TypeChoice is one card type the bulk bar can put the chosen cards on: the ID
+// the write needs, and the name it is read by — library data, not a message.
+type TypeChoice struct {
+	ID   core.ID
+	Name string
+}
+
 // CardsState is the card table's own state: the query and filter the user
 // chose, the sort and the columns, and the rows chosen for a bulk action. The
 // rows themselves are the app's, so the screen keeps only the choice inside
@@ -145,6 +152,10 @@ type CardsState struct {
 	list   ui.ListState
 	field  ui.Handle
 	tagBox ui.Handle
+
+	// deleting are the rows the delete question is about: the question is drawn
+	// over the table, so the answer needs the ids it was asked about.
+	deleting []core.ID
 
 	// hidden is the columns the user switched off, by the id the table knows
 	// them by.
@@ -247,12 +258,20 @@ type CardsDeps struct {
 	ChooseFilter func(CardFilter)
 	// Open shows the card's note, or the card in review when its block is gone.
 	Open func(core.ID)
-	// Suspend, SetDue, Freeze and AddTag are the bulk writes, over the rows
-	// chosen; SetDue names a day offset from today.
-	Suspend func([]core.ID)
-	SetDue  func([]core.ID, int)
-	Freeze  func([]core.ID)
-	AddTag  func([]core.ID, string)
+	// Suspend, SetDue, Freeze, AddTag, ChangeType, Bury and Delete are the bulk
+	// writes, over the rows chosen; SetDue names a day offset from today.
+	Suspend    func([]core.ID)
+	SetDue     func([]core.ID, int)
+	Freeze     func([]core.ID)
+	AddTag     func([]core.ID, string)
+	ChangeType func([]core.ID, core.ID)
+	Bury       func([]core.ID)
+	Delete     func([]core.ID)
+	// Review enters the session with exactly the rows chosen, in table order.
+	Review func([]core.ID)
+	// Types are the types the bulk bar can move the chosen cards to, named for
+	// the user; a catalog with none offers no choice.
+	Types func() []TypeChoice
 
 	// Items are the browse.row slot's items, as the library load cached them,
 	// asked for where the action row draws them: an item that names
@@ -307,9 +326,9 @@ func CardsView(c *ui.Context, s *CardsState, d CardsDeps) {
 				}).FillWidth()
 			}
 
-			if len(chosen) > 0 {
-				bulkBar(c, s, d, tk, msgs, chosen)
-			}
+			// The bulk bar is always there: with nothing chosen it says so, and
+			// every control in it is disabled until a row is ticked.
+			bulkBar(c, s, d, tk, msgs, chosen)
 
 			groups := d.Facets()
 			if !wide {
@@ -338,6 +357,10 @@ func CardsView(c *ui.Context, s *CardsState, d CardsDeps) {
 			}
 		})
 	})
+
+	// The bulk bar's delete asks over the page, so the row's choice is kept
+	// until the question is answered.
+	s.deleteDialog(c, msgs, d)
 
 	// The effects of this pass, once the fields have taken what was typed.
 	if reload {
@@ -538,49 +561,119 @@ func narrowFilter(c *ui.Context, s *CardsState, tk design.Tokens, msgs locales.M
 }
 
 // bulkBar is the actions over the rows chosen: suspend, move the due date,
-// freeze, and tag the notes they came from.
+// change the type, freeze, tag the notes they came from, bury the paragraph's
+// other cards, delete, and review exactly these. It shows with nothing chosen
+// too, every control disabled and the reason where the count would be: a
+// disabled control carries no tooltip, so a reason that is only a tip explains
+// nothing.
+//
+// The writes are one menu rather than a row of buttons, as the prototype has
+// them: seven of them beside a tag field and the primary do not fit one line of
+// the smallest window, and a bar two lines deep costs the table the rows it is
+// made for.
 func bulkBar(c *ui.Context, s *CardsState, d CardsDeps, tk design.Tokens, msgs locales.Messages, chosen []core.ID) {
-	ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
+	none := len(chosen) == 0
+	types := d.types()
+	clear := func() { s.ClearSelection() }
+	ui.Row(c).FillWidth().Wrap().AlignItems(ui.Center).Gap(tk.SpaceS).
 		Padding(tk.SpaceS, tk.SpaceM).Radius(tk.RadiusControl).
 		Background(tk.Accent.Alpha(0.08)).Children(func() {
-		ui.Text(c, msgs.RecallCardsSelected(len(chosen))).FontSize(tk.TypeUI).Bold()
-		ui.Spacer(c)
-		ui.Button(c, msgs.Suspend()).MinHeight(tk.Control).OnClick(func() {
-			d.Suspend(chosen)
-			s.ClearSelection()
-		})
-		ui.PopoverMenuButton(c, msgs.RecallBulkDue(), func(m *ui.Menu) {
-			for _, option := range dueOptions(msgs) {
-				option := option
-				if m.Item(option.label).Chosen() {
-					d.SetDue(chosen, option.days)
-					s.ClearSelection()
+		if none {
+			ui.Text(c, msgs.RecallBulkNoSelection()).FontSize(tk.TypeUI).Bold()
+		} else {
+			ui.Text(c, msgs.RecallCardsSelected(len(chosen))).FontSize(tk.TypeUI).Bold()
+		}
+		ui.PopoverMenuButton(c, msgs.RecallBulkActions(), func(m *ui.Menu) {
+			if m.Item(msgs.Suspend()).Chosen() {
+				d.Suspend(chosen)
+				clear()
+			}
+			m.Submenu(msgs.RecallBulkDue(), func(m *ui.Menu) {
+				for _, option := range dueOptions(msgs) {
+					option := option
+					if m.Item(option.label).Chosen() {
+						d.SetDue(chosen, option.days)
+						clear()
+					}
 				}
+			})
+			if len(types) > 0 {
+				m.Submenu(msgs.RecallBulkType(), func(m *ui.Menu) {
+					for _, typ := range types {
+						typ := typ
+						if m.Item(typ.Name).Chosen() {
+							d.ChangeType(chosen, typ.ID)
+							clear()
+						}
+					}
+				})
 			}
-		}).MinHeight(tk.Control).Label(msgs.RecallBulkDue())
-		ui.Button(c, msgs.RecallBulkFreeze()).MinHeight(tk.Control).OnClick(func() {
-			d.Freeze(chosen)
-			s.ClearSelection()
-		})
-		ui.Row(c).AlignItems(ui.Center).Gap(tk.SpaceXS).Children(func() {
-			input := ui.TextInput(c, &s.Tag).
-				Placeholder(msgs.RecallBulkTagPlaceholder()).Label(msgs.RecallBulkTagPlaceholder()).
-				MinHeight(tk.Control).Width(tk.NameColumnWidth).Bind(&s.tagBox)
-			added := false
-			if ui.Button(c, msgs.RecallBulkTagApply()).MinHeight(tk.Control).
-				Disabled(s.Tag == "").Clicked() {
-				added = true
+			if m.Item(msgs.RecallBulkFreeze()).Chosen() {
+				d.Freeze(chosen)
+				clear()
 			}
-			if input.Submitted() && s.Tag != "" {
-				added = true
+			if m.Item(msgs.RecallBulkBury()).Chosen() {
+				d.Bury(chosen)
+				clear()
 			}
-			if added {
-				d.AddTag(chosen, s.Tag)
-				s.Tag = ""
-				s.ClearSelection()
+			m.Separator()
+			if m.Item(msgs.RecallBulkDelete()).Danger().Chosen() {
+				// The question is asked over the table, so the ids it is about are
+				// kept until it is answered.
+				s.deleting = chosen
 			}
+		}).MinHeight(tk.Control).Label(msgs.RecallBulkActions()).Disabled(none)
+		input := ui.TextInput(c, &s.Tag).
+			Placeholder(msgs.RecallBulkTagPlaceholder()).Label(msgs.RecallBulkTagPlaceholder()).
+			MinHeight(tk.Control).Width(tk.TagFieldWidth).Bind(&s.tagBox).Disabled(none)
+		added := false
+		if ui.Button(c, msgs.RecallBulkTagApply()).MinHeight(tk.Control).
+			Disabled(none || s.Tag == "").Clicked() {
+			added = true
+		}
+		if input.Submitted() && !none && s.Tag != "" {
+			added = true
+		}
+		if added {
+			d.AddTag(chosen, s.Tag)
+			s.Tag = ""
+			clear()
+		}
+		ui.PrimaryButton(c, msgs.RecallBulkReview()).MinHeight(tk.Control).Disabled(none).OnClick(func() {
+			d.Review(chosen)
 		})
 	})
+}
+
+// deleteDialog asks before the rows chosen go, naming how many and where their
+// history stays: the review log is append-only, so deleting a card takes no
+// review with it.
+func (s *CardsState) deleteDialog(c *ui.Context, msgs locales.Messages, d CardsDeps) {
+	if len(s.deleting) == 0 {
+		return
+	}
+	open := true
+	switch ui.AlertDialog(c, &open, msgs.RecallBulkDeleteTitle(),
+		msgs.RecallBulkDeleteWarning(len(s.deleting)),
+		msgs.Cancel(), msgs.RecallBulkDeleteConfirm()) {
+	case 0, ui.AlertDismissed:
+		s.deleting = nil
+	case 1:
+		ids := s.deleting
+		s.deleting = nil
+		if d.Delete != nil {
+			d.Delete(ids)
+		}
+		s.ClearSelection()
+	}
+}
+
+// types are the type choices, empty when the app offers none.
+func (d CardsDeps) types() []TypeChoice {
+	if d.Types == nil {
+		return nil
+	}
+	return d.Types()
 }
 
 // dueOption is one choice of the due menu: its label and how many days from

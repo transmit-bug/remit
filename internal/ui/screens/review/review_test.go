@@ -424,6 +424,39 @@ func TestQueueOrderSurvivesSync(t *testing.T) {
 	}
 }
 
+// OnlyMany is the session a list of chosen cards enters: the queue is exactly
+// that list, in its order, and the store's due list does not narrow it — a card
+// the user picked is one they asked for, due today or not.
+func TestOnlyManyHoldsTheChosenList(t *testing.T) {
+	state := &review.State{}
+	state.OnlyMany([]core.ID{"a", "b"})
+	if got := state.Remaining(); got != 2 {
+		t.Fatalf("the session holds %d cards, want the two chosen", got)
+	}
+	state.Sync([]core.ID{"c"})
+	if got := state.Remaining(); got != 2 {
+		t.Fatalf("a reload narrowed the chosen list to %d cards", got)
+	}
+	for _, want := range []core.ID{"a", "b"} {
+		id, ok := state.Current()
+		if !ok || id != want {
+			t.Fatalf("the head is %q, want %q", id, want)
+		}
+		state.Advance(true)
+	}
+	if _, ok := state.Current(); ok {
+		t.Error("the session holds a card nobody chose")
+	}
+
+	// Only is still the one-card session it was.
+	state.Reset()
+	state.Only("a")
+	state.Advance(true)
+	if _, ok := state.Current(); ok {
+		t.Error("the one-card session kept a card after it was graded")
+	}
+}
+
 // withPreview gives the screen the four intervals the app would show, as the
 // schedule would report them.
 func withPreview(f *fake, waits [4]time.Duration) {

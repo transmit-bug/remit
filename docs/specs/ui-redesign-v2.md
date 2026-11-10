@@ -709,7 +709,7 @@ overlay overlayKind // overlayNone / overlayPalette / overlayKeys / overlayImpor
   （提示/笔记/类型/状态/间隔/重来/到期）+ `CellMenu`（右键批量动作）+ `Fixed`（勾选列）。
 - 工具行：`ui.SearchField`（支持 `is:` / `type:` / `tag:` / `note:`）+ 语法帮助（`ui.Button` 开 callout）
   + 列开关 `ui.PopoverMenuButton` + `browse.row` 插件动作（无项时禁用 + 说明）。
-- 批量动作条：选中数 + 「暂停」「改到期」「冻结」「加标签」。
+- 批量动作条：选中数 + 「批量动作」菜单（暂停 / 改到期 / 改类型 / 冻结 / 埋藏同类 / 删除）+「加标签」字段 +「复习所选」（`PrimaryButton`）。未选中时整条常显、控件全禁用，原因写在选中数的位置（禁用控件不显示 tooltip，原因必须是可见文字）。
 - 数据：`Cards func() ([]store.CardSummary, int)`、`Selection` 状态、`Deps.Bulk…`。
 - 空态：无命中 → 一句 + 语法提示；无卡片 → 「还没有卡片」+「在笔记里用 `::` 或选中文字制卡」。
 - 验收：`TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`。

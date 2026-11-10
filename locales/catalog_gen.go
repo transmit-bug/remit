@@ -12303,6 +12303,166 @@ func (msgs Messages) RecallBulkTagApply() string {
 	return Catalog.Format(msgs.locale, "recallBulkTagApply", nil)
 }
 
+// RecallBulkNoSelection says "Tick a card first."
+// in the language the app shows.
+//
+// Says, in the bulk bar, why its controls are disabled: no row is ticked.
+func RecallBulkNoSelection() string { return In(i18n.Locale()).RecallBulkNoSelection() }
+
+// RecallBulkNoSelection says "Tick a card first."
+// in the language of msgs.
+//
+// Says, in the bulk bar, why its controls are disabled: no row is ticked.
+func (msgs Messages) RecallBulkNoSelection() string {
+	return Catalog.Format(msgs.locale, "recallBulkNoSelection", nil)
+}
+
+// RecallBulkActions says "Bulk actions"
+// in the language the app shows.
+//
+// The bulk bar's menu of writes over the rows ticked.
+func RecallBulkActions() string { return In(i18n.Locale()).RecallBulkActions() }
+
+// RecallBulkActions says "Bulk actions"
+// in the language of msgs.
+//
+// The bulk bar's menu of writes over the rows ticked.
+func (msgs Messages) RecallBulkActions() string {
+	return Catalog.Format(msgs.locale, "recallBulkActions", nil)
+}
+
+// RecallBulkType says "Change type…"
+// in the language the app shows.
+//
+// The bulk action that renders the chosen cards through another type.
+func RecallBulkType() string { return In(i18n.Locale()).RecallBulkType() }
+
+// RecallBulkType says "Change type…"
+// in the language of msgs.
+//
+// The bulk action that renders the chosen cards through another type.
+func (msgs Messages) RecallBulkType() string {
+	return Catalog.Format(msgs.locale, "recallBulkType", nil)
+}
+
+// RecallBulkBury says "Bury siblings"
+// in the language the app shows.
+//
+// The bulk action that puts the other cards of the chosen cards’
+// paragraphs off until tomorrow.
+func RecallBulkBury() string { return In(i18n.Locale()).RecallBulkBury() }
+
+// RecallBulkBury says "Bury siblings"
+// in the language of msgs.
+//
+// The bulk action that puts the other cards of the chosen cards’
+// paragraphs off until tomorrow.
+func (msgs Messages) RecallBulkBury() string {
+	return Catalog.Format(msgs.locale, "recallBulkBury", nil)
+}
+
+// RecallBulkDelete says "Delete…"
+// in the language the app shows.
+//
+// The bulk action that removes the chosen cards, after a question.
+func RecallBulkDelete() string { return In(i18n.Locale()).RecallBulkDelete() }
+
+// RecallBulkDelete says "Delete…"
+// in the language of msgs.
+//
+// The bulk action that removes the chosen cards, after a question.
+func (msgs Messages) RecallBulkDelete() string {
+	return Catalog.Format(msgs.locale, "recallBulkDelete", nil)
+}
+
+// RecallBulkDeleteTitle says "Delete these cards?"
+// in the language the app shows.
+//
+// The question a bulk delete asks.
+func RecallBulkDeleteTitle() string { return In(i18n.Locale()).RecallBulkDeleteTitle() }
+
+// RecallBulkDeleteTitle says "Delete these cards?"
+// in the language of msgs.
+//
+// The question a bulk delete asks.
+func (msgs Messages) RecallBulkDeleteTitle() string {
+	return Catalog.Format(msgs.locale, "recallBulkDeleteTitle", nil)
+}
+
+// RecallBulkDeleteWarning says "{count, plural, one {# card is deleted. Its reviews stay in the review log.} other {# cards are deleted. Their review…"
+// in the language the app shows.
+//
+// What a bulk delete costs: how many cards, and that the history stays.
+func RecallBulkDeleteWarning(count int) string {
+	return In(i18n.Locale()).RecallBulkDeleteWarning(count)
+}
+
+// RecallBulkDeleteWarning says "{count, plural, one {# card is deleted. Its reviews stay in the review log.} other {# cards are deleted. Their review…"
+// in the language of msgs.
+//
+// What a bulk delete costs: how many cards, and that the history stays.
+func (msgs Messages) RecallBulkDeleteWarning(count int) string {
+	return Catalog.Format(msgs.locale, "recallBulkDeleteWarning", map[string]any{"count": count})
+}
+
+// RecallBulkDeleteConfirm says "Delete cards"
+// in the language the app shows.
+//
+// The button that answers the bulk delete’s question.
+func RecallBulkDeleteConfirm() string { return In(i18n.Locale()).RecallBulkDeleteConfirm() }
+
+// RecallBulkDeleteConfirm says "Delete cards"
+// in the language of msgs.
+//
+// The button that answers the bulk delete’s question.
+func (msgs Messages) RecallBulkDeleteConfirm() string {
+	return Catalog.Format(msgs.locale, "recallBulkDeleteConfirm", nil)
+}
+
+// RecallBulkReview says "Review selected"
+// in the language the app shows.
+//
+// The bulk action that enters the review session with exactly the rows
+// ticked.
+func RecallBulkReview() string { return In(i18n.Locale()).RecallBulkReview() }
+
+// RecallBulkReview says "Review selected"
+// in the language of msgs.
+//
+// The bulk action that enters the review session with exactly the rows
+// ticked.
+func (msgs Messages) RecallBulkReview() string {
+	return Catalog.Format(msgs.locale, "recallBulkReview", nil)
+}
+
+// RecallBulkBuried says "{count, plural, one {# card buried until tomorrow} other {# cards buried until tomorrow}}"
+// in the language the app shows.
+//
+// The outcome of burying a paragraph’s other cards.
+func RecallBulkBuried(count int) string { return In(i18n.Locale()).RecallBulkBuried(count) }
+
+// RecallBulkBuried says "{count, plural, one {# card buried until tomorrow} other {# cards buried until tomorrow}}"
+// in the language of msgs.
+//
+// The outcome of burying a paragraph’s other cards.
+func (msgs Messages) RecallBulkBuried(count int) string {
+	return Catalog.Format(msgs.locale, "recallBulkBuried", map[string]any{"count": count})
+}
+
+// RecallBulkDeleted says "{count, plural, one {# card deleted} other {# cards deleted}}"
+// in the language the app shows.
+//
+// The outcome of a bulk delete.
+func RecallBulkDeleted(count int) string { return In(i18n.Locale()).RecallBulkDeleted(count) }
+
+// RecallBulkDeleted says "{count, plural, one {# card deleted} other {# cards deleted}}"
+// in the language of msgs.
+//
+// The outcome of a bulk delete.
+func (msgs Messages) RecallBulkDeleted(count int) string {
+	return Catalog.Format(msgs.locale, "recallBulkDeleted", map[string]any{"count": count})
+}
+
 // RecallDueTomorrow says "Tomorrow"
 // in the language the app shows.
 //

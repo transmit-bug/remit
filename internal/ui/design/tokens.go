@@ -66,8 +66,9 @@ type Tokens struct {
 	// The card table's fixed columns: a row's checkbox, a count, a date and a
 	// name.
 	CheckColumnWidth, CountColumnWidth, DateColumnWidth, NameColumnWidth float32
-	// MeterWidth is a row's paragraph progress bar.
-	MeterWidth float32
+	// MeterWidth is a row's paragraph progress bar, and TagFieldWidth the bulk
+	// bar's tag field.
+	MeterWidth, TagFieldWidth float32
 	// The statistics calendar: a day's box in the overview's strip and on the
 	// heatmap page's grid, the room between two, and the column the weekday
 	// names get.
@@ -129,8 +130,9 @@ func NewTokens(base *ui.Theme) Tokens {
 		TableFloor:       TableFloor,
 		CheckColumnWidth: CheckColumnWidth, CountColumnWidth: CountColumnWidth,
 		DateColumnWidth: DateColumnWidth, NameColumnWidth: NameColumnWidth,
-		MeterWidth: MeterWidth,
-		HeatCell:   HeatCell, HeatCellLarge: HeatCellLarge,
+		MeterWidth:    MeterWidth,
+		TagFieldWidth: TagFieldWidth,
+		HeatCell:      HeatCell, HeatCellLarge: HeatCellLarge,
 		HeatGap: HeatGap, HeatWeekday: HeatWeekday,
 	}
 }

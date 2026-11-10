@@ -83,6 +83,10 @@ const (
 	// MeterWidth is a row's paragraph progress bar: wide enough to read as a
 	// fraction, narrow enough to leave the title the room it needs (spec §4.5).
 	MeterWidth float32 = 120
+	// TagFieldWidth is the bulk bar's tag field: a tag, not a name, so it is
+	// narrower than a column's name and the bar stays one line on the smallest
+	// window.
+	TagFieldWidth float32 = 120
 	// SourceLabelWidth is the column a card's context names its three paragraphs
 	// in — before, this one, after — so their texts start on one line.
 	SourceLabelWidth float32 = 76
