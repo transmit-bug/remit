@@ -9,8 +9,9 @@
 逐条核到，没核到的不写。文档返工改掉了三条旧名，本文只写现在的名字：笔记列的「三列」测试随笔记列删除，
 填满高度那条改成 `TestTheDocumentFillsTheWindowHeight`，标签筛选并入 `TestNotesListFiltersByTag`，
 笔记列由 `TestDocumentHasNoNotesColumn` 守。
-冻结依据是 `docs/specs/ui-redesign-v2.md` 开头的状态句（2026-11-10 用户把实现细节授权给工程判断，
-本稿据此冻结），不是某次确认事件；本文只记代码与测试的现状。
+冻结依据是 `docs/specs/ui-redesign-v2.md` 开头的状态句：2026-11-10 用户把实现细节授权给工程判断，
+并在交付口径的确认问题上明确接受本稿（52 面、六区、Today、阅读终态、`remit/3`、插件槽位）为冻结基线；
+本文只记代码与测试的现状，偏差以文末缺口表为准。
 
 状态三值：
 
@@ -113,10 +114,11 @@
 - 目的：把三种来源（`.remitlib` / Markdown 目录 / Anki `.apkg`）带进库，并在写之前给人看计数。
 - 元素：`ui.DialogBase` + 步骤条（`ui.Badge` + `ui.Divider` 组合，理由：`ui.Stepper` 是数值步进）+ 三个来源行 + 预览 `ui.Table`（项 / 值）+ 三个 `ui.Switch`（保留现有笔记 / 重建索引 / 加入阅读队列）+ 完成页。
 - 动作：`ChooseArchive` / `ChooseMarkdown` / `ChooseAnki` → 预览 → 下一步（计数 0 时 `Disabled` 并写原因）→ 写库 → 重开库。Markdown 把开关交给 `importmd.Options.KeepExisting`；`.remitlib` 落自己的目录、Anki 按 GUID 匹配，两者各写一行说明为什么没有那个开关。
+- 状态：写入离开帧（`a.background`）：运行中预览步把按钮行换成 `ui.Progress(c, -1)`（不定长）+「正在导入」一行，关闭按钮同时禁用；答案回到 UI 线程后才换到完成页，失败则留在预览页写原因。选项在启动时快照，跑到一半拨开关不改变这一次写入。
 - 键：`Esc` 关。
 - 尺寸：`SettingsWidth` 内的对话框；720×520 由 `TestImportWizardKeepsItsOptionsAtTheMinimumSize` 守。
-- 守卫：`TestImportWizardWalksThreeSteps`、`TestImportWizardRefusesAnEmptySource`、`TestImportWizardReportsAFailure`、`TestImportWizardUnpacksAnArchive`、`TestImportWizardSaysAnArchiveKeepsTheLibrary`、`TestImportWizardKeepsItsOptionsAtTheMinimumSize`（`internal/ui/import_test.go`）；Markdown 路径 `TestImportMarkdownFromTheWizard`、`TestImportMarkdownFailure`、`TestImportMarkdownKeepsExistingNotes`、`TestImportMarkdownOverwritesWhenKeepingIsOff`（`internal/ui/importmd_test.go`）；导入器本身 `TestImportKeepsTheNotesItFinds`、`TestImportOverwritesWhenNotKeeping`（`internal/core/importmd/import_test.go`）。
-- 状态：**covered**。缺口 #9 关闭：spec 的「保留现有笔记」与原有的「加入阅读队列」并存。
+- 守卫：`TestImportWizardWalksThreeSteps`、`TestImportWizardRefusesAnEmptySource`、`TestImportWizardReportsAFailure`、`TestImportWizardUnpacksAnArchive`、`TestImportWizardSaysAnArchiveKeepsTheLibrary`、`TestImportShowsProgressWhileItRuns`（写入中不挡帧、活动条在位、运行按钮不再可点）、`TestImportWizardKeepsItsOptionsAtTheMinimumSize`（`internal/ui/import_test.go`）；Markdown 路径 `TestImportMarkdownFromTheWizard`、`TestImportMarkdownFailure`、`TestImportMarkdownKeepsExistingNotes`、`TestImportMarkdownOverwritesWhenKeepingIsOff`（`internal/ui/importmd_test.go`）；导入器本身 `TestImportKeepsTheNotesItFinds`、`TestImportOverwritesWhenNotKeeping`（`internal/core/importmd/import_test.go`）。
+- 状态：**covered**。缺口 #9 关闭：spec 的「保留现有笔记」与原有的「加入阅读队列」并存；spec 的「导入中 `ui.Progress`（不定长）」已实现并有测试（缺口 #16）。
 
 ## S03 · 导出
 
@@ -697,6 +699,7 @@
 | 13 | §4.14 `kit.GradeBar` | 没有这个 `kit` 组件；实现是 `internal/ui/screens/recall/history.go:160` 的局部 `gradeBar` | `grep -rn GradeBar internal/ui` 无命中 | 口径差 |
 | 14 | §4.10 把 S05–S10 全归 `ListWidth 860` | S08 在 §4.3 写的是 `BrowseWidth`，代码也是 `BrowseWidth 1080` | `internal/ui/screens/notes/assetspage.go:47` | 口径差 |
 | 15 | §4.1 S03 导出中的 `ui.Spinner` | 导出同步写在点击处理里，没有 exporting 态与 `ui.Spinner`；主按钮只在所选格式不可写时禁用 | `internal/ui/export.go` 的 `exportView` / `runExport`；无测试 | 未做 |
+| 16 | §4.1 S02 导入中的 `ui.Progress`（不定长） | 曾缺：`import.go` 无 `Progress`，`runImport` 同步写在点击处理里。现在写入走 `a.background`，运行中画不定长活动条；代价是 `Esc` 仍可关掉对话框（写入不会中断，结果丢失） | `internal/ui/import.go` 的 `runImport` / `unpackArchive` / `importPreviewStep`、`TestImportShowsProgressWhileItRuns` | **已修** |
 
 ### 无行为测试的屏
 

@@ -2,6 +2,9 @@
 
 > 状态：**implemented（2026-11-10，含交付审计后的返工）**。2026-11-10 用户把实现细节授权给工程判断
 > （「不需要问我，按最佳实践」）；本稿据此冻结，§10.2 的三项口径按默认值执行。
+> **冻结确认（交付口径）**：2026-11-10 用户就交付问题明确确认本稿为已接受的冻结设计基线
+> ——52 面、六区、Today 混合队列、阅读终态、`remit/3` 预设、插件槽位一并接受，偏差以
+> [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md) 文末的缺口表为准，不在本稿外另议。
 > 已合并的切片：前端 **W1–W9**（W3a/W3b、W5a/W5b、W8a/W8b）与后端 **B1–B6**；§9.1 的 106 个测试名
 > 都在仓库里。审计返工补齐了文档版式、卡片批量、卡片 CSV 与「保留现有笔记」、白板连线；逐面核对、
 > 点名的缺口与三面 `manual` 在 [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md)
