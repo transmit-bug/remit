@@ -1,7 +1,19 @@
 # UI 重设计 v2 · 从 40 屏原型到可实现的切片
 
-> 状态：**accepted（2026-11-10）**。用户已把实现细节授权给工程判断；本稿是 3 合 1 信息架构与
+> 状态：**implemented（2026-11-10）**。用户已把实现细节授权给工程判断；本稿是 3 合 1 信息架构与
 > 界面的实现口径，§10.2 的三项口径按默认值冻结。
+> 已合并的切片：前端 **W1–W9**（W3a/W3b、W5a/W5b、W8a/W8b）与后端 **B1–B6**，§9.1 的 100 个测试名全部
+> 在仓库里；逐面核对、点名的缺口与三面 `manual` 在
+> [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md)（52 面：covered 49、missing 0、manual 3）。
+> 三处实现口径，按代码为准（各自有测试或注释）：
+> ① 1024 宽的文档面是三列（笔记列 + 纸面 + 面板，`TestThreeColumnsAtTheDefaultSize`，早于本轮）；
+> 面板到 `BreakpointNarrow 980` 才收成 `ui.Overlay`，与 §2.5 ② 一致。
+> ② 720×520 的四档评分全部在场，但排成两列（`ui.Grid`，t23 p2 起；t21 时是一行四档，
+> `TestGradesTakeTwoColumnsAtTheMinimumSize`），即 §2.5 ④。
+> ③ 进度条的常态填充取 `theme.Success`（`kit/progressTone`，t22 起，跟随 `ui.Meter` 自己的
+> Success/Warning/Danger），与 §7.1 把「进度」列在 Mark 强调色下不同；本稿不改，记在这里。
+> ④ 文档面板是固定 288 的列（`writeArea` 的 `ui.Row` + `ui.Divider`，`panel.go` 的 `notePanel`），
+> 不是 §2.2 写的可拖 `ui.Split`：面板是查阅的地方，拖动只留给笔记列与分栏。
 > 基线：`master`（合并已落地），MyGo **v0.8.1**（`go list -m -f '{{.Dir}}' github.com/egoist/mygo`）。
 > 原型：`ref/prototype/`（`DESIGN.md` 说明书 + `index.html`/`styles.css`/`app.js` 可点稿），
 > 主路由静帧在 `/tmp/remit-shots/*.png`（`ref/prototype/shots/` 的 23 张为重复/损坏，不采用）。

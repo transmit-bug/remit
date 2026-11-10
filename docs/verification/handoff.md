@@ -64,3 +64,25 @@ This is the list a person runs before calling a build good.
 Anything that fails here is a bug, not a known limitation; anything that cannot
 be run (no second machine, no signing identity) is recorded as unverified rather
 than assumed.
+
+## The redesign's surfaces
+
+The five checks `docs/specs/ui-redesign-v2.md` §9.4 adds on top of the list above
+(the first five of the list in `docs/verification/ui-acceptance.md`, 全局验收 · 人工交接,
+whose items 6-8 are the appearance, accessibility and `manual` passes):
+
+- [ ] Rail fold: drag the window to 960 wide — the rail is the 64 icon strip, an
+      icon is clickable and names itself in its tooltip, the counts still show;
+      drag back to 1200 and the labels return. At 980 and below neither fold
+      control is drawn, since neither can change anything there.
+- [ ] Whiteboard round trip: a node opens read mode at its own paragraph; the
+      paragraph's block menu goes back to the board and the node is highlighted.
+- [ ] Plugin failure: break the page data of `examples/plugins/leeches`, and the
+      page says why and offers Retry; three failures take its rail item away
+      while Settings still lists it with the reason, and Re-enable brings the
+      contribution back.
+- [ ] Archive and dismiss: A/D in a reading session, then the archive page
+      restores the note to Today; the state survives a restart.
+- [ ] Presets: change the retention, close the window, reopen — the value is
+      still there; add an unknown key to `remit.json` by hand, reopen, and it has
+      not been dropped.
