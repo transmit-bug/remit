@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -383,6 +384,10 @@ func recallSubPage(t *testing.T, tt *ui.Tester, loc, page string) {
 // answered Again most often first, and its second click reverses the order. It
 // is the ui-composition gate TestBrowseSortsByColumn: a table built row by row
 // has no order to change.
+//
+// The search narrows the table to the two cards the sort is about first: the bulk
+// bar holds the page's head, so the smallest window lists fewer rows than the
+// seed holds, and the order of a visible pair is what the click can prove.
 func TestBrowseSortsByColumn(t *testing.T) {
 	msgs := locales.In("en")
 	for _, size := range windowSizes {
@@ -392,6 +397,11 @@ func TestBrowseSortsByColumn(t *testing.T) {
 			settle(tt)
 			recallSubPage(t, tt, "en", msgs.CardsPage())
 
+			if err := tt.Click(msgs.RecallCardsSearch()); err != nil {
+				t.Fatalf("the search field: %v", err)
+			}
+			tt.Type("is:learning")
+			tt.Frame()
 			if err := tt.Click(msgs.RecallColumnLapses()); err != nil {
 				t.Fatalf("sort by lapses: %v", err)
 			}
@@ -400,22 +410,22 @@ func TestBrowseSortsByColumn(t *testing.T) {
 			if !ok {
 				t.Fatalf("the table lost Alpha; texts %q", tt.Texts())
 			}
-			gamma, ok := tt.Find("Gamma card")
+			beta, ok := tt.Find("Beta card")
 			if !ok {
-				t.Fatalf("the table lost Gamma; texts %q", tt.Texts())
+				t.Fatalf("the table lost Beta; texts %q", tt.Texts())
 			}
-			if alpha.Y >= gamma.Y {
-				t.Errorf("the lapses sort put Alpha at %.1f and Gamma at %.1f, want Alpha first", alpha.Y, gamma.Y)
+			if alpha.Y >= beta.Y {
+				t.Errorf("the lapses sort put Alpha at %.1f and Beta at %.1f, want Alpha first", alpha.Y, beta.Y)
 			}
 
 			if err := tt.Click(msgs.RecallColumnLapses()); err != nil {
 				t.Fatalf("reverse the sort: %v", err)
 			}
-			tt.Frame()
+			tt.Advance(320 * time.Millisecond)
 			alpha, _ = tt.Find("Alpha card")
-			gamma, _ = tt.Find("Gamma card")
-			if gamma.Y >= alpha.Y {
-				t.Errorf("the reversed sort put Gamma at %.1f and Alpha at %.1f, want Gamma first", gamma.Y, alpha.Y)
+			beta, _ = tt.Find("Beta card")
+			if beta.Y >= alpha.Y {
+				t.Errorf("the reversed sort put Beta at %.1f and Alpha at %.1f, want Beta first", beta.Y, alpha.Y)
 			}
 		})
 	}
@@ -473,8 +483,12 @@ func TestCardTableBulkSuspends(t *testing.T) {
 	if !tt.HasText(msgs.RecallCardsSelected(2)) {
 		t.Fatalf("the bulk bar does not count the rows checked; texts %q", tt.Texts())
 	}
-	if err := tt.Click(msgs.Suspend()); err != nil {
-		t.Fatalf("suspend the rows checked: %v", err)
+	if err := tt.Click(msgs.RecallBulkActions()); err != nil {
+		t.Fatalf("the bulk bar has no menu: %v", err)
+	}
+	tt.Frame()
+	if err := tt.ChooseMenuItem(msgs.Suspend()); err != nil {
+		t.Fatalf("the menu has no suspend: %v; items %q", err, tt.Menu())
 	}
 	tt.Frame()
 
@@ -794,4 +808,328 @@ func TestCardTableOpensTheNote(t *testing.T) {
 	if a.notes.Loaded != string(note) {
 		t.Fatalf("the card opened %q, want its note %q", a.notes.Loaded, note)
 	}
+}
+
+// The bulk bar lists every write of the prototype: suspend, the due date, the
+// type, freeze, bury the paragraph's other cards, the tag, and the delete — plus
+// the session of exactly the rows ticked.
+func TestCardTableBulkMenuOffersEveryWrite(t *testing.T) {
+	msgs := locales.In("en")
+	a, _ := seedRecallLibrary(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	recallSubPage(t, tt, "en", msgs.CardsPage())
+
+	if err := tt.Click(msgs.RecallCardsSelect("Alpha card")); err != nil {
+		t.Fatalf("check the row: %v", err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.RecallBulkActions()); err != nil {
+		t.Fatalf("the bulk bar has no menu: %v", err)
+	}
+	tt.Frame()
+	items := strings.Join(tt.Menu(), "\n")
+	for _, want := range []string{msgs.Suspend(), msgs.RecallBulkDue(), msgs.RecallBulkType(),
+		msgs.RecallBulkFreeze(), msgs.RecallBulkBury(), msgs.RecallBulkDelete()} {
+		if !strings.Contains(items, want) {
+			t.Errorf("the bulk menu does not offer %q: %q", want, items)
+		}
+	}
+	if !tt.HasText(msgs.RecallCardsSelected(1)) {
+		t.Errorf("the bar does not count the row checked; texts %q", tt.Texts())
+	}
+	assertControl(t, tt, 1024, 720, msgs.RecallBulkReview())
+}
+
+// The bulk bar shows with nothing ticked and every control in it is dead, with
+// the reason where the count would be: a disabled control carries no tooltip, so
+// the reason has to be a line of its own. It is checked at the smallest window
+// and in the other language, where the bar has the least room.
+func TestCardTableBulkBarSaysWhyItIsOff(t *testing.T) {
+	for _, size := range windowSizes {
+		t.Run(size.name, func(t *testing.T) {
+			locale := "en"
+			if size.name == "minimum" {
+				locale = "zh-Hans"
+			}
+			msgs := locales.In(locale)
+			a, _ := seedRecallLibrary(t)
+			tt := ui.NewTester(a.View, size.w, size.h)
+			tt.SetLocale(locale)
+			settle(tt)
+			recallSubPage(t, tt, locale, msgs.CardsPage())
+
+			// The reason is visible text, and every control has a box: a control
+			// laid out past the edge is one the user cannot press.
+			if !tt.HasText(msgs.RecallBulkNoSelection()) {
+				t.Fatalf("the bar does not say why it is off; texts %q", tt.Texts())
+			}
+			assertControl(t, tt, size.w, size.h, msgs.RecallBulkNoSelection())
+			assertControl(t, tt, size.w, size.h, msgs.RecallBulkActions())
+			assertControl(t, tt, size.w, size.h, msgs.RecallBulkTagApply())
+			assertControl(t, tt, size.w, size.h, msgs.RecallBulkReview())
+
+			// Pressing a dead control does nothing: the menu stays shut and the
+			// session is not entered.
+			if err := tt.Click(msgs.RecallBulkActions()); err != nil {
+				t.Fatalf("the menu button: %v", err)
+			}
+			tt.Frame()
+			if items := tt.Menu(); len(items) != 0 {
+				t.Errorf("a disabled bulk menu opened: %q", items)
+			}
+			if err := tt.Click(msgs.RecallBulkReview()); err != nil {
+				t.Fatalf("the review button: %v", err)
+			}
+			tt.Frame()
+			if a.session == sessionReview {
+				t.Error("a disabled review button entered the session")
+			}
+		})
+	}
+}
+
+// Changing the type of the rows ticked writes the type through the store, and the
+// table says so on its next pass.
+func TestCardTableBulkChangesTheType(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed := seedRecallLibrary(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	recallSubPage(t, tt, "en", msgs.CardsPage())
+
+	if err := tt.Click(msgs.RecallCardsSelect("Alpha card")); err != nil {
+		t.Fatalf("check the row: %v", err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.RecallBulkActions()); err != nil {
+		t.Fatalf("the bulk bar has no menu: %v", err)
+	}
+	tt.Frame()
+	if err := tt.ChooseMenuItem(msgs.RecallBulkType(), "Cloze"); err != nil {
+		t.Fatalf("the menu has no type: %v; items %q", err, tt.Menu())
+	}
+	tt.Frame()
+
+	card, ok := a.lib.Card(seed.alpha.ID)
+	if !ok {
+		t.Fatal("the card is gone")
+	}
+	if card.Type != core.TypeCloze {
+		t.Errorf("the card is %s, want the type the menu chose", card.Type)
+	}
+	if !tt.HasText(msgs.RecallBulkDone(1)) {
+		t.Errorf("the bar does not report the write; texts %q", tt.Texts())
+	}
+}
+
+// Burying puts the other cards of the chosen cards' paragraphs off until
+// tomorrow: the paragraph asks one thing twice, and the second asking is not
+// worth meeting before the first is learned. The card chosen keeps its date.
+func TestCardTableBulkBuriesTheSiblings(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed := seedRecallLibrary(t)
+	// One paragraph, two cards: the pair a bury is about. The blanks make each
+	// card ask its own, so the two rows are told apart by their prompts.
+	note, ok := a.lib.Note(blockNote(t, a, seed.alpha.Ref.Block))
+	if !ok {
+		t.Fatal("the note is gone")
+	}
+	note.Blocks = append(note.Blocks, core.Block{Text: "one {{a}} and {{b}}"})
+	saved, err := a.lib.SaveNote(note)
+	if err != nil {
+		t.Fatalf("SaveNote: %v", err)
+	}
+	pair, err := a.lib.CreateCards(saved.Blocks[len(saved.Blocks)-1].ID, []core.Derived{
+		{Type: core.TypeCloze, Ordinal: 0},
+		{Type: core.TypeCloze, Ordinal: 1},
+	})
+	if err != nil {
+		t.Fatalf("CreateCards: %v", err)
+	}
+	if len(pair) != 2 {
+		t.Fatalf("the paragraph made %d cards, want 2", len(pair))
+	}
+	chosen, sibling := pair[0], pair[1]
+	a.reload()
+	first, _, _ := a.faces(chosen)
+	kept := dueOfCard(t, a, chosen.ID)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	recallSubPage(t, tt, "en", msgs.CardsPage())
+
+	if err := tt.Click(msgs.RecallCardsSelect(first)); err != nil {
+		t.Fatalf("check %q: %v", first, err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.RecallBulkActions()); err != nil {
+		t.Fatalf("the bulk bar has no menu: %v", err)
+	}
+	tt.Frame()
+	if err := tt.ChooseMenuItem(msgs.RecallBulkBury()); err != nil {
+		t.Fatalf("the menu has no bury: %v; items %q", err, tt.Menu())
+	}
+	tt.Frame()
+
+	tomorrow := dayStart(time.Now()).AddDate(0, 0, 1)
+	if got := dueOfCard(t, a, sibling.ID); !got.Equal(tomorrow) {
+		t.Errorf("the sibling is due %s, want %s", got, tomorrow)
+	}
+	if got := dueOfCard(t, a, chosen.ID); !got.Equal(kept) {
+		t.Errorf("the chosen card is due %s, want the date it had %s", got, kept)
+	}
+	// Burying is a due date, not a grade: the sibling's history is what it was.
+	if state, ok := a.lib.CardState(sibling.ID); ok && state.Reviews != 0 {
+		t.Errorf("the buried sibling has %d reviews, want none written", state.Reviews)
+	}
+}
+
+// Deleting the rows ticked asks first, names how many and where their history
+// stays, and then removes the card files: the review log is append-only, so the
+// answers stay written.
+func TestCardTableBulkDeletesAndKeepsTheHistory(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed := seedRecallLibrary(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	recallSubPage(t, tt, "en", msgs.CardsPage())
+
+	for _, prompt := range []string{"Alpha card", "Beta card"} {
+		if err := tt.Click(msgs.RecallCardsSelect(prompt)); err != nil {
+			t.Fatalf("check %q: %v", prompt, err)
+		}
+		tt.Frame()
+	}
+	before, err := a.lib.History(seed.alpha.ID)
+	if err != nil || len(before) == 0 {
+		t.Fatalf("the seed card has no history: %+v (%v)", before, err)
+	}
+
+	if err := tt.Click(msgs.RecallBulkActions()); err != nil {
+		t.Fatalf("the bulk bar has no menu: %v", err)
+	}
+	tt.Frame()
+	if err := tt.ChooseMenuItem(msgs.RecallBulkDelete()); err != nil {
+		t.Fatalf("the menu has no delete: %v; items %q", err, tt.Menu())
+	}
+	tt.Frame()
+	// The question names the count and says the history stays.
+	if !tt.HasText(msgs.RecallBulkDeleteTitle()) {
+		t.Fatalf("the delete asks nothing; texts %q", tt.Texts())
+	}
+	if !tt.HasText(msgs.RecallBulkDeleteWarning(2)) {
+		t.Errorf("the question does not say what it costs; texts %q", tt.Texts())
+	}
+	if err := tt.Click(msgs.Cancel()); err != nil {
+		t.Fatalf("cancel the delete: %v", err)
+	}
+	tt.Frame()
+	if _, ok := a.lib.Card(seed.alpha.ID); !ok {
+		t.Fatal("cancelling the question deleted the card")
+	}
+
+	// Answering it deletes both, and the log keeps what they were answered.
+	if err := tt.Click(msgs.RecallBulkActions()); err != nil {
+		t.Fatalf("the bulk bar has no menu: %v", err)
+	}
+	tt.Frame()
+	if err := tt.ChooseMenuItem(msgs.RecallBulkDelete()); err != nil {
+		t.Fatalf("the menu has no delete: %v", err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.RecallBulkDeleteConfirm()); err != nil {
+		t.Fatalf("answer the delete: %v", err)
+	}
+	tt.Frame()
+	for _, id := range []core.ID{seed.alpha.ID, seed.beta.ID} {
+		if _, ok := a.lib.Card(id); ok {
+			t.Errorf("card %q is still in the library", id)
+		}
+	}
+	after, err := a.lib.History(seed.alpha.ID)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if len(after) != len(before) {
+		t.Errorf("the log holds %d answers for the deleted card, want the %d it had", len(after), len(before))
+	}
+	if _, ok := a.lib.Card(seed.gamma.ID); !ok {
+		t.Error("a card nobody chose went with them")
+	}
+	if id, ok := a.review.Current(); ok && id == seed.alpha.ID {
+		t.Errorf("the deleted card is on screen; texts %q", tt.Texts())
+	}
+}
+
+// Review selected enters the session with exactly the rows ticked, in the order
+// the table lists them, and keeps them there: a card the user picked does not
+// leave the session for not being due today when the next answer reloads.
+func TestCardTableReviewsOnlyTheRowsTicked(t *testing.T) {
+	msgs := locales.In("en")
+	a, seed := seedRecallLibrary(t)
+	// Gamma is moved a month out, so it is not in today's queue at all.
+	if _, err := a.lib.SetDue([]core.ID{seed.gamma.ID}, time.Now().AddDate(0, 0, 30)); err != nil {
+		t.Fatalf("SetDue: %v", err)
+	}
+	a.reload()
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	recallSubPage(t, tt, "en", msgs.CardsPage())
+
+	for _, prompt := range []string{"Alpha card", "Gamma card"} {
+		if err := tt.Click(msgs.RecallCardsSelect(prompt)); err != nil {
+			t.Fatalf("check %q: %v", prompt, err)
+		}
+		tt.Frame()
+	}
+	if err := tt.Click(msgs.RecallBulkReview()); err != nil {
+		t.Fatalf("review the rows ticked: %v", err)
+	}
+	tt.Frame()
+
+	if a.session != sessionReview {
+		t.Fatalf("the window is not in the session (%v)", a.session)
+	}
+	if done, total := a.review.Progress(); done != 0 || total != 2 {
+		t.Fatalf("the session holds %d of %d cards, want exactly the two ticked", done, total)
+	}
+	if id, ok := a.review.Current(); !ok || id != seed.alpha.ID {
+		t.Fatalf("the session starts at %q, want the first row ticked", id)
+	}
+
+	// One answer reloads the library; the card the user picked is still there.
+	tt.Key(0, ui.KeySpace)
+	tt.Advance(320 * time.Millisecond)
+	tt.Key(0, ui.Key3) // Good
+	tt.Advance(320 * time.Millisecond)
+	if id, ok := a.review.Current(); !ok || id != seed.gamma.ID {
+		t.Fatalf("after the first answer the session is at %q, want the other row ticked", id)
+	}
+}
+
+// blockNote is the note a block lives in, as the snapshot has it.
+func blockNote(t *testing.T, a *App, block core.ID) core.ID {
+	t.Helper()
+	note, ok := a.data.noteOfBlock(block)
+	if !ok {
+		t.Fatalf("block %q has no note", block)
+	}
+	return note
+}
+
+// dueOfCard is when a card comes up, as the store's listing reports it — asked
+// of the store, because a page that is not open has derived no rows.
+func dueOfCard(t *testing.T, a *App, id core.ID) time.Time {
+	t.Helper()
+	rows, _, err := a.lib.QueryCards(store.CardQuery{})
+	if err != nil {
+		t.Fatalf("QueryCards: %v", err)
+	}
+	for _, row := range rows {
+		if row.ID == id {
+			return row.Due
+		}
+	}
+	t.Fatalf("card %q is not in the listing", id)
+	return time.Time{}
 }

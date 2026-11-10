@@ -1349,6 +1349,12 @@ func (l *Library) DeleteNote(id core.ID, at time.Time, cascade Cascade) error {
 func (l *Library) DeleteCard(id core.ID) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	return l.deleteCardLocked(id)
+}
+
+// deleteCardLocked is DeleteCard's write, assuming the lock is held: it is what a
+// batch delete loops over so one card's failure does not stop the rest.
+func (l *Library) deleteCardLocked(id core.ID) error {
 	if l.index == nil {
 		return ErrClosed
 	}

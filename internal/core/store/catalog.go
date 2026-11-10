@@ -64,11 +64,13 @@ func (l *Library) dropDue(meta *cardMeta) {
 }
 
 // ensureDue rebuilds the queue order when a bulk change — a note save that
-// moved many blocks, or an undo — left it stale.
+// moved many blocks, or an undo — left it stale. The order is rebuilt, not
+// appended to: the entries it held are the ones that went stale.
 func (l *Library) ensureDue() {
 	if l.dueOK {
 		return
 	}
+	l.byDue = l.byDue[:0]
 	if cap(l.byDue) < len(l.cards) {
 		l.byDue = make([]dueEntry, 0, len(l.cards))
 	}

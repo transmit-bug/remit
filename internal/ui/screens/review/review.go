@@ -204,19 +204,28 @@ type State struct {
 	typed       string // what the user typed for the card on screen
 	submitted   bool   // that typed answer has been checked
 	verdict     []Span // how it compared with the card's answer
+	// fixed says the queue is the list the user chose — Only, OnlyMany — rather
+	// than the day's queue: a reload then leaves it alone instead of dropping
+	// the chosen cards for not being due today.
+	fixed bool
 }
 
 // Reset forgets the queue and the session's progress.
 func (s *State) Reset() {
 	s.queue, s.shown, s.revealed, s.graded = nil, "", false, nil
+	s.fixed = false
 	s.forgetCard()
 }
 
 // Sync takes the library's answer to what is due now: a card still due keeps its
 // place, one no longer due leaves, and one that became due — a card made just
 // now, a card returned by undo — joins the end. Membership is the store's; the
-// order the user is working through stays.
+// order the user is working through stays. A queue the user chose is not the
+// day's, so it is left as it is.
 func (s *State) Sync(due []core.ID) {
+	if s.fixed {
+		return
+	}
 	head, _ := s.Current()
 	live := make(map[core.ID]bool, len(due))
 	for _, id := range due {
@@ -269,6 +278,17 @@ func (s *State) Current() (core.ID, bool) {
 // Only makes id the whole queue, as opening one card from the card table does.
 func (s *State) Only(id core.ID) {
 	s.queue = []core.ID{id}
+	s.forgetCard()
+}
+
+// OnlyMany makes ids the whole queue, in the order given: what "review selected"
+// in the card table enters with, so the session meets the cards in the order the
+// user was reading them. The queue is the list chosen, not the day's, and a
+// reload keeps it. An empty list is no queue at all, which the screen shows as
+// its empty state.
+func (s *State) OnlyMany(ids []core.ID) {
+	s.queue = append([]core.ID(nil), ids...)
+	s.fixed = true
 	s.forgetCard()
 }
 
@@ -336,9 +356,16 @@ func (s *State) Restore(id core.ID) {
 
 // Show puts a card at the head of the queue with its answer still hidden, as a
 // card that was just re-linked wants: the user sees the text it follows now,
-// whether or not its due date is today.
+// whether or not its due date is today. A card already in the queue moves to the
+// head rather than joining it twice.
 func (s *State) Show(id core.ID) {
-	s.queue = append([]core.ID{id}, s.queue...)
+	kept := make([]core.ID, 0, len(s.queue)+1)
+	for _, queued := range s.queue {
+		if queued != id {
+			kept = append(kept, queued)
+		}
+	}
+	s.queue = append([]core.ID{id}, kept...)
 	s.shown, s.revealed = "", false
 	s.forgetCard()
 }

@@ -282,6 +282,22 @@ func (a *App) showCard(id core.ID) {
 	a.loadCurrent()
 }
 
+// reviewSelected enters the review session with exactly the rows the card table
+// has chosen, in the order it lists them. A chosen card need not be due today —
+// the user asked for these ones, and the session is the list rather than the
+// day's queue.
+func (a *App) reviewSelected(ids []core.ID) {
+	if a.lib == nil || len(ids) == 0 {
+		return
+	}
+	a.review.Reset()
+	a.review.OnlyMany(ids)
+	a.failed = nil
+	a.session = sessionReview
+	a.syncMode()
+	a.loadCurrent()
+}
+
 // reviewNote narrows the session to one note and enters it: what a queue row
 // does, so a note is reviewed without opening the scope dialog.
 func (a *App) reviewNote(c *ui.Context, note core.ID) {
@@ -496,6 +512,23 @@ func (a *App) cardTableDeps(c *ui.Context) recall.CardsDeps {
 			a.bulkDone(c, result, err)
 		},
 		AddTag: func(ids []core.ID, tag string) { a.addTagToCards(c, ids, tag) },
+		ChangeType: func(ids []core.ID, typeID core.ID) {
+			result, err := a.lib.ChangeCardTypes(ids, typeID)
+			a.bulkDone(c, result, err)
+		},
+		Bury: func(ids []core.ID) {
+			// Burying is for the rest of today: the paragraph's other cards come
+			// back tomorrow, which is the day their sibling is learned by.
+			until := dayStart(time.Now()).AddDate(0, 0, 1)
+			result, err := a.lib.BuryCards(ids, until)
+			a.bulkOutcome(c, result, err, m(c).RecallBulkBuried)
+		},
+		Delete: func(ids []core.ID) {
+			result, err := a.lib.DeleteCards(ids)
+			a.bulkOutcome(c, result, err, m(c).RecallBulkDeleted)
+		},
+		Review: a.reviewSelected,
+		Types:  a.bulkTypeChoices,
 		Items:  a.browseRowItems,
 		PluginText: func(c *ui.Context, plugin, raw string) string {
 			return a.pluginText(c, plugin, raw)
@@ -560,9 +593,27 @@ func (a *App) addTagToCards(c *ui.Context, ids []core.ID, tag string) {
 	a.bulkDone(c, result, err)
 }
 
+// bulkTypeChoices are the types the bulk bar can move the chosen cards to, in
+// catalog order: a type's name is library data, so it is shown as the library
+// says it, the same words the type page and the table's column use.
+func (a *App) bulkTypeChoices() []recall.TypeChoice {
+	out := make([]recall.TypeChoice, 0, len(a.typeList))
+	for _, typ := range a.typeList {
+		out = append(out, recall.TypeChoice{ID: typ.ID, Name: typ.Name})
+	}
+	return out
+}
+
 // bulkDone reports a batch's outcome and derives the library again: a write
 // that changed cards has changed the table, the queue and the counts.
 func (a *App) bulkDone(c *ui.Context, result store.BulkResult, err error) {
+	a.bulkOutcome(c, result, err, m(c).RecallBulkDone)
+}
+
+// bulkOutcome is bulkDone with the words the action reports: what a delete or a
+// bury did is not what a suspend did, and calling a removed card "updated"
+// would be a report the user cannot act on.
+func (a *App) bulkOutcome(c *ui.Context, result store.BulkResult, err error, done func(int) string) {
 	if err != nil {
 		a.report(c, "bulk action", err)
 		return
@@ -570,8 +621,11 @@ func (a *App) bulkDone(c *ui.Context, result store.BulkResult, err error) {
 	if failure := result.Err(); failure != nil {
 		slog.Warn("remit: bulk action", "err", failure)
 		c.Toast(m(c).RecallBulkPartial(result.Applied, len(result.Failed)))
-	} else if result.Applied > 0 {
-		c.Toast(m(c).RecallBulkDone(result.Applied))
+	} else {
+		// Nothing written is said too: a bury of a paragraph whose other cards
+		// are already past tomorrow is a real answer, and silence reads as a
+		// click that did nothing.
+		c.Toast(done(result.Applied))
 	}
 	a.reload()
 }

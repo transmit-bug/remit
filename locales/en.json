@@ -4600,6 +4600,68 @@
   "@recallBulkTagApply": {
     "description": "The bulk action that tags the notes the chosen cards came from."
   },
+  "recallBulkNoSelection": "Tick a card first.",
+  "@recallBulkNoSelection": {
+    "description": "Says, in the bulk bar, why its controls are disabled: no row is ticked."
+  },
+  "recallBulkActions": "Bulk actions",
+  "@recallBulkActions": {
+    "description": "The bulk bar's menu of writes over the rows ticked."
+  },
+  "recallBulkType": "Change type…",
+  "@recallBulkType": {
+    "description": "The bulk action that renders the chosen cards through another type."
+  },
+  "recallBulkBury": "Bury siblings",
+  "@recallBulkBury": {
+    "description": "The bulk action that puts the other cards of the chosen cards’ paragraphs off until tomorrow."
+  },
+  "recallBulkDelete": "Delete…",
+  "@recallBulkDelete": {
+    "description": "The bulk action that removes the chosen cards, after a question."
+  },
+  "recallBulkDeleteTitle": "Delete these cards?",
+  "@recallBulkDeleteTitle": {
+    "description": "The question a bulk delete asks."
+  },
+  "recallBulkDeleteWarning": "{count, plural, one {# card is deleted. Its reviews stay in the review log.} other {# cards are deleted. Their reviews stay in the review log.}}",
+  "@recallBulkDeleteWarning": {
+    "description": "What a bulk delete costs: how many cards, and that the history stays.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "recallBulkDeleteConfirm": "Delete cards",
+  "@recallBulkDeleteConfirm": {
+    "description": "The button that answers the bulk delete’s question."
+  },
+  "recallBulkReview": "Review selected",
+  "@recallBulkReview": {
+    "description": "The bulk action that enters the review session with exactly the rows ticked."
+  },
+  "recallBulkBuried": "{count, plural, one {# card buried until tomorrow} other {# cards buried until tomorrow}}",
+  "@recallBulkBuried": {
+    "description": "The outcome of burying a paragraph’s other cards.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "recallBulkDeleted": "{count, plural, one {# card deleted} other {# cards deleted}}",
+  "@recallBulkDeleted": {
+    "description": "The outcome of a bulk delete.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
   "recallDueTomorrow": "Tomorrow",
   "@recallDueTomorrow": {
     "description": "The due menu: the next day."

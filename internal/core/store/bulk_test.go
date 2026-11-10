@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -427,4 +428,278 @@ func TestBulkTagsAndNotesReportPerID(t *testing.T) {
 // cardPathOf is where a card's definition lives in the library.
 func cardPathOf(dir string, card core.Card) string {
 	return filepath.Join(dir, "cards", string(card.ID)+".json")
+}
+
+// TestChangeCardTypesKeepsTheSharedFields is the batch type change: the cards
+// render through the type chosen, the values the new schema still names come with
+// them, and the ones it does not are dropped — a card never carries a field its
+// type cannot show.
+func TestChangeCardTypesKeepsTheSharedFields(t *testing.T) {
+	lib, dir, clk := newLibrary(t)
+	note := saveNote(t, lib, "Studied", "a :: 1", "b :: 2")
+	edited, err := firstCard(lib, note.Blocks[0].ID)
+	if err != nil {
+		t.Fatalf("card: %v", err)
+	}
+	plain, err := firstCard(lib, note.Blocks[1].ID)
+	if err != nil {
+		t.Fatalf("card: %v", err)
+	}
+	// What the user typed into the two fields, kept the way a card keeps them.
+	edited.Fields = map[string]string{"Front": "question", "Back": "answer"}
+	edited.Edited = true
+	if err := lib.SaveCard(edited); err != nil {
+		t.Fatalf("SaveCard: %v", err)
+	}
+
+	// Basic and bidirectional share their two names, so both values stay.
+	result, err := lib.ChangeCardTypes([]core.ID{edited.ID, plain.ID}, core.TypeBidirectional)
+	if err != nil {
+		t.Fatalf("ChangeCardTypes: %v", err)
+	}
+	if result.Applied != 2 || result.Err() != nil {
+		t.Fatalf("result = %+v (%v), want both cards written", result, result.Err())
+	}
+	moved, ok := lib.Card(edited.ID)
+	if !ok {
+		t.Fatal("the card is gone")
+	}
+	if moved.Type != core.TypeBidirectional {
+		t.Errorf("type = %s, want the type chosen", moved.Type)
+	}
+	if moved.Fields["Front"] != "question" || moved.Fields["Back"] != "answer" || !moved.Edited {
+		t.Errorf("fields = %+v (edited %v), want the values the new type names", moved.Fields, moved.Edited)
+	}
+
+	t.Run("a field the new type does not name is dropped", func(t *testing.T) {
+		// The cloze type asks one field, so the two the card held have nowhere
+		// to go and the card resolves its text from the block again.
+		result, err := lib.ChangeCardTypes([]core.ID{edited.ID}, core.TypeCloze)
+		if err != nil || result.Applied != 1 {
+			t.Fatalf("ChangeCardTypes = %+v (%v), want it done", result, err)
+		}
+		card, _ := lib.Card(edited.ID)
+		if card.Type != core.TypeCloze {
+			t.Errorf("type = %s, want cloze", card.Type)
+		}
+		if len(card.Fields) != 0 || card.Edited {
+			t.Errorf("fields = %+v (edited %v), want none of the old schema", card.Fields, card.Edited)
+		}
+	})
+
+	t.Run("a type the library does not hold fails every id", func(t *testing.T) {
+		result, err := lib.ChangeCardTypes([]core.ID{edited.ID, plain.ID}, "remit.missing")
+		if err != nil {
+			t.Fatalf("ChangeCardTypes: %v", err)
+		}
+		if result.Applied != 0 || len(result.Failed) != 2 {
+			t.Fatalf("result = %+v, want both ids reported", result)
+		}
+		if !errors.Is(result.Err(), store.ErrNoType) {
+			t.Errorf("err = %v, want it to name the missing type", result.Err())
+		}
+	})
+
+	t.Run("the type is in the file, not only in memory", func(t *testing.T) {
+		if body := string(read(t, cardPathOf(dir, plain))); !strings.Contains(body, string(core.TypeBidirectional)) {
+			t.Errorf("card file does not name the type: %s", body)
+		}
+	})
+
+	// The reopen is here and not in a subtest: a subtest's cleanup would close
+	// the library the rest of this test reads.
+	lib = reopen(t, lib, dir, clk)
+	if err := lib.Rebuild(); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	card, ok := lib.Card(edited.ID)
+	if !ok || card.Type != core.TypeCloze || len(card.Fields) != 0 {
+		t.Errorf("the rebuilt card = %+v, want the cloze type and no fields", card)
+	}
+}
+
+// TestBuryCardsSetsTheSiblingsDueTomorrow is the batch bury: the other cards of
+// the paragraphs chosen come back tomorrow, the chosen ones keep the date they
+// had, and no review is written — burying is a due date, not a second history.
+func TestBuryCardsSetsTheSiblingsDueTomorrow(t *testing.T) {
+	lib, dir, clk := newLibrary(t)
+	note := saveNote(t, lib, "Blanks", "one {{a}} and {{b}}", "elsewhere :: 1")
+	// Two cards on one paragraph, as a cloze makes: the sibling pair a bury is
+	// about.
+	created, err := lib.CreateCards(note.Blocks[0].ID, []core.Derived{
+		{Type: core.TypeCloze, Ordinal: 0},
+		{Type: core.TypeCloze, Ordinal: 1},
+	})
+	if err != nil {
+		t.Fatalf("CreateCards: %v", err)
+	}
+	if len(created) != 2 {
+		t.Fatalf("the paragraph made %d cards, want 2", len(created))
+	}
+	chosen, sibling := created[0], created[1]
+	other, err := firstCard(lib, note.Blocks[1].ID)
+	if err != nil {
+		t.Fatalf("card: %v", err)
+	}
+	if err := lib.Review(chosen.ID, schedule.Good, t0.Add(-24*time.Hour)); err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+	// The sibling is due now, which is what a bury is for: it is in the queue and
+	// the user is about to meet the same paragraph's other card.
+	if err := lib.Review(sibling.ID, schedule.Again, t0.Add(-24*time.Hour)); err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+	before := dueOf(t, lib, chosen.ID)
+	events := len(lib.Events())
+	siblingState, ok := lib.CardState(sibling.ID)
+	if !ok || siblingState.Reviews == 0 {
+		t.Fatalf("the sibling has no schedule: %+v", siblingState)
+	}
+	siblingReviews := siblingState.Reviews
+
+	until := t0.AddDate(0, 0, 1)
+	result, err := lib.BuryCards([]core.ID{chosen.ID}, until)
+	if err != nil {
+		t.Fatalf("BuryCards: %v", err)
+	}
+	if result.Applied != 1 || result.Err() != nil {
+		t.Fatalf("result = %+v (%v), want the one sibling written", result, result.Err())
+	}
+	if got := dueOf(t, lib, sibling.ID); !got.Equal(until) {
+		t.Errorf("the sibling is due %s, want %s", got, until)
+	}
+	if got := dueOf(t, lib, chosen.ID); !got.Equal(before) {
+		t.Errorf("the chosen card is due %s, want the date it had %s", got, before)
+	}
+	if got := dueOf(t, lib, other.ID); got.Equal(until) {
+		t.Errorf("a card of another paragraph was buried: due %s", got)
+	}
+	// A due date is not a review: the log holds what it held.
+	if got := len(lib.Events()); got != events {
+		t.Errorf("the log holds %d events, want the %d it had", got, events)
+	}
+	// The sibling's own history is untouched, and it leaves today's queue.
+	if state, ok := lib.CardState(sibling.ID); !ok || state.Reviews != siblingReviews {
+		t.Errorf("the buried sibling has %+v, want the %d reviews it had", state, siblingReviews)
+	}
+	if due, err := lib.Due(t0, 0); err != nil {
+		t.Fatalf("Due: %v", err)
+	} else {
+		for _, card := range due {
+			if card.ID == sibling.ID {
+				t.Error("the buried sibling is still in today's queue")
+			}
+		}
+	}
+
+	// The reopen is here and not in a subtest: it hands back the library the
+	// rest of this test reads, and a subtest's cleanup would close it.
+	lib = reopen(t, lib, dir, clk)
+	if err := lib.Rebuild(); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	if got := dueOf(t, lib, sibling.ID); !got.Equal(until) {
+		t.Errorf("the rebuilt sibling is due %s, want %s", got, until)
+	}
+
+	t.Run("a sibling already due after the bury is left alone", func(t *testing.T) {
+		clk.advance(48 * time.Hour)
+		if err := lib.Review(sibling.ID, schedule.Good, clk.Now()); err != nil {
+			t.Fatalf("Review: %v", err)
+		}
+		later := dueOf(t, lib, sibling.ID)
+		if !later.After(until) {
+			t.Fatalf("the reviewed sibling is due %s, want a date past %s", later, until)
+		}
+		result, err := lib.BuryCards([]core.ID{chosen.ID}, until)
+		if err != nil {
+			t.Fatalf("BuryCards: %v", err)
+		}
+		if result.Applied != 0 {
+			t.Errorf("result = %+v, want nothing written over a later date", result)
+		}
+		if got := dueOf(t, lib, sibling.ID); !got.Equal(later) {
+			t.Errorf("the sibling is due %s, want its own date %s kept", got, later)
+		}
+	})
+
+	t.Run("a card id that names nothing is reported", func(t *testing.T) {
+		result, err := lib.BuryCards([]core.ID{"card_00000000000000000000000000000000"}, until)
+		if err != nil {
+			t.Fatalf("BuryCards: %v", err)
+		}
+		if result.Applied != 0 || len(result.Failed) != 1 {
+			t.Fatalf("result = %+v, want the unknown id reported", result)
+		}
+	})
+}
+
+// TestDeleteCardsKeepsTheReviews is the batch delete: the card files go, the
+// review log stays, and an id that names nothing is reported instead of taking
+// the rest of the batch with it.
+func TestDeleteCardsKeepsTheReviews(t *testing.T) {
+	lib, dir, clk := newLibrary(t)
+	note := saveNote(t, lib, "Studied", "a :: 1", "b :: 2", "c :: 3")
+	var cards []core.Card
+	for _, block := range note.Blocks {
+		card, err := firstCard(lib, block.ID)
+		if err != nil {
+			t.Fatalf("card: %v", err)
+		}
+		cards = append(cards, card)
+	}
+	if err := lib.Review(cards[0].ID, schedule.Again, t0); err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+	events := len(lib.Events())
+	unknown := core.ID("card_00000000000000000000000000000000")
+
+	result, err := lib.DeleteCards([]core.ID{cards[0].ID, unknown, cards[1].ID})
+	if err != nil {
+		t.Fatalf("DeleteCards: %v", err)
+	}
+	if result.Applied != 2 || len(result.Failed) != 1 || result.Failed[0].ID != unknown {
+		t.Fatalf("result = %+v, want the two cards deleted and the unknown id reported", result)
+	}
+	for _, id := range []core.ID{cards[0].ID, cards[1].ID} {
+		if _, ok := lib.Card(id); ok {
+			t.Errorf("card %q is still readable", id)
+		}
+		if _, ok := lib.CardState(id); ok {
+			t.Errorf("card %q still has a schedule", id)
+		}
+	}
+	if _, ok := lib.Card(cards[2].ID); !ok {
+		t.Error("the card nobody chose went with them")
+	}
+	history, err := lib.History(cards[0].ID)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if len(history) != 1 || history[0].Rating != schedule.Again {
+		t.Errorf("history = %+v, want the review the log keeps", history)
+	}
+	if got := len(lib.Events()); got != events {
+		t.Errorf("the log holds %d events, want the %d it had", got, events)
+	}
+	// The card file is the truth: with it gone the card stays gone.
+	if _, err := os.Stat(cardPathOf(dir, cards[0])); !os.IsNotExist(err) {
+		t.Errorf("the deleted card's file is still there: %v", err)
+	}
+
+	// The reopen is here and not in a subtest: a subtest's cleanup would close
+	// the library the rest of this test reads.
+	lib = reopen(t, lib, dir, clk)
+	if err := lib.Rebuild(); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	if _, ok := lib.Card(cards[0].ID); ok {
+		t.Error("the deleted card came back with the rebuilt index")
+	}
+	if all := lib.Cards(); len(all) != 1 || all[0].ID != cards[2].ID {
+		t.Errorf("the library holds %+v, want the one card left", all)
+	}
+	if history, err := lib.History(cards[0].ID); err != nil || len(history) != 1 {
+		t.Errorf("the rebuilt history = %+v (%v), want the review kept", history, err)
+	}
 }
