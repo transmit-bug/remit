@@ -325,3 +325,35 @@ func TestExportDisabledOnAnEmptyLibrary(t *testing.T) {
 		t.Errorf("the CSV has no reason on an empty library; texts %q", tt.Texts())
 	}
 }
+
+// The report's one follow-up works: the toast's action reveals the folder the
+// export wrote into, rather than a button that names it and does nothing.
+func TestExportToastRevealsWhatItWrote(t *testing.T) {
+	msgs := locales.In("en")
+	dir := t.TempDir()
+	seedLibrary(t, dir)
+	out := filepath.Join(t.TempDir(), "md")
+	var shown []string
+	a := NewApp(Options{
+		LibraryDir: dir,
+		ChooseExportFolder: func(string) (string, error) {
+			return out, nil
+		},
+		ShowInFolder: func(dir string) { shown = append(shown, dir) },
+	})
+
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	exportDialog(t, tt, msgs)
+	if err := tt.Click(msgs.ExportRun()); err != nil {
+		t.Fatalf("the dialog has no export button: %v", err)
+	}
+	tt.Frame()
+	if err := tt.Click(msgs.ExportOpenFolder()); err != nil {
+		t.Fatalf("the report offers no way to the folder: %v", err)
+	}
+	tt.Frame()
+	if len(shown) != 1 || shown[0] != out {
+		t.Errorf("the toast revealed %v, want %q", shown, out)
+	}
+}

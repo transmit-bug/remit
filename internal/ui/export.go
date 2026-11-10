@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
@@ -216,7 +215,7 @@ func (a *App) writeArchive(c *ui.Context, dir string) {
 // was, with the one follow-up it has — showing the files it wrote.
 func (a *App) exportReported(c *ui.Context, sentence, dir string) {
 	c.ToastAction(sentence, m(c).ExportOpenFolder(), func() {
-		mygo.Shell.ShowItemInFolder(dir)
+		a.reveal(dir)
 	})
 }
 

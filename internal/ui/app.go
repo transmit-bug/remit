@@ -232,6 +232,9 @@ type App struct {
 	importMd   func(path string, opts importmd.Options) (importmd.Report, error)
 	pickFolder func(title string) (string, error)
 	pickImage  func() (string, error)
+	// reveal shows a written file in the platform's file manager: the export
+	// toast's one follow-up. A test replaces it, since the real one opens Finder.
+	reveal func(dir string)
 	// pickPlugin is the file picker a plugin importer's entry opens through,
 	// shaped like the app's own: the label names the entry, the extensions
 	// filter the files. nil falls back to the window's dialog.
@@ -278,6 +281,7 @@ func NewApp(opts ...Options) *App {
 		pickFolder:  pickExportFolder,
 		pickImage:   pickNoteImage,
 		pickExport:  pickLibraryArchive,
+		reveal:      mygo.Shell.ShowItemInFolder,
 		checkUpdate: screensettings.CheckForUpdate,
 	}
 	// The importer reads the library open now, which a dropped archive can
@@ -319,6 +323,9 @@ func NewApp(opts ...Options) *App {
 		}
 		if o.ChooseExportFile != nil {
 			a.pickExport = o.ChooseExportFile
+		}
+		if o.ShowInFolder != nil {
+			a.reveal = o.ShowInFolder
 		}
 		if o.OpenSystemSettings != nil {
 			a.openDisplay = o.OpenSystemSettings

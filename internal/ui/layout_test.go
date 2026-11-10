@@ -98,6 +98,22 @@ func TestTheStatusLineIsTheWindowsLastRow(t *testing.T) {
 	}
 }
 
+// The line belongs to the document: every other area leaves it to the frame,
+// where it is not drawn at all rather than drawn empty.
+func TestOtherAreasShowNoStatusLine(t *testing.T) {
+	msgs := locales.In("en")
+	a, _ := newTestApp(t)
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	for _, area := range []areaID{areaToday, areaRead, areaRecall, areaStats, areaSettings} {
+		a.setArea(area, 0)
+		settle(tt)
+		if _, ok := tt.Find(msgs.StatusLine()); ok {
+			t.Errorf("%v draws the document's status line", area)
+		}
+	}
+}
+
 // The card table is read in the room it has: a window too narrow for every
 // column folds the secondary ones away rather than cutting the prompt to a
 // word, and a wide window shows them again.

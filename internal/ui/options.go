@@ -61,6 +61,10 @@ type Options struct {
 	// ChooseExportFile picks the archive an export of the whole library writes,
 	// mygo.Dialog's save dialog unless a test replaces it.
 	ChooseExportFile func() (string, error)
+	// ShowInFolder reveals an exported file in the platform's file manager,
+	// mygo.Shell's own unless a test replaces it: opening Finder is the one thing
+	// a headless test cannot do.
+	ShowInFolder func(dir string)
 	// OpenSystemSettings opens the desktop's text-size page, which is where the
 	// window's text size is changed. nil keeps the platform's own, a build
 	// without one hides the door rather than drawing a dead button.

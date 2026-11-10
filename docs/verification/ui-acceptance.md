@@ -129,7 +129,7 @@
 - 键：`Esc` 关。
 - 尺寸：`SummaryWidth` 对话框；720×520 由 `TestExportChoicesFitTheSmallestWindow` 守。
 - 守卫：`TestExportWritesAndReports`（§9.1 点名）、`TestExportWritesTheCardCSV`、`TestExportRefusesTheCSVWithoutCards`、`TestCardCSVEscapesWhatItCarries`、`TestExportChoicesFitTheSmallestWindow`；另 `TestExportWritesTheLibraryArchive`、`TestExportDisabledOnAnEmptyLibrary`（`internal/ui/export_test.go`）。
-- 状态：**covered**（卡片 CSV 已实现，见缺口 #9 的同一批提交）。偏差：导出同步写入，没有「导出中」态与 `ui.Spinner`（spec §4.1 S03 要求），主按钮只在所选格式不可写时禁用——见缺口 #15。成功后的 toast 带「打开文件夹」（`export.go:217` 的 `c.ToastAction`），但 `TestExportWritesAndReports` 只断言报告文案，没点那个动作。
+- 状态：**covered**（卡片 CSV 已实现，见缺口 #9 的同一批提交）。偏差：导出同步写入，没有「导出中」态与 `ui.Spinner`（spec §4.1 S03 要求），主按钮只在所选格式不可写时禁用——见缺口 #15。成功后的 toast 带「打开文件夹」（`export.go` 的 `exportReported`，走 `Options.ShowInFolder` 注入），`TestExportToastRevealsWhatItWrote` 点的是这个动作，断言它拿到导出目录。
 
 ## S04 · 今日
 
@@ -695,7 +695,7 @@
 | 9 | §4.1 S02 第二个开关 | 「保留现有笔记」`ui.Switch` 写 `importmd.Options.KeepExisting`（同批实现卡片 CSV） | `internal/ui/import.go` 的 `a.importMd(path, importmd.Options{KeepExisting: w.keep})`（`internal/ui/app.go` 注入 `importmd.Import`）、`TestImportMarkdownKeepsExistingNotes`、`TestImportMarkdownOverwritesWhenKeepingIsOff`、`TestImportKeepsTheNotesItFinds` | **已修**（`003ab4f`） |
 | 10 | §4.1 S01 三件元素 | 导入门、最近库列表（`settings.RecentLibraries`）、卡内 danger callout | `internal/ui/screens/start/start.go`、`internal/ui/library.go` | **已修** |
 | 11 | §4.9 S52 | 重命名、删除（含确认）、对应 `Deps` 与 core 写入 | `internal/ui/screens/notes/list.go`、`internal/core/store/library.go` | **已修** |
-| 12 | §3 状态行「只在文档面出现」 | `docStatus` 只在 `areaWrite` + `subNotes` + 有草稿时给内容，其余面为空 → 整行不建；但守「其余面无状态行」的测试还没写，shell 侧只有「没话不画」 | `internal/ui/notes.go` 的 `docStatus`、`TestStatusLineOnlyWhenItSaysSomething` | 代码已收口，**无专门测试** |
+| 12 | §3 状态行「只在文档面出现」 | `docStatus` 只在 `areaWrite` + `subNotes` + 有草稿时给内容，其余面为空 → 整行不建 | `internal/ui/notes.go` 的 `docStatus`、`TestStatusLineOnlyWhenItSaysSomething`（shell 侧不画空行）、`TestTheStatusLineIsTheWindowsLastRow`（文档面有行）、`TestOtherAreasShowNoStatusLine`（其余五面不画） | **已修** |
 | 13 | §4.14 `kit.GradeBar` | 没有这个 `kit` 组件；实现是 `internal/ui/screens/recall/history.go:160` 的局部 `gradeBar` | `grep -rn GradeBar internal/ui` 无命中 | 口径差 |
 | 14 | §4.10 把 S05–S10 全归 `ListWidth 860` | S08 在 §4.3 写的是 `BrowseWidth`，代码也是 `BrowseWidth 1080` | `internal/ui/screens/notes/assetspage.go:47` | 口径差 |
 | 15 | §4.1 S03 导出中的 `ui.Spinner` | 导出同步写在点击处理里，没有 exporting 态与 `ui.Spinner`；主按钮只在所选格式不可写时禁用 | `internal/ui/export.go` 的 `exportView` / `runExport`；无测试 | 未做 |
