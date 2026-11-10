@@ -12,7 +12,7 @@
 > 页面由 `internal/ui/screens/pluginpage` 用宿主组件绘制，设置项落在设置页的宿主表单里。
 > `remit ext check <dir>` 跑同一份解析；`remit ext test <dir>` 用插件自带的 `fixtures/`
 > 逐字比对钩子答案；`remit.d.ts` 由宿主的表生成并随 `apiVersion` 版本化。库的每次写入
-> 都会让开着的页面重取一次数据（§9）。§4 的每个槽位都有接收方（W9），除 `status.item`；
+> 都会让开着的页面重取一次数据（§9）。§4 的每个槽位都有接收方（W9），除 `status.item`（预留）；
 > 仍未做的：`status.item`（预留，随 `apiVersion` 升级）、`activation`（manifest 的触发
 > 时机仍是加载即用）。
 
@@ -131,20 +131,21 @@
 每项是 `{command, group, order, when}`。`group` 取宿主组（`primary` / `secondary`）或
 `plugin`；同组按 `order` 升序。位置、分隔线与溢出行为由 #129 定，契约只保证槽位存在。
 
-每个槽位的接收方（`ui-redesign-v2.md` §6.3 是同一张表的界面口径）：
+每个槽位的接收方（`ui-redesign-v2.md` §6.3 是同一张表的界面口径）；接收方测试在
+`internal/ui/receivers_test.go`（`stats.block` 的那条在 `internal/ui/stats_test.go`）：
 
-| 槽位 | 宿主落点 |
-|---|---|
-| `toolbar.overflow`、`note.overflow` | 窗口的 `⋯` 菜单，两条槽位在这一处合并，同一命令只出现一次 |
-| `note.block` | 段落菜单的底部，以及块检查器的「插件」段 |
-| `editor.slash` | `/` 插入菜单的底部，随查询一起过滤 |
-| `review.card` | 复习会话的动作行 |
-| `browse.row` | 卡片表工具行的「插件动作」，`browse.selection` 决定它开不开 |
-| `sidebar.note` | 笔记行菜单的底部 |
-| `page.header` | 插件页页头 |
-| `today.widget` | 今日页每个插件的一段 |
-| `stats.block` | 统计·总览每个插件的一段 |
-| `status.item` | **不画**：条目保留，声明进设置页「问题」 |
+| 槽位 | 宿主落点 | 接收方 |
+|---|---|---|
+| `toolbar.overflow`、`note.overflow` | 窗口的 `⋯` 菜单，两条槽位在这一处合并，同一命令只出现一次 | 有（`TestOverflowMenuDrawsTheToolbarAndNoteSlots`） |
+| `note.block` | 段落菜单的底部，以及块检查器的「插件」段 | 有（`TestBlockMenuDrawsTheNoteBlockSlot`） |
+| `editor.slash` | `/` 插入菜单的底部，随查询一起过滤 | 有（`TestSlashMenuDrawsTheEditorSlashSlot`） |
+| `review.card` | 复习会话的动作行 | 有（`TestReviewFooterDrawsTheReviewCardSlot`） |
+| `browse.row` | 卡片表工具行的「插件动作」，`browse.selection` 决定它开不开 | 有（`TestCardTableDrawsTheBrowseRowSlot`） |
+| `sidebar.note` | 笔记行菜单的底部 | 有（`TestNoteRowMenuDrawsTheSidebarNoteSlot`） |
+| `page.header` | 插件页页头 | 有（`TestPageHeaderDrawsThePageHeaderSlot`） |
+| `today.widget` | 今日页每个插件的一段 | 有（`TestTodayDrawsTheTodayWidgetSlot`） |
+| `stats.block` | 统计·总览每个插件的一段 | 有（`TestStatsBlocksComeFromPlugins`） |
+| `status.item` | **不画**：条目保留，声明进设置页「问题」 | **预留**：无接收方，随一次 `apiVersion` 升级到来 |
 
 槽项只读宿主的缓存：`when` 在库打开时编译一次，接收方每帧求值、从不调用插件（§9）。
 

@@ -1,8 +1,11 @@
 # UI 验收 · 逐屏（t23 part 2）
 
-对象：`docs/specs/ui-redesign-v2.md` §3 的 52 个面（S01–S52），一屏一节。核对基准是 `master`
-`7b83d5f` 的代码与测试；part 1 只记录**当时仓库里能用测试证明什么**，part 2 把点名的缺口补上：
-S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、两条组件闸门。
+对象：`docs/specs/ui-redesign-v2.md` §3 的 52 个面（S01–S52），一屏一节。核对基准是 part 1 的
+`master` `7b83d5f` 的代码与测试；part 2（`e574b59` 合并）把点名的缺口补上：S01 三门与最近库、
+S52 重命名与删除、§2.5 ④ 的两列评分、两条组件闸门。
+t21（`3d87970`）与 t22（`22ba6cb`）之后在 `master` `22980a1` 复核过状态列、§2.5 五行、缺口表
+与全表的测试名：变化只有 §2.5 ③／缺口 #6（t21 把 `GutterNarrow` 接上，从「未修」改「已修」），
+其余不变。
 每个测试名都用 `grep -q "^func <名字>(" --include='*_test.go' internal/` 核过，没核到的不写。
 
 状态三值：
@@ -36,7 +39,7 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 |---|---|---|---|
 | ① | ≤980 轨道 64、label 传空、Tooltip 补名、Badge 仍显示 | `shell/rail.go` | 已实现，有测试 |
 | ② | ≤980 文档面板收起、顶栏面板按钮改开 `ui.Overlay` | `notes/notes.go` + `notes/panel.go` | 已实现（`TestPanelBecomesAnOverlayWhenNarrow`、`TestNarrowWindowDropsThePanel`） |
-| ③ | ≤760 纸面边距 48 → 20、`TypeDisplay 34 → 30` | 只有 `DisplayNarrow` 用在 `notes/read.go:166`；`GutterNarrow` 定义了但没有任何视图引用 | **部分未实现**（见缺口 #6） |
+| ③ | ≤760 纸面边距 48 → 20、`TypeDisplay 34 → 30` | `notes/read.go` 的 `paperGutter` / `displaySize`：阅读态 ≤760 用 `GutterNarrow 20`，页面标题（读写两态）用 `DisplayNarrow 30`；写作态不收紧，沟槽挂在左侧边距里 | 已实现（t21）；边距本身无专门测试，最小窗由 `TestChineseAtTheMinimumSize` 画一遭 |
 | ④ | ≤760 复习评分改两列 `ui.Grid` | `grades`（`internal/ui/screens/review/review.go`）在 `BreakpointSmall` 及以下用 `ui.Grid` 两列，四档仍在 | 已实现，`TestGradesTakeTwoColumnsAtTheMinimumSize` |
 | ⑤ | ≤760 块沟槽从左侧 48 沟槽改为段落上方一行 | 代码保留 48 沟槽，改由 `TestPaperKeepsGutterAtMinimumSize` / `TestBlockHandlesAtMinimumSize` 守「最小窗仍可点」 | **口径改判**（缺口 #8） |
 
@@ -66,7 +69,7 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 
 ### 减少动效
 
-`TestReducedMotionSwitchesAtOnce`、`TestMotionSettles`、`TestHoverAndPressKeepTheLayout`（`internal/ui/motion_test.go`）；`design.Press` 0.98 / `design.Hover` 由 `internal/ui/design/motion_test.go` 的 `TestOnlyTheEntranceBounces`、`TestMomentDurations` 定口径。降动效下选择性控件不得因动画不收敛而卡住：`narrowFilter` 用固定宽度而非 Grow，注释写在 `internal/ui/screens/recall/cards.go:519`。
+`TestReducedMotionSwitchesAtOnce`、`TestMotionSettles`、`TestHoverAndPressKeepTheLayout`（`internal/ui/motion_test.go`）；`design.Press` 0.98 / `design.Hover` 由 `internal/ui/design/motion_test.go` 的 `TestOnlyTheEntranceBounces`、`TestMomentDurations` 定口径。降动效下选择性控件不得因动画不收敛而卡住：`narrowFilter` 用固定宽度而非 Grow，注释写在 `internal/ui/screens/recall/cards.go:521`。
 
 ### 人工交接（headless 测不到）
 
@@ -105,7 +108,7 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 - 键：`Esc` 关。
 - 尺寸：`SettingsWidth` 内的对话框；720×520 无专门测试。
 - 守卫：`TestImportWizardWalksThreeSteps`、`TestImportWizardRefusesAnEmptySource`、`TestImportWizardReportsAFailure`、`TestImportWizardUnpacksAnArchive`（`internal/ui/import_test.go`）；Markdown 路径 `TestImportMarkdownFromTheWizard`、`TestImportMarkdownFailure`（`internal/ui/importmd_test.go`）。
-- 状态：**covered**。口径差：spec 第二个开关是「保留现有笔记」，代码是 `ImportQueue`「加入阅读队列」（`import.go:447`，缺口 #9）。
+- 状态：**covered**。口径差：spec 第二个开关是「保留现有笔记」，代码是 `ImportQueue`「加入阅读队列」（`import.go:445`，缺口 #9）。
 
 ## S03 · 导出
 
@@ -213,13 +216,13 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 - 元素：`ui/markdown.View` 只读正文、块编号常显、当前块高亮（`Accent.Alpha(0.10)` + 左侧 2px）、每块右标记列（N 卡 / 已摘 / 上次停在这里）、标题用 `DisplayNarrow`（≤760）。
 - 动作：点块 → 设为当前块；`E` → `Deps.Excerpt`；`M` → 回编辑。
 - 键：`E`、`⌘F`。
-- 尺寸：`PaperWidth`；≤760 用 `DisplayNarrow`（`read.go:166`）。
+- 尺寸：`PaperWidth`；≤760 用 `DisplayNarrow`，边距用 `GutterNarrow`（`read.go:164-180`）。
 - 守卫：`TestReadModeMarksCardsAndExcerpts`（`internal/ui/screens/notes/workbench_test.go`）、`TestReadModeExcerptsTheCurrentBlock`（`internal/ui/workbench_test.go`）；另 `TestReadModeChoosesItsParagraph`、`TestReadViewLoadsAnImageOnce`。
 - 状态：**covered**。
 
 ## S13 · 文档 · 分栏
 
-- 代码：`internal/ui/screens/notes/notes.go:421`（`ui.SplitPercent` + `SplitReset(defaultReadShare)`）。
+- 代码：`internal/ui/screens/notes/notes.go:432`（`ui.SplitPercent` + `SplitReset(defaultReadShare)`）。
 - 目的：左写右读，中线可拖，50/50 可复位。
 - 元素：`ui.SplitPercent`（`readShare`）、左 `richtext.EditorBase`、右 `ui/markdown.View`、中线 1px。
 - 动作：拖中线；双击复位；两侧各自滚动。
@@ -230,7 +233,7 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 
 ## S14 · 查找条
 
-- 代码：`internal/ui/screens/notes/editor.go:135`（`ui.FindBar`）。
+- 代码：`internal/ui/screens/notes/editor.go:138`（`ui.FindBar`）。
 - 目的：在打开的文档里找，数清命中，回车走一条。
 - 元素：`ui.FindBar(c, &open, &query, matches, &current)`，占自身高度压在纸面上方；无命中「0 个结果」。
 - 动作：下一个 / 上一个 / 关闭；`↵` 走到下一条并回卷。
@@ -309,10 +312,10 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 
 - 代码：`internal/ui/screens/notes/outline.go`、`internal/ui/screens/notes/panel.go`。
 - 目的：这篇有哪些节，以及现在写在哪一节。
-- 元素：`ui.Split` 第二栏（`PanelWidth 288`）、顶部 `ui.Segmented`（大纲 / 反链 N）+ 收起按钮（`.Tooltip`）、`ui.Outline`（当前节用强调色）；空 →「这篇还没有标题」+ 一句。
+- 元素：`ui.Column` 固定 `PanelWidth 288`（`writeArea` 里的 `ui.Row` + `ui.Divider`，不是可拖的 `ui.Split`）、顶部 `ui.Segmented`（大纲 / 反链 N）+ 收起按钮（`.Tooltip`）、`ui.Outline`（当前节用强调色）；空 →「这篇还没有标题」+ 一句。
 - 动作：点行 → `pendingJump` 滚到该段；分段切换 → 写 `PanelTab`；`⌘⇧P` 开关；≤980 → `ui.Overlay`。
 - 键：`⌘⇧P`、`Esc`（Overlay）。
-- 尺寸：288；≤980 收进 Overlay（`TestPanelBecomesAnOverlayWhenNarrow`、`TestNarrowWindowDropsThePanel`）。
+- 尺寸：固定 288（不可拖；v2 §2.2 写的 `ui.Split` 未采用，`writeArea` 是 `ui.Row` + 固定列）；≤980 收进 Overlay（`TestPanelBecomesAnOverlayWhenNarrow`、`TestNarrowWindowDropsThePanel`）。
 - 守卫：`TestOutlineFollowsTheCaret`、`TestOutlineJumpsToItsParagraph`、`TestPanelScrollsOnItsOwn`（`internal/ui/panel_test.go`）、`TestPanelTakesAColumnOnAWideWindow`（`internal/ui/workbench_test.go`）。
 - 状态：**covered**。
 
@@ -362,7 +365,7 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 
 ## S26 · 会话 · 摘录并制卡
 
-- 代码：`internal/ui/screens/reading/reading.go:289`（`ui.Checkbox`）、`state.go:178`（`ExcerptWithCard`）。
+- 代码：`internal/ui/screens/reading/reading.go:295`（`ui.Checkbox`）、`state.go:180`（`ExcerptWithCard`）。
 - 目的：摘录这一步顺手把卡也做出来，勾一次管一段会话。
 - 元素：动作行里与「摘录」紧邻的一个 `ui.Checkbox`。
 - 动作：勾上后 `Deps.Excerpt(..., withCard=true)`。
@@ -422,7 +425,7 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 - 元素：`ui.Split`（左 `FilterPaneWidth 200` 筛选栏；≤窄窗换成顶部 `ui.Select`）、`ui.Table`（首列勾选 `Fixed`、`Sortable`、`CellMenu`、列开关）、工具行（`ui.SearchField` 带 `is:`/`type:`/`tag:`/`note:` + 语法帮助 + 列开关 + `browse.row` 插件动作）、批量条（暂停 / 改到期 / 冻结 / 加标签）。
 - 动作：点表头排序、右键批量、多选批量、语法筛选、开原笔记。
 - 键：表自己的（↑↓ / Home / End / 空格选中）。
-- 尺寸：`BrowseWidth 1080`；≤ 阈值切 `ui.Select`（`cards.go:504`），zh 最小窗由 `TestRecallPagesAtMinimumInChinese` 守。
+- 尺寸：`BrowseWidth 1080`；≤ 阈值切 `ui.Select`（`cards.go:524`），zh 最小窗由 `TestRecallPagesAtMinimumInChinese` 守。
 - 守卫：`TestBrowseSortsByColumn`、`TestCardSearchSyntaxNarrows`、`TestCardTableBulkSuspends`（`internal/ui/recall_test.go`）；另 `TestCardTableOpensTheNote`、`TestCardTableDrawsTheBrowseRowSlot`（`internal/ui/receivers_test.go`）。
 - 状态：**covered**。
 
@@ -505,7 +508,7 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 
 ## S39 · 设置 · 外观
 
-- 代码：`internal/ui/screens/settings/appearance.go`、`internal/ui/prefs.go:231`（`a.tokens`：三选折成 `dark bool` 的唯一解析点）、`internal/ui/view.go:29`（`c.SetTheme`）。
+- 代码：`internal/ui/screens/settings/appearance.go`、`internal/ui/prefs.go:250`（`a.tokens`：三选折成 `dark bool` 的唯一解析点）、`internal/ui/view.go:29`（`c.SetTheme`）。
 - 目的：跟系统走，还是钉在纸面或墨色；纸面多宽。
 - 元素：`ui.Segmented` 三选（随系统 / 纸面 / 墨色）、纸面宽度 `ui.StepSlider`（620–860 step 20）、正文尺寸显式只读 + 一行「跟随桌面文本缩放」+「打开系统设置」。
 - 动作：三选 → `settings.Appearance` + `c.SetTheme`；滑杆 → `settings.PaperWidth`。
@@ -676,10 +679,10 @@ S01 三门与最近库、S52 重命名与删除、§2.5 ④ 的两列评分、�
 
 | # | 面 / 规则 | 缺什么 | 证据 | 状态 |
 |---|---|---|---|---|
-| 6 | §2.5 ③ 纸面边距 48 → 20 | `GutterNarrow` 定义了但没有任何视图引用；`DisplayNarrow` 只在 `internal/ui/screens/notes/read.go:166` 用 | `grep -rn GutterNarrow internal/ui` 只有 `design/` | 未修 |
+| 6 | §2.5 ③ 纸面边距 48 → 20 | 阅读态由 `paperGutter` 在 `BreakpointSmall` 及以下返回 `GutterNarrow`，标题由 `displaySize` 返回 `DisplayNarrow` | `internal/ui/screens/notes/read.go:162-180`、`editor.go:57` | **已修**（t21） |
 | 7 | §2.5 ④ ≤760 复习评分两列 | `grades` 在 `BreakpointSmall` 及以下用 `ui.Grid` 两列 | `internal/ui/screens/review/review.go`、`TestGradesTakeTwoColumnsAtTheMinimumSize` | **已修** |
 | 8 | §2.5 ⑤ 沟槽改到段上一行 | 代码保留左侧 48 沟槽（口径改判，已由测试固定） | `TestPaperKeepsGutterAtMinimumSize`、`TestBlockHandlesAtMinimumSize` | 口径改判 |
-| 9 | §4.1 S02 步骤 2 开关 | spec 写「保留现有笔记、导入后重建索引」，代码是「重建索引、加入阅读队列」 | `internal/ui/import.go:446-447` | 未修 |
+| 9 | §4.1 S02 步骤 2 开关 | spec 写「保留现有笔记、导入后重建索引」，代码是「重建索引、加入阅读队列」 | `internal/ui/import.go:444-445` | 未修 |
 | 10 | §4.1 S01 三件元素 | 导入门、最近库列表（`settings.RecentLibraries`）、卡内 danger callout | `internal/ui/screens/start/start.go`、`internal/ui/library.go` | **已修** |
 | 11 | §4.9 S52 | 重命名、删除（含确认）、对应 `Deps` 与 core 写入 | `internal/ui/screens/notes/list.go`、`internal/core/store/library.go` | **已修** |
 | 12 | §3 状态行「只在文档面出现」 | 代码按内容判断（有话才画），不按面 | `internal/ui/shell/status.go:15`、`TestStatusLineOnlyWhenItSaysSomething` | 未修 |
