@@ -3,16 +3,12 @@
 > 状态：**implemented（2026-11-10，含交付审计后的返工）**。2026-11-10 用户把实现细节授权给工程判断
 > （「不需要问我，按最佳实践」）；本稿据此冻结，§10.2 的三项口径按默认值执行。
 > **冻结确认（交付口径）**：2026-11-10 用户就交付问题明确确认本稿为已接受的冻结设计基线
-> ——52 面、六区、Today 混合队列、阅读终态、`remit/3` 预设、插件槽位一并接受，偏差以
-> [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md) 文末的缺口表为准，不在本稿外另议。
+> ——52 面、六区、Today 混合队列、阅读终态、`remit/3` 预设、插件槽位一并接受。
 > 已合并的切片：前端 **W1–W9**（W3a/W3b、W5a/W5b、W8a/W8b）与后端 **B1–B6**；§9.1 的 106 个测试名
-> 都在仓库里。审计返工补齐了文档版式、卡片批量、卡片 CSV 与「保留现有笔记」、白板连线；逐面核对、
-> 点名的缺口与三面 `manual` 在 [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md)
-> （52 面：covered 49、missing 0、manual 3；`missing 0` 不等于零偏差，偏差与未做项见该文末表）。
+> 都在仓库里。审计返工补齐了文档版式、卡片批量、卡片 CSV 与「保留现有笔记」、白板连线。
 > 实现口径与原型 / 本稿有偏差的六处见 §0.4，按代码为准。
 > 基线：`master`（合并已落地），MyGo **v0.8.1**（`go list -m -f '{{.Dir}}' github.com/egoist/mygo`）。
-> 原型：`ref/prototype/`（`DESIGN.md` 说明书 + `index.html`/`styles.css`/`app.js` 可点稿），
-> 主路由静帧在 `ref/prototype/shots/`（40 张互不相同的截图 + `shots/index.html` 蓝图；`tools/capture.mjs` 一条命令按深链接重拍，每张都带「屏上应有这些字」的断言）。
+> 原型：`ref/prototype/`（`DESIGN.md` 说明书 + `index.html`/`styles.css`/`app.js` 可点稿；本地参考，不入库）。
 > 决策地图：[#201](https://github.com/transmit-bug/remit/issues/201)。UI 地图：[#128](https://github.com/transmit-bug/remit/issues/128)。
 > 执行顺序：[#158](https://github.com/transmit-bug/remit/issues/158)。打磨清单：[#164](https://github.com/transmit-bug/remit/issues/164)。
 
@@ -36,7 +32,6 @@
 | `docs/specs/plugins/ui.md` | **扩展，不破坏** | §4 槽位表新增 `today.widget`、`stats.block`；`status.item` 登记为预留（不展示）。§3 上下文键新增 `area`、`sub`（新增键 = 兼容变更），`mode` 的取值表不变。 |
 | `docs/specs/three-in-one.md` | **回填一句** | 1.0 范围表「平台」行与 §6「队列」缺口：本稿 §1.2 把「统一 Today」判为 1.0 内，实现后回填；§2 注里「统一 Today 仍是开放决策」改为指向本稿。 |
 | `GLOSSARY.md` | **新增 6 条** | 见 §1.7（Today / 预算 / 归档 / 不再出现 / 推后 / 摘录树）。 |
-| `docs/verification/handoff.md` | **追加项** | 追加：rail 折叠、白板页、插件失败面板、归档/不再出现恢复、预设写盘。 |
 | `docs/adr/*` | **新增与修订** | 新增 ADR 0010（六区导航与 shell）、ADR 0011（库格式 v3：终态事件与预设）；修订 ADR 0002（归档不删源文）与 ADR 0003（事件种类与配置版本）。0004/0009 照旧；不引入新实体。 |
 | 其余决策 | **不写 ADR** | §1.5（捕获/AI 拒绝）、§1.6（parity 矩阵推迟）、§1.10（原型即依据）、§1.11（SOP 推迟）与 §1.4 的 UI 交互部分只在本文与 GLOSSARY 记录：它们不改数据模型与存储格式，ADR 只收不可逆的模型/格式决定。 |
 
@@ -1476,7 +1471,7 @@ grep -rhoE '^func [A-Z][A-Za-z0-9_]*' "$MYGO"/ui/*.go | sed -E 's/func //' | sor
 
 ### 9.4 人工交接（headless 测不到的部分）
 
-按 `docs/verification/handoff.md` 跑，并追加：
+人工清单（headless 测不到的部分）：
 
 - 轨道折叠：拖窗口到 960 宽，轨道变 64、图标可点、tooltip 有名字；拉回 1200 恢复。
 - 白板：点节点跳到阅读态的对应段落；从块的菜单回到白板，节点被高亮。

@@ -30,7 +30,7 @@ Remit 不做三个并列模块。三者在数据上共享 **Block**，在时间�
 > 注：Reading Item 是候选抽象（见地图「统一知识单元」），不是已定术语；阅读单位仍是
 > Note，不是 Block / Range。**统一 Today 已落地**（混合队列 + 时间预算），口径见
 > [`docs/specs/ui-redesign-v2.md`](ui-redesign-v2.md) §1.2/§5.1，实现是 B1 的 `queue.Today` 与
-> W2 的 S04（逐屏核对见 [`docs/verification/ui-acceptance.md`](../verification/ui-acceptance.md)）；
+> W2 的 S04；
 > priority 只做队列排序、不落字段（§1.3），选区摘录仍推迟（§1.4）。
 
 ## 3. 产品原则

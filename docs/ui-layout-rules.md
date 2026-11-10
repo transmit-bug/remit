@@ -4,8 +4,7 @@
 宽度、居中、边距和最小窗口下的让位顺序都从 `internal/ui/design` 取。
 窗口的外壳（轨道 / 顶栏 / 子导航 / 状态行）由 `internal/ui/shell` 一次画完，屏不画边框。
 
-口径来源：`docs/specs/ui-redesign-v2.md` §2.1–§2.6、§7.4；实现在 `internal/ui/shell`，
-逐屏核对在 `docs/verification/ui-acceptance.md`。
+口径来源：`docs/specs/ui-redesign-v2.md` §2.1–§2.6、§7.4；实现在 `internal/ui/shell`。
 
 ## 1. 三种骨架
 
