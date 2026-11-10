@@ -24,7 +24,7 @@ func TestImportDirectoryCarriesItsAssets(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	report, err := Import(dir, lib)
+	report, err := Import(dir, lib, Options{})
 	if err != nil {
 		t.Fatalf("Import: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestExportWritesTheReferencedAssets(t *testing.T) {
 	// The directory imports back and stores nothing new: same file, same
 	// content-addressed name.
 	back := newLib(t)
-	again, err := Import(out, back)
+	again, err := Import(out, back, Options{})
 	if err != nil {
 		t.Fatalf("Import back: %v", err)
 	}
@@ -149,7 +149,7 @@ func TestImportIgnoresForeignImageReferences(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "web.md"), []byte("# Web\n\n![](//example.com/x.png) and ![](assets/../../etc.png)\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	report, err := Import(dir, lib)
+	report, err := Import(dir, lib, Options{})
 	if err != nil {
 		t.Fatalf("Import: %v", err)
 	}

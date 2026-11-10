@@ -3577,20 +3577,22 @@ func (msgs Messages) DropImageFailed(file string) string {
 	return Catalog.Format(msgs.locale, "dropImageFailed", map[string]any{"file": file})
 }
 
-// ImportMdReport says "Imported {notes} notes, skipped {skipped}."
+// ImportMdReport says "Imported {notes} notes, kept {kept}, skipped {skipped}."
 // in the language the app shows.
 //
-// What a Markdown import wrote.
-func ImportMdReport(notes int, skipped int) string {
-	return In(i18n.Locale()).ImportMdReport(notes, skipped)
+// What a Markdown import wrote, how many existing notes it left as they
+// were, and how many files said nothing new.
+func ImportMdReport(notes int, kept int, skipped int) string {
+	return In(i18n.Locale()).ImportMdReport(notes, kept, skipped)
 }
 
-// ImportMdReport says "Imported {notes} notes, skipped {skipped}."
+// ImportMdReport says "Imported {notes} notes, kept {kept}, skipped {skipped}."
 // in the language of msgs.
 //
-// What a Markdown import wrote.
-func (msgs Messages) ImportMdReport(notes int, skipped int) string {
-	return Catalog.Format(msgs.locale, "importMdReport", map[string]any{"notes": notes, "skipped": skipped})
+// What a Markdown import wrote, how many existing notes it left as they
+// were, and how many files said nothing new.
+func (msgs Messages) ImportMdReport(notes int, kept int, skipped int) string {
+	return Catalog.Format(msgs.locale, "importMdReport", map[string]any{"notes": notes, "kept": kept, "skipped": skipped})
 }
 
 // PluginImportReport says "Imported {notes} notes, {cards} cards; {dropped} suggestions dropped."
@@ -3710,43 +3712,43 @@ func (msgs Messages) ExportArchiveHint() string {
 // ExportCards says "A card CSV"
 // in the language the app shows.
 //
-// Export format: a card table as CSV, which this version does not write.
+// Export format: the card table as a CSV file for other tools.
 func ExportCards() string { return In(i18n.Locale()).ExportCards() }
 
 // ExportCards says "A card CSV"
 // in the language of msgs.
 //
-// Export format: a card table as CSV, which this version does not write.
+// Export format: the card table as a CSV file for other tools.
 func (msgs Messages) ExportCards() string {
 	return Catalog.Format(msgs.locale, "exportCards", nil)
 }
 
-// ExportCardsHint says "The card table as a spreadsheet."
+// ExportCardsHint says "The card table as a spreadsheet, one row per card."
 // in the language the app shows.
 //
-// What the card CSV export would write, under its choice.
+// What the card CSV export writes, under its choice.
 func ExportCardsHint() string { return In(i18n.Locale()).ExportCardsHint() }
 
-// ExportCardsHint says "The card table as a spreadsheet."
+// ExportCardsHint says "The card table as a spreadsheet, one row per card."
 // in the language of msgs.
 //
-// What the card CSV export would write, under its choice.
+// What the card CSV export writes, under its choice.
 func (msgs Messages) ExportCardsHint() string {
 	return Catalog.Format(msgs.locale, "exportCardsHint", nil)
 }
 
-// ExportNoCSV says "Card CSV is not in 1.0. The card table waits for its own slice."
+// ExportNoCards says "The library has no cards yet."
 // in the language the app shows.
 //
-// Why the card CSV export is disabled, shown beside the choices.
-func ExportNoCSV() string { return In(i18n.Locale()).ExportNoCSV() }
+// Why the card CSV export is disabled: the library holds no card to write.
+func ExportNoCards() string { return In(i18n.Locale()).ExportNoCards() }
 
-// ExportNoCSV says "Card CSV is not in 1.0. The card table waits for its own slice."
+// ExportNoCards says "The library has no cards yet."
 // in the language of msgs.
 //
-// Why the card CSV export is disabled, shown beside the choices.
-func (msgs Messages) ExportNoCSV() string {
-	return Catalog.Format(msgs.locale, "exportNoCSV", nil)
+// Why the card CSV export is disabled: the library holds no card to write.
+func (msgs Messages) ExportNoCards() string {
+	return Catalog.Format(msgs.locale, "exportNoCards", nil)
 }
 
 // ExportEmptyLibrary says "The library has no notes yet."
@@ -3803,6 +3805,22 @@ func ExportArchiveReport(name string) string { return In(i18n.Locale()).ExportAr
 // What a .remitlib export wrote: the file's name.
 func (msgs Messages) ExportArchiveReport(name string) string {
 	return Catalog.Format(msgs.locale, "exportArchiveReport", map[string]any{"name": name})
+}
+
+// ExportCardsReport says "Wrote {name} with {rows} cards."
+// in the language the app shows.
+//
+// What a card CSV export wrote: the file's name and how many rows it holds.
+func ExportCardsReport(name string, rows int) string {
+	return In(i18n.Locale()).ExportCardsReport(name, rows)
+}
+
+// ExportCardsReport says "Wrote {name} with {rows} cards."
+// in the language of msgs.
+//
+// What a card CSV export wrote: the file's name and how many rows it holds.
+func (msgs Messages) ExportCardsReport(name string, rows int) string {
+	return Catalog.Format(msgs.locale, "exportCardsReport", map[string]any{"name": name, "rows": rows})
 }
 
 // ExportOpenFolder says "Open folder"
@@ -4085,6 +4103,128 @@ func ImportQueue() string { return In(i18n.Locale()).ImportQueue() }
 // An import option: queue the notes the import brought for reading.
 func (msgs Messages) ImportQueue() string {
 	return Catalog.Format(msgs.locale, "importQueue", nil)
+}
+
+// ImportKeep says "Keep existing notes"
+// in the language the app shows.
+//
+// An import option: leave a note the library already holds as it is instead
+// of writing the file over it.
+func ImportKeep() string { return In(i18n.Locale()).ImportKeep() }
+
+// ImportKeep says "Keep existing notes"
+// in the language of msgs.
+//
+// An import option: leave a note the library already holds as it is instead
+// of writing the file over it.
+func (msgs Messages) ImportKeep() string {
+	return Catalog.Format(msgs.locale, "importKeep", nil)
+}
+
+// ImportKeepHint says "A note the library already holds is left as it is. Off, the file replaces that note."
+// in the language the app shows.
+//
+// What the keep-existing option does, under its switch.
+func ImportKeepHint() string { return In(i18n.Locale()).ImportKeepHint() }
+
+// ImportKeepHint says "A note the library already holds is left as it is. Off, the file replaces that note."
+// in the language of msgs.
+//
+// What the keep-existing option does, under its switch.
+func (msgs Messages) ImportKeepHint() string {
+	return Catalog.Format(msgs.locale, "importKeepHint", nil)
+}
+
+// ImportKeepAnki says "Anki notes are matched by their GUID, and a note the library already holds is never overwritten."
+// in the language the app shows.
+//
+// Why the keep-existing option does not apply to an Anki package.
+func ImportKeepAnki() string { return In(i18n.Locale()).ImportKeepAnki() }
+
+// ImportKeepAnki says "Anki notes are matched by their GUID, and a note the library already holds is never overwritten."
+// in the language of msgs.
+//
+// Why the keep-existing option does not apply to an Anki package.
+func (msgs Messages) ImportKeepAnki() string {
+	return Catalog.Format(msgs.locale, "importKeepAnki", nil)
+}
+
+// ImportKeepArchive says "An archive opens as a library of its own, so the notes here are kept as they are."
+// in the language the app shows.
+//
+// Why the keep-existing option does not apply to a .remitlib archive.
+func ImportKeepArchive() string { return In(i18n.Locale()).ImportKeepArchive() }
+
+// ImportKeepArchive says "An archive opens as a library of its own, so the notes here are kept as they are."
+// in the language of msgs.
+//
+// Why the keep-existing option does not apply to a .remitlib archive.
+func (msgs Messages) ImportKeepArchive() string {
+	return Catalog.Format(msgs.locale, "importKeepArchive", nil)
+}
+
+// ImportRowExisting says "Existing notes"
+// in the language the app shows.
+//
+// The import preview's row naming what the run does with notes the library
+// already holds.
+func ImportRowExisting() string { return In(i18n.Locale()).ImportRowExisting() }
+
+// ImportRowExisting says "Existing notes"
+// in the language of msgs.
+//
+// The import preview's row naming what the run does with notes the library
+// already holds.
+func (msgs Messages) ImportRowExisting() string {
+	return Catalog.Format(msgs.locale, "importRowExisting", nil)
+}
+
+// ImportExistingKept says "Kept as they are"
+// in the language the app shows.
+//
+// The preview's answer when existing notes are kept: the import writes
+// nothing over them.
+func ImportExistingKept() string { return In(i18n.Locale()).ImportExistingKept() }
+
+// ImportExistingKept says "Kept as they are"
+// in the language of msgs.
+//
+// The preview's answer when existing notes are kept: the import writes
+// nothing over them.
+func (msgs Messages) ImportExistingKept() string {
+	return Catalog.Format(msgs.locale, "importExistingKept", nil)
+}
+
+// ImportExistingOverwritten says "Replaced by the files"
+// in the language the app shows.
+//
+// The preview's answer when existing notes are written over: the files are
+// the note's new saying.
+func ImportExistingOverwritten() string { return In(i18n.Locale()).ImportExistingOverwritten() }
+
+// ImportExistingOverwritten says "Replaced by the files"
+// in the language of msgs.
+//
+// The preview's answer when existing notes are written over: the files are
+// the note's new saying.
+func (msgs Messages) ImportExistingOverwritten() string {
+	return Catalog.Format(msgs.locale, "importExistingOverwritten", nil)
+}
+
+// ImportExistingNotApplicable says "Not applicable"
+// in the language the app shows.
+//
+// The preview's answer when the source cannot replace a note the library
+// holds.
+func ImportExistingNotApplicable() string { return In(i18n.Locale()).ImportExistingNotApplicable() }
+
+// ImportExistingNotApplicable says "Not applicable"
+// in the language of msgs.
+//
+// The preview's answer when the source cannot replace a note the library
+// holds.
+func (msgs Messages) ImportExistingNotApplicable() string {
+	return Catalog.Format(msgs.locale, "importExistingNotApplicable", nil)
 }
 
 // ImportRowItem says "Item"

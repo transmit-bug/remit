@@ -16,16 +16,41 @@ import (
 // ErrNoLibrary is a nil library, the way importanki reports one.
 var ErrNoLibrary = errors.New("importmd: no library")
 
+// Options configures an import.
+type Options struct {
+	// KeepExisting leaves a note the library already holds as it is: a file
+	// that names it — by a block's marker, or by its title — is read and
+	// counted, never written. Off, such a file replaces the note it names,
+	// which is what importing a folder edited outside the library means.
+	KeepExisting bool
+}
+
+// outcome is what a file's import did to the library.
+type outcome uint8
+
+const (
+	// wrote means the file's note is in the library with the file's text.
+	wrote outcome = iota
+	// skipped means the library already said exactly this, or the file could
+	// not be written: nothing changed, and a warning names what went wrong.
+	skipped
+	// kept means the library holds the note the file names, and the import
+	// left it alone although the file says something else.
+	kept
+)
+
 // Import brings Markdown files into the library. Files are the .md files of
 // path — one file or a directory, read recursively — and each becomes one
 // note: the first H1 is the title, or the file's name when there is none;
 // the rest is blocks. A file that carries the marker of a block already in
-// the library updates that note; one without falls back to its title, and
-// only when the text it holds differs from what the titled note already says.
+// the library names that note; one without falls back to its title, and only
+// when the text it holds differs from what the titled note already says. What
+// the run does with such a note is Options.KeepExisting's: keep it, or write
+// the file over it.
 //
 // Files import in name order, so a run is reproducible: the same directory
 // twice leaves the library where the first run left it.
-func Import(path string, lib *store.Library) (Report, error) {
+func Import(path string, lib *store.Library, opts Options) (Report, error) {
 	var report Report
 	if lib == nil {
 		return report, ErrNoLibrary
@@ -50,22 +75,25 @@ func Import(path string, lib *store.Library) (Report, error) {
 		if err != nil {
 			return report, fmt.Errorf("read %s: %w", file, err)
 		}
-		wrote, warn := importFile(file, data, lib, byTitle)
+		done, warn := importFile(file, data, lib, byTitle, opts)
 		if warn != "" {
 			warnf(&report, "%s", warn)
 		}
-		if wrote {
+		switch done {
+		case wrote:
 			report.Notes++
-		} else {
+		case kept:
+			report.Kept++
+		default:
 			report.Skipped++
 		}
 	}
 	return report, nil
 }
 
-// importFile writes one file's note and answers whether it wrote. warn is
-// empty or one warning about the file.
-func importFile(file string, data []byte, lib *store.Library, byTitle map[string]core.ID) (bool, string) {
+// importFile writes one file's note and answers what it did. warn is empty or
+// one warning about the file.
+func importFile(file string, data []byte, lib *store.Library, byTitle map[string]core.ID, opts Options) (outcome, string) {
 	title, blocks := store.ParseNoteSource(data)
 	if title == "" {
 		title = strings.TrimSuffix(filepath.Base(file), ".md")
@@ -89,7 +117,10 @@ func importFile(file string, data []byte, lib *store.Library, byTitle map[string
 		// The same note saying the same thing needs no write: an export
 		// imported back leaves the library where it was.
 		if same, ok := lib.Note(known); ok && notesEqual(same.Blocks, blocks) && same.Title == title {
-			return false, ""
+			return skipped, ""
+		}
+		if opts.KeepExisting {
+			return kept, ""
 		}
 	}
 	if known == "" {
@@ -98,7 +129,10 @@ func importFile(file string, data []byte, lib *store.Library, byTitle map[string
 		// run has been here, and a different text is the note's new saying.
 		if id, ok := byTitle[title]; ok {
 			if same, ok := lib.Note(id); ok && notesEqual(same.Blocks, blocks) {
-				return false, ""
+				return skipped, ""
+			}
+			if opts.KeepExisting {
+				return kept, ""
 			}
 			known = id
 		}
@@ -109,9 +143,11 @@ func importFile(file string, data []byte, lib *store.Library, byTitle map[string
 		note.ID = known
 	}
 	if _, err := lib.SaveNote(note); err != nil {
-		return false, fmt.Sprintf("%s: %v", file, err)
+		// The note the library holds stays as it was, so the file ranks with the
+		// ones that changed nothing; the warning names what went wrong.
+		return skipped, fmt.Sprintf("%s: %v", file, err)
 	}
-	return true, ""
+	return wrote, ""
 }
 
 // notesEqual says whether two block lists carry the same text, ignoring

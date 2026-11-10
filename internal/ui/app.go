@@ -229,7 +229,7 @@ type App struct {
 	// The Markdown import's seams, shaped like the Anki ones: a test replaces
 	// the picker and the importer; a nil importer leaves the actions quiet.
 	pickMd     func() ([]string, error)
-	importMd   func(path string) (importmd.Report, error)
+	importMd   func(path string, opts importmd.Options) (importmd.Report, error)
 	pickFolder func(title string) (string, error)
 	pickImage  func() (string, error)
 	// pickPlugin is the file picker a plugin importer's entry opens through,
@@ -283,7 +283,9 @@ func NewApp(opts ...Options) *App {
 	// The importer reads the library open now, which a dropped archive can
 	// replace, so it takes it at call time rather than at construction.
 	a.importAnki = func(path string) (importanki.Report, error) { return importanki.Import(path, a.lib) }
-	a.importMd = func(path string) (importmd.Report, error) { return importmd.Import(path, a.lib) }
+	a.importMd = func(path string, opts importmd.Options) (importmd.Report, error) {
+		return importmd.Import(path, a.lib, opts)
+	}
 	var chosenCards *ext.JSRunner
 	var chosenScheduler *ext.JSRunner
 	withoutCards, withoutScheduler := false, false

@@ -26,9 +26,13 @@ type Report struct {
 	Notes int
 	// Files is how many files an export wrote.
 	Files int
-	// Skipped is what the run left alone: an import counts files whose note
-	// already held this exact content, an export counts notes with no title
-	// and no text.
+	// Kept is how many notes an import found in the library and left as they
+	// were, because Options.KeepExisting said so: the files named notes the
+	// library holds, and the import did not write over them.
+	Kept int
+	// Skipped is what the run left alone with nothing at stake: an import
+	// counts files whose note already held this exact content, an export counts
+	// notes with no title and no text.
 	Skipped int
 	// Assets is how many asset files the run stored or wrote: an import
 	// stores the files of the directory's assets/ subtree in the library,

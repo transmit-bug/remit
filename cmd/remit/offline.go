@@ -94,11 +94,11 @@ func runMarkdown(dir, importPath, exportDir string) bool {
 	defer lib.Close()
 
 	if importPath != "" {
-		report, err := importmd.Import(importPath, lib)
+		report, err := importmd.Import(importPath, lib, importmd.Options{})
 		if err != nil {
 			log.Fatalf("import %s: %v", importPath, err)
 		}
-		fmt.Printf("imported %s: %d notes, %d skipped\n", importPath, report.Notes, report.Skipped)
+		fmt.Printf("imported %s: %d notes, %d kept, %d skipped\n", importPath, report.Notes, report.Kept, report.Skipped)
 		for _, warning := range report.Warnings {
 			fmt.Printf("  warning: %s\n", warning)
 		}

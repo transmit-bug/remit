@@ -53,7 +53,7 @@ func TestImportPlainMarkdown(t *testing.T) {
 	path := write(t, filepath.Join(t.TempDir(), "chapters", "01-intro.md"),
 		"# The Introduction\n\nFirst paragraph, with **bold**.\n\n- one\n- two\n\n```go\ncode()\n```\n")
 
-	report, err := importmd.Import(path, lib)
+	report, err := importmd.Import(path, lib, importmd.Options{})
 	if err != nil {
 		t.Fatalf("Import: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestImportTakesFileNameWithoutH1(t *testing.T) {
 	lib, _ := newLibrary(t)
 	path := write(t, filepath.Join(t.TempDir(), "grocery list.md"), "Just one line.\n")
 
-	if _, err := importmd.Import(path, lib); err != nil {
+	if _, err := importmd.Import(path, lib, importmd.Options{}); err != nil {
 		t.Fatalf("Import: %v", err)
 	}
 	if note := noteByText(t, lib, "Just one line"); note.Title != "grocery list" {
@@ -131,7 +131,7 @@ func TestRoundTripReachesTheSameNote(t *testing.T) {
 		}
 	}
 
-	report, err := importmd.Import(out, lib)
+	report, err := importmd.Import(out, lib, importmd.Options{})
 	if err != nil {
 		t.Fatalf("Import: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestImportAdoptsMarkedFile(t *testing.T) {
 	}
 	_ = otherDir
 
-	report, err := importmd.Import(out, lib)
+	report, err := importmd.Import(out, lib, importmd.Options{})
 	if err != nil {
 		t.Fatalf("Import: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestImportMatchesTitledNoteByText(t *testing.T) {
 	dir := t.TempDir()
 	same := write(t, filepath.Join(dir, "journal.md"), "# Journal\n\nThe day was long.\n")
 
-	report, err := importmd.Import(same, lib)
+	report, err := importmd.Import(same, lib, importmd.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func TestImportMatchesTitledNoteByText(t *testing.T) {
 	}
 
 	changed := write(t, filepath.Join(dir, "journal.md"), "# Journal\n\nThe day was short.\n")
-	report, err = importmd.Import(changed, lib)
+	report, err = importmd.Import(changed, lib, importmd.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,6 +225,77 @@ func TestImportMatchesTitledNoteByText(t *testing.T) {
 	}
 }
 
+// keepFixture is the library and the files a keep-or-overwrite run reads: one
+// note a file names by the marker its block carries, one it names by title
+// alone, and both files saying something the library's notes do not.
+func keepFixture(t *testing.T) (lib *store.Library, marked, titled core.Note, dir string) {
+	t.Helper()
+	lib, _ = newLibrary(t)
+	marked, err := lib.SaveNote(core.Note{Title: "Marked", Blocks: []core.Block{
+		{ID: core.NewID(core.BlockKind), Text: "What the library holds."},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	titled, err = lib.SaveNote(core.Note{Title: "Titled", Blocks: []core.Block{
+		{ID: core.NewID(core.BlockKind), Text: "What the library holds."},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir = t.TempDir()
+	write(t, filepath.Join(dir, "marked.md"),
+		"# Marked\n\nWhat the file says. "+core.BlockMarker(marked.Blocks[0].ID)+"\n")
+	write(t, filepath.Join(dir, "titled.md"), "# Titled\n\nWhat the file says.\n")
+	return lib, marked, titled, dir
+}
+
+// KeepExisting leaves every note the source names as the library has it, and
+// says how many that was: the import read the files and wrote nothing.
+func TestImportKeepsTheNotesItFinds(t *testing.T) {
+	lib, marked, titled, dir := keepFixture(t)
+
+	report, err := importmd.Import(dir, lib, importmd.Options{KeepExisting: true})
+	if err != nil {
+		t.Fatalf("Import: %v", err)
+	}
+	if report.Notes != 0 || report.Kept != 2 || report.Skipped != 0 {
+		t.Fatalf("report = %+v, want both notes kept", report)
+	}
+	for _, original := range []core.Note{marked, titled} {
+		note, ok := lib.Note(original.ID)
+		if !ok {
+			t.Fatalf("note %q vanished", original.Title)
+		}
+		if len(note.Blocks) != 1 || note.Blocks[0].Text != "What the library holds." {
+			t.Errorf("note %q was written over: %+v", note.Title, note.Blocks)
+		}
+	}
+}
+
+// Without KeepExisting the same files are the notes' new saying: the note keeps
+// its identity, and the file's text replaces the library's.
+func TestImportOverwritesWhenNotKeeping(t *testing.T) {
+	lib, marked, titled, dir := keepFixture(t)
+
+	report, err := importmd.Import(dir, lib, importmd.Options{})
+	if err != nil {
+		t.Fatalf("Import: %v", err)
+	}
+	if report.Notes != 2 || report.Kept != 0 {
+		t.Fatalf("report = %+v, want both notes written", report)
+	}
+	for _, original := range []core.Note{marked, titled} {
+		note, ok := lib.Note(original.ID)
+		if !ok {
+			t.Fatalf("note %q vanished", original.Title)
+		}
+		if len(note.Blocks) != 1 || note.Blocks[0].Text != "What the file says." {
+			t.Errorf("note %q kept its old text: %+v", note.Title, note.Blocks)
+		}
+	}
+}
+
 // A directory imports recursively and in name order.
 func TestImportDirectory(t *testing.T) {
 	lib, _ := newLibrary(t)
@@ -233,7 +304,7 @@ func TestImportDirectory(t *testing.T) {
 	write(t, filepath.Join(root, "nested", "a-first.md"), "# First\n\na.\n")
 	write(t, filepath.Join(root, "not-markdown.txt"), "# not imported\n")
 
-	report, err := importmd.Import(root, lib)
+	report, err := importmd.Import(root, lib, importmd.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,13 +365,13 @@ func TestExportNote(t *testing.T) {
 func TestImportRefusesNonMarkdown(t *testing.T) {
 	lib, _ := newLibrary(t)
 	path := write(t, filepath.Join(t.TempDir(), "notes.rtf"), "rich text")
-	if _, err := importmd.Import(path, lib); err == nil {
+	if _, err := importmd.Import(path, lib, importmd.Options{}); err == nil {
 		t.Fatal("imported a non-Markdown file")
 	}
 }
 
 func TestNilLibrary(t *testing.T) {
-	if _, err := importmd.Import(t.TempDir(), nil); err != importmd.ErrNoLibrary {
+	if _, err := importmd.Import(t.TempDir(), nil, importmd.Options{}); err != importmd.ErrNoLibrary {
 		t.Errorf("Import err = %v, want ErrNoLibrary", err)
 	}
 	if _, err := importmd.Export(t.TempDir(), nil); err != importmd.ErrNoLibrary {
