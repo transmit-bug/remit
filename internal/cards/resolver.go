@@ -7,6 +7,7 @@ package cards
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/template"
@@ -16,19 +17,38 @@ import (
 // Resolver derives cards from block text and renders their faces with the
 // library's types. A nil plugin is allowed: a library without a card plugin
 // makes no new cards, and a card reads its paragraph's own words.
+//
+// One resolver is shared by every goroutine that serves an agent API request,
+// so deriving and facing are safe to run at once.
 type Resolver struct {
 	plugin *ext.JSRunner
-	types  map[core.ID]core.Type
-	front  map[core.ID]*template.Template
-	back   map[core.ID]*template.Template
+	// The type tables are written by New and read-only afterwards, so a face
+	// reads them — and renders on them — without a lock.
+	types map[core.ID]core.Type
+	front map[core.ID]*template.Template
+	back  map[core.ID]*template.Template
+
+	mu sync.Mutex
 	// asked caches what the plugin answered for a text, failures included, so
 	// a paragraph is asked once however many of its cards are on screen — and
-	// a plugin that throws is not retried every frame.
+	// a plugin that throws is not retried every frame. Its answers are shared
+	// with every caller, so none of them may mutate one.
 	asked map[string]answer
+	// deriving holds the derivations in flight, one per text, so a text being
+	// asked is waited for rather than asked a second time.
+	deriving map[string]*derivation
 }
 
 // answer is the cached reply for one text.
 type answer struct {
+	cards []core.Derived
+	ok    bool
+}
+
+// derivation is one text's plugin call in flight; done closes once its answer
+// is in the cache.
+type derivation struct {
+	done  chan struct{}
 	cards []core.Derived
 	ok    bool
 }
@@ -38,11 +58,12 @@ type answer struct {
 // field list rather than taking the review down.
 func New(plugin *ext.JSRunner, types []core.Type) *Resolver {
 	r := &Resolver{
-		plugin: plugin,
-		types:  make(map[core.ID]core.Type, len(types)),
-		front:  make(map[core.ID]*template.Template, len(types)),
-		back:   make(map[core.ID]*template.Template, len(types)),
-		asked:  map[string]answer{},
+		plugin:   plugin,
+		types:    make(map[core.ID]core.Type, len(types)),
+		front:    make(map[core.ID]*template.Template, len(types)),
+		back:     make(map[core.ID]*template.Template, len(types)),
+		asked:    map[string]answer{},
+		deriving: map[string]*derivation{},
 	}
 	for _, typ := range types {
 		r.types[typ.ID] = typ
@@ -82,14 +103,48 @@ type derivedEntry struct {
 // Derive asks the plugin what a text makes. ok is false when there is no
 // plugin or it failed: a paragraph then makes no new card, and nothing the
 // user sees turns red over it. The answer is stamped with the plugin's
-// identity and cached by text — the failure too, so it is asked once.
-func (r *Resolver) Derive(text string) ([]core.Derived, bool) {
+// identity and cached by text — the failure too, so it is asked once, and a
+// text already being asked is waited for rather than asked again. The answer
+// is shared, so no caller may mutate it, and the plugin a derivation calls
+// must not reach back into this resolver's Derive — a card plugin's runner is
+// given no host that derives.
+func (r *Resolver) Derive(text string) (cards []core.Derived, ok bool) {
 	if r == nil || r.plugin == nil {
 		return nil, false
 	}
-	if got, ok := r.asked[text]; ok {
+	r.mu.Lock()
+	if got, hit := r.asked[text]; hit {
+		r.mu.Unlock()
 		return got.cards, got.ok
 	}
+	if wait, busy := r.deriving[text]; busy {
+		r.mu.Unlock()
+		<-wait.done
+		return wait.cards, wait.ok
+	}
+	wait := &derivation{done: make(chan struct{})}
+	r.deriving[text] = wait
+	r.mu.Unlock()
+
+	// The wait is settled even if the plugin call lets a panic out, so a
+	// waiter is never left blocked on a text nobody is asking.
+	defer func() {
+		r.mu.Lock()
+		wait.cards, wait.ok = cards, ok
+		r.asked[text] = answer{cards: cards, ok: ok}
+		delete(r.deriving, text)
+		r.mu.Unlock()
+		close(wait.done)
+	}()
+
+	// The plugin call stays outside the lock: another text derives on the
+	// runner's other runtime instead of queueing behind this one.
+	return r.ask(text)
+}
+
+// ask runs the plugin for one text. It takes no lock, so two texts derive at
+// once on the runner's two runtimes rather than queueing behind each other.
+func (r *Resolver) ask(text string) ([]core.Derived, bool) {
 	types := make([]any, 0, len(r.types))
 	for _, typ := range r.types {
 		types = append(types, map[string]any{
@@ -100,7 +155,6 @@ func (r *Resolver) Derive(text string) ([]core.Derived, bool) {
 	block := map[string]any{"text": text}
 	if err := r.plugin.Call("deriveBlock", []any{block, types}, &entries); err != nil {
 		slog.Error("remit: the card plugin could not derive", "err", err)
-		r.asked[text] = answer{}
 		return nil, false
 	}
 	producer := core.Producer{ID: r.plugin.Identity(), Version: r.plugin.Revision()}
@@ -116,7 +170,6 @@ func (r *Resolver) Derive(text string) ([]core.Derived, bool) {
 		}
 		out = append(out, core.Derived{Type: id, Ordinal: entry.Ordinal, Fields: entry.Fields, Producer: producer})
 	}
-	r.asked[text] = answer{cards: out, ok: true}
 	return out, true
 }
 

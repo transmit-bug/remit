@@ -1,6 +1,9 @@
 package cards_test
 
 import (
+	"fmt"
+	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/transmit-bug/remit/internal/cards"
@@ -167,5 +170,73 @@ func TestFaceFallsBackOnABrokenTemplate(t *testing.T) {
 	got := r.Face(card, core.BlockSet{"b1": {ID: "b1", Text: "asked :: answered"}})
 	if got.Front == "" || got.Back == "" {
 		t.Errorf("a broken template left a blank face: %q / %q", got.Front, got.Back)
+	}
+}
+
+// The resolver is one instance shared by every goroutine that serves an agent
+// API request, so deriving and facing at once must answer what one thread
+// answers. The race detector is the other half of the test: an unlocked cache
+// turns this red on its own.
+func TestConcurrentDeriveAndFaceAgreeWithOneThread(t *testing.T) {
+	type sample struct {
+		text    string
+		blocks  core.BlockSet
+		derived []core.Derived
+		faces   []cards.Answer
+	}
+	samples := []*sample{
+		{text: "spacing :: the gaps between reviews"},
+		{text: "The {{first}} blank and the {{second}} one."},
+		{text: "spacing ::: the gaps between reviews"},
+		{text: "a paragraph with no separator at all"},
+	}
+	// What one thread answers, asked before the resolver is shared.
+	alone := newResolver(t)
+	for _, s := range samples {
+		s.blocks = core.BlockSet{"b1": {ID: "b1", Text: s.text}}
+		derived, ok := alone.Derive(s.text)
+		if !ok {
+			t.Fatalf("one thread could not derive %q", s.text)
+		}
+		s.derived = derived
+		for _, d := range derived {
+			card := core.Card{Type: d.Type, Ordinal: d.Ordinal, Ref: core.Reference{Block: "b1"}}
+			s.faces = append(s.faces, alone.Face(card, s.blocks))
+		}
+	}
+
+	shared := newResolver(t)
+	const goroutines, rounds = 8, 25
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	failures := make(chan string, goroutines*rounds*(1+3))
+	for g := range goroutines {
+		wg.Add(1)
+		go func(g int) {
+			defer wg.Done()
+			<-start
+			for i := range rounds {
+				s := samples[(g+i)%len(samples)]
+				got, ok := shared.Derive(s.text)
+				if !ok || !reflect.DeepEqual(got, s.derived) {
+					failures <- fmt.Sprintf("goroutine %d derived %q as %+v (ok %v), want %+v",
+						g, s.text, got, ok, s.derived)
+					continue
+				}
+				for j, d := range got {
+					card := core.Card{Type: d.Type, Ordinal: d.Ordinal, Ref: core.Reference{Block: "b1"}}
+					if face := shared.Face(card, s.blocks); face != s.faces[j] {
+						failures <- fmt.Sprintf("goroutine %d faced %q %v/%d as %+v, want %+v",
+							g, s.text, d.Type, d.Ordinal, face, s.faces[j])
+					}
+				}
+			}
+		}(g)
+	}
+	close(start)
+	wg.Wait()
+	close(failures)
+	for failure := range failures {
+		t.Error(failure)
 	}
 }
