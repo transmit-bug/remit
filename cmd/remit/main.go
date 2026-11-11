@@ -15,6 +15,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/logging"
+	"github.com/transmit-bug/remit/internal/plugin"
 	"github.com/transmit-bug/remit/internal/settings"
 	appui "github.com/transmit-bug/remit/internal/ui"
 	"github.com/transmit-bug/remit/internal/update"
@@ -98,25 +99,16 @@ func main() {
 	// told about them as seams: the settings page turns the port on and off and
 	// rebinds the key while the app runs.
 	agent := newAgentService(dataDir)
-	// The plugin directory is cmd's: the app lists it for the settings page and
-	// asks it for the runner each role names, once for the process's life — a
-	// runner that outlives a library opens and follows the next one.
-	plugins := newPluginService(filepath.Join(dataDir, "extensions"))
+	// The plugins are one supervisor's, over the user's plugin directory: it
+	// discovers, resolves a library's roles, starts one runner per name and lives
+	// as long as the process, so a library switch only swaps what it acts on.
+	plugins := plugin.New(filepath.Join(dataDir, "extensions"))
 	a := appui.NewApp(appui.Options{
 		LibraryDir:    dir,
 		DataDir:       dataDir,
+		Plugins:       plugins,
 		BindHotkey:    func(accelerator string) error { return hotkey.apply(accelerator) },
 		AgentControls: agent,
-		Discover:      plugins.Discover,
-		Plugin:        plugins.Open,
-		Manifests:     plugins.Manifests,
-		Contribution: func(name string) (appui.CommandRunner, error) {
-			runner, err := plugins.Open(name)
-			if err != nil {
-				return nil, err
-			}
-			return runner, nil
-		},
 	})
 	hotkey = newHotkeyBinder(func() {
 		a.ShowQueue()
@@ -130,8 +122,10 @@ func main() {
 			slog.Warn("remit: agent api", "err", err)
 		}
 		// The plugins act on the library that just opened, and a contributed
-		// page reads it: bind before the runners ask for capabilities.
-		plugins.SetLibrary(lib)
+		// page reads it: bind before the runners ask for capabilities. One bind
+		// per open is what makes an enabled role a single runner, and a switch a
+		// change of host rather than a restart.
+		plugins.Bind(hostFor(lib), lib.EnabledExtensions())
 		startExtensions(lib, a, plugins)
 	})
 	mygo.App.SetName(appui.Name)
@@ -151,6 +145,9 @@ func main() {
 	}
 	defer closeLog()
 	slog.SetDefault(logger)
+	// The plugins are closed at the end of the process, after the last window:
+	// their log lines belong in the log the app opened.
+	defer func() { _ = plugins.Close() }()
 
 	// About lives in macOS's app menu, the only menu bar this app sets: on
 	// Linux and Windows that menu would add File, Edit and View to the window

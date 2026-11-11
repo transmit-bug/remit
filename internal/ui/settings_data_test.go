@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/plugin"
+	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -27,17 +31,62 @@ func configOf(t *testing.T, dir string) map[string]any {
 	return config
 }
 
+// acmeCards is the installed plugin the settings tests open: a card plugin of
+// the user's own, with a capability and a role, laid out as a directory the
+// supervisor discovers.
+func acmeCards(t *testing.T) *plugin.Supervisor {
+	t.Helper()
+	return pluginsWith(t, pluginDir(t, ext.Manifest{
+		ID:           "acme.cards",
+		Name:         "acme.cards",
+		Version:      "0.3.0",
+		APIVersion:   1,
+		Runtime:      "js",
+		Entry:        "main.js",
+		Capabilities: []string{"notes:read"},
+		Implements:   map[string]int{"deriveBlock": 1},
+	}), nil)
+}
+
+// The settings page lists what the supervisor found: the two plugins this build
+// ships with the roles they play, then what the directory holds with the id,
+// version, capabilities and roles its manifest declares — and, on top, whether
+// this library approved it. The regression this guards: a page that lists a
+// second answer to "what is installed", which is how the window and the plugin
+// directory drifted apart before one module owned both.
+func TestSettingsListsTheSupervisorsPlugins(t *testing.T) {
+	a := settingsApp(t, Options{Plugins: acmeCards(t)})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	settingsPage(t, tt, a, subSettingsPlugins)
+
+	listed := map[string]screensettings.Plugin{}
+	for _, p := range a.pluginList {
+		listed[p.Name] = p
+	}
+	if got := listed["cards"]; !got.Builtin || !got.Enabled || !slices.Contains(got.Roles, core.RoleCardsDerive) {
+		t.Errorf("the page lists the shipped card plugin as %+v", got)
+	}
+	if got := listed["scheduler"]; !got.Builtin || !slices.Contains(got.Roles, core.RoleReviewSchedule) {
+		t.Errorf("the page lists the shipped scheduler as %+v", got)
+	}
+	if got := listed["acme.cards"]; got.Builtin || got.Enabled || got.ID != "acme.cards" || got.Version != "0.3.0" ||
+		!slices.Contains(got.Roles, core.RoleCardsDerive) || !slices.Contains(got.Capabilities, "notes:read") {
+		t.Errorf("the page lists the installed plugin as %+v", got)
+	}
+	for _, name := range []string{"cards", "scheduler", "acme.cards"} {
+		if !tt.HasText(name) {
+			t.Errorf("the page does not draw %q; texts %q", name, tt.Texts())
+		}
+	}
+}
+
 // The settings page's plugins and types are the library's: approving a plugin
 // and choosing a role rewrite remit.json, and saving a type goes through the
 // store's write path to types/<id>.json. The page never writes; the app does.
 func TestSettingsPluginAndRoleWritesReachTheLibrary(t *testing.T) {
 	msgs := locales.In("en")
-	discovered := []Plugin{
-		{Name: "cards", ID: "remit.cards.standard", Version: "1.0.0", Roles: []string{core.RoleCardsDerive}, Builtin: true, Enabled: true},
-		{Name: "scheduler", ID: "remit.scheduler.default", Version: "1.0.0", Roles: []string{core.RoleReviewSchedule}, Builtin: true, Enabled: true},
-		{Name: "acme.cards", ID: "acme.cards", Version: "0.3.0", Capabilities: []string{"notes:read"}, Roles: []string{core.RoleCardsDerive}},
-	}
-	a := settingsApp(t, Options{Discover: func() ([]Plugin, error) { return discovered, nil }})
+	a := settingsApp(t, Options{Plugins: acmeCards(t)})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	settingsPage(t, tt, a, subSettingsPlugins)
@@ -68,6 +117,23 @@ func TestSettingsPluginAndRoleWritesReachTheLibrary(t *testing.T) {
 	if got := a.lib.Roles()[core.RoleCardsDerive]; got != "acme.cards" {
 		t.Errorf("the library reads cards.derive as %q, want acme.cards", got)
 	}
+	// The approval the library wrote is what the page shows next to the plugin.
+	for _, p := range a.pluginList {
+		if p.Name == "acme.cards" && !p.Enabled {
+			t.Error("the page lists the plugin it just approved as not enabled")
+		}
+	}
+}
+
+// pluginDir writes one manifest into a fresh directory, the plugin directory a
+// supervisor discovers: what an installed plugin's extension.json is.
+func pluginDir(t *testing.T, manifest ext.Manifest) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := installManifest(t, dir, manifest); err != nil {
+		t.Fatalf("install %q: %v", manifest.Name, err)
+	}
+	return dir
 }
 
 // Saving a type from the types page writes the type file the store owns, and

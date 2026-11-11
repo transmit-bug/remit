@@ -1,8 +1,11 @@
 package ui
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -10,6 +13,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/plugin"
 	"github.com/transmit-bug/remit/locales"
 )
 
@@ -32,7 +36,23 @@ func withPlugin(t *testing.T, dir string, source string) (*App, testLibrary) {
 		t.Fatalf("open the test plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
-	return NewApp(Options{LibraryDir: lib, Cards: runner}), seed
+	return NewApp(Options{LibraryDir: lib, Plugins: pluginsWith(t, t.TempDir(), map[string]ext.Hook{"cards": runner})}), seed
+}
+
+// pluginsWith is a supervisor that answers the runners given, by manifest name,
+// and builds the app's own for everything else: a window driven by a fake plugin
+// without a plugin directory or a second implementation.
+func pluginsWith(t *testing.T, dir string, runners map[string]ext.Hook) *plugin.Supervisor {
+	t.Helper()
+	s := plugin.New(dir)
+	s.Construct = func(name string) (ext.Hook, error) {
+		if runner, ok := runners[name]; ok {
+			return runner, nil
+		}
+		return s.Build(name)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	return s
 }
 
 // A plugin's derived fields are what the card reads, through its type's
@@ -192,7 +212,7 @@ export function summary(session) {
 	}
 	t.Cleanup(func() { _ = runner.Close() })
 
-	a := NewApp(Options{LibraryDir: dir, Scheduler: runner})
+	a := NewApp(Options{LibraryDir: dir, Plugins: pluginsWith(t, t.TempDir(), map[string]ext.Hook{"scheduler": runner})})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	recallQueue(tt)
@@ -209,5 +229,72 @@ export function summary(session) {
 	// The plugin names the scheduler every review it writes is stamped with.
 	if got := a.Library().Scheduler(); got != "test-9" {
 		t.Errorf("the library schedules with %q, want test-9", got)
+	}
+}
+
+// fakeRole is a plugin a test hands the supervisor in place of the engine: the
+// window asks a role for a policy, and nothing else in these tests needs a hook.
+type fakeRole struct {
+	name   string
+	family string
+	warmed int
+}
+
+func (f *fakeRole) Name() string { return f.name }
+func (f *fakeRole) Warm() error  { f.warmed++; return nil }
+func (f *fakeRole) Close() error { return nil }
+
+func (f *fakeRole) Call(method string, _, out any) error {
+	if method != "policy" {
+		return fmt.Errorf("fake role %q has no %s", f.name, method)
+	}
+	return json.Unmarshal([]byte(fmt.Sprintf(`{"family":%q,"version":"9"}`, f.family)), out)
+}
+
+// The window builds no plugin of its own: with a supervisor that can start
+// nothing it runs without the roles, rather than with a built-in it made itself
+// (docs/specs/plugin-system.md, P1: one owner of a plugin's life). The
+// regression this guards: a second construction path in the window, which is what
+// let a library's plugin and the app's own drift apart.
+func TestTheWindowBuildsNoPluginOfItsOwn(t *testing.T) {
+	dir := t.TempDir()
+	_ = seedLibrary(t, dir)
+	s := plugin.New(t.TempDir())
+	s.Construct = func(name string) (ext.Hook, error) {
+		return nil, fmt.Errorf("nothing starts: %s", name)
+	}
+
+	a := NewApp(Options{LibraryDir: dir, Plugins: s})
+	if a.cards != nil || a.scheduler != nil {
+		t.Fatalf("the window holds roles its supervisor did not build: cards %v, scheduler %v", a.cards, a.scheduler)
+	}
+}
+
+// The window's roles are the supervisor's runners, runner for runner: the policy
+// a library opens with comes from the one plugin the module constructed and
+// warmed, not from a copy the window started beside it.
+func TestTheWindowResolvesAndWarmsRolesThroughTheSupervisor(t *testing.T) {
+	dir := t.TempDir()
+	_ = seedLibrary(t, dir)
+	scheduler := &fakeRole{name: "scheduler", family: "test"}
+	asked := []string{}
+	s := plugin.New(t.TempDir())
+	s.Construct = func(name string) (ext.Hook, error) {
+		asked = append(asked, name)
+		if name == "scheduler" {
+			return scheduler, nil
+		}
+		return nil, fmt.Errorf("no plugin named %q", name)
+	}
+
+	a := NewApp(Options{LibraryDir: dir, Plugins: s})
+	if got := a.Library().Scheduler(); got != "test-9" {
+		t.Errorf("the library schedules with %q, want the runner the supervisor resolved", got)
+	}
+	if !slices.Contains(asked, "scheduler") {
+		t.Errorf("the supervisor was asked for %v, want the scheduling role's plugin", asked)
+	}
+	if scheduler.warmed == 0 {
+		t.Error("the role's plugin was not warmed before the library read")
 	}
 }

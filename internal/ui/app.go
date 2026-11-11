@@ -18,8 +18,8 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
-	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
+	"github.com/transmit-bug/remit/internal/plugin"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/cardtypes"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
@@ -150,21 +150,15 @@ type App struct {
 	cardEdit         cardEditState
 	cardDetail       cardDetailState
 	prefs            screensettings.State
-	settingsSub      subID // the settings page the user was on last
-	cards            *cardPlugin                             // what a paragraph asks and how a card reads
-	scheduler        *schedulerPlugin                        // what schedules a review, and what a session is worth
-	cardsChoice      *ext.JSRunner                           // the runner Options.Cards named, nil for the app's own
-	schedulerChoice  *ext.JSRunner                           // the runner Options.Scheduler named
-	withoutCards     bool                                    // no card plugin at all
-	withoutScheduler bool                                    // schedule with the app's own defaults
-	discover         func() ([]screensettings.Plugin, error) // what the plugin directory holds
-	openPlugin       func(string) (*ext.JSRunner, error)     // the runner a role names
-	// manifests and contribution are the plugin service as the window reads it:
-	// what each plugin declares without being started, and the runner that
-	// answers a contributed command. cmd owns both; nil is a build whose plugins
-	// contribute no UI and whose callbacks are unavailable.
-	manifests    func() ([]ext.Extension, error)
-	contribution func(name string) (CommandRunner, error)
+	settingsSub      subID            // the settings page the user was on last
+	cards            *cardPlugin      // what a paragraph asks and how a card reads
+	scheduler        *schedulerPlugin // what schedules a review, and what a session is worth
+	withoutCards     bool             // no card plugin at all
+	withoutScheduler bool             // schedule with the app's own defaults
+	// plugins is the supervisor: discovery, the enabled list, role resolution and
+	// the runner behind each name are its answers, never the window's. A frame
+	// reads what it left; a frame starts nothing.
+	plugins *plugin.Supervisor
 
 	// ui is the plugins' declared UI, parsed once when the library opens, and
 	// pending is what their callbacks answered since the last frame: what a
@@ -289,9 +283,9 @@ func NewApp(opts ...Options) *App {
 	a.importMd = func(path string, opts importmd.Options) (importmd.Report, error) {
 		return importmd.Import(path, a.lib, opts)
 	}
-	var chosenCards *ext.JSRunner
-	var chosenScheduler *ext.JSRunner
-	withoutCards, withoutScheduler := false, false
+	// The plugins are the supervisor's: a window built without one runs the two
+	// this build ships, over no directory at all.
+	a.plugins = plugin.New("")
 	if len(opts) > 0 {
 		o := opts[0]
 		a.dir = o.LibraryDir
@@ -334,23 +328,15 @@ func NewApp(opts ...Options) *App {
 		}
 		a.bindHotkey = o.BindHotkey
 		a.agentAPI = o.AgentControls
-		chosenCards, withoutCards = o.Cards, o.WithoutCards
-		chosenScheduler, withoutScheduler = o.Scheduler, o.WithoutScheduler
-		a.discover, a.openPlugin = o.Discover, o.Plugin
-		a.manifests, a.contribution = o.Manifests, o.Contribution
+		a.withoutCards, a.withoutScheduler = o.WithoutCards, o.WithoutScheduler
+		if o.Plugins != nil {
+			a.plugins = o.Plugins
+		}
 	}
-	a.cardsChoice, a.schedulerChoice = chosenCards, chosenScheduler
-	a.withoutCards, a.withoutScheduler = withoutCards, withoutScheduler
 	// The desktop's text-size page exists on macOS alone; elsewhere the settings
 	// page says where the size comes from without a door that cannot open.
 	if a.openDisplay == nil && runtime.GOOS == "darwin" {
 		a.openDisplay = openDisplaySettings
-	}
-	// With a plugin directory the roles decide what derives and schedules, so
-	// the plugins are opened per library; without one the app's own play.
-	if a.openPlugin == nil {
-		a.cards = openCards(chosenCards, withoutCards)
-		a.scheduler = openScheduler(chosenScheduler, withoutScheduler)
 	}
 	if dir, err := DefaultLibraryDir(); err == nil {
 		a.defaultLibrary = dir

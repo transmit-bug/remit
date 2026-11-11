@@ -15,6 +15,15 @@ import (
 //go:embed cards/extension.json cards/main.js scheduler/extension.json scheduler/main.js
 var files embed.FS
 
+// The manifest names of the two plugins this build ships. A library's default
+// roles name them (store.DefaultRole reads the same two strings, which it cannot
+// take from here: core does not depend on the extension substrate), and the
+// supervisor's construction switch is what turns a name into the runner.
+const (
+	CardsName     = "cards"
+	SchedulerName = "scheduler"
+)
+
 // Cards is the default card plugin: what a paragraph of a note asks, in the
 // shapes the content model knows. It answers JSON; the host renders.
 func Cards(host ext.Host, limits ext.JSLimits) (*ext.JSRunner, error) {
@@ -44,7 +53,7 @@ func CardsManifest() (ext.Manifest, error) {
 }
 
 // IsBuiltin reports whether a name belongs to an extension this app ships.
-func IsBuiltin(name string) bool { return name == "cards" || name == "scheduler" }
+func IsBuiltin(name string) bool { return name == CardsName || name == SchedulerName }
 
 // Scheduler is the default scheduling plugin: it decides policy — retention, and
 // what to call the scheduler — while the schedule's arithmetic stays the app's.

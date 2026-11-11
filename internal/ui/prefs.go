@@ -467,24 +467,32 @@ func (a *App) refreshSettingsData() {
 	}
 }
 
-// discoveredPlugins is what the plugin directory holds, built-ins first and
-// then by name. A discovery that fails is a log line and what it did find: a
-// broken directory must not keep the settings page from opening.
+// discoveredPlugins is what the supervisor found, built-ins first and then by
+// name. A discovery that fails is a log line and what it did find: a broken
+// directory must not keep the settings page from opening.
 func (a *App) discoveredPlugins() []screensettings.Plugin {
-	if a.discover == nil {
-		return nil
-	}
-	found, err := a.discover()
+	found, err := a.plugins.Discover()
 	if err != nil {
 		slog.Warn("remit: discover plugins", "err", err)
 	}
-	sort.Slice(found, func(i, j int) bool {
-		if found[i].Builtin != found[j].Builtin {
-			return found[i].Builtin
+	out := make([]screensettings.Plugin, 0, len(found))
+	for _, p := range found {
+		out = append(out, screensettings.Plugin{
+			Name:         p.Name,
+			ID:           p.ID,
+			Version:      p.Version,
+			Capabilities: p.Capabilities,
+			Roles:        p.Roles,
+			Builtin:      p.Builtin,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Builtin != out[j].Builtin {
+			return out[i].Builtin
 		}
-		return found[i].Name < found[j].Name
+		return out[i].Name < out[j].Name
 	})
-	return found
+	return out
 }
 
 // settingsDeps is what the settings pages ask of the app: one function per

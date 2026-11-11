@@ -13,21 +13,34 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/plugin"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/locales"
 )
 
-// roleRunners stands in for the plugin service: a manifest name answers the
-// runner the test built for it, and a name it does not hold fails the way a real
-// service reports a plugin that is not installed — the window then falls back to
-// the built-in.
-type roleRunners map[string]*ext.JSRunner
-
-func (r roleRunners) open(name string) (*ext.JSRunner, error) {
-	if runner, ok := r[name]; ok {
-		return runner, nil
+// roleRunners is a supervisor whose directory holds the manifests the tests
+// name and whose runners they built: a role resolves through it the way a role
+// resolves through the app's, and the fallback is the app's own.
+func roleRunners(t *testing.T, runners map[string]*ext.JSRunner) *plugin.Supervisor {
+	t.Helper()
+	dir := t.TempDir()
+	held := make(map[string]ext.Hook, len(runners))
+	for name, runner := range runners {
+		manifest := ext.Manifest{
+			ID:         "test." + name,
+			Name:       name,
+			Version:    "1",
+			APIVersion: 1,
+			Runtime:    "js",
+			Entry:      "main.js",
+			Implements: map[string]int{"deriveBlock": 1, "policy": 1},
+		}
+		if err := installManifest(t, dir, manifest); err != nil {
+			t.Fatalf("install %q: %v", name, err)
+		}
+		held[name] = runner
 	}
-	return nil, fmt.Errorf("no plugin named %q", name)
+	return pluginsWith(t, dir, held)
 }
 
 // cardRolePlugin opens a card plugin whose deriveBlock tags the front, so which
@@ -113,9 +126,9 @@ func TestSwitchDerivesThroughTheNewLibrarysCardRole(t *testing.T) {
 	seed := seedLibrary(t, first)
 	other := seedLibrary(t, second)
 	nameRole(t, second, core.RoleCardsDerive, "acme.cards")
-	service := roleRunners{"acme.cards": cardRolePlugin(t, "acme.cards", "ACME")}
+	service := roleRunners(t, map[string]*ext.JSRunner{"acme.cards": cardRolePlugin(t, "acme.cards", "ACME")})
 
-	a := NewApp(Options{LibraryDir: first, Plugin: service.open})
+	a := NewApp(Options{LibraryDir: first, Plugins: service})
 	if got := front(a, seed.spacing); got != "Spacing beats cramming" {
 		t.Fatalf("the first library's card reads %q, want the built-in plugin's answer", got)
 	}
@@ -133,9 +146,9 @@ func TestSwitchStampsReviewsWithTheNewLibrarysScheduler(t *testing.T) {
 	seedLibrary(t, first)
 	other := seedLibrary(t, second)
 	nameRole(t, second, core.RoleReviewSchedule, "acme.sched")
-	service := roleRunners{"acme.sched": scheduleRolePlugin(t, "acme.sched", "acme", "9", 0.84)}
+	service := roleRunners(t, map[string]*ext.JSRunner{"acme.sched": scheduleRolePlugin(t, "acme.sched", "acme", "9", 0.84)})
 
-	a := NewApp(Options{LibraryDir: first, Plugin: service.open})
+	a := NewApp(Options{LibraryDir: first, Plugins: service})
 	if got := a.Library().Scheduler(); got != "fsrs-1" {
 		t.Fatalf("the first library schedules with %q, want the built-in fsrs-1", got)
 	}
@@ -160,8 +173,8 @@ func TestSwitchStampsReviewsWithTheNewLibrarysScheduler(t *testing.T) {
 // policy: the retention the plugin asks for, and its name on the reviews, not
 // the host's defaults.
 func TestNewLibraryOpensWithItsSchedulersPolicy(t *testing.T) {
-	service := roleRunners{"scheduler": scheduleRolePlugin(t, "scheduler", "policy", "3", 0.84)}
-	a := NewApp(Options{LibraryDir: filepath.Join(t.TempDir(), "Remit"), Plugin: service.open})
+	service := roleRunners(t, map[string]*ext.JSRunner{"scheduler": scheduleRolePlugin(t, "scheduler", "policy", "3", 0.84)})
+	a := NewApp(Options{LibraryDir: filepath.Join(t.TempDir(), "Remit"), Plugins: service})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 
@@ -194,12 +207,12 @@ func TestAFailedOpenHoldsNoRolesForTheLibraryItCouldNotOpen(t *testing.T) {
 	}
 	next := t.TempDir()
 	seeded := seedLibrary(t, next)
-	service := roleRunners{
+	service := roleRunners(t, map[string]*ext.JSRunner{
 		"acme.cards": cardRolePlugin(t, "acme.cards", "ACME"),
 		"acme.sched": scheduleRolePlugin(t, "acme.sched", "acme", "9", 0.84),
-	}
+	})
 
-	a := NewApp(Options{LibraryDir: broken, Plugin: service.open})
+	a := NewApp(Options{LibraryDir: broken, Plugins: service})
 	if a.lib != nil || a.openErr == nil {
 		t.Fatalf("the damaged library opened: err %v", a.openErr)
 	}
@@ -231,9 +244,9 @@ func TestAFailedSwitchLeavesTheLibraryAndItsRolesInPlace(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(broken, "types", "remit.basic.json"), []byte("{"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	service := roleRunners{"acme.cards": cardRolePlugin(t, "acme.cards", "ACME")}
+	service := roleRunners(t, map[string]*ext.JSRunner{"acme.cards": cardRolePlugin(t, "acme.cards", "ACME")})
 
-	a := NewApp(Options{LibraryDir: kept, Plugin: service.open})
+	a := NewApp(Options{LibraryDir: kept, Plugins: service})
 	a.OpenLibrary(broken)
 	if a.lib == nil || a.dir != kept {
 		t.Fatalf("the window left the library it had: dir %q", a.dir)
@@ -251,16 +264,16 @@ func TestRecentLibraryOpensWithItsOwnPlugins(t *testing.T) {
 	seeded := seedLibrary(t, dir)
 	nameRole(t, dir, core.RoleCardsDerive, "acme.cards")
 	nameRole(t, dir, core.RoleReviewSchedule, "acme.sched")
-	service := roleRunners{
+	service := roleRunners(t, map[string]*ext.JSRunner{
 		"acme.cards": cardRolePlugin(t, "acme.cards", "ACME"),
 		"acme.sched": scheduleRolePlugin(t, "acme.sched", "acme", "9", 0.84),
-	}
+	})
 	data := t.TempDir()
 	if err := settings.Save(data, settings.Settings{RecentLibraries: []string{dir}}); err != nil {
 		t.Fatal(err)
 	}
 
-	a := NewApp(Options{DataDir: data, Plugin: service.open})
+	a := NewApp(Options{DataDir: data, Plugins: service})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	if err := tt.Click(locales.In("en").StartRecentOpen(dir)); err != nil {

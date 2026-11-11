@@ -11,6 +11,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/plugin"
 )
 
 // pluginHost is the store as a plugin's host: what a contributed page reads
@@ -45,19 +46,21 @@ func exampleContribution(t *testing.T, locale string) (*App, *ui.Tester) {
 	enablePlugin(t, dir, "leeches")
 	extDir := filepath.Join("..", "..", "examples", "plugins", "leeches")
 
+	// The supervisor reads the example's manifest from the directory it ships in;
+	// the runner is the test's own, opened over the test's host, so the page reads
+	// the library the window opened.
 	a := NewApp(Options{
 		LibraryDir: dir,
-		Manifests: func() ([]ext.Extension, error) {
-			found, err := ext.Load(extDir)
-			return []ext.Extension{found}, err
-		},
+		Plugins:    plugin.New(filepath.Join("..", "..", "examples", "plugins")),
 	})
 	runner, err := ext.OpenJS(extDir, pluginHost{a.Library()}, ext.JSLimits{Timeout: 2 * time.Second})
 	if err != nil {
 		t.Fatalf("load the example plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
-	a.contribution = func(string) (CommandRunner, error) { return runner, nil }
+	t.Cleanup(func() { _ = a.plugins.Close() })
+	a.plugins.Construct = func(string) (ext.Hook, error) { return runner, nil }
+	a.plugins.Bind(pluginHost{a.Library()}, a.Library().EnabledExtensions())
 	a.runBackground = func(c *ui.Context, job func() func(*ui.Context)) { job()(c) }
 
 	tt := ui.NewTester(a.View, 1024, 720)

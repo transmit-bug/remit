@@ -2,6 +2,8 @@ package ui
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -192,8 +194,29 @@ func (f *fakeRunner) calls() int {
 
 // Identity and Revision are what a producer stamp reads off a runner, the
 // same surface ext.JSRunner carries.
+// Name and Close are what ext.Hook adds to the call: the supervisor holds the
+// runner, so it needs a name and a way to let it go.
+func (f *fakeRunner) Name() string { return "acme.plugin" }
+func (f *fakeRunner) Close() error { return nil }
+
 func (f *fakeRunner) Identity() string { return "acme.obsidian" }
 func (f *fakeRunner) Revision() string { return "1" }
+
+// installManifest writes a manifest under root, the way an installed plugin
+// arrives: the supervisor discovers and lists it, and starting it is the test's
+// fake runner.
+func installManifest(t *testing.T, root string, manifest ext.Manifest) error {
+	t.Helper()
+	dir := filepath.Join(root, manifest.Name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "extension.json"), data, 0o644)
+}
 
 // enablePlugin approves a plugin in the library at dir, before the app opens it.
 func enablePlugin(t *testing.T, dir, name string) {
@@ -248,15 +271,15 @@ func contribApp(t *testing.T, name, contributes string, runner *fakeRunner) (*Ap
 	if _, ok := runner.reply["data"]; !ok {
 		runner.reply["data"] = reportTree
 	}
+	// The plugin is a directory the supervisor discovers by its manifest; its
+	// runner is the test's fake, so no engine runs for a contributed command.
+	extDir := t.TempDir()
+	if err := installManifest(t, extDir, manifest); err != nil {
+		t.Fatalf("install the test plugin: %v", err)
+	}
 	a := NewApp(Options{
 		LibraryDir: dir,
-		Manifests: func() ([]ext.Extension, error) {
-			return []ext.Extension{{Manifest: manifest}}, nil
-		},
-		Discover: func() ([]Plugin, error) {
-			return []Plugin{{Name: name, ID: manifest.ID, Version: "1"}}, nil
-		},
-		Contribution: func(string) (CommandRunner, error) { return runner, nil },
+		Plugins:    pluginsWith(t, extDir, map[string]ext.Hook{name: runner}),
 	})
 	a.runBackground = func(c *ui.Context, job func() func(*ui.Context)) { job()(c) }
 	return a, seed

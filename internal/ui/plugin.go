@@ -6,73 +6,53 @@ import (
 	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ext"
-	"github.com/transmit-bug/remit/internal/ext/builtin"
+	"github.com/transmit-bug/remit/internal/plugin"
 )
 
-// cardPlugin is the extension that answers what a paragraph asks. It is an
-// ordinary extension — the one the app ships, loaded through the same loader
-// and capability rules as any other (ADR 0006/0007).
+// cardPlugin is the extension that answers what a paragraph asks, as the window
+// holds it: the runner the supervisor resolved for the role. It is an ordinary
+// extension — the one the app ships is loaded through the same loader and
+// capability rules as any other (ADR 0006/0007) — and the window never starts
+// one of its own.
 //
 // A library without one still works: no paragraph makes a new card, and a card
 // reads its paragraph's own words.
 type cardPlugin struct {
-	runner *ext.JSRunner
+	runner plugin.Role
 }
 
-// openCards starts the card plugin: the one a test hands in, none at all when it
-// asked for none, and otherwise the one the app ships. The app's own plugins are
-// opened before a library is and declare no capabilities, so they are given no
-// host; a downloaded extension is started by cmd, beside the open library.
-func openCards(chosen *ext.JSRunner, without bool) *cardPlugin {
-	if without {
+// openCards is the card role as the window draws with it, or none when the role
+// resolved to nothing: the supervisor's answer, never a plugin built here.
+func openCards(runner plugin.Role) *cardPlugin {
+	if runner == nil {
 		return nil
 	}
-	if chosen != nil {
-		warm(chosen, "card")
-		return &cardPlugin{runner: chosen}
-	}
-	runner, err := builtin.Cards(nil, ext.JSLimits{})
-	if err != nil {
-		// A plugin that cannot start is not a reason to refuse the library: the
-		// cards that exist keep reading their paragraphs.
-		slog.Error("remit: the card plugin did not start", "err", err)
-		return nil
-	}
-	warm(runner, "card")
 	return &cardPlugin{runner: runner}
 }
 
-// warm fills a plugin's runtime pool at activation, so the first review pays
-// no load cost and a syntax error surfaces now rather than mid-review
-// (ADR 0006). A plugin that cannot warm still works: its calls load lazily.
-func warm(runner *ext.JSRunner, what string) {
-	if err := runner.Warm(); err != nil {
-		slog.Error("remit: the "+what+" plugin did not warm", "err", err)
+// engine is the runner behind the role, as the card resolver takes it today: a
+// role is js only (internal/plugin enforces it), so it is the engine's own
+// runner. #267 hands the resolver the capability it asks for instead.
+func (c *cardPlugin) engine() *ext.JSRunner {
+	if c == nil {
+		return nil
 	}
+	runner, _ := c.runner.(*ext.JSRunner)
+	return runner
 }
 
 // schedulerPlugin is the extension that decides scheduling policy and says what
 // a finished session is worth: the arithmetic stays the app's (ADR 0007).
 type schedulerPlugin struct {
-	runner *ext.JSRunner
+	runner plugin.Role
 }
 
-// openScheduler starts the scheduling plugin, or returns nil when the app is
-// asked to run without one.
-func openScheduler(chosen *ext.JSRunner, without bool) *schedulerPlugin {
-	if without {
+// openScheduler is the scheduling role as the window draws with it, or none when
+// the role resolved to nothing.
+func openScheduler(runner plugin.Role) *schedulerPlugin {
+	if runner == nil {
 		return nil
 	}
-	if chosen != nil {
-		warm(chosen, "scheduler")
-		return &schedulerPlugin{runner: chosen}
-	}
-	runner, err := builtin.Scheduler(nil, ext.JSLimits{})
-	if err != nil {
-		slog.Error("remit: the scheduler plugin did not start", "err", err)
-		return nil
-	}
-	warm(runner, "scheduler")
 	return &schedulerPlugin{runner: runner}
 }
 

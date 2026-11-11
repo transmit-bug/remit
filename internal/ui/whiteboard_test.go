@@ -8,6 +8,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/plugin"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
 	"github.com/transmit-bug/remit/locales"
@@ -27,17 +28,16 @@ func whiteboardExample(t *testing.T, locale string) (*App, testLibrary, *ui.Test
 
 	a := NewApp(Options{
 		LibraryDir: dir,
-		Manifests: func() ([]ext.Extension, error) {
-			found, err := ext.Load(extDir)
-			return []ext.Extension{found}, err
-		},
+		Plugins:    plugin.New(filepath.Join("..", "..", "examples", "plugins")),
 	})
 	runner, err := ext.OpenJS(extDir, pluginHost{a.Library()}, ext.JSLimits{Timeout: 2 * time.Second})
 	if err != nil {
 		t.Fatalf("load the example plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
-	a.contribution = func(string) (CommandRunner, error) { return runner, nil }
+	t.Cleanup(func() { _ = a.plugins.Close() })
+	a.plugins.Construct = func(string) (ext.Hook, error) { return runner, nil }
+	a.plugins.Bind(pluginHost{a.Library()}, a.Library().EnabledExtensions())
 	a.runBackground = func(c *ui.Context, job func() func(*ui.Context)) { job()(c) }
 
 	tt := ui.NewTester(a.View, 1024, 720)

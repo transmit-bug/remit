@@ -25,8 +25,12 @@ import (
 // importerRef is one enabled plugin's importer, with the plugin that
 // declares it: an entry in the import list.
 type importerRef struct {
-	Plugin string // the manifest name, what a runner is opened by
-	Entry  contrib.Importer
+	// Plugin is the plugin's manifest id: what its strings, its failures and the
+	// producer stamp are keyed by.
+	Plugin string
+	// Name is the plugin's manifest name: what a runner is opened by.
+	Name  string
+	Entry contrib.Importer
 }
 
 // importers lists the importers the enabled plugins declare, sorted by
@@ -36,7 +40,7 @@ func (a *App) importers() []importerRef {
 	var out []importerRef
 	for _, plugin := range a.ui.index.Plugins() {
 		for _, entry := range plugin.Importers {
-			out = append(out, importerRef{Plugin: plugin.Plugin, Entry: entry})
+			out = append(out, importerRef{Plugin: plugin.Plugin, Name: plugin.Name, Entry: entry})
 		}
 	}
 	return out
@@ -72,7 +76,7 @@ func (a *App) importerForFile(path string) (importerRef, bool) {
 // is a seam, like every dialog in this app: an importer that arrives with a
 // picker of its own uses it, the window's dialog is the fallback.
 func (a *App) importWithPluginEntry(c *ui.Context, ref importerRef) {
-	if a.lib == nil || a.contribution == nil {
+	if a.lib == nil {
 		return
 	}
 	label := a.pluginText(c, ref.Plugin, string(ref.Entry.Label))
@@ -107,15 +111,12 @@ func (a *App) importWithPluginEntry(c *ui.Context, ref importerRef) {
 // what survives the host's checks. The runner is the same door a contributed
 // command opens; the hook's answer is suggestions, and Apply is the write.
 func (a *App) importWithPlugin(c *ui.Context, ref importerRef, path string) {
-	if a.contribution == nil {
-		return
-	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		a.report(c, "read the file", err)
 		return
 	}
-	runner, err := a.contribution(ref.Plugin)
+	runner, err := a.plugins.Runner(ref.Name)
 	if err != nil {
 		a.report(c, "start the importer plugin", err)
 		return

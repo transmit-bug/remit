@@ -90,10 +90,10 @@ func (a *App) loadContributions() {
 		area:     area,
 		sub:      sub,
 	}
-	if a.lib == nil || a.manifests == nil {
+	if a.lib == nil {
 		return
 	}
-	manifests, err := a.manifests()
+	manifests, err := a.plugins.Manifests()
 	if err != nil {
 		slog.Warn("remit: discover plugins", "err", err)
 	}
@@ -428,10 +428,7 @@ func (a *App) runnerFor(name string) (CommandRunner, error) {
 	if runner, ok := a.ui.runners[name]; ok {
 		return runner, nil
 	}
-	if a.contribution == nil {
-		return nil, errNoPluginService
-	}
-	runner, err := a.contribution(name)
+	runner, err := a.plugins.Runner(name)
 	if err != nil {
 		return nil, err
 	}
@@ -878,10 +875,6 @@ func (a *App) pluginFailures(name string) int {
 	}
 	return total
 }
-
-// errNoPluginService is a build with no plugin service: a contribution that
-// calls back says so in its page or its toast, and the window goes on.
-var errNoPluginService = errorString("remit: this build has no plugin service")
 
 // errNoSetting is a setting the plugin no longer declares.
 var errNoSetting = errorString("remit: the plugin no longer declares this setting")

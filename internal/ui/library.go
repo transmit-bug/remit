@@ -16,7 +16,6 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
-	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
@@ -98,55 +97,39 @@ func libraryOptions(scheduler *schedulerPlugin) store.Options {
 
 // rolesFor resolves what derives the cards and what schedules the reviews for
 // the library at dir, scheduling first: its policy is what the library opens
-// with. Without a plugin service the roles are the app's own, resolved once
-// when the window was built — a library cannot name a plugin this build has no
-// service for. A role naming a plugin that is missing or will not start falls
-// back to the built-in and says so in the log: a library always opens, whatever
-// its plugins do. A role change is written at once and picked up here, on the
-// next library open.
+// with. The supervisor owns the resolution, and a role naming a plugin that is
+// missing or will not start falls back to the one this build ships for it and
+// says so in the log: a library always opens, whatever its plugins do. A role
+// change is written at once and picked up here, on the next library open.
 func (a *App) rolesFor(dir string) (*cardPlugin, *schedulerPlugin) {
-	if a.openPlugin == nil {
-		return a.cards, a.scheduler
-	}
 	roles := store.ReadRoles(dir)
 	scheduler := a.schedulerRole(roles[core.RoleReviewSchedule])
 	return a.cardRole(roles[core.RoleCardsDerive]), scheduler
 }
 
-// cardRole starts the plugin the card role names, or the app's own when it
-// cannot: no paragraph derives a card through a plugin that is not there.
+// cardRole resolves the plugin the card role names, through the supervisor: no
+// paragraph derives a card through a plugin that is not there.
 func (a *App) cardRole(name string) *cardPlugin {
 	if a.withoutCards {
 		return nil
 	}
-	runner := a.cardsChoice
-	if runner == nil {
-		opened, err := a.openPlugin(name)
-		if err != nil {
-			slog.Warn("remit: the card role's plugin did not start", "name", name, "err", err)
-		} else {
-			runner = opened
-		}
-	}
-	return openCards(runner, false)
+	return openCards(a.plugins.Resolve(core.RoleCardsDerive, name, shippedPlugin(core.RoleCardsDerive)))
 }
 
-// schedulerRole starts the plugin the scheduling role names, or the app's own
-// when it cannot: scheduling falls back, never stops.
+// schedulerRole resolves the plugin the scheduling role names, through the
+// supervisor: scheduling falls back, never stops.
 func (a *App) schedulerRole(name string) *schedulerPlugin {
 	if a.withoutScheduler {
 		return nil
 	}
-	runner := a.schedulerChoice
-	if runner == nil {
-		opened, err := a.openPlugin(name)
-		if err != nil {
-			slog.Warn("remit: the scheduling role's plugin did not start", "name", name, "err", err)
-		} else {
-			runner = opened
-		}
-	}
-	return openScheduler(runner, false)
+	return openScheduler(a.plugins.Resolve(core.RoleReviewSchedule, name, shippedPlugin(core.RoleReviewSchedule)))
+}
+
+// shippedPlugin is the plugin this build ships for role: what the role falls
+// back to when the library's own choice cannot play it.
+func shippedPlugin(role string) string {
+	name, _ := store.DefaultRole(role)
+	return name
 }
 
 // apply makes lib the open library and opens the window on today, the first
@@ -393,11 +376,7 @@ func (a *App) reload() {
 	if a.lib == nil {
 		return
 	}
-	var runner *ext.JSRunner
-	if a.cards != nil {
-		runner = a.cards.runner
-	}
-	a.resolver = cards.New(runner, a.lib.Types())
+	a.resolver = cards.New(a.cards.engine(), a.lib.Types())
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
 	a.loadTypes()
 	a.excerpted = a.excerptedBlocks()
