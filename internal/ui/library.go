@@ -10,6 +10,7 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/schedule"
@@ -145,6 +146,9 @@ func (a *App) apply(lib *store.Library, dir string) {
 	a.back = a.back[:0]
 	a.syncMode()
 	a.review.Reset()
+	// A library's answers are its own plugin's: the window keeps a resolver across
+	// a write, never across a library (see cardResolver).
+	a.resolver = nil
 	a.loadContributions()
 	a.reload()
 	if a.opened != nil {
@@ -364,7 +368,8 @@ func (a *App) dueToday() []core.ID {
 
 // reload retakes the snapshot, asks the store what is due now, and loads what
 // the mode on screen reads beyond both. Every write ends here, which is what
-// keeps the build pass free of store calls.
+// keeps the build pass free of store calls. What a paragraph already answered
+// survives it: the resolver is kept while it was built for what is on screen.
 //
 // Writes themselves run on the UI thread. A review append is a durable file
 // write the store finishes before it returns — about 9 ms at a 10k-card
@@ -377,7 +382,7 @@ func (a *App) reload() {
 	if a.lib == nil {
 		return
 	}
-	a.resolver = a.cards.resolver(a.lib.Types())
+	a.resolver = a.cardResolver()
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
 	a.loadTypes()
 	a.excerpted = a.excerptedBlocks()
@@ -394,6 +399,29 @@ func (a *App) reload() {
 		a.counts(a.queueCounts())
 	}
 	a.loadCurrent()
+}
+
+// cardResolver is the resolver the window derives and faces cards through. It
+// keeps the one it has while that one was built for this library's plugin and
+// type table: every write ends in a reload, and rating a card does not change
+// what its paragraph makes. A switched plugin, or a type whose fields, version or
+// templates were edited, is a different resolver, so nothing old hits
+// (docs/specs/plugin-system.md P4).
+func (a *App) cardResolver() *cards.Resolver {
+	types := a.lib.Types()
+	if a.resolver.Serves(a.cardProducer(), types) {
+		return a.resolver
+	}
+	return a.cards.resolver(types)
+}
+
+// cardProducer is the stamp a card made now would carry: the plugin the window
+// holds, or the empty stamp of a window without one.
+func (a *App) cardProducer() core.Producer {
+	if a.cards == nil {
+		return core.Producer{}
+	}
+	return a.cards.producer
 }
 
 // reviewScopeEmpty reports whether the scoped session has neither cards to

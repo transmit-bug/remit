@@ -66,6 +66,12 @@ type Supervisor struct {
 	// a name that has no runner to ask. Guarded by mu.
 	broken    map[string]string
 	fallbacks map[string][]Fallback
+	// cache is what the card role's plugin answered, kept for the process rather
+	// than for one resolver: the agent API builds its source when a listener
+	// starts, and a text does not make a different card because the listener was
+	// restarted. Its keys name the plugin and the type table, so a library that
+	// switched either hits nothing (docs/specs/plugin-system.md P4).
+	cache *cards.Cache
 	// host is the library a capability call reaches now, as a provider: a runner
 	// starts before a library is open — a role's must, its policy is what the
 	// library opens with — and asks on every call, so binding a library hands the
@@ -84,6 +90,7 @@ func New(dir string) *Supervisor {
 		roles:     map[string]string{},
 		broken:    map[string]string{},
 		fallbacks: map[string][]Fallback{},
+		cache:     cards.NewCache(cards.DefaultBound),
 	}
 }
 
@@ -161,25 +168,30 @@ func (s *Supervisor) Resolve(role, name, fallback string) Role {
 // plugin: internal/cards then makes no card and a card reads its own
 // paragraph's words. That is the one fallback, and it lives there — a second
 // one here would be the copy that drifts.
+//
+// The answers are the supervisor's, not the resolver's: what a text made does
+// not change because a listener restarted or a library was retaken, so a
+// resolver built again for the same plugin and types reads them (P4).
 func (s *Supervisor) CardResolver(types []core.Type) *cards.Resolver {
 	s.mu.Lock()
 	runner := s.cardRunnerLocked()
+	cache := s.cache
 	s.mu.Unlock()
 	if runner == nil {
-		return cards.New(nil, core.Producer{}, types)
+		return cache.Resolver(nil, core.Producer{}, types)
 	}
 	// Built outside the lock: the resolver compiles the library's templates, and
 	// no other caller waits on that. What leaves the supervisor is the capability
-	// and the stamp its cards carry, never the runner.
-	return cards.New(ext.HooksOf(runner), ext.ProducerOf(runner), types)
+	// and the stamp its cards carry, never the runner — and the answers stay in
+	// the cache this supervisor owns.
+	return cache.Resolver(ext.HooksOf(runner), ext.ProducerOf(runner), types)
 }
 
 // cardRunnerLocked is the runner the card role answers, nil when nothing plays
 // it. Resolve warmed it, so a resolver built here never pays the load cost on
-// the first review; a role runs on js only (see jsOnly), which is why it is the
-// engine's own runner.
-func (s *Supervisor) cardRunnerLocked() *ext.JSRunner {
-	runner, _ := s.open[s.roles[core.RoleCardsDerive]].(*ext.JSRunner)
+// the first review; a role runs on js only (see jsOnly).
+func (s *Supervisor) cardRunnerLocked() ext.Hook {
+	runner, _ := s.open[s.roles[core.RoleCardsDerive]]
 	return runner
 }
 

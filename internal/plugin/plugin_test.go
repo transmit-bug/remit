@@ -10,11 +10,13 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
 
 // fakeHost is a library as a plugin reaches one. The supervisor only hands it
@@ -687,5 +689,92 @@ func requireShell(t *testing.T) {
 	t.Helper()
 	if runtime.GOOS == "windows" {
 		t.Skip("the fake process plugin is a shell script")
+	}
+}
+
+// fakeCard is a card plugin with no engine behind it: it counts the texts it was
+// asked and says who it is, which is the half of a cache key that names the
+// plugin. It answers a capability itself, so no wire is involved.
+type fakeCard struct {
+	name string
+	id   string
+
+	mu    sync.Mutex
+	asked []string
+}
+
+func (f *fakeCard) Name() string     { return f.name }
+func (f *fakeCard) Warm() error      { return nil }
+func (f *fakeCard) Close() error     { return nil }
+func (f *fakeCard) Identity() string { return f.id }
+func (f *fakeCard) Revision() string { return "1.0.0" }
+
+func (f *fakeCard) DeriveBlock(in ext.DeriveIn) ([]ext.DerivedCard, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.asked = append(f.asked, in.Block.Text)
+	return nil, nil
+}
+
+func (f *fakeCard) times() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.asked)
+}
+
+// What the card role answered belongs to the supervisor, not to a resolver: the
+// agent API builds a resolver per listener, and a listener that restarts — a token
+// rotation restarts one — must not ask the plugin again for a text it answered.
+// The regression this guards: the cache inside the resolver, which died with it
+// (docs/specs/plugin-system.md P4).
+func TestCardResolverKeepsItsAnswersAcrossResolvers(t *testing.T) {
+	fake := &fakeCard{name: builtin.CardsName, id: "test.cards"}
+	s := New(t.TempDir())
+	s.Construct = func(string) (ext.Hook, error) { return fake, nil }
+	t.Cleanup(func() { _ = s.Close() })
+	if role := s.Resolve(core.RoleCardsDerive, builtin.CardsName, ""); role == nil {
+		t.Fatal("the card role resolved to nothing")
+	}
+
+	if _, ok := s.CardResolver(core.BuiltinTypes()).Derive("a :: b"); !ok {
+		t.Fatal("the role's plugin was not asked")
+	}
+	s.CardResolver(core.BuiltinTypes()).Derive("a :: b")
+	if got := fake.times(); got != 1 {
+		t.Errorf("the plugin was asked %d times for one text across two resolvers, want once", got)
+	}
+}
+
+// A switched card plugin is another plugin answering: the same text is asked
+// again rather than served what the plugin before it gave. The regression this
+// guards: a process-wide cache keyed by text, so a library that switched its card
+// plugin keeps the old one's answers.
+func TestCardResolverAsksASwitchedPluginAgain(t *testing.T) {
+	root := t.TempDir()
+	installPlugin(t, root, "other") // a manifest, so the role's js-only rule passes
+	first := &fakeCard{name: builtin.CardsName, id: "test.cards"}
+	second := &fakeCard{name: "other", id: "test.other"}
+	s := New(root)
+	s.Construct = func(name string) (ext.Hook, error) {
+		if name == "other" {
+			return second, nil
+		}
+		return first, nil
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	if role := s.Resolve(core.RoleCardsDerive, builtin.CardsName, ""); role == nil {
+		t.Fatal("the card role resolved to nothing")
+	}
+	s.CardResolver(core.BuiltinTypes()).Derive("a :: b")
+
+	if role := s.Resolve(core.RoleCardsDerive, "other", ""); role == nil || role.Name() != "other" {
+		t.Fatalf("the card role did not switch to other: %v", role)
+	}
+	s.CardResolver(core.BuiltinTypes()).Derive("a :: b")
+	if got := first.times(); got != 1 {
+		t.Errorf("the plugin before the switch was asked %d times, want once", got)
+	}
+	if got := second.times(); got != 1 {
+		t.Errorf("the switched plugin was asked %d times, want once: the old answer was served", got)
 	}
 }

@@ -292,3 +292,94 @@ func TestTheWindowResolvesAndWarmsRolesThroughTheSupervisor(t *testing.T) {
 		t.Error("the role's plugin was not warmed before the library read")
 	}
 }
+
+// askedTexts is a card plugin that counts what it was asked, by text: what the
+// window asks it again after a write is the number this test reads.
+func askedTexts(asks map[string]int) func(ext.DeriveIn) ([]ext.DerivedCard, error) {
+	return func(in ext.DeriveIn) ([]ext.DerivedCard, error) {
+		asks[in.Block.Text]++
+		return nil, nil
+	}
+}
+
+// A write — a rating is one — must not ask the card plugin again for a paragraph
+// it already answered: the window keeps its resolver, and the answers in it,
+// across the reload every write ends with. The regression this guards: a resolver
+// built per write, which made the cache live exactly as long as the write before
+// it (docs/specs/plugin-system.md P4).
+func TestAWriteDoesNotAskThePluginAgain(t *testing.T) {
+	asks := map[string]int{}
+	a := withDeriver(t, askedTexts(asks))
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	recallQueue(tt)
+	tt.Key(0, ui.KeySpace)
+	tt.Advance(320 * time.Millisecond) // the answer unfolding
+
+	id, ok := a.review.Current()
+	if !ok {
+		t.Fatal("the review has no card on screen")
+	}
+	card, ok := a.data.byID[id]
+	if !ok {
+		t.Fatalf("the card %q is not in the snapshot", id)
+	}
+	text, _ := card.Ref.Text(a.data.blocks)
+	if got := asks[text]; got != 1 {
+		t.Fatalf("the card's text was asked %d times before the rating, want once", got)
+	}
+
+	tt.Key(0, ui.Key3) // Good: the write the rating makes
+	tt.Advance(320 * time.Millisecond)
+	a.face(card)
+	if got := asks[text]; got != 1 {
+		t.Errorf("rating asked the plugin again: %d asks for %q, want one", got, text)
+	}
+}
+
+// A type's fields are part of what the plugin is asked, so editing them must ask
+// again: the window keeps its resolver only while the type table is the one it was
+// built for. The regression this guards: a kept resolver serving the answers of
+// the old field table after a type is edited.
+func TestAnEditedTypeAsksThePluginAgain(t *testing.T) {
+	asks := map[string]int{}
+	a := withDeriver(t, askedTexts(asks))
+	card := a.data.cards[0]
+	text, _ := card.Ref.Text(a.data.blocks)
+	a.face(card)
+
+	typ, ok := a.Library().Type(card.Type)
+	if !ok {
+		t.Fatalf("the card's type %q is not in the library", card.Type)
+	}
+	typ.Fields = append(typ.Fields, "Extra")
+	if _, err := a.Library().SaveType(typ); err != nil {
+		t.Fatalf("save the edited type: %v", err)
+	}
+	a.reload()
+	a.face(card)
+	if got := asks[text]; got != 2 {
+		t.Errorf("an edited type was asked %d times, want 2: the old answer was served", got)
+	}
+}
+
+// Switching the card plugin is a different plugin answering, so the window asks
+// the new one rather than serving the old one's answers. The regression this
+// guards: a kept resolver deriving through the plugin the window no longer holds.
+func TestASwitchedCardPluginAsksThePluginAgain(t *testing.T) {
+	asks := map[string]int{}
+	a := withDeriver(t, askedTexts(asks))
+	card := a.data.cards[0]
+	text, _ := card.Ref.Text(a.data.blocks)
+	a.face(card)
+
+	a.cards = &cardPlugin{
+		deriver:  deriverFunc(askedTexts(asks)),
+		producer: core.Producer{ID: "test.cards.other", Version: "1"},
+	}
+	a.reload()
+	a.face(card)
+	if got := asks[text]; got != 2 {
+		t.Errorf("a switched plugin was asked %d times, want 2: the old answer was served", got)
+	}
+}

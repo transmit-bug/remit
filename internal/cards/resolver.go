@@ -6,8 +6,9 @@
 package cards
 
 import (
+	"crypto/sha256"
 	"log/slog"
-	"sync"
+	"slices"
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/template"
@@ -19,7 +20,9 @@ import (
 // makes no new cards, and a card reads its paragraph's own words.
 //
 // One resolver is shared by every goroutine that serves an agent API request,
-// so deriving and facing are safe to run at once.
+// so deriving and facing are safe to run at once. What it derives lives in a
+// Cache, so a resolver built again for the same plugin and type table reads the
+// answers of the one before it.
 type Resolver struct {
 	// deriver is what derives, as the capability it is: the resolver never
 	// holds a runner, and a test holds a hand-written deriver here.
@@ -27,51 +30,44 @@ type Resolver struct {
 	// producer is what every card the deriver makes is stamped with: the plugin
 	// that made it, and which build of it.
 	producer core.Producer
-	// The type tables are written by New and read-only afterwards, so a face
-	// reads them — and renders on them — without a lock.
+	// The type tables are written by the builder and read-only afterwards, so a
+	// face reads them — and renders on them — without a lock.
 	types map[core.ID]core.Type
 	front map[core.ID]*template.Template
 	back  map[core.ID]*template.Template
-
-	mu sync.Mutex
-	// asked caches what the plugin answered for a text, failures included, so
-	// a paragraph is asked once however many of its cards are on screen — and
-	// a plugin that throws is not retried every frame. Its answers are shared
-	// with every caller, so none of them may mutate one.
-	asked map[string]answer
-	// deriving holds the derivations in flight, one per text, so a text being
-	// asked is waited for rather than asked a second time.
-	deriving map[string]*derivation
+	// cache is what this resolver's answers live in: its own, or one shared with
+	// every resolver built for the same plugin and type table.
+	cache *Cache
+	// identity is the plugin and type table digested: the half of a cache key
+	// that says who answered, so a text costs one digest rather than a walk of
+	// the table.
+	identity [sha256.Size]byte
 }
 
-// answer is the cached reply for one text.
-type answer struct {
-	cards []core.Derived
-	ok    bool
-}
-
-// derivation is one text's plugin call in flight; done closes once its answer
-// is in the cache.
-type derivation struct {
-	done  chan struct{}
-	cards []core.Derived
-	ok    bool
-}
-
-// New builds a resolver over the deriver and the library's types, stamping what
-// it derives with producer. A nil deriver derives nothing, which is the one
-// fallback: no paragraph makes a new card, and a card reads its own words. A
-// type whose templates do not compile — a user's edit can break them — renders
-// as the field list rather than taking the review down.
+// New builds a resolver with a cache of its own, over the deriver and the
+// library's types, stamping what it derives with producer. A nil deriver derives
+// nothing, which is the one fallback: no paragraph makes a new card, and a card
+// reads its own words. A type whose templates do not compile — a user's edit can
+// break them — renders as the field list rather than taking the review down.
+//
+// A caller that builds resolvers again and again — a window after every write,
+// an agent listener that restarts — takes one Cache and asks it for each.
 func New(deriver ext.Deriver, producer core.Producer, types []core.Type) *Resolver {
+	return NewCache(DefaultBound).Resolver(deriver, producer, types)
+}
+
+// Resolver builds a resolver answering from this cache: what it derives is
+// remembered there, so a resolver built for the same plugin and type table reads
+// what was already asked.
+func (c *Cache) Resolver(deriver ext.Deriver, producer core.Producer, types []core.Type) *Resolver {
 	r := &Resolver{
 		deriver:  deriver,
 		producer: producer,
 		types:    make(map[core.ID]core.Type, len(types)),
 		front:    make(map[core.ID]*template.Template, len(types)),
 		back:     make(map[core.ID]*template.Template, len(types)),
-		asked:    map[string]answer{},
-		deriving: map[string]*derivation{},
+		cache:    c,
+		identity: identity(producer, types),
 	}
 	for _, typ := range types {
 		r.types[typ.ID] = typ
@@ -79,6 +75,24 @@ func New(deriver ext.Deriver, producer core.Producer, types []core.Type) *Resolv
 		r.back[typ.ID] = compile(typ, typ.Back, "back")
 	}
 	return r
+}
+
+// Serves reports whether this resolver was built for exactly this plugin and type
+// table, templates included. A caller that retakes its library after every write
+// asks before building another: the resolver it has still answers for what it was
+// built for, and its answers are what a rebuild would throw away.
+func (r *Resolver) Serves(producer core.Producer, types []core.Type) bool {
+	if r == nil || r.producer != producer || len(r.types) != len(types) {
+		return false
+	}
+	for _, typ := range types {
+		built, ok := r.types[typ.ID]
+		if !ok || built.Version != typ.Version ||
+			!slices.Equal(built.Fields, typ.Fields) || built.Front != typ.Front || built.Back != typ.Back {
+			return false
+		}
+	}
+	return true
 }
 
 // compile parses one side of a type's templates, reporting a bad one instead
@@ -103,43 +117,17 @@ type Answer struct {
 // Derive asks the plugin what a text makes. ok is false when there is no
 // plugin or it failed: a paragraph then makes no new card, and nothing the
 // user sees turns red over it. The answer is stamped with the plugin's
-// identity and cached by text — the failure too, so it is asked once, and a
-// text already being asked is waited for rather than asked again. The answer
-// is shared, so no caller may mutate it, and the plugin a derivation calls
-// must not reach back into this resolver's Derive — a card plugin's runner is
-// given no host that derives.
-func (r *Resolver) Derive(text string) (cards []core.Derived, ok bool) {
+// identity and cached under that identity and the text — the failure too, so it
+// is asked once, and a text already being asked is waited for rather than asked
+// again. The answer is shared, so no caller may mutate it, and the plugin a
+// derivation calls must not reach back into this resolver's Derive — a card
+// plugin's runner is given no host that derives.
+func (r *Resolver) Derive(text string) ([]core.Derived, bool) {
 	if r == nil || r.deriver == nil {
 		return nil, false
 	}
-	r.mu.Lock()
-	if got, hit := r.asked[text]; hit {
-		r.mu.Unlock()
-		return got.cards, got.ok
-	}
-	if wait, busy := r.deriving[text]; busy {
-		r.mu.Unlock()
-		<-wait.done
-		return wait.cards, wait.ok
-	}
-	wait := &derivation{done: make(chan struct{})}
-	r.deriving[text] = wait
-	r.mu.Unlock()
-
-	// The wait is settled even if the plugin call lets a panic out, so a
-	// waiter is never left blocked on a text nobody is asking.
-	defer func() {
-		r.mu.Lock()
-		wait.cards, wait.ok = cards, ok
-		r.asked[text] = answer{cards: cards, ok: ok}
-		delete(r.deriving, text)
-		r.mu.Unlock()
-		close(wait.done)
-	}()
-
-	// The plugin call stays outside the lock: another text derives on the
-	// runner's other runtime instead of queueing behind this one.
-	return r.ask(text)
+	key := key{identity: r.identity, text: sha256.Sum256([]byte(text))}
+	return r.cache.derive(key, func() ([]core.Derived, bool) { return r.ask(text) })
 }
 
 // ask runs the deriver for one text. It takes no lock, so two texts derive at
