@@ -32,7 +32,39 @@ type Plugin struct {
 	// Hidden names the contributions three failures took out, one line each, with
 	// what failed: the row a reader finds beside Re-enable.
 	Hidden []string
+	// Health is how the plugin itself stands: three failed calls stop it whole,
+	// which is not the count above — that one hides a single contribution
+	// (docs/specs/plugin-system.md P1: 两层失败不合并).
+	Health PluginHealth
 }
+
+// PluginHealth is how a plugin stands at the plugin level, as its row says it: the
+// state, the count behind it, the reason in the words it failed in, and the roles
+// a built-in plays instead. The state names are the supervisor's own — ok,
+// failing, disabled, failed — because the app maps one answer onto the other and
+// this page starts no plugin itself (see internal/plugin.HealthState).
+type PluginHealth struct {
+	State    string
+	Failures int
+	Reason   string
+	Fallback []PluginFallback
+}
+
+// PluginFallback is a role a plugin lost, and the plugin playing it instead.
+type PluginFallback struct {
+	Role   string // the role, one of core.Role*
+	Player string // the manifest name playing it
+}
+
+// The plugin-level states a row draws. A plugin is stopped whole by three failed
+// calls; the count beside the contributions hides one command or page instead
+// (docs/specs/plugin-system.md P1: 两层失败不合并).
+const (
+	HealthOK       = "ok"
+	HealthFailing  = "failing"
+	HealthDisabled = "disabled"
+	HealthFailed   = "failed"
+)
 
 // enableRequest is the approval one frame asked for, applied after the
 // fieldset is built so the write happens once, not once per control.

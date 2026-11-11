@@ -68,8 +68,10 @@ type Deps struct {
 	// PluginMessage resolves one of a plugin's own messages in the frame's
 	// language, so a page follows the window's locale rather than a snapshot.
 	PluginMessage func(*ui.Context, string, string) string
-	// Reenable gives a plugin's failed contributions another try: the counts go
-	// back to zero and the hidden entries show again.
+	// Reenable gives a plugin another try, over both of its counts: the
+	// plugin-level streak is cleared and its runner opened again, and the counts
+	// that hid its failed contributions go, so the entries show again. The two
+	// counts stay separate; the action is one (docs/specs/plugin-system.md P1).
 	Reenable func(*ui.Context, string)
 
 	// SetAgent starts or stops the agent API now, and remembers the choice.

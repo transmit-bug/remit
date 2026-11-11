@@ -2708,6 +2708,54 @@
   "@pluginReenabled": {
     "description": "A plugin's failures were cleared."
   },
+  "pluginHealthFailing": "{count, plural, one {# call failed in a row; one more stops the plugin.} other {# calls failed in a row; one more stops the plugin.}}",
+  "@pluginHealthFailing": {
+    "description": "A plugin whose last calls failed: the plugin level, before three failures stop it whole.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "pluginHealthDisabled": "Stopped after {count, plural, one {# failed call} other {# failed calls}} in a row.",
+  "@pluginHealthDisabled": {
+    "description": "A plugin three failed calls in a row stopped.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "pluginHealthFailed": "This plugin will not start.",
+  "@pluginHealthFailed": {
+    "description": "A plugin that could not be started at all: a file it cannot read, a syntax error."
+  },
+  "pluginHealthFallback": "{role} falls back to {player}.",
+  "@pluginHealthFallback": {
+    "description": "A role a stopped plugin lost, and the plugin playing it instead.",
+    "placeholders": {
+      "role": {
+        "type": "String",
+        "example": "Card derivation"
+      },
+      "player": {
+        "type": "String",
+        "example": "cards"
+      }
+    }
+  },
+  "pluginReenableFailed": "The plugin was not re-enabled: {reason}",
+  "@pluginReenableFailed": {
+    "description": "Re-enabling a plugin failed: it will not start.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "the plugin is not installed"
+      }
+    }
+  },
   "pluginSettingFailed": "The setting was not saved: {reason}",
   "@pluginSettingFailed": {
     "description": "Writing a contributed setting into the plugin's own store failed.",

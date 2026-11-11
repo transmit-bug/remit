@@ -31,7 +31,7 @@ func TestRunnerWithoutAHostSaysNoLibraryYet(t *testing.T) {
 		if callErr = runner.Call("get", "note_1", nil); !errors.Is(callErr, ext.ErrNoLibrary) {
 			t.Fatalf("with no library the call answered %v, want ErrNoLibrary", callErr)
 		}
-		if runner.Disabled() {
+		if _, disabled, _ := runner.Streak(); disabled {
 			t.Fatalf("call %d disabled the runner: a library that is not open yet is not the plugin's failure", callErr)
 		}
 	}
@@ -40,8 +40,8 @@ func TestRunnerWithoutAHostSaysNoLibraryYet(t *testing.T) {
 			t.Errorf("the error %q does not name %q", callErr, want)
 		}
 	}
-	if runner.Failures() != 0 {
-		t.Errorf("three no-library answers left the failure streak at %d", runner.Failures())
+	if failures, _, _ := runner.Streak(); failures != 0 {
+		t.Errorf("three no-library answers left the failure streak at %d", failures)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
+	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/locales"
 )
@@ -88,8 +89,12 @@ func numberStep(value float64) float64 {
 	return 0.1
 }
 
-// pluginProblems lists what a plugin's manifest declared that this host cannot
-// use, and how many of its entries failed and were hidden.
+// pluginProblems is what a plugin is not doing, in the two layers that are never
+// merged: the plugin-level state three failed calls leave — with the reason in the
+// plugin's own words and the roles a built-in plays instead — and then the
+// contributed entries three failures hid. One Re-enable beside them, because one
+// user action clears both counts (docs/specs/plugin-system.md P1: 重新启用是一个
+// 用户动作、两个内部计数).
 func pluginProblems(c *ui.Context, d Deps, msgs locales.Messages, tk design.Tokens, p Plugin) {
 	if len(p.Problems) > 0 {
 		ui.Text(c, msgs.PluginProblems()).FontSize(tk.TypeUI).TextColor(tk.Danger)
@@ -97,11 +102,15 @@ func pluginProblems(c *ui.Context, d Deps, msgs locales.Messages, tk design.Toke
 			ui.Text(c, problem).FontSize(tk.TypeUI).TextColor(tk.Danger).SingleLine()
 		}
 	}
-	if p.Failures == 0 {
+	pluginHealth(c, msgs, tk, p.Health)
+	stopped := p.Health.State == HealthDisabled || p.Health.State == HealthFailed
+	if p.Failures == 0 && !stopped {
 		return
 	}
 	ui.Row(c).Gap(tk.SpaceS).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, msgs.PluginFailures(p.Failures)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+		if p.Failures > 0 {
+			ui.Text(c, msgs.PluginFailures(p.Failures)).FontSize(tk.TypeUI).TextColor(tk.TextMuted)
+		}
 		ui.Button(c, msgs.PluginReenable()).MinHeight(tk.Control).
 			Label(msgs.PluginReenableOf(p.Name)).
 			OnClick(func() { d.reenable(c, p.Name) })
@@ -111,6 +120,50 @@ func pluginProblems(c *ui.Context, d Deps, msgs locales.Messages, tk design.Toke
 	for _, hidden := range p.Hidden {
 		ui.Text(c, hidden).FontSize(tk.TypeLabel).TextColor(tk.TextMuted).SingleLine()
 	}
+}
+
+// pluginHealth is the plugin level of the row: the state in the frame's language,
+// the reason under it in the plugin's own words — the host translates its labels,
+// never a plugin's error — and the roles this library gave to a built-in.
+func pluginHealth(c *ui.Context, msgs locales.Messages, tk design.Tokens, h PluginHealth) {
+	line := healthLine(msgs, h)
+	if line == "" {
+		return
+	}
+	ui.Text(c, line).FontSize(tk.TypeUI).TextColor(tk.Danger)
+	if h.Reason != "" {
+		ui.Text(c, h.Reason).FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+	}
+	for _, fallback := range h.Fallback {
+		ui.Text(c, msgs.PluginHealthFallback(roleLabel(msgs, fallback.Role), fallback.Player)).
+			FontSize(tk.TypeLabel).TextColor(tk.TextMuted)
+	}
+}
+
+// healthLine is a plugin's plugin-level state as one sentence, "" while it is
+// running: a row that says nothing is a plugin that is fine.
+func healthLine(msgs locales.Messages, h PluginHealth) string {
+	switch h.State {
+	case HealthFailing:
+		return msgs.PluginHealthFailing(h.Failures)
+	case HealthDisabled:
+		return msgs.PluginHealthDisabled(h.Failures)
+	case HealthFailed:
+		return msgs.PluginHealthFailed()
+	}
+	return ""
+}
+
+// roleLabel names a role the way the page does: the words its two role fields
+// carry, so a fallback reads as a role and not as a manifest string.
+func roleLabel(msgs locales.Messages, role string) string {
+	switch role {
+	case core.RoleCardsDerive:
+		return msgs.PluginRoleCards()
+	case core.RoleReviewSchedule:
+		return msgs.PluginRoleSchedule()
+	}
+	return role
 }
 
 func (d Deps) pluginMessage(c *ui.Context, plugin, raw string) string {

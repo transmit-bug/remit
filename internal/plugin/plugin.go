@@ -61,6 +61,11 @@ type Supervisor struct {
 	roles   map[string]string
 	enabled []string
 	closed  bool
+	// broken is why each name that will not start did not, and fallbacks are the
+	// roles a plugin lost to the one playing them instead: what Health answers for
+	// a name that has no runner to ask. Guarded by mu.
+	broken    map[string]string
+	fallbacks map[string][]Fallback
 	// host is the library a capability call reaches now, as a provider: a runner
 	// starts before a library is open — a role's must, its policy is what the
 	// library opens with — and asks on every call, so binding a library hands the
@@ -73,7 +78,13 @@ type Supervisor struct {
 
 // New serves the plugins installed under dir, and the two this build ships.
 func New(dir string) *Supervisor {
-	return &Supervisor{dir: dir, open: map[string]ext.Hook{}, roles: map[string]string{}}
+	return &Supervisor{
+		dir:       dir,
+		open:      map[string]ext.Hook{},
+		roles:     map[string]string{},
+		broken:    map[string]string{},
+		fallbacks: map[string][]Fallback{},
+	}
 }
 
 // Resolve resolves the plugin a library names for a role and warms it. It is
@@ -91,12 +102,25 @@ func (s *Supervisor) Resolve(role, name, fallback string) Role {
 		return nil
 	}
 	hook, err := s.roleLocked(name)
+	if err == nil {
+		// A plugin three failures stopped plays nothing: its role takes the
+		// built-in, the same road a plugin that will not start takes
+		// (docs/specs/plugin-system.md P1: 停用之后回退内置 runner).
+		err = s.disabledLocked(name)
+	}
 	if err != nil {
-		var notJS roleRuntimeError
-		if errors.As(err, &notJS) {
+		var (
+			notJS   roleRuntimeError
+			stopped disabledError
+		)
+		switch {
+		case errors.As(err, &notJS):
 			slog.Warn("remit: a role takes a js plugin only",
 				"role", role, "plugin", name, "fallback", fallback, "err", err)
-		} else {
+		case errors.As(err, &stopped):
+			slog.Warn("remit: a role's plugin is disabled, so the role falls back",
+				"role", role, "plugin", name, "fallback", fallback, "err", err)
+		default:
 			// Missing, broken or not installed: the role still falls back, but the
 			// reason is not the substrate rule and must not be reported as one.
 			slog.Warn("remit: a role's plugin did not start",
@@ -107,6 +131,9 @@ func (s *Supervisor) Resolve(role, name, fallback string) Role {
 			s.roles[role] = ""
 			return nil
 		}
+		s.fellBackLocked(name, role, fallback)
+	} else {
+		s.playedLocked(name, role)
 	}
 	runner, ok := hook.(Role)
 	if !ok {
@@ -303,8 +330,12 @@ var errClosed = errors.New("remit: the plugin supervisor is closed")
 func (s *Supervisor) startLocked(name string) (ext.Hook, error) {
 	hook, err := s.build(name)
 	if err != nil {
+		// What will not start is remembered: Health reports it and Reenable is the
+		// way back (docs/specs/plugin-system.md P1).
+		s.broken[name] = err.Error()
 		return nil, err
 	}
+	delete(s.broken, name)
 	if runner, ok := hook.(*ext.JSRunner); ok {
 		runner.UseHost(s.currentHost)
 	}

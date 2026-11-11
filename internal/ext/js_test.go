@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -326,13 +327,13 @@ export function go(ok) {
 			t.Fatalf("call %d succeeded", i)
 		}
 	}
-	if got := runner.Failures(); got != 2 {
+	if got, _, _ := runner.Streak(); got != 2 {
 		t.Fatalf("failures = %d, want 2", got)
 	}
 	if err := runner.Call("go", pass, nil); err != nil {
 		t.Fatalf("success after failures: %v", err)
 	}
-	if got := runner.Failures(); got != 0 {
+	if got, _, _ := runner.Streak(); got != 0 {
 		t.Fatalf("a success left the streak at %d", got)
 	}
 
@@ -341,8 +342,10 @@ export function go(ok) {
 			t.Fatalf("strike %d succeeded", i)
 		}
 	}
-	if !runner.Disabled() {
+	if _, disabled, reason := runner.Streak(); !disabled {
 		t.Fatal("three strikes left the runner enabled")
+	} else if reason == "" {
+		t.Error("a stopped runner kept no reason for the settings page")
 	}
 	before := runner.Runtimes()
 	if err := runner.Call("go", pass, nil); !errors.Is(err, ext.ErrDisabled) {
@@ -350,6 +353,67 @@ export function go(ok) {
 	}
 	if got := runner.Runtimes(); got != before {
 		t.Errorf("the disabled call made a runtime: %d, want %d", got, before)
+	}
+}
+
+// errDiskFull is the host's own failure: the library refused a write because
+// the disk is full, and the plugin did nothing wrong.
+var errDiskFull = errors.New("no space left on device")
+
+// fullDisk is a library that refuses every write of a plugin's own store, and
+// counts the writes it was asked for: a call that reached it reached the engine.
+type fullDisk struct {
+	ext.Host
+	writes int
+}
+
+func (h *fullDisk) SetPluginData(string, string) error {
+	h.writes++
+	return errDiskFull
+}
+
+// A host failure is the app's to answer for, not the plugin's: three refused
+// writes neither stop the plugin nor move its streak, and a fourth call still
+// reaches the engine. The regression this guards: a disk filling up disables a
+// plugin that behaved (docs/specs/plugin-system.md P1: 失败要分归属).
+func TestAHostFailureIsNotAStrike(t *testing.T) {
+	host := &fullDisk{}
+	dir := writeJS(t, manifestFor("saver", ext.CapStoreOwn), `
+export function save(ok) {
+  if (!ok) throw new Error("the plugin's own");
+  remit.store.set("value");
+  return 1;
+}
+`)
+	runner, err := ext.OpenJS(dir, host, ext.JSLimits{})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer runner.Close()
+
+	for i := range 3 {
+		err := runner.Call("save", true, nil)
+		if !strings.Contains(err.Error(), errDiskFull.Error()) {
+			t.Fatalf("write %d answered %v, want the host's own failure", i+1, err)
+		}
+	}
+	if failures, disabled, _ := runner.Streak(); failures != 0 || disabled {
+		t.Fatalf("three refused writes left %d failures, disabled %v, want a plugin still running", failures, disabled)
+	}
+	if err := runner.Call("save", true, nil); err == nil || !strings.Contains(err.Error(), errDiskFull.Error()) {
+		t.Fatalf("the fourth call answered %v, want the engine's same answer", err)
+	}
+	if host.writes != 4 {
+		t.Errorf("the host was asked to write %d times, want 4: a call stopped entering the engine", host.writes)
+	}
+
+	// The plugin's own throw is still a strike: the mark excuses the host's
+	// failure alone.
+	if err := runner.Call("save", false, nil); err == nil || strings.Contains(err.Error(), errDiskFull.Error()) {
+		t.Fatalf("the plugin's throw answered %v, want its own failure", err)
+	}
+	if got, _, _ := runner.Streak(); got != 1 {
+		t.Errorf("the plugin's own throw left the streak at %d, want 1", got)
 	}
 }
 

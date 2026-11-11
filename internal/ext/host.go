@@ -1,6 +1,7 @@
 package ext
 
 import (
+	"errors"
 	"time"
 
 	"github.com/transmit-bug/remit/internal/agentapi"
@@ -42,6 +43,73 @@ type Host interface {
 // library then hands nothing to the runner, the provider answers differently
 // from the next call on.
 type HostFunc func() Host
+
+// HostError is a failure the host raised while answering a capability call: a
+// write the library refused, a disk that is full. Its message is the host's own,
+// unchanged — a plugin reads what went wrong, not a label — and the runner
+// recognises it on its way back out of the runtime, so the app's failure is
+// logged instead of counted among the plugin's three
+// (docs/specs/plugin-system.md P1: 失败要分归属).
+type HostError struct{ Err error }
+
+// Error is the host's own message, unchanged.
+func (e HostError) Error() string { return e.Err.Error() }
+
+// Unwrap is the host's own error, for errors.Is and errors.As.
+func (e HostError) Unwrap() error { return e.Err }
+
+// IsHostError reports whether err is the host's own failure. Uncaught, it comes
+// back from the runtime as the thrown value's error, which unwraps to this.
+func IsHostError(err error) bool {
+	var failure HostError
+	return errors.As(err, &failure)
+}
+
+// guardedHost is the host one capability call gets, and the one place a host
+// failure is marked: everything it fails at leaves as a HostError. A plugin's own
+// mistakes — an id it made up, an argument of the wrong shape — are answered
+// above this, in the capability function, and stay the plugin's.
+type guardedHost struct{ Host }
+
+func (h guardedHost) SearchNotes(text string) ([]core.Note, error) {
+	notes, err := h.Host.SearchNotes(text)
+	return notes, hostError(err)
+}
+
+func (h guardedHost) CreateCard(block core.ID) (core.Card, error) {
+	card, err := h.Host.CreateCard(block)
+	return card, hostError(err)
+}
+
+func (h guardedHost) SaveCard(card core.Card) error { return hostError(h.Host.SaveCard(card)) }
+
+func (h guardedHost) DeleteCard(id core.ID) error { return hostError(h.Host.DeleteCard(id)) }
+
+func (h guardedHost) History(id core.ID) ([]schedule.Event, error) {
+	events, err := h.Host.History(id)
+	return events, hostError(err)
+}
+
+func (h guardedHost) Remaining(at time.Time) (int, error) {
+	due, err := h.Host.Remaining(at)
+	return due, hostError(err)
+}
+
+func (h guardedHost) Review(id core.ID, rating schedule.Rating, at time.Time) error {
+	return hostError(h.Host.Review(id, rating, at))
+}
+
+func (h guardedHost) SetPluginData(id, value string) error {
+	return hostError(h.Host.SetPluginData(id, value))
+}
+
+// hostError marks one host failure, leaving the host's message as it stands.
+func hostError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return HostError{Err: err}
+}
 
 // UseHost makes every later capability call resolve its host through provide,
 // replacing the host the runner was opened with. The runner is not restarted:

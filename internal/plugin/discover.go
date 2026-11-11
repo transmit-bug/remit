@@ -10,7 +10,7 @@ import (
 )
 
 // Info is one plugin this build can run, as the settings page lists it: what its
-// manifest declares, read without starting anything.
+// manifest declares, read without starting anything, and how it stands.
 type Info struct {
 	Name         string
 	ID           string
@@ -18,16 +18,23 @@ type Info struct {
 	Capabilities []string // the capability names the manifest declares
 	Roles        []string // the role names the manifest implements
 	Builtin      bool     // this build ships it
+	// Health is the plugin-level state the page's row reports: three failed calls
+	// stop a plugin whole, which is not the window's contribution-level count.
+	Health Health
 }
 
 // Discover lists the plugins this build can run: the two it ships, then what the
-// user installed. A plugin that will not load is reported and left out, so the
-// page lists what works.
+// user installed, each with how it stands now. A plugin that will not load is
+// reported and left out, so the page lists what works.
 func (s *Supervisor) Discover() ([]Info, error) {
 	found, problems := s.all()
 	out := make([]Info, 0, len(found))
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	for _, e := range found {
-		out = append(out, info(e))
+		one := info(e)
+		one.Health = s.healthLocked(one.Name)
+		out = append(out, one)
 	}
 	return out, problems
 }

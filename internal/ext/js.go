@@ -53,7 +53,9 @@ var ErrNoHook = errors.New("ext: the extension has no such hook")
 var ErrNoLibrary = errors.New("ext: no library yet")
 
 // ErrDisabled is a call to an extension that failed three times in a row.
-// Re-enabling is a fresh Open; that is the caller's call to make.
+// Re-enabling is Reset, and it is the caller's call to make: one user action in
+// the settings page, over this count and the window's contribution one
+// (docs/specs/plugin-system.md P1: 重新启用是一个用户动作、两个内部计数).
 var ErrDisabled = errors.New("ext: the extension is disabled")
 
 // JSLimits bound one call to an in-process extension.
@@ -117,10 +119,18 @@ type JSRunner struct {
 	made     atomic.Int64 // runtimes made, for the pool's own gauge
 	failures int
 	disabled bool
+	// reason is the last failure in its own words, kept for the settings page:
+	// it shows the plugin's reason rather than a label of the host's.
+	reason string
 }
 
 // runtimePoolSize is the pool depth ADR 0006 rules on: two per extension.
 const runtimePoolSize = 2
+
+// strikeLimit is how many failed calls in a row stop an extension whole. It is
+// the plugin level, and the window's contribution level counts three failures of
+// one command or page separately (docs/specs/plugin-system.md P1: 两层失败不合并).
+const strikeLimit = 3
 
 // OpenJS loads the JavaScript extension in dir: the same manifest, the same
 // capability rules and the same limits as any other, built in or not. host is
@@ -257,20 +267,32 @@ func (r *JSRunner) put(rt *moejs.Runtime) {
 	}
 }
 
-// Failures is how many calls in a row have failed, for the UI and the log.
-func (r *JSRunner) Failures() int {
+// Streak is the runner's account of its consecutive failures: how many in a row,
+// whether they stopped it, and the raw reason the last one gave. It is the plugin
+// level of "failed n times" — the count a contribution keeps is the window's
+// (docs/specs/plugin-system.md P1: 两层失败不合并).
+func (r *JSRunner) Streak() (failures int, disabled bool, reason string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.failures
+	return r.failures, r.disabled, r.reason
 }
 
-// Disabled reports whether the extension was stopped by three consecutive
-// failures. Starting it again is a fresh Open — the caller's decision, not the
-// runner's.
-func (r *JSRunner) Disabled() bool {
+// Reset gives a stopped runner another try: the streak, the reason and the
+// pooled runtimes go, so the next call runs on a runtime that never saw the
+// failure. The step is the user's — one action over both counters
+// (docs/specs/plugin-system.md P1: 重新启用) — never something a call does for
+// itself.
+func (r *JSRunner) Reset() {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.disabled
+	r.failures, r.disabled, r.reason = 0, false, ""
+	r.mu.Unlock()
+	for {
+		select {
+		case <-r.pool:
+		default:
+			return
+		}
+	}
 }
 
 // Close drops the pooled runtimes. There is nothing else to release.
@@ -284,21 +306,34 @@ func (r *JSRunner) Close() error {
 	}
 }
 
-// fail records one failed call and disables the runner at three in a row.
-func (r *JSRunner) fail() {
+// fail records one failed call and disables the runner at three in a row. err is
+// the failure in its own words: the settings page repeats the plugin's reason
+// rather than a label of its own.
+func (r *JSRunner) fail(err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.failures++
-	if r.failures >= 3 {
+	r.reason = err.Error()
+	if r.failures >= strikeLimit {
 		r.disabled = true
 	}
 }
 
-// succeeded clears the streak: three strikes only count when consecutive.
+// succeeded clears the streak: three strikes only count when consecutive, and a
+// plugin that answers is not one whose last failure is worth showing.
 func (r *JSRunner) succeeded() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.failures = 0
+	r.reason = ""
+}
+
+// stopped reports whether three failures in a row stopped the runner: the check
+// Call makes before it touches a runtime.
+func (r *JSRunner) stopped() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.disabled
 }
 
 // Call runs one hook with JSON-shaped parameters and decodes its result into
@@ -307,7 +342,7 @@ func (r *JSRunner) succeeded() {
 // disable the runner; a disabled runner answers ErrDisabled without touching
 // a runtime.
 func (r *JSRunner) Call(method string, params, out any) error {
-	if r.Disabled() {
+	if r.stopped() {
 		return fmt.Errorf("%w: %s", ErrDisabled, r.manifest.Name)
 	}
 	hook, err := r.module.Hook(method)
@@ -347,17 +382,26 @@ func (r *JSRunner) Call(method string, params, out any) error {
 		rt.Interrupt(ErrTimeout)
 		res = <-done
 		if res.err == nil {
-			r.fail()
-			return ErrTimeout
+			err := fmt.Errorf("%w: %s", ErrTimeout, r.manifest.Name)
+			r.fail(err)
+			return err
 		}
 	}
 	if res.err != nil {
 		err := r.classify(res.err)
-		// A library the runner does not have yet is the app's timing, not the
-		// plugin's failure: counting it would disable a role plugin for having
-		// started before the library it is waiting for.
-		if !errors.Is(err, ErrNoLibrary) {
-			r.fail()
+		switch {
+		case errors.Is(err, ErrNoLibrary):
+			// A library the runner does not have yet is the app's timing, not the
+			// plugin's failure: counting it would disable a role plugin for having
+			// started before the library it is waiting for.
+		case IsHostError(err):
+			// The host's own failure — a refused write, a full disk. It is the
+			// app's to answer for, so it is logged and the streak does not move
+			// (docs/specs/plugin-system.md P1: 失败要分归属).
+			slog.Warn("remit: a capability call failed in the host",
+				"extension", r.manifest.Name, "method", method, "err", err)
+		default:
+			r.fail(err)
 		}
 		return err
 	}
@@ -813,6 +857,10 @@ func (r *JSRunner) hostFunc(rt *moejs.Runtime, capability string, call func(Host
 // the plugin log — this app's one log — says which plugin asked for what. A
 // runner with no library open yet answers ErrNoLibrary: the caller waits for
 // one instead of treating the runner as broken.
+//
+// The host it answers is guarded, which is where a host failure takes its mark:
+// the caller above cannot tell the two kinds of error apart by itself
+// (see HostError).
 func (r *JSRunner) reachable(capability string) (Host, error) {
 	if !r.caps[capability] {
 		slog.Warn("remit: a plugin called a capability it did not declare",
@@ -821,7 +869,7 @@ func (r *JSRunner) reachable(capability string) (Host, error) {
 	}
 	if provide := r.hostProvider(); provide != nil {
 		if host := provide(); host != nil {
-			return host, nil
+			return guardedHost{Host: host}, nil
 		}
 	}
 	return nil, fmt.Errorf("%w: %s: %s", ErrNoLibrary, r.manifest.Name, capability)

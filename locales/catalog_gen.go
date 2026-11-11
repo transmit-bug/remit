@@ -7061,6 +7061,84 @@ func (msgs Messages) PluginReenabled() string {
 	return Catalog.Format(msgs.locale, "pluginReenabled", nil)
 }
 
+// PluginHealthFailing says "{count, plural, one {# call failed in a row; one more stops the plugin.} other {# calls failed in a row; one more sto…"
+// in the language the app shows.
+//
+// A plugin whose last calls failed: the plugin level, before three failures
+// stop it whole.
+func PluginHealthFailing(count int) string { return In(i18n.Locale()).PluginHealthFailing(count) }
+
+// PluginHealthFailing says "{count, plural, one {# call failed in a row; one more stops the plugin.} other {# calls failed in a row; one more sto…"
+// in the language of msgs.
+//
+// A plugin whose last calls failed: the plugin level, before three failures
+// stop it whole.
+func (msgs Messages) PluginHealthFailing(count int) string {
+	return Catalog.Format(msgs.locale, "pluginHealthFailing", map[string]any{"count": count})
+}
+
+// PluginHealthDisabled says "Stopped after {count, plural, one {# failed call} other {# failed calls}} in a row."
+// in the language the app shows.
+//
+// A plugin three failed calls in a row stopped.
+func PluginHealthDisabled(count int) string { return In(i18n.Locale()).PluginHealthDisabled(count) }
+
+// PluginHealthDisabled says "Stopped after {count, plural, one {# failed call} other {# failed calls}} in a row."
+// in the language of msgs.
+//
+// A plugin three failed calls in a row stopped.
+func (msgs Messages) PluginHealthDisabled(count int) string {
+	return Catalog.Format(msgs.locale, "pluginHealthDisabled", map[string]any{"count": count})
+}
+
+// PluginHealthFailed says "This plugin will not start."
+// in the language the app shows.
+//
+// A plugin that could not be started at all: a file it cannot read, a
+// syntax error.
+func PluginHealthFailed() string { return In(i18n.Locale()).PluginHealthFailed() }
+
+// PluginHealthFailed says "This plugin will not start."
+// in the language of msgs.
+//
+// A plugin that could not be started at all: a file it cannot read, a
+// syntax error.
+func (msgs Messages) PluginHealthFailed() string {
+	return Catalog.Format(msgs.locale, "pluginHealthFailed", nil)
+}
+
+// PluginHealthFallback says "{role} falls back to {player}."
+// in the language the app shows.
+//
+// A role a stopped plugin lost, and the plugin playing it instead.
+func PluginHealthFallback(role string, player string) string {
+	return In(i18n.Locale()).PluginHealthFallback(role, player)
+}
+
+// PluginHealthFallback says "{role} falls back to {player}."
+// in the language of msgs.
+//
+// A role a stopped plugin lost, and the plugin playing it instead.
+func (msgs Messages) PluginHealthFallback(role string, player string) string {
+	return Catalog.Format(msgs.locale, "pluginHealthFallback", map[string]any{"role": role, "player": player})
+}
+
+// PluginReenableFailed says "The plugin was not re-enabled: {reason}"
+// in the language the app shows.
+//
+// Re-enabling a plugin failed: it will not start.
+func PluginReenableFailed(reason string) string {
+	return In(i18n.Locale()).PluginReenableFailed(reason)
+}
+
+// PluginReenableFailed says "The plugin was not re-enabled: {reason}"
+// in the language of msgs.
+//
+// Re-enabling a plugin failed: it will not start.
+func (msgs Messages) PluginReenableFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "pluginReenableFailed", map[string]any{"reason": reason})
+}
+
 // PluginSettingFailed says "The setting was not saved: {reason}"
 // in the language the app shows.
 //

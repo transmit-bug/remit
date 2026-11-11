@@ -189,6 +189,44 @@ func TestPluginsShowCapabilitiesAndFailures(t *testing.T) {
 	}
 }
 
+// A plugin three failed calls stopped says so, in its own words and with the role
+// a built-in plays instead — beside, never instead of, the contributed entries
+// that failed. The regression this guards: two counts read as one, so a stopped
+// plugin and a hidden page cannot be told apart (issue #266, criteria 1 and 4).
+func TestPluginHealthIsShownApartFromHiddenEntries(t *testing.T) {
+	msgs := en
+	reason := "ext: acme.cards: ReferenceError: derive is not defined"
+	w := newWorld()
+	w.plugins[2].Enabled = true
+	w.plugins[2].Health = settings.PluginHealth{
+		State:    settings.HealthDisabled,
+		Failures: 3,
+		Reason:   reason,
+		Fallback: []settings.PluginFallback{{Role: core.RoleCardsDerive, Player: "cards"}},
+	}
+	w.plugins[2].Failures = 3
+	w.plugins[2].Hidden = []string{"acme.cards.report: the plugin threw"}
+	w.state = &settings.State{HasLibrary: true, Page: settings.PagePlugins}
+	tt := atWorld(t, w, 1024, 720)
+
+	for _, want := range []string{
+		msgs.PluginHealthDisabled(3),
+		reason,
+		msgs.PluginHealthFallback(msgs.PluginRoleCards(), "cards"),
+		msgs.PluginFailures(3),
+		"acme.cards.report: the plugin threw",
+	} {
+		reveal(t, tt, 1024, 720, want)
+		if !tt.HasText(want) {
+			t.Fatalf("the row is missing %q; texts %q", want, tt.Texts())
+		}
+	}
+	// The two counters are one action, so the row draws one button, not two.
+	if got := countText(tt, msgs.PluginReenable()); got != 1 {
+		t.Fatalf("the row draws %d Re-enable buttons, want the one action over both counts", got)
+	}
+}
+
 // One plugin's details are opened by its own button, and say what the row has no
 // room for: the manifest id, its version and the roles it can play.
 func TestPluginDetailsOpenOnTheirButton(t *testing.T) {

@@ -484,6 +484,7 @@ func (a *App) discoveredPlugins() []screensettings.Plugin {
 			Capabilities: p.Capabilities,
 			Roles:        p.Roles,
 			Builtin:      p.Builtin,
+			Health:       settingsHealth(p.Health),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -530,7 +531,7 @@ func (a *App) settingsDeps() screensettings.Deps {
 
 		SetPluginSetting: a.setPluginSetting,
 		PluginMessage:    a.pluginText,
-		Reenable:         a.reenablePlugin,
+		Reenable:         a.reenable,
 	}
 }
 

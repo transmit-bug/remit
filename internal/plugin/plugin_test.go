@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -289,6 +290,11 @@ func TestARoleFallsBackWhenItsPluginWillNotStart(t *testing.T) {
 	if f.built["cards"] != 1 {
 		t.Errorf("the fallback was constructed %d times, want once", f.built["cards"])
 	}
+	// A plugin that will not start is one the page can report: Health keeps what
+	// the constructor said, so the row says why it is not working.
+	if got := f.sup.Health("acme"); got.State != HealthFailed || !strings.Contains(got.Reason, "will not start") {
+		t.Errorf("Health reports the plugin as %+v, want it recorded as one that will not start", got)
+	}
 }
 
 // The enabled list takes both substrates (ADR 0006): a process plugin starts and
@@ -366,6 +372,223 @@ func TestCloseEndsEveryRunnerOnce(t *testing.T) {
 	}
 	if _, err := f.sup.Runner("acme"); err == nil {
 		t.Error("a closed supervisor still started a plugin")
+	}
+}
+
+// broken is the js plugin these tests drive: one hook that throws while it is
+// told to and answers while it is not, so a test can stop it and start it again.
+const brokenPlugin = `
+export function deriveBlock(ok) {
+  if (!ok) throw new Error("the plugin is broken");
+  return [];
+}
+`
+
+// realPlugins is a supervisor over the engine: the one plugin it holds is a real
+// js runner, written to a directory of this test's own, so the three-strikes rule
+// under test is the one a user's plugin meets.
+func realPlugins(t *testing.T, name string) *Supervisor {
+	t.Helper()
+	root := t.TempDir()
+	dir := filepath.Join(root, name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("plugin dir: %v", err)
+	}
+	manifest := fmt.Sprintf(`{"id":"test.%s","name":%q,"version":"1.0.0","apiVersion":1,"runtime":"js","entry":"main.js","implements":{"deriveBlock":1}}`, name, name)
+	if err := os.WriteFile(filepath.Join(dir, "extension.json"), []byte(manifest), 0o644); err != nil {
+		t.Fatalf("manifest: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.js"), []byte(brokenPlugin), 0o644); err != nil {
+		t.Fatalf("entry: %v", err)
+	}
+	s := New(root)
+	s.Construct = func(name string) (ext.Hook, error) {
+		if name == "" || name == "cards" || name == "scheduler" {
+			return s.Build(name)
+		}
+		return ext.OpenJS(filepath.Join(root, name), nil, ext.JSLimits{})
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	return s
+}
+
+// stop breaks a runner three times in a row: three failed calls leave it stopped.
+func stop(t *testing.T, hook ext.Hook) {
+	t.Helper()
+	for i := range 3 {
+		if err := hook.Call("deriveBlock", false, nil); err == nil {
+			t.Fatalf("call %d succeeded, want the plugin's own failure", i+1)
+		}
+	}
+}
+
+// A role whose plugin three failed calls stopped falls back to the plugin this
+// build ships for it, and the role is the built-in's. The regression this
+// guards: a stopped role plugin used as if it worked, every call answering
+// ErrDisabled and the cards it should have made silently missing
+// (docs/specs/plugin-system.md P1: 停用之后回退内置 runner).
+func TestARoleFallsBackWhenItsPluginIsDisabled(t *testing.T) {
+	s := realPlugins(t, "acme")
+	role := s.Resolve(core.RoleCardsDerive, "acme", "cards")
+	if role == nil || role.Name() != "acme" {
+		t.Fatalf("the role resolved to %v, want acme", role)
+	}
+	stop(t, role)
+
+	// The library opens again with the same choice: the stopped plugin plays no
+	// role, and the shipped one takes it.
+	again := s.Resolve(core.RoleCardsDerive, "acme", "cards")
+	if again == nil || again.Name() != "cards" {
+		t.Fatalf("the role resolved to %v, want the shipped cards plugin", again)
+	}
+	if err := again.Call("deriveBlock", map[string]any{"text": "a :: b"}, nil); err != nil {
+		t.Errorf("the fallback does not answer: %v", err)
+	}
+	if got := s.Health("acme"); len(got.Fallback) != 1 || got.Fallback[0] != (Fallback{Role: core.RoleCardsDerive, Player: "cards"}) {
+		t.Errorf("Health reports %q's fallbacks as %+v, want the shipped cards plugin playing its role", "acme", got.Fallback)
+	}
+}
+
+// Three failed calls stop a plugin whole, and Health says so in the plugin's own
+// words: the state, the count and the reason, which the settings page repeats
+// rather than translates. The regression this guards: a stopped plugin nobody
+// can see — no state and no reason (issue #266, criterion 1).
+func TestHealthReportsAStoppedPluginAndItsReason(t *testing.T) {
+	s := realPlugins(t, "acme")
+	hook, err := s.Runner("acme")
+	if err != nil {
+		t.Fatalf("Runner(acme): %v", err)
+	}
+	stop(t, hook)
+
+	got := s.Health("acme")
+	if got.State != HealthDisabled || got.Failures != 3 {
+		t.Fatalf("the stopped plugin reads as %+v, want three failures and disabled", got)
+	}
+	if !strings.Contains(got.Reason, "the plugin is broken") {
+		t.Errorf("Health keeps %q, want the plugin's own reason", got.Reason)
+	}
+
+	// The list the settings page draws carries the same answer.
+	found, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+	var acme *Info
+	for i := range found {
+		if found[i].Name == "acme" {
+			acme = &found[i]
+		}
+	}
+	if acme == nil {
+		t.Fatalf("the plugin is not discovered: %+v", found)
+	}
+	if acme.Health.State != HealthDisabled || acme.Health.Failures != 3 {
+		t.Errorf("discovery reports the plugin as %+v, want it stopped", acme.Health)
+	}
+}
+
+// Re-enable is the way back: the plugin-level count goes, the runner is opened
+// again and the next call is answered. The regression this guards: a stopped
+// plugin only a restart of the app could revive (issue #266, criterion 2).
+func TestReenableOpensAStoppedPluginAgain(t *testing.T) {
+	s := realPlugins(t, "acme")
+	hook, err := s.Runner("acme")
+	if err != nil {
+		t.Fatalf("Runner(acme): %v", err)
+	}
+	stop(t, hook)
+	if err := hook.Call("deriveBlock", true, nil); !errors.Is(err, ext.ErrDisabled) {
+		t.Fatalf("a stopped runner answered %v, want ErrDisabled", err)
+	}
+
+	if err := s.Reenable("acme"); err != nil {
+		t.Fatalf("Reenable: %v", err)
+	}
+	if got := s.Health("acme"); got.State != HealthOK || got.Failures != 0 || got.Reason != "" {
+		t.Fatalf("after Re-enable the plugin reads as %+v, want it running with no count", got)
+	}
+	if err := hook.Call("deriveBlock", true, nil); err != nil {
+		t.Fatalf("the runner was not opened again: %v", err)
+	}
+}
+
+// A plugin that failed once or twice is failing, not stopped: Health reports the
+// streak with its count and its reason, and a call that succeeds clears it. The
+// regression this guards: a plugin reported as stopped before it is, so the row
+// offers a way back to one that never needed it.
+func TestHealthCountsAStreakBeforeItStops(t *testing.T) {
+	s := realPlugins(t, "acme")
+	hook, err := s.Runner("acme")
+	if err != nil {
+		t.Fatalf("Runner(acme): %v", err)
+	}
+	if got := s.Health("acme"); got.State != HealthOK || got.Failures != 0 {
+		t.Fatalf("a fresh plugin reads as %+v, want it running", got)
+	}
+
+	if err := hook.Call("deriveBlock", false, nil); err == nil {
+		t.Fatal("the plugin's own failure was answered")
+	}
+	if got := s.Health("acme"); got.State != HealthFailing || got.Failures != 1 || got.Reason == "" {
+		t.Fatalf("one failure reads as %+v, want a failing streak of one", got)
+	}
+
+	if err := hook.Call("deriveBlock", true, nil); err != nil {
+		t.Fatalf("the plugin's own answer: %v", err)
+	}
+	if got := s.Health("acme"); got.State != HealthOK || got.Failures != 0 || got.Reason != "" {
+		t.Errorf("a success left the plugin at %+v, want it running with no count", got)
+	}
+}
+
+// Re-enable starts a plugin that would not start, once: a row that offers the
+// action for a plugin Health calls failed must be a row that does something. The
+// regression this guards: an action that only clears a count, leaving a plugin
+// that never ran behind a row that says it is fine.
+func TestReenableStartsAPluginThatWouldNotStart(t *testing.T) {
+	f := newFake(t, "acme")
+	f.fails["acme"] = true
+	f.sup.Bind(nil, []string{"acme"})
+	if got := f.sup.Health("acme"); got.State != HealthFailed {
+		t.Fatalf("the plugin reads as %+v, want one that will not start", got)
+	}
+
+	f.fails["acme"] = false
+	if err := f.sup.Reenable("acme"); err != nil {
+		t.Fatalf("Reenable: %v", err)
+	}
+	if got := f.sup.Health("acme"); got.State != HealthOK || got.Reason != "" {
+		t.Errorf("after Re-enable the plugin reads as %+v, want it running", got)
+	}
+	if f.built["acme"] != 2 {
+		t.Errorf("acme was constructed %d times, want the retry to be the second", f.built["acme"])
+	}
+}
+
+// Re-enabled, a plugin a role lost falls back no longer: the next resolve answers
+// it and the row stops naming a built-in. The regression this guards: a fallback
+// that is a history rather than a state, so the page keeps saying a built-in plays
+// a role its plugin has again.
+func TestARolePlaysItsPluginAgainAfterReenable(t *testing.T) {
+	s := realPlugins(t, "acme")
+	role := s.Resolve(core.RoleCardsDerive, "acme", "cards")
+	if role == nil || role.Name() != "acme" {
+		t.Fatalf("the role resolved to %v, want acme", role)
+	}
+	stop(t, role)
+	if again := s.Resolve(core.RoleCardsDerive, "acme", "cards"); again == nil || again.Name() != "cards" {
+		t.Fatalf("the stopped plugin's role resolved to %v, want the shipped cards plugin", again)
+	}
+
+	if err := s.Reenable("acme"); err != nil {
+		t.Fatalf("Reenable: %v", err)
+	}
+	if again := s.Resolve(core.RoleCardsDerive, "acme", "cards"); again == nil || again.Name() != "acme" {
+		t.Fatalf("the re-enabled plugin's role resolved to %v, want acme", again)
+	}
+	if got := s.Health("acme"); len(got.Fallback) != 0 {
+		t.Errorf("the row still says %+v plays its role", got.Fallback)
 	}
 }
 
