@@ -21,7 +21,7 @@ func newResolver(t *testing.T) *cards.Resolver {
 		t.Fatalf("open the built-in card plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
-	return cards.New(runner, core.BuiltinTypes())
+	return cards.New(ext.HooksOf(runner), ext.ProducerOf(runner), core.BuiltinTypes())
 }
 
 func TestDeriveAnswersTypedCards(t *testing.T) {
@@ -76,7 +76,7 @@ func TestDeriveAnswersTypedBlocks(t *testing.T) {
 // A nil plugin is allowed: nothing derives, and a card reads its paragraph's
 // own words.
 func TestWithoutPlugin(t *testing.T) {
-	r := cards.New(nil, core.BuiltinTypes())
+	r := cards.New(nil, core.Producer{}, core.BuiltinTypes())
 	if _, ok := r.Derive("a :: b"); ok {
 		t.Error("no plugin answered")
 	}
@@ -164,7 +164,7 @@ func TestFaceFallsBackOnABrokenTemplate(t *testing.T) {
 	t.Cleanup(func() { _ = runner.Close() })
 	broken := core.BuiltinTypes()
 	broken[0].Front = "{{Nope"
-	r := cards.New(runner, broken)
+	r := cards.New(ext.HooksOf(runner), ext.ProducerOf(runner), broken)
 	card := core.Card{Type: core.TypeBasic,
 		Ref: core.Reference{Block: "b1"}}
 	got := r.Face(card, core.BlockSet{"b1": {ID: "b1", Text: "asked :: answered"}})

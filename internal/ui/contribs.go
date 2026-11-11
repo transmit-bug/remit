@@ -21,28 +21,14 @@ import (
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 )
 
-// CommandRunner is how a contributed command's callback is called: one hook with
-// JSON-shaped parameters and a JSON-shaped answer. *ext.JSRunner is the one the
-// app uses; a test hands in its own to count what a frame did not call.
-type CommandRunner interface {
-	Call(method string, params, out any) error
-}
-
-// CommandHook is the export a plugin answers its contributed commands and its
-// pages' data with: command({name, context}), answering either a command's
-// result or a page's node tree. One hook, because a page's data command is a
-// command (docs/specs/plugins/ui.md §5, §9). It is ext's name for the hook, so
-// the loader, the checker and the window cannot drift apart.
-const CommandHook = ext.CommandHook
-
 // pluginUI is the plugins' declared UI as the window uses it: parsed once when
 // the library opens, so a frame only reads it. Nothing here is a plugin call —
 // the runners are only reached from a handler, off the frame.
 type pluginUI struct {
 	index contrib.Index
-	// runners is the runner that answers a plugin's callbacks, by manifest name,
-	// opened on first use: a plugin with no command never starts.
-	runners map[string]CommandRunner
+	// commanders is what answers a plugin's callbacks, by manifest name, opened
+	// on first use: a plugin with no command never starts.
+	commanders map[string]ext.Commander
 	// pages is each page's state, by plugin and page id: the tree the last load
 	// left, and the reader's choices in it. A page the window dropped keeps its
 	// state until the library reopens.
@@ -80,15 +66,15 @@ func pageKey(plugin, id string) string { return plugin + "/" + id }
 func (a *App) loadContributions() {
 	area, sub := a.ui.area, a.ui.sub
 	a.ui = pluginUI{
-		runners:  map[string]CommandRunner{},
-		pages:    map[string]*pluginpage.State{},
-		pagesFor: map[string]string{},
-		loading:  map[string]bool{},
-		failures: contrib.NewFailures(),
-		problems: map[string][]string{},
-		names:    map[string]string{},
-		area:     area,
-		sub:      sub,
+		commanders: map[string]ext.Commander{},
+		pages:      map[string]*pluginpage.State{},
+		pagesFor:   map[string]string{},
+		loading:    map[string]bool{},
+		failures:   contrib.NewFailures(),
+		problems:   map[string][]string{},
+		names:      map[string]string{},
+		area:       area,
+		sub:        sub,
 	}
 	if a.lib == nil {
 		return
@@ -345,15 +331,14 @@ func (a *App) runContribution(c *ui.Context, ref contrib.CommandRef) {
 		a.runHostAction(c, host)
 		return
 	}
-	runner, err := a.runnerFor(ref.Name)
+	commander, err := a.commanderFor(ref.Name)
 	if err != nil {
 		a.contributionFailed(c, ref.Plugin, ref.Command.ID, m(c).PluginCommandFailed(a.pluginText(c, ref.Plugin, string(ref.Command.Title)), err.Error()))
 		return
 	}
-	input := map[string]any{"name": ref.Command.Action.Name, "context": a.contributionPayload()}
+	in := ext.CommandIn{Name: ref.Command.Action.Name, Context: a.contributionPayload()}
 	a.background(c, func() func(*ui.Context) {
-		var answer commandAnswer
-		err := runner.Call(CommandHook, input, &answer)
+		answer, err := commander.RunCommand(in)
 		return func(c *ui.Context) {
 			if err != nil {
 				a.contributionFailed(c, ref.Plugin, ref.Command.ID, m(c).PluginCommandFailed(a.pluginText(c, ref.Plugin, string(ref.Command.Title)), err.Error()))
@@ -365,17 +350,9 @@ func (a *App) runContribution(c *ui.Context, ref contrib.CommandRef) {
 	})
 }
 
-// commandAnswer is what a command callback answers: a result the host applies,
-// never a change to the host's state of its own.
-type commandAnswer struct {
-	Result  string `json:"result"`
-	Page    string `json:"page"`
-	Message string `json:"message"`
-}
-
 // applyCommandAnswer applies one answer's result on the UI thread: a page to
 // open, a refresh of the page on screen, or a toast.
-func (a *App) applyCommandAnswer(c *ui.Context, ref contrib.CommandRef, answer commandAnswer) {
+func (a *App) applyCommandAnswer(c *ui.Context, ref contrib.CommandRef, answer ext.CommandResult) {
 	switch answer.Result {
 	case "", "none":
 	case "navigate":
@@ -422,18 +399,19 @@ func (a *App) runHostAction(c *ui.Context, name string) {
 	}
 }
 
-// runnerFor is the runner that answers a plugin's callbacks, opened on first
-// use: a plugin that contributes a menu item costs nothing until it is asked.
-func (a *App) runnerFor(name string) (CommandRunner, error) {
-	if runner, ok := a.ui.runners[name]; ok {
-		return runner, nil
+// commanderFor is what answers a plugin's callbacks, opened on first use: a
+// plugin that contributes a menu item costs nothing until it is asked.
+func (a *App) commanderFor(name string) (ext.Commander, error) {
+	if commander, ok := a.ui.commanders[name]; ok {
+		return commander, nil
 	}
 	runner, err := a.plugins.Runner(name)
 	if err != nil {
 		return nil, err
 	}
-	a.ui.runners[name] = runner
-	return runner, nil
+	commander := ext.HooksOf(runner)
+	a.ui.commanders[name] = commander
+	return commander, nil
 }
 
 // contributionPayload is the context a callback reads: every key the contract
@@ -484,7 +462,7 @@ func (a *App) loadPage(c *ui.Context, ref contrib.PageRef, force bool) {
 	if a.ui.loading[key] {
 		return
 	}
-	runner, err := a.runnerFor(ref.Name)
+	commander, err := a.commanderFor(ref.Name)
 	if err != nil {
 		state.Err = err.Error()
 		state.Loading = false
@@ -494,10 +472,9 @@ func (a *App) loadPage(c *ui.Context, ref contrib.PageRef, force bool) {
 	state.Loading = true
 	state.Err = ""
 	a.ui.loading[key] = true
-	input := map[string]any{"name": ref.Page.Data, "context": payload}
+	in := ext.CommandIn{Name: ref.Page.Data, Context: payload}
 	a.background(c, func() func(*ui.Context) {
-		var raw json.RawMessage
-		err := runner.Call(CommandHook, input, &raw)
+		raw, err := commander.PageData(in)
 		return func(c *ui.Context) {
 			delete(a.ui.loading, key)
 			state := a.pageState(ref)
@@ -572,9 +549,9 @@ func (a *App) pluginPageView(c *ui.Context) {
 	}
 	state := a.pageState(ref)
 	key := pageKey(ref.Plugin, ref.Page.ID)
-	// A page that has been drawn before has its runner; opening one is the
+	// A page that has been drawn before has its commander; opening one is the
 	// handler's job (openPage), so a frame never starts a plugin.
-	_, ready := a.ui.runners[ref.Name]
+	_, ready := a.ui.commanders[ref.Name]
 	if ready && state.Err == "" && !a.ui.loading[key] && a.ui.pagesFor[key] != contextHash(a.contributionPayload()) {
 		a.loadPage(c, ref, false)
 	}

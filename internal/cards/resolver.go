@@ -15,13 +15,18 @@ import (
 )
 
 // Resolver derives cards from block text and renders their faces with the
-// library's types. A nil plugin is allowed: a library without a card plugin
+// library's types. A nil deriver is allowed: a library without a card plugin
 // makes no new cards, and a card reads its paragraph's own words.
 //
 // One resolver is shared by every goroutine that serves an agent API request,
 // so deriving and facing are safe to run at once.
 type Resolver struct {
-	plugin *ext.JSRunner
+	// deriver is what derives, as the capability it is: the resolver never
+	// holds a runner, and a test holds a hand-written deriver here.
+	deriver ext.Deriver
+	// producer is what every card the deriver makes is stamped with: the plugin
+	// that made it, and which build of it.
+	producer core.Producer
 	// The type tables are written by New and read-only afterwards, so a face
 	// reads them — and renders on them — without a lock.
 	types map[core.ID]core.Type
@@ -53,12 +58,15 @@ type derivation struct {
 	ok    bool
 }
 
-// New builds a resolver over the plugin and the library's types. A type whose
-// templates do not compile — a user's edit can break them — renders as the
-// field list rather than taking the review down.
-func New(plugin *ext.JSRunner, types []core.Type) *Resolver {
+// New builds a resolver over the deriver and the library's types, stamping what
+// it derives with producer. A nil deriver derives nothing, which is the one
+// fallback: no paragraph makes a new card, and a card reads its own words. A
+// type whose templates do not compile — a user's edit can break them — renders
+// as the field list rather than taking the review down.
+func New(deriver ext.Deriver, producer core.Producer, types []core.Type) *Resolver {
 	r := &Resolver{
-		plugin:   plugin,
+		deriver:  deriver,
+		producer: producer,
 		types:    make(map[core.ID]core.Type, len(types)),
 		front:    make(map[core.ID]*template.Template, len(types)),
 		back:     make(map[core.ID]*template.Template, len(types)),
@@ -92,14 +100,6 @@ type Answer struct {
 	State       core.LinkState
 }
 
-// derivedEntry is one card the plugin answered, as the extension speaks it.
-type derivedEntry struct {
-	TypeID  string            `json:"typeId"`
-	Ordinal int               `json:"ordinal"`
-	Fields  map[string]string `json:"fields"`
-	Unknown []string          `json:"unknown"`
-}
-
 // Derive asks the plugin what a text makes. ok is false when there is no
 // plugin or it failed: a paragraph then makes no new card, and nothing the
 // user sees turns red over it. The answer is stamped with the plugin's
@@ -109,7 +109,7 @@ type derivedEntry struct {
 // must not reach back into this resolver's Derive — a card plugin's runner is
 // given no host that derives.
 func (r *Resolver) Derive(text string) (cards []core.Derived, ok bool) {
-	if r == nil || r.plugin == nil {
+	if r == nil || r.deriver == nil {
 		return nil, false
 	}
 	r.mu.Lock()
@@ -142,22 +142,18 @@ func (r *Resolver) Derive(text string) (cards []core.Derived, ok bool) {
 	return r.ask(text)
 }
 
-// ask runs the plugin for one text. It takes no lock, so two texts derive at
+// ask runs the deriver for one text. It takes no lock, so two texts derive at
 // once on the runner's two runtimes rather than queueing behind each other.
 func (r *Resolver) ask(text string) ([]core.Derived, bool) {
-	types := make([]any, 0, len(r.types))
+	types := make([]ext.CardType, 0, len(r.types))
 	for _, typ := range r.types {
-		types = append(types, map[string]any{
-			"id": string(typ.ID), "fields": typ.Fields, "version": typ.Version,
-		})
+		types = append(types, ext.CardType{ID: string(typ.ID), Fields: typ.Fields, Version: typ.Version})
 	}
-	var entries []derivedEntry
-	block := map[string]any{"text": text}
-	if err := r.plugin.Call("deriveBlock", []any{block, types}, &entries); err != nil {
+	entries, err := r.deriver.DeriveBlock(ext.DeriveIn{Block: ext.Block{Text: text}, Types: types})
+	if err != nil {
 		slog.Error("remit: the card plugin could not derive", "err", err)
 		return nil, false
 	}
-	producer := core.Producer{ID: r.plugin.Identity(), Version: r.plugin.Revision()}
 	out := make([]core.Derived, 0, len(entries))
 	for _, entry := range entries {
 		id := core.ID(entry.TypeID)
@@ -168,7 +164,7 @@ func (r *Resolver) ask(text string) ([]core.Derived, bool) {
 		if len(entry.Unknown) > 0 {
 			slog.Warn("remit: fields the type does not carry were dropped", "type", entry.TypeID, "fields", entry.Unknown)
 		}
-		out = append(out, core.Derived{Type: id, Ordinal: entry.Ordinal, Fields: entry.Fields, Producer: producer})
+		out = append(out, core.Derived{Type: id, Ordinal: entry.Ordinal, Fields: entry.Fields, Producer: r.producer})
 	}
 	return out, true
 }

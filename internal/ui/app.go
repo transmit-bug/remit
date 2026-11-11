@@ -18,6 +18,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/plugin"
 	"github.com/transmit-bug/remit/internal/settings"
@@ -180,7 +181,7 @@ type App struct {
 	pluginList     []screensettings.Plugin
 	roleList       map[string]string
 	typeList       []cardtypes.Type
-	summaryWord    summaryAnswer    // what the scheduling plugin says about a session
+	summaryWord    ext.Summary      // what the scheduling plugin says about a session
 	summaryWordFor string           // the numbers that answer was given
 	resolver       *cards.Resolver  // what a paragraph asks and how a card reads, asked once per text
 	backlinks      []notes.Backlink // what points at the note open now

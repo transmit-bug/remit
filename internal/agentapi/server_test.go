@@ -317,7 +317,7 @@ func newPluginSource(t *testing.T, lib *store.Library) pluginSource {
 		t.Fatalf("open the card plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
-	return pluginSource{Library: lib, faces: cards.New(runner, lib.Types())}
+	return pluginSource{Library: lib, faces: cards.New(ext.HooksOf(runner), ext.ProducerOf(runner), lib.Types())}
 }
 
 func (s pluginSource) CreateCard(blockID core.ID) (core.Card, error) {

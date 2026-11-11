@@ -396,7 +396,7 @@ func resolver(t *testing.T, lib *store.Library) *cards.Resolver {
 		t.Fatalf("open the card plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
-	return cards.New(runner, lib.Types())
+	return cards.New(ext.HooksOf(runner), ext.ProducerOf(runner), lib.Types())
 }
 
 // blocksOf is the library's blocks as the model reads them.

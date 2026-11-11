@@ -2,10 +2,12 @@ package ui
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,27 +19,26 @@ import (
 	"github.com/transmit-bug/remit/locales"
 )
 
-// withPlugin opens a library with the card plugin given, on the library the
-// other tests seed.
-func withPlugin(t *testing.T, dir string, source string) (*App, testLibrary) {
+// withDeriver opens the seeded library with the window's card role played by a Go
+// Deriver: what a derived field renders through its type's templates, with no
+// JavaScript written and no plugin started at all — both roles are the test's, so
+// the window resolves nothing and loads no engine. The role is the function, so a
+// test that watches the window derive watches exactly this.
+func withDeriver(t *testing.T, derive func(ext.DeriveIn) ([]ext.DerivedCard, error)) *App {
 	t.Helper()
-	lib := t.TempDir()
-	seed := seedLibrary(t, lib)
-	extDir := t.TempDir()
-	manifest := `{"id":"test.cards","name":"cards","version":"1","apiVersion":1,"runtime":"js","entry":"main.js","implements":{"deriveBlock":1}}`
-	if err := os.WriteFile(filepath.Join(extDir, "extension.json"), []byte(manifest), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(extDir, "main.js"), []byte(source), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	runner, err := ext.OpenJS(extDir, nil, ext.JSLimits{Timeout: time.Second})
-	if err != nil {
-		t.Fatalf("open the test plugin: %v", err)
-	}
-	t.Cleanup(func() { _ = runner.Close() })
-	return NewApp(Options{LibraryDir: lib, Plugins: pluginsWith(t, t.TempDir(), map[string]ext.Hook{"cards": runner})}), seed
+	dir := t.TempDir()
+	seedLibrary(t, dir)
+	a := NewApp(Options{LibraryDir: dir, WithoutCards: true, WithoutScheduler: true})
+	a.cards = &cardPlugin{deriver: deriverFunc(derive), producer: core.Producer{ID: "test.cards", Version: "1"}}
+	a.reload()
+	return a
 }
+
+// deriverFunc is a card plugin with no engine behind it: deriving is the whole of
+// what the window asks, so a function is the plugin.
+type deriverFunc func(ext.DeriveIn) ([]ext.DerivedCard, error)
+
+func (f deriverFunc) DeriveBlock(in ext.DeriveIn) ([]ext.DerivedCard, error) { return f(in) }
 
 // pluginsWith is a supervisor that answers the runners given, by manifest name,
 // and builds the app's own for everything else: a window driven by a fake plugin
@@ -59,15 +60,20 @@ func pluginsWith(t *testing.T, dir string, runners map[string]ext.Hook) *plugin.
 // templates: the host draws the template's answer over the plugin's fields,
 // not anything the host would have said itself.
 func TestRenderedCardComesFromThePlugin(t *testing.T) {
-	a, _ := withPlugin(t, "", `
-export function deriveBlock(block) {
-  const text = (block && block.text) || "";
-  const at = text.indexOf("::");
-  if (at < 0) return [];
-  return [{ typeId: "remit.basic", ordinal: 0,
-    fields: { Front: "PLUGIN " + text.slice(0, at).trim(), Back: text.slice(at + 2).trim() } }];
-}
-`)
+	a := withDeriver(t, func(in ext.DeriveIn) ([]ext.DerivedCard, error) {
+		text := in.Block.Text
+		at := strings.Index(text, "::")
+		if at < 0 {
+			return nil, nil
+		}
+		return []ext.DerivedCard{{
+			TypeID: string(core.TypeBasic), Ordinal: 0,
+			Fields: map[string]string{
+				"Front": "PLUGIN " + strings.TrimSpace(text[:at]),
+				"Back":  strings.TrimSpace(text[at+2:]),
+			},
+		}}, nil
+	})
 	tt := ui.NewTester(a.View, 1024, 720)
 	settle(tt)
 	recallQueue(tt)
@@ -79,38 +85,28 @@ export function deriveBlock(block) {
 	}
 }
 
-// A plugin that throws, or loops past its budget, does not stop the review: the
-// card reads its paragraph's own words.
-func TestBrokenPluginFallsBackToTheParagraph(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		source string
-	}{
-		{"throws", `export function deriveBlock() { throw new Error("no"); }`},
-		{"loops", `export function deriveBlock() { for (;;) {} }`},
-		{"answers with nonsense", `export function deriveBlock() { return 42; }`},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			a, _ := withPlugin(t, "", tc.source)
-			tt := ui.NewTester(a.View, 1024, 720)
-			settle(tt)
-			recallQueue(tt)
-			tt.Key(0, ui.KeySpace)
-			tt.Advance(320 * time.Millisecond)
+// A derivation that fails does not stop the review: the error is the window's to
+// swallow, so the card reads its paragraph's own words and the queue still moves.
+// The regression this guards: a plugin's failure on screen — a blank card, or a
+// review that will not go on.
+func TestFailingDerivationFallsBackToTheParagraph(t *testing.T) {
+	a := withDeriver(t, func(ext.DeriveIn) ([]ext.DerivedCard, error) {
+		return nil, errors.New("the card plugin threw")
+	})
+	tt := ui.NewTester(a.View, 1024, 720)
+	settle(tt)
+	recallQueue(tt)
+	tt.Key(0, ui.KeySpace)
+	tt.Advance(320 * time.Millisecond)
 
-			// The card still reads its paragraph, and the queue still moves.
-			if !tt.HasText("reviewing just before you forget strengthens recall.") {
-				t.Fatalf("the card reads nothing; texts %q", tt.Texts())
-			}
-			tt.Key(0, ui.Key3) // Good
-			tt.Advance(320 * time.Millisecond)
-			if !tt.HasText("3 cards left") && !tt.HasText("2 cards left") {
-				t.Errorf("grading did not move the queue on; texts %q", tt.Texts())
-			}
-			if a.cards == nil {
-				t.Error("the plugin was dropped rather than reported")
-			}
-		})
+	// The card still reads its paragraph, and the queue still moves.
+	if !tt.HasText("reviewing just before you forget strengthens recall.") {
+		t.Fatalf("the card reads nothing; texts %q", tt.Texts())
+	}
+	tt.Key(0, ui.Key3) // Good
+	tt.Advance(320 * time.Millisecond)
+	if !tt.HasText("3 cards left") && !tt.HasText("2 cards left") {
+		t.Errorf("grading did not move the queue on; texts %q", tt.Texts())
 	}
 }
 

@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"encoding/base64"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -10,8 +9,8 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
-	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/suggest"
+	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 )
 
@@ -108,8 +107,9 @@ func (a *App) importWithPluginEntry(c *ui.Context, ref importerRef) {
 }
 
 // importWithPlugin hands one file to a plugin's importFile hook and applies
-// what survives the host's checks. The runner is the same door a contributed
-// command opens; the hook's answer is suggestions, and Apply is the write.
+// what survives the host's checks. The plugin is the same door a contributed
+// command opens; the hook asks for the file as the host's shape — the bytes, not
+// base64 — and answers suggestions, and Apply is the write.
 func (a *App) importWithPlugin(c *ui.Context, ref importerRef, path string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -121,14 +121,18 @@ func (a *App) importWithPlugin(c *ui.Context, ref importerRef, path string) {
 		a.report(c, "start the importer plugin", err)
 		return
 	}
-	answer, err := callImporter(runner, ref.Entry.Format, filepath.Base(path), data)
+	importer := ext.HooksOf(runner)
+	answer, err := importer.ImportFile(ext.ImportIn{Data: data, Name: filepath.Base(path), Format: ref.Entry.Format})
 	if err != nil {
 		slog.Error("remit: a plugin's import failed", "plugin", ref.Plugin, "file", path, "err", err)
 		c.Toast(m(c).ImportFailed(err.Error()))
 		return
 	}
-	producer := core.Producer{ID: pluginIdentity(runner, ref.Plugin), Version: pluginRevision(runner)}
-	report, err := suggest.Apply(a.lib, answer, producer)
+	producer := ext.ProducerOf(runner)
+	if producer.ID == "" {
+		producer.ID = ref.Plugin
+	}
+	report, err := suggest.Apply(a.lib, suggestions(answer), producer)
 	if err != nil {
 		slog.Error("remit: an import's suggestions did not apply", "plugin", ref.Plugin, "err", err)
 		c.Toast(m(c).ImportFailed(err.Error()))
@@ -140,61 +144,18 @@ func (a *App) importWithPlugin(c *ui.Context, ref importerRef, path string) {
 	c.Toast(m(c).PluginImportReport(report.Notes, report.Cards, report.Dropped))
 }
 
-// callImporter asks one plugin what one file suggests: the wire shape of
-// spec §5's importFile, base64 for the bytes so any runtime agrees on them.
-func callImporter(runner CommandRunner, format, name string, data []byte) (suggest.Suggestions, error) {
-	var answered struct {
-		Notes []struct {
-			Title  string   `json:"title"`
-			Blocks []string `json:"blocks"`
-		} `json:"notes"`
-		Cards []struct {
-			Note    int               `json:"note"`
-			Block   int               `json:"block"`
-			TypeID  string            `json:"typeId"`
-			Ordinal int               `json:"ordinal"`
-			Fields  map[string]string `json:"fields"`
-		} `json:"cards"`
-		Warnings []string `json:"warnings"`
-	}
-	params := map[string]any{
-		"name":   name,
-		"data":   base64.StdEncoding.EncodeToString(data),
-		"format": format,
-	}
-	if err := runner.Call("importFile", params, &answered); err != nil {
-		return suggest.Suggestions{}, err
-	}
-	out := suggest.Suggestions{Warnings: answered.Warnings}
-	for _, note := range answered.Notes {
+// suggestions is an importer's answer as the host applies it: what a plugin
+// suggested, in the shape the host's own check reads.
+func suggestions(answer ext.ImportSuggestions) suggest.Suggestions {
+	out := suggest.Suggestions{Warnings: answer.Warnings}
+	for _, note := range answer.Notes {
 		out.Notes = append(out.Notes, suggest.Note{Title: note.Title, Blocks: note.Blocks})
 	}
-	for _, card := range answered.Cards {
+	for _, card := range answer.Cards {
 		out.Cards = append(out.Cards, suggest.Card{
 			Note: card.Note, Block: card.Block, Type: card.TypeID,
 			Ordinal: card.Ordinal, Fields: card.Fields,
 		})
 	}
-	return out, nil
-}
-
-// pluginIdentity is the identity a producer stamp carries for a plugin the
-// role seams did not open: the manifest id, which is what a contributed
-// command's plugin is known by here.
-func pluginIdentity(runner CommandRunner, name string) string {
-	if hook, ok := runner.(interface{ Identity() string }); ok {
-		if id := hook.Identity(); id != "" {
-			return id
-		}
-	}
-	return name
-}
-
-// pluginRevision is the runner's revision when it carries one, else empty: a
-// stamp of which build of the plugin wrote.
-func pluginRevision(runner CommandRunner) string {
-	if hook, ok := runner.(interface{ Revision() string }); ok {
-		return hook.Revision()
-	}
-	return ""
+	return out
 }

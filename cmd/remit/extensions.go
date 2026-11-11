@@ -19,20 +19,30 @@ import (
 // runners reach the library through the provider Bind gave them, resolved per
 // capability call, so one started before this library opened acts on it too.
 func startExtensions(lib *store.Library, app *appui.App, plugins *plugin.Supervisor) {
-	runners := plugins.Enabled()
+	sinks := make([]extensionSink, 0, len(plugins.Enabled()))
+	for _, runner := range plugins.Enabled() {
+		sinks = append(sinks, extensionSink{name: runner.Name(), EventSink: ext.HooksOf(runner)})
+	}
 	// Events are notifications, not vetoes: a failing extension is logged and
 	// the review goes on. The handler is set even with no runner, because the
 	// window's contributed pages read the library's events as their refresh.
 	lib.SetEventHandler(func(ev store.Event) {
-		for _, r := range runners {
-			if err := r.Call("on_event", map[string]any{"kind": ev.Kind, "id": string(ev.ID)}, nil); err != nil {
-				slog.Warn("remit: extension event failed", "extension", r.Name(), "err", err)
+		for _, sink := range sinks {
+			if err := sink.OnEvent(ext.Event{Kind: ev.Kind, ID: string(ev.ID)}); err != nil {
+				slog.Warn("remit: extension event failed", "extension", sink.name, "err", err)
 			}
 		}
 		if app != nil {
 			app.LibraryEvent()
 		}
 	})
+}
+
+// extensionSink is one enabled plugin as events are told to it: the name the log
+// reports, and what answers.
+type extensionSink struct {
+	name string
+	ext.EventSink
 }
 
 // hostFor is the library the plugins act on, as the supervisor binds it: the

@@ -142,8 +142,7 @@ type fakeRunner struct {
 }
 
 func (f *fakeRunner) Call(method string, params, out any) error {
-	input, _ := params.(map[string]any)
-	name, _ := input["name"].(string)
+	name := commandName(params)
 
 	f.mu.Lock()
 	f.names = append(f.names, name)
@@ -169,6 +168,20 @@ func (f *fakeRunner) Call(method string, params, out any) error {
 		return nil
 	}
 	return json.Unmarshal([]byte(raw), out)
+}
+
+// commandName is the callback a hook's parameters name: the host's own input shape
+// for a command, and the object a test wrote by hand when it asked the runner
+// directly.
+func commandName(params any) string {
+	switch in := params.(type) {
+	case ext.CommandIn:
+		return in.Name
+	case map[string]any:
+		name, _ := in["name"].(string)
+		return name
+	}
+	return ""
 }
 
 // setFailure makes a callback answer or throw, as the plugin's next run does.

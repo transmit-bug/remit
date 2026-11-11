@@ -10,7 +10,6 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
-	"github.com/transmit-bug/remit/internal/cards"
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/schedule"
@@ -376,7 +375,7 @@ func (a *App) reload() {
 	if a.lib == nil {
 		return
 	}
-	a.resolver = cards.New(a.cards.engine(), a.lib.Types())
+	a.resolver = a.cards.resolver(a.lib.Types())
 	a.data = newLibraryData(a.lib.Notes(), a.lib.Cards())
 	a.loadTypes()
 	a.excerpted = a.excerptedBlocks()

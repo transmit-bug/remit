@@ -3,6 +3,8 @@ package ext
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/transmit-bug/remit/internal/core"
 )
 
 // The hook ids: the export a plugin writes. The vocabulary (HookContracts) and
@@ -229,6 +231,26 @@ type hooks struct{ c Caller }
 // The runner itself stays where it belongs — what leaves the seam is what a
 // plugin can do, not the thing that runs it.
 func HooksOf(c Caller) Hooks { return hooks{c} }
+
+// stamped is a caller that can say who it is: the manifest id and the version of
+// the build that answered. A js runner is one; a test's stand-in need not be.
+type stamped interface {
+	Identity() string
+	Revision() string
+}
+
+// ProducerOf answers who a caller is, for the cards and notes credited to it: the
+// identity stamp that travels with the capabilities, so that no caller needs the
+// runner behind them. A caller that cannot say answers the empty stamp — the
+// host's own, which is what a card the app made carries — rather than a stamp it
+// would be wrong to write.
+func ProducerOf(c Caller) core.Producer {
+	stamped, ok := c.(stamped)
+	if !ok {
+		return core.Producer{}
+	}
+	return core.Producer{ID: stamped.Identity(), Version: stamped.Revision()}
+}
 
 // DeriveBlock answers the cards a text is worth, in the order they are numbered.
 func (h hooks) DeriveBlock(in DeriveIn) ([]DerivedCard, error) {

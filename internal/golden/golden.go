@@ -141,7 +141,7 @@ func faces() []Face {
 		panic("golden: the card plugin did not start: " + err.Error())
 	}
 	defer runner.Close()
-	resolver := cards.New(runner, core.BuiltinTypes())
+	resolver := cards.New(ext.HooksOf(runner), ext.ProducerOf(runner), core.BuiltinTypes())
 
 	out := make([]Face, 0, len(cases))
 	for _, c := range cases {
@@ -314,7 +314,7 @@ func excerpts() []Excerpt {
 		panic("golden: the card plugin did not start: " + err.Error())
 	}
 	defer runner.Close()
-	resolver := cards.New(runner, core.BuiltinTypes())
+	resolver := cards.New(ext.HooksOf(runner), ext.ProducerOf(runner), core.BuiltinTypes())
 
 	out := make([]Excerpt, 0, len(cases))
 	for _, c := range cases {

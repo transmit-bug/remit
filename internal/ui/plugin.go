@@ -10,59 +10,60 @@ import (
 )
 
 // cardPlugin is the extension that answers what a paragraph asks, as the window
-// holds it: the runner the supervisor resolved for the role. It is an ordinary
-// extension — the one the app ships is loaded through the same loader and
-// capability rules as any other (ADR 0006/0007) — and the window never starts
-// one of its own.
+// holds it: the capability the supervisor resolved for the role, and the stamp
+// its cards carry. It is an ordinary extension — the one the app ships is loaded
+// through the same loader and capability rules as any other (ADR 0006/0007) — and
+// the window never starts one of its own.
 //
 // A library without one still works: no paragraph makes a new card, and a card
 // reads its paragraph's own words.
 type cardPlugin struct {
-	runner plugin.Role
+	deriver  ext.Deriver
+	producer core.Producer
 }
 
 // openCards is the card role as the window draws with it, or none when the role
 // resolved to nothing: the supervisor's answer, never a plugin built here.
-func openCards(runner plugin.Role) *cardPlugin {
-	if runner == nil {
+func openCards(role plugin.Role) *cardPlugin {
+	if role == nil {
 		return nil
 	}
-	return &cardPlugin{runner: runner}
+	return &cardPlugin{deriver: ext.HooksOf(role), producer: ext.ProducerOf(role)}
 }
 
-// engine is the runner behind the role, as the card resolver takes it: a role
-// is js only (internal/plugin enforces it), so it is the engine's own runner.
-// The agent API and a plugin's cards:write derive through the same one, which
-// the supervisor answers for the card role (#267), so which plugin derives is
-// answered once and every card is stamped alike.
-func (c *cardPlugin) engine() *ext.JSRunner {
+// resolver is what the window derives and faces cards through. No card plugin is
+// a resolver that derives nothing and stamps nothing, which is where the one
+// fallback lives: internal/cards makes no card and a card reads its own words.
+func (c *cardPlugin) resolver(types []core.Type) *cards.Resolver {
 	if c == nil {
-		return nil
+		return cards.New(nil, core.Producer{}, types)
 	}
-	runner, _ := c.runner.(*ext.JSRunner)
-	return runner
+	return cards.New(c.deriver, c.producer, types)
 }
 
 // schedulerPlugin is the extension that decides scheduling policy and says what
 // a finished session is worth: the arithmetic stays the app's (ADR 0007).
 type schedulerPlugin struct {
-	runner plugin.Role
+	scheduler  ext.Scheduler
+	summariser ext.Summariser
 }
 
 // openScheduler is the scheduling role as the window draws with it, or none when
 // the role resolved to nothing.
-func openScheduler(runner plugin.Role) *schedulerPlugin {
-	if runner == nil {
+func openScheduler(role plugin.Role) *schedulerPlugin {
+	if role == nil {
 		return nil
 	}
-	return &schedulerPlugin{runner: runner}
+	hooks := ext.HooksOf(role)
+	return &schedulerPlugin{scheduler: hooks, summariser: hooks}
 }
 
-// policy is what the plugin schedules with, and how it names itself.
+// policy is ext's answer as the window holds it: what the plugin schedules with,
+// and how it names itself.
 type policy struct {
-	Family    string  `json:"family"`
-	Version   string  `json:"version"`
-	Retention float64 `json:"retention"`
+	Family    string
+	Version   string
+	Retention float64
 }
 
 // Policy answers the plugin's policy, and false when it has none to give: the
@@ -71,12 +72,13 @@ func (p *schedulerPlugin) Policy() (policy, bool) {
 	if p == nil {
 		return policy{}, false
 	}
-	var answered policy
-	if err := p.runner.Call("policy", nil, &answered); err != nil {
+	answered, err := p.scheduler.Policy()
+	if err != nil {
 		slog.Error("remit: the scheduler plugin answered no policy", "err", err)
 		return policy{}, false
 	}
-	return answered, answered.Family != ""
+	return policy{Family: answered.Family, Version: answered.Version, Retention: answered.Retention},
+		answered.Family != ""
 }
 
 // Identity is what a review record carries: the family and version that
@@ -91,22 +93,15 @@ func (p policy) Identity() string {
 	return p.Family + "-" + p.Version
 }
 
-// summary is what a finished session is worth, as a plugin may add to it.
-type summaryAnswer struct {
-	Tone  string   `json:"tone"`
-	Lines []string `json:"lines"`
-}
-
 // SummaryOf asks what the session is worth saying beyond its numbers.
-func (p *schedulerPlugin) SummaryOf(reviewed, dueTomorrow int, accuracy float64) (summaryAnswer, bool) {
+func (p *schedulerPlugin) SummaryOf(reviewed, dueTomorrow int, accuracy float64) (ext.Summary, bool) {
 	if p == nil {
-		return summaryAnswer{}, false
+		return ext.Summary{}, false
 	}
-	var answered summaryAnswer
-	params := map[string]any{"reviewed": reviewed, "dueTomorrow": dueTomorrow, "accuracy": accuracy}
-	if err := p.runner.Call("summary", params, &answered); err != nil {
+	answered, err := p.summariser.Summary(ext.SummaryIn{Reviewed: reviewed, DueTomorrow: dueTomorrow, Accuracy: accuracy})
+	if err != nil {
 		slog.Error("remit: the scheduler plugin answered no summary", "err", err)
-		return summaryAnswer{}, false
+		return ext.Summary{}, false
 	}
 	return answered, true
 }

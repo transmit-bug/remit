@@ -165,9 +165,13 @@ func (s *Supervisor) CardResolver(types []core.Type) *cards.Resolver {
 	s.mu.Lock()
 	runner := s.cardRunnerLocked()
 	s.mu.Unlock()
+	if runner == nil {
+		return cards.New(nil, core.Producer{}, types)
+	}
 	// Built outside the lock: the resolver compiles the library's templates, and
-	// no other caller waits on that.
-	return cards.New(runner, types)
+	// no other caller waits on that. What leaves the supervisor is the capability
+	// and the stamp its cards carry, never the runner.
+	return cards.New(ext.HooksOf(runner), ext.ProducerOf(runner), types)
 }
 
 // cardRunnerLocked is the runner the card role answers, nil when nothing plays
