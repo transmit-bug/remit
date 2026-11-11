@@ -110,7 +110,7 @@ func (a *App) openNoteAt(c *ui.Context, note, block core.ID) {
 		}
 	}
 	a.notes.Selected = string(note)
-	a.setArea(areaWrite, subNotes)
+	a.goTo(areaWrite, subNotes)
 	a.notes.ShowAt(paragraph)
 }
 

@@ -259,9 +259,7 @@ func (a *App) startReview() {
 	if a.review.Remaining() == 0 {
 		return
 	}
-	a.session = sessionReview
-	a.syncMode()
-	a.loadCurrent()
+	a.enterSession(sessionReview)
 }
 
 // showCard enters the review session on one card, which is the whole queue:
@@ -272,14 +270,14 @@ func (a *App) showCard(id core.ID) {
 		return
 	}
 	// The card opens over the queue it belongs to, so leaving the session lands
-	// on the page that holds it.
+	// on the page that holds it, and going back once more returns to the table
+	// it was chosen from.
+	a.pushPlace(place{a.area, a.sub})
 	a.setArea(areaRecall, subRecallQueue)
 	a.review.Reset()
 	a.review.Only(id)
 	a.failed = nil
-	a.session = sessionReview
-	a.syncMode()
-	a.loadCurrent()
+	a.enterSession(sessionReview)
 }
 
 // reviewSelected enters the review session with exactly the rows the card table
@@ -293,9 +291,7 @@ func (a *App) reviewSelected(ids []core.ID) {
 	a.review.Reset()
 	a.review.OnlyMany(ids)
 	a.failed = nil
-	a.session = sessionReview
-	a.syncMode()
-	a.loadCurrent()
+	a.enterSession(sessionReview)
 }
 
 // reviewNote narrows the session to one note and enters it: what a queue row
@@ -1104,7 +1100,7 @@ func (a *App) openRow(id core.ID) {
 	}
 	if note, ok := a.data.noteOfBlock(card.Ref.Block); ok {
 		a.notes.Selected = string(note)
-		a.setMode(modeNotes)
+		a.goTo(areaWrite, subNotes)
 		return
 	}
 	a.showCard(card.ID)

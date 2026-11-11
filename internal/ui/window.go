@@ -153,12 +153,12 @@ func (a *App) shortcuts(c *ui.Context) {
 		return
 	}
 	c.OnShortcut(ui.Cmd, ui.KeyK, func() { a.openPalette(c) })
-	c.OnShortcut(ui.Cmd, ui.Key1, func() { a.setArea(areaToday, subNone) })
-	c.OnShortcut(ui.Cmd, ui.Key2, func() { a.setArea(areaWrite, defaultSub(areaWrite)) })
-	c.OnShortcut(ui.Cmd, ui.Key3, func() { a.setArea(areaRead, subReadQueue) })
-	c.OnShortcut(ui.Cmd, ui.Key4, func() { a.setArea(areaRecall, subRecallQueue) })
-	c.OnShortcut(ui.Cmd, ui.Key5, func() { a.setArea(areaStats, subStatsOverview) })
-	c.OnShortcut(ui.Cmd, ui.Key6, func() { a.setArea(areaSettings, subSettingsAppearance) })
+	c.OnShortcut(ui.Cmd, ui.Key1, func() { a.goTo(areaToday, subNone) })
+	c.OnShortcut(ui.Cmd, ui.Key2, func() { a.goTo(areaWrite, defaultSub(areaWrite)) })
+	c.OnShortcut(ui.Cmd, ui.Key3, func() { a.goTo(areaRead, subReadQueue) })
+	c.OnShortcut(ui.Cmd, ui.Key4, func() { a.goTo(areaRecall, subRecallQueue) })
+	c.OnShortcut(ui.Cmd, ui.Key5, func() { a.goTo(areaStats, subStatsOverview) })
+	c.OnShortcut(ui.Cmd, ui.Key6, func() { a.goTo(areaSettings, subSettingsAppearance) })
 	c.OnShortcut(ui.Cmd, ui.KeyF, func() {
 		if a.documentOpen() && a.notes.Draft.ID != "" {
 			// The notebook's find looks in the note that is open; the library's
@@ -211,8 +211,8 @@ func (a *App) shortcuts(c *ui.Context) {
 		c.OnShortcut(0, ui.KeyU, func() { a.undo(c) })
 		c.OnShortcut(0, ui.KeyS, func() { a.suspendCurrent(c) })
 		c.OnShortcut(0, ui.KeyE, a.editCurrent)
-		// Escape leaves the session for the queue it was entered from.
-		c.OnShortcut(0, ui.KeyEscape, func() { a.setArea(areaRecall, subRecallQueue) })
+		// Escape leaves the session for the page it was entered from.
+		c.OnShortcut(0, ui.KeyEscape, func() { a.goBack() })
 		return
 	}
 
@@ -235,9 +235,12 @@ func (a *App) shortcuts(c *ui.Context) {
 		c.OnShortcut(0, ui.KeyD, func() { a.endCurrentReading(c, reading.DismissDecision) })
 		c.OnShortcut(0, ui.KeyP, func() { a.endCurrentReading(c, reading.PostponeDecision) })
 		c.OnShortcut(0, ui.KeyM, a.editCurrentReading)
-		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
-	case modeBrowse, modeStats, modePlugin:
-		c.OnShortcut(0, ui.KeyEscape, func() { a.setMode(modeNotes) })
+	}
+	// Below the overlays — each of which takes the keyboard while it shows —
+	// Escape is one ladder: the session, then the page, then the area's first
+	// page.
+	if a.session != sessionNone || a.area != areaSettings {
+		c.OnShortcut(0, ui.KeyEscape, func() { a.escape() })
 	}
 }
 

@@ -312,7 +312,7 @@ func TestPaletteCommandsForReading(t *testing.T) {
 		t.Fatalf("the reading queue = %+v, want the note that was open", queued)
 	}
 
-	a.setMode(modeNotes)
+	a.goTo(areaWrite, subNotes)
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyK)
 	if err := tt.Click(msgs.ActionReading()); err != nil {

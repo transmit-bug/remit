@@ -32,7 +32,7 @@ func (a *App) notesDeps(c *ui.Context) notes.Deps {
 		Inspector:  a.blockInspector,
 		Due:        func() int { return a.review.Remaining() },
 		Reload:     a.reload,
-		OpenReview: func() { a.setMode(modeReview) },
+		OpenReview: func() { a.goTo(areaRecall, subRecallQueue) },
 		NewNote:    a.newNote,
 		Templates:  a.noteTemplates,
 		NewFromTemplate: func(c *ui.Context, id core.ID) {
@@ -90,7 +90,7 @@ func (a *App) notesDeps(c *ui.Context) notes.Deps {
 // switching to the notebook when another screen was up.
 func (a *App) showPanel(tab notes.PanelTab) {
 	if a.mode != modeNotes {
-		a.setMode(modeNotes)
+		a.goTo(areaWrite, subNotes)
 	}
 	a.notes.ShowPanel(tab)
 }
@@ -191,7 +191,7 @@ func (a *App) newNote(c *ui.Context) {
 	a.reload()
 	a.notes.Selected = string(note.ID)
 	a.notes.FocusTitle()
-	a.setMode(modeNotes)
+	a.goTo(areaWrite, subNotes)
 }
 
 // noteTemplates lists the library's note templates from the snapshot: the
@@ -224,7 +224,7 @@ func (a *App) newNoteFromTemplate(c *ui.Context, templateID core.ID) {
 	a.reload()
 	a.notes.Selected = string(note.ID)
 	a.notes.FocusTitle()
-	a.setMode(modeNotes)
+	a.goTo(areaWrite, subNotes)
 }
 
 // renameNote writes a note's new title from its row. Nothing moves on disk: the
@@ -283,7 +283,7 @@ func (a *App) openDailyNote(c *ui.Context) {
 	for _, note := range a.data.notes {
 		if note.Title == title {
 			a.notes.Selected = string(note.ID)
-			a.setMode(modeNotes)
+			a.goTo(areaWrite, subNotes)
 			return
 		}
 	}
@@ -299,7 +299,7 @@ func (a *App) openDailyNote(c *ui.Context) {
 	a.reload()
 	a.notes.Selected = string(note.ID)
 	a.notes.FocusTitle()
-	a.setMode(modeNotes)
+	a.goTo(areaWrite, subNotes)
 }
 
 // editNote opens the note a card's block belongs to. A lost card has no note
@@ -310,7 +310,7 @@ func (a *App) editNote(card core.Card) {
 		return
 	}
 	a.notes.Selected = string(note)
-	a.setMode(modeNotes)
+	a.goTo(areaWrite, subNotes)
 }
 
 // blockBadges is the paragraph gutter's badges: how many cards each paragraph

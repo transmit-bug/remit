@@ -76,8 +76,8 @@ func (a *App) readingDeps(c *ui.Context) reading.Deps {
 		EditNote: func(id core.ID) {
 			a.openNote(id)
 		},
-		Review: func() { a.setMode(modeReview) },
-		Home:   func() { a.setMode(modeNotes) },
+		Review: func() { a.goTo(areaRecall, subRecallQueue) },
+		Home:   func() { a.goBack() },
 	}
 }
 
@@ -260,9 +260,7 @@ func (a *App) startReading(id core.ID) {
 	if a.reading.Remaining() == 0 {
 		return
 	}
-	a.session = sessionReading
-	a.syncMode()
-	a.loadCurrent()
+	a.enterSession(sessionReading)
 }
 
 // endCurrentReading is the key form of the session's terminal actions: the same
@@ -372,7 +370,7 @@ func (a *App) openNote(id core.ID) {
 		return
 	}
 	a.notes.Selected = string(id)
-	a.setMode(modeNotes)
+	a.goTo(areaWrite, subNotes)
 }
 
 // openNoteID is the note the notebook has open, if any: what a command that

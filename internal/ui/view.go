@@ -196,7 +196,7 @@ func (a *App) selectRailItem(c *ui.Context, item shell.Area) {
 	}
 	for _, area := range []areaID{areaToday, areaWrite, areaRead, areaRecall, areaStats, areaSettings} {
 		if areaName(area) == item {
-			a.setArea(area, defaultSub(area))
+			a.goTo(area, defaultSub(area))
 			return
 		}
 	}
@@ -262,8 +262,8 @@ func (a *App) crumbs(c *ui.Context) []string {
 // today, and an area is that area's first page.
 func (a *App) chooseCrumb(index int) {
 	if index == 0 {
-		a.setArea(areaToday, subNone)
+		a.goTo(areaToday, subNone)
 		return
 	}
-	a.setArea(a.area, defaultSub(a.area))
+	a.goTo(a.area, defaultSub(a.area))
 }

@@ -128,6 +128,7 @@ func (a *App) apply(lib *store.Library, dir string) {
 	a.welcome.Failed = nil
 	a.page = contrib.PageRef{}
 	a.area, a.sub, a.session = areaToday, subNone, sessionNone
+	a.back = a.back[:0]
 	a.syncMode()
 	a.review.Reset()
 	a.loadContributions()

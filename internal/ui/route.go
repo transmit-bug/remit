@@ -9,7 +9,7 @@ func (a *App) ShowNote(id core.ID) {
 	for _, note := range a.data.notes {
 		if note.ID == id {
 			a.notes.Selected = string(id)
-			a.setArea(areaWrite, subNotes)
+			a.land(areaWrite, subNotes)
 			return
 		}
 	}
@@ -22,37 +22,40 @@ func (a *App) ShowCard(id core.ID) {
 	if _, ok := a.data.byID[id]; !ok {
 		return
 	}
+	// A link from outside has no page behind it: the card's own queue is what
+	// back returns to.
+	a.back = a.back[:0]
 	a.showCard(id)
 }
 
 // ShowToday opens the window on today.
 func (a *App) ShowToday() {
 	a.reload()
-	a.setArea(areaToday, subNone)
+	a.land(areaToday, subNone)
 }
 
 // ShowRead opens the read area's queue: the notes that are due now.
 func (a *App) ShowRead() {
 	a.reload()
-	a.setArea(areaRead, subReadQueue)
+	a.land(areaRead, subReadQueue)
 }
 
 // ShowRecall opens the recall area's queue: today's cards.
 func (a *App) ShowRecall() {
 	a.reload()
-	a.setArea(areaRecall, subRecallQueue)
+	a.land(areaRecall, subRecallQueue)
 }
 
 // ShowQueue enters the recall queue, the link remit://queue has always named.
 func (a *App) ShowQueue() {
 	a.reload()
-	a.setArea(areaRecall, subRecallQueue)
+	a.land(areaRecall, subRecallQueue)
 }
 
 // ShowReading enters the reading queue, with the notes that are due now.
 func (a *App) ShowReading() {
 	a.reload()
-	a.setArea(areaRead, subReadQueue)
+	a.land(areaRead, subReadQueue)
 }
 
 // Search shows the write area's search page on a query from outside the window
@@ -60,7 +63,7 @@ func (a *App) ShowReading() {
 // state up, which says the search ran.
 func (a *App) Search(query string) {
 	a.notes.SearchQuery = query
-	a.setArea(areaWrite, subSearch)
+	a.land(areaWrite, subSearch)
 	a.reload()
 	a.notes.FocusSearch()
 }

@@ -75,11 +75,11 @@ func (a *App) openPalette(c *ui.Context) {
 func (a *App) paletteActions(c *ui.Context) []paletteAction {
 	msgs := m(c)
 	actions := []paletteAction{
-		{label: msgs.ActionReviewCards(), run: func() { a.setMode(modeReview) }},
-		{label: msgs.ActionReading(), run: func() { a.setMode(modeReading) }},
-		{label: msgs.ActionEditNotes(), run: func() { a.setMode(modeNotes) }},
-		{label: msgs.BrowseTitle(), run: func() { a.setMode(modeBrowse) }},
-		{label: msgs.StatsTitle(), run: func() { a.setMode(modeStats) }},
+		{label: msgs.ActionReviewCards(), run: func() { a.goTo(areaRecall, subRecallQueue) }},
+		{label: msgs.ActionReading(), run: func() { a.goTo(areaRead, subReadQueue) }},
+		{label: msgs.ActionEditNotes(), run: func() { a.goTo(areaWrite, subNotes) }},
+		{label: msgs.BrowseTitle(), run: func() { a.goTo(areaRecall, subRecallCards) }},
+		{label: msgs.StatsTitle(), run: func() { a.goTo(areaStats, subStatsOverview) }},
 		{label: msgs.NewNote(), run: func() { a.newNote(c) }},
 		{label: msgs.OpenSettings(), run: func() { a.openSettings() }},
 	}

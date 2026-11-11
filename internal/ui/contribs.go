@@ -408,13 +408,13 @@ func (a *App) runHostAction(c *ui.Context, name string) {
 	case "remit.command.openSettings":
 		a.openSettings()
 	case "remit.command.reviewCards":
-		a.setMode(modeReview)
+		a.goTo(areaRecall, subRecallQueue)
 	case "remit.command.editNotes":
-		a.setMode(modeNotes)
+		a.goTo(areaWrite, subNotes)
 	case "remit.command.browse":
-		a.setMode(modeBrowse)
+		a.goTo(areaRecall, subRecallCards)
 	case "remit.command.stats":
-		a.setMode(modeStats)
+		a.goTo(areaStats, subStatsOverview)
 	case "remit.command.newNote":
 		a.newNote(c)
 	case "remit.command.makeCard":
@@ -475,6 +475,9 @@ func (a *App) openPage(c *ui.Context, ref contrib.PageRef) {
 		return
 	}
 	moved := pageArea(a.page) != pageArea(ref)
+	if moved {
+		a.pushPlace(place{a.area, a.sub})
+	}
 	a.page = ref
 	a.setArea(areaPlugin, subNone)
 	if moved {

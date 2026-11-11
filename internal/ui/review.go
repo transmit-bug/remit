@@ -117,7 +117,7 @@ func (a *App) reviewDeps(c *ui.Context) review.Deps {
 				a.editNote(card)
 			}
 		},
-		Home: func() { a.setMode(modeNotes) },
+		Home: func() { a.goBack() },
 		EmptyLabel: func() string {
 			if a.reviewScope.Kind != queue.ScopeAll && a.reviewScopeEmpty() {
 				return m(c).ReviewScopeEmpty()

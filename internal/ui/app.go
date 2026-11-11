@@ -93,6 +93,7 @@ type App struct {
 	mode             mode
 	area             areaID          // which area the rail shows as chosen
 	sub              subID           // which of its pages; subNone when it has none
+	back             []place         // where back returns to, most recent last
 	session          sessionKind     // the session over the stage, when one is open; none until the session screens land
 	page             contrib.PageRef // the contributed page on screen, when area is areaPlugin
 	review           review.State
@@ -149,9 +150,7 @@ type App struct {
 	cardEdit         cardEditState
 	cardDetail       cardDetailState
 	prefs            screensettings.State
-	prefsBack        areaID                                  // the area the settings page goes back to
-	prefsBackSub     subID                                   // and the page of it
-	settingsSub      subID                                   // the settings page the user was on last
+	settingsSub      subID // the settings page the user was on last
 	cards            *cardPlugin                             // what a paragraph asks and how a card reads
 	scheduler        *schedulerPlugin                        // what schedules a review, and what a session is worth
 	cardsChoice      *ext.JSRunner                           // the runner Options.Cards named, nil for the app's own

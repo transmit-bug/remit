@@ -303,13 +303,13 @@ func (a *App) openNoteRead(id core.ID) {
 	}
 	a.notes.Selected = string(id)
 	a.notes.View = notes.Read
-	a.setArea(areaWrite, subNotes)
+	a.goTo(areaWrite, subNotes)
 }
 
 // openTag shows the notes page narrowed to one tag.
 func (a *App) openTag(tag string) {
 	a.notes.TagFilter = tag
-	a.setArea(areaWrite, subNoteList)
+	a.goTo(areaWrite, subNoteList)
 }
 
 // openCardSource shows what a card renders from. The card's own page is not

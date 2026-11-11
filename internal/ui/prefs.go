@@ -119,23 +119,16 @@ func (a *App) syncRecent() {
 // itself is loaded by loadCurrent, so opening it is the same navigation as any
 // other.
 func (a *App) openSettings() {
-	if a.area != areaSettings {
-		a.prefsBack, a.prefsBackSub = a.area, a.sub
-	}
 	sub := a.settingsSub
 	if !hasSub(areaSettings, sub) {
 		sub = subSettingsAppearance
 	}
-	a.setArea(areaSettings, sub)
+	a.goTo(areaSettings, sub)
 }
 
 // closeSettings returns to the area the page was opened from.
 func (a *App) closeSettings() {
-	area, sub := a.prefsBack, a.prefsBackSub
-	if area == areaSettings {
-		area, sub = areaToday, subNone
-	}
-	a.setArea(area, sub)
+	a.goBack()
 }
 
 // syncPrefs copies the settings, the library's presets and the agent API's own

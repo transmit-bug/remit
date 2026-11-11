@@ -343,7 +343,85 @@ func (a *App) setArea(area areaID, sub subID) {
 // setSub switches the area's page, keeping the area — and closing whatever
 // session was open over it, since choosing a page is leaving it.
 func (a *App) setSub(sub subID) {
-	a.setArea(a.area, sub)
+	a.goTo(a.area, sub)
+}
+
+// place is one page the window was on: the area and its page. It is what back
+// returns to, so the page the user came from is remembered rather than derived
+// from a mode.
+type place struct {
+	area areaID
+	sub  subID
+}
+
+// historyDepth bounds what back remembers: enough for a session's digressions,
+// not the whole run of a day.
+const historyDepth = 16
+
+// goTo moves the window to a page and remembers the one it left, so that back
+// returns there. Asking for the page already on screen is not a move.
+func (a *App) goTo(area areaID, sub subID) {
+	if !hasSub(area, sub) {
+		sub = defaultSub(area)
+	}
+	if area != a.area || sub != a.sub {
+		a.pushPlace(place{a.area, a.sub})
+	}
+	a.setArea(area, sub)
+}
+
+// goBack returns to the page the window was on before this one, and does nothing
+// when there is none: back is a request, not a command.
+func (a *App) goBack() {
+	if len(a.back) == 0 {
+		return
+	}
+	last := a.back[len(a.back)-1]
+	a.back = a.back[:len(a.back)-1]
+	a.setArea(last.area, last.sub)
+}
+
+// land moves the window to a page with nothing behind it: a link from outside
+// the window, the tray, a deep link. Such a request is a place to be, not a step
+// away from somewhere, so back has nowhere to go.
+func (a *App) land(area areaID, sub subID) {
+	a.back = a.back[:0]
+	a.setArea(area, sub)
+}
+
+// pushPlace notes where the window was, for back. A page a session was entered
+// from is noted by enterSession, so leaving a session returns to it.
+func (a *App) pushPlace(p place) {
+	if len(a.back) > 0 && a.back[len(a.back)-1] == p {
+		return
+	}
+	a.back = append(a.back, p)
+	if len(a.back) > historyDepth {
+		a.back = a.back[1:]
+	}
+}
+
+// enterSession opens a session over the page on screen and remembers that page,
+// so that the session's own way out returns there.
+func (a *App) enterSession(kind sessionKind) {
+	a.pushPlace(place{a.area, a.sub})
+	a.session = kind
+	a.syncMode()
+	a.loadCurrent()
+}
+
+// escape is the one Escape handler below the overlays: a session leaves for the
+// page it was entered from, and any other page goes back when there is somewhere
+// to go. A page entered from outside the window has no history, so a detail page
+// falls back to the list its area opens on.
+func (a *App) escape() {
+	if len(a.back) > 0 {
+		a.goBack()
+		return
+	}
+	if a.sub != defaultSub(a.area) {
+		a.setArea(a.area, defaultSub(a.area))
+	}
 }
 
 // syncMode derives a.mode from the area, the page and the session; it is the
@@ -389,35 +467,6 @@ func (a *App) syncMode() {
 	default:
 		a.mode = modeNone
 	}
-}
-
-// areaOfMode is where an action phrased in modes lands: the screens' callbacks
-// and the palette still speak of the five screens, and each one is a page of an
-// area. It keeps the mapping in one place so that the write path stays setArea.
-func areaOfMode(m mode) (areaID, subID) {
-	switch m {
-	case modeNone:
-		return areaToday, subNone
-	case modeReview:
-		return areaRecall, subRecallQueue
-	case modeReading:
-		return areaRead, subReadQueue
-	case modeBrowse:
-		return areaRecall, subRecallCards
-	case modeStats:
-		return areaStats, subStatsOverview
-	case modeSettings:
-		return areaSettings, subSettingsAppearance
-	}
-	return areaWrite, subNotes
-}
-
-// setMode is the bridge for the call sites that still speak in modes — the
-// screens' callbacks, the palette and the settings page's return. It writes
-// through setArea, so the area remains the only navigation state.
-func (a *App) setMode(m mode) {
-	area, sub := areaOfMode(m)
-	a.setArea(area, sub)
 }
 
 // takingOver reports whether the screen takes the window whole: a session hides
