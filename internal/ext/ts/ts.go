@@ -272,201 +272,15 @@ export type PageTree = Node & { kind: "page" };
 		contrib.MaxDepth, contrib.MaxNodes, contrib.MaxTableRows, contrib.MaxPageBytes,
 		contrib.MaxBoardNodes, contrib.MaxBoardEdges)
 
-	fmt.Fprintf(&b, `// ─── the host a plugin reaches ─────────────────────────────────────────────
-// A function below is there only when the manifest declared its capability; a
-// call to one it did not declare throws ext.CapabilityError.
-
-export interface Block {
-  /** Absent in the view a derive hook is handed; the text is what it reads. */
-  id?: string;
-  text: string;
-}
-
-export interface CardType {
-  id: string;
-  fields: string[];
-  version: number;
-}
-
-export interface DerivedCard {
-  typeId: string;
-  ordinal: number;
-  fields: Record<string, string>;
-  /** Field names the type does not carry; the host logs and drops them. */
-  unknown?: string[];
-}
-
-export interface Note {
-  id: string;
-  title: string;
-  blocks: Block[];
-}
-
-export interface Card {
-  id: string;
-  block: string;
-  type: string;
-  ordinal: number;
-  /** The user's own edited fields; the rest are derived when the card renders. */
-  fields?: Record<string, string>;
-  edited?: boolean;
-  status: CardStatus;
-  due?: string;
-  reviews: number;
-}
-
-/** One line of the review log, as a plugin reads it: no voided events. */
-export interface ReviewEvent {
-  seq: number;
-  card: string;
-  rating: Rating;
-  at: string;
-  scheduler?: string;
-}
-
-export type Rating = "again" | "hard" | "good" | "easy";
-
-/**
- * A card's FSRS state. It is the host's shape and opaque to a plugin: carry it
- * back unchanged; the arithmetic stays the host's.
- */
-export interface ScheduleState {
-  stability: number;
-  difficulty: number;
-  due?: string;
-  lastReview?: string;
-  reviews: number;
-  lastRating?: Rating;
-}
-
-export interface Policy {
-  family: string;
-  version: string;
-  retention: number;
-}
-
-export interface SummaryInput {
-  reviewed: number;
-  dueTomorrow: number;
-  accuracy: number;
-}
-
-export interface Summary {
-  tone: "quiet" | "celebrated";
-  /** Markdown the host draws under its own wording. */
-  lines: string[];
-}
-
-/** A notification, not a veto: the host ignores the answer. */
-export interface Event {
-  /** note.saved, card.created or review.recorded. */
-  kind: string;
-  id: string;
-}
-
-/** What a contributed command and a page's data are asked with. */
-export interface CommandInput {
-  /** The name the contribution declared after command:. */
-  name: string;
-  context: Partial<Context> & { "card.id"?: string; "note.id"?: string };
-}
-
-/** What a command callback answers: the host applies the result. */
-export interface CommandResult {
-  result?: "navigate" | "refresh" | "toast" | "none";
-  /** The page to open when result is "navigate". */
-  page?: string;
-  /** The message when result is "toast": a %%key%% or a literal. */
-  message?: string;
-}
-
-export declare const remit: {
-  /** remit.echo: answers the value back. For a plugin's own tests. */
-  echo(value: unknown): unknown;
-  /** remit.now: the time as RFC 3339. */
-  now(): string;
-  notes: {
-    /** notes:read */
-    list(): Note[];
-    get(id: string): Note | null;
-    search(text: string): Note[];
-  };
-  cards: {
-    /** cards:write */
-    create(block: string): Card;
-    update(id: string, patch: { fields?: Record<string, string>; status?: CardStatus }): Card;
-    delete(id: string): void;
-  };
-  review: {
-    /** review:read */
-    history(card: string): ReviewEvent[];
-    dueCount(): number;
-    /** review:write */
-    record(card: string, rating: Rating, at?: string): Card;
-  };
-  fsrs: {
-    /** schedule:fsrs: advances a state by one answer. */
-    review(state: ScheduleState, rating: Rating, at?: string): ScheduleState;
-  };
-  store: {
-    /** store:own: the plugin's own value, under its own id. */
-    get(): string | null;
-    set(value: string): void;
-  };
-};
-
-// ─── the exports the host calls ────────────────────────────────────────────
-// A plugin exports the hooks its manifest declares; the names are the host's.
-
-export interface Hooks {
-  describe(): { name: string; version: string };
-  deriveBlock(block: Block, types: CardType[]): DerivedCard[];
-  identity(): string;
-  on_event(event: Event): void;
-  policy(): Policy;
-  summary(session: SummaryInput): Summary;
-  /** What a contributed command and a page's data answer. */
-  command(input: CommandInput): CommandResult | PageTree;
-  /** One file in, suggestions out; the host checks and writes (#153). */
-  importFile(input: ImportInput): ImportSuggestions;
-}
-
-/** One file handed to an importer: its name, its bytes in base64, and which of the plugin's declared formats matched. */
-export interface ImportInput {
-  name: string;
-  data: string;
-  format: string;
-}
-
-/** A suggested note: the host mints identities and checks every block. */
-export interface SuggestedNote {
-  title: string;
-  blocks: string[];
-}
-
-/** A suggested card, on a block of a suggested note, by index into the same answer. */
-export interface SuggestedCard {
-  note: number;
-  block: number;
-  typeId: string;
-  ordinal: number;
-  fields?: Record<string, string>;
-}
-
-export interface ImportSuggestions {
-  notes: SuggestedNote[];
-  cards?: SuggestedCard[];
-  warnings?: string[];
-}
-`)
+	b.WriteString(hookSection())
 
 	return []byte(b.String())
 }
 
-// hookNames is the hook vocabulary in a stable order.
+// hookNames is the manifests' hook vocabulary in a stable order.
 func hookNames() []string {
-	names := make([]string, 0, len(ext.Hooks))
-	for name := range ext.Hooks {
+	names := make([]string, 0, len(ext.HookContracts))
+	for name := range ext.HookContracts {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -477,7 +291,7 @@ func hookNames() []string {
 func hookContracts() string {
 	var b strings.Builder
 	for _, name := range hookNames() {
-		fmt.Fprintf(&b, "  %q: %d;\n", name, ext.Hooks[name])
+		fmt.Fprintf(&b, "  %q: %d;\n", name, ext.HookContracts[name])
 	}
 	return b.String()
 }

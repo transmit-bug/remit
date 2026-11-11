@@ -6,8 +6,8 @@ import "github.com/transmit-bug/remit/internal/core"
 // job with one plugin per library (ADR 0007), and the manifest's implements is
 // where a plugin says it can do it — before any code runs.
 var roleHooks = map[string]string{
-	core.RoleCardsDerive:    "deriveBlock",
-	core.RoleReviewSchedule: "policy",
+	core.RoleCardsDerive:    hookDeriveBlock,
+	core.RoleReviewSchedule: hookPolicy,
 }
 
 // Plays reports whether e implements the hook role asks for. A role the host

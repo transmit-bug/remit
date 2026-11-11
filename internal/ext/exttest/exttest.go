@@ -286,11 +286,14 @@ func readHookDir(dir, hook string) ([]fixtureCase, []error) {
 	return out, problems
 }
 
-// compare runs one case and holds the hook to its fixture.
+// compare runs one case and holds the hook to its fixture. The call goes through
+// the host's hook table, so a fixture can drive any hook the host calls — a hook
+// with no typed method of its own included — and a hook the table does not hold
+// cannot be compared at all.
 func compare(runner ext.Hook, one fixtureCase) error {
 	where := fmt.Sprintf("%s/%s/%s", FixturesDir, one.hook, one.name)
 	var answer json.RawMessage
-	if err := runner.Call(one.hook, one.args, &answer); err != nil {
+	if err := ext.Invoke(runner, one.hook, one.args, &answer); err != nil {
 		return fmt.Errorf("%s: %w", where, err)
 	}
 	got, err := canonical(answer)

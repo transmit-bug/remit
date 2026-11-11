@@ -111,8 +111,8 @@ func TestValidateJSManifestAcceptsTheCurrentContract(t *testing.T) {
 	if err := ext.Validate(m); err != nil {
 		t.Fatalf("a well-formed js manifest was refused: %v", err)
 	}
-	if ext.Hooks["deriveBlock"] != 1 || ext.Hooks["on_event"] != 1 {
-		t.Errorf("the hook vocabulary drifted: %+v", ext.Hooks)
+	if ext.HookContracts["deriveBlock"] != 1 || ext.HookContracts["on_event"] != 1 {
+		t.Errorf("the hook vocabulary drifted: %+v", ext.HookContracts)
 	}
 }
 

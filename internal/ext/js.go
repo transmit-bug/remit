@@ -76,6 +76,12 @@ func (l JSLimits) withDefaults() JSLimits {
 // Hook is what a started extension can do, whichever substrate it runs on: the
 // same call shape in process and over a pipe, so that a built-in extension gets
 // no path a downloaded one does not have.
+//
+// It is the seam until #269. The typed capabilities (hooks.go: HooksOf, one
+// interface per job) are the shape the call sites move to; when they have, Call
+// leaves this interface — the fixtures harness asks through Invoke, and business
+// code names a capability instead of a string. Until then both doors open onto
+// the same runner, and #268's test holds them to the same answer.
 type Hook interface {
 	Name() string
 	Call(method string, params, out any) error
@@ -428,10 +434,9 @@ type noteJSON struct {
 	Blocks []blockJSON `json:"blocks"`
 }
 
-type blockJSON struct {
-	ID   string `json:"id,omitempty"`
-	Text string `json:"text"`
-}
+// blockJSON is the one block shape, wherever a plugin meets one: the derive
+// hook's input and a note's blocks are the same view (shapes.go).
+type blockJSON = Block
 
 type cardJSON struct {
 	ID      string            `json:"id"`

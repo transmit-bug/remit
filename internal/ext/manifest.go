@@ -13,22 +13,29 @@ import (
 // accepts by minimum-version semantics, one breaking release back.
 const HostAPIVersion = 1
 
-// Hooks is the host's hook vocabulary: every hook id an extension may put in
-// its manifest's implements, with the contract version the host records for
-// it. It is the single source the host checks against, before any code runs.
+// HookContracts is the host's hook vocabulary: every hook id an extension may put
+// in its manifest's implements, with the contract version the host records for
+// it. It is the single source validation reads, before any code runs.
+//
+// It is deliberately a list of its own beside HookTable (hooks.go), which holds
+// what each hook is asked with and answers: a hook a manifest may declare is a
+// fact about what a plugin can claim, a callable hook is a fact about what the
+// host can call, and the one test that ties them says which is missing. The
+// command hook rides with contributes rather than implements, so it is in the
+// table and not here.
 //
 // Contract v2 (#140): derive became deriveBlock, whose answer is typed
 // (typeId, ordinal, fields) rather than shaped sides, and faces/render are
 // gone — card faces are rendered by the host template engine from the card
 // type's own templates, not by a plugin.
-var Hooks = map[string]int{
-	"describe":    1,
-	"deriveBlock": 1,
-	"policy":      1,
-	"identity":    1,
-	"summary":     1,
-	"on_event":    1,
-	"importFile":  1,
+var HookContracts = map[string]int{
+	hookDescribe:    1,
+	hookDeriveBlock: 1,
+	hookPolicy:      1,
+	hookIdentity:    1,
+	hookSummary:     1,
+	hookOnEvent:     1,
+	hookImportFile:  1,
 }
 
 // Manifest is extension.json: what the extension is, what it runs on, and what
@@ -122,7 +129,7 @@ func validateJS(m Manifest) error {
 func validateImplements(m Manifest) error {
 	var problems []error
 	for _, hook := range sortedKeys(m.Implements) {
-		contract, ok := Hooks[hook]
+		contract, ok := HookContracts[hook]
 		switch {
 		case !ok:
 			problems = append(problems, fmt.Errorf("implements %q: no such hook", hook))
