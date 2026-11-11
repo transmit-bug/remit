@@ -36,14 +36,11 @@ func startExtensions(lib *store.Library, app *appui.App, plugins *plugin.Supervi
 }
 
 // hostFor is the library the plugins act on, as the supervisor binds it: the
-// same read and write layer the loopback agent API serves, so a capability call
-// and an API request see one library.
-func hostFor(lib *store.Library) ext.Host {
-	host, err := newCardSource(lib)
-	if err != nil {
-		slog.Warn("remit: extensions: the card plugin did not start", "err", err)
-	}
-	return host
+// same read and write layer the loopback agent API serves, deriving through the
+// same card role, so a capability call and an API request see one library and
+// one card plugin.
+func hostFor(lib *store.Library, plugins *plugin.Supervisor) ext.Host {
+	return newCardSource(lib, plugins)
 }
 
 // runCheckExtension answers the -check-ext flag, the name this command had

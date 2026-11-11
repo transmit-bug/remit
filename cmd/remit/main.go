@@ -98,11 +98,13 @@ func main() {
 	// The agent API and the shortcut are the window's services, so the app is
 	// told about them as seams: the settings page turns the port on and off and
 	// rebinds the key while the app runs.
-	agent := newAgentService(dataDir)
+	//
 	// The plugins are one supervisor's, over the user's plugin directory: it
 	// discovers, resolves a library's roles, starts one runner per name and lives
-	// as long as the process, so a library switch only swaps what it acts on.
+	// as long as the process, so a library switch only swaps what it acts on. It
+	// is made first because the agent API derives through the same card role.
 	plugins := plugin.New(filepath.Join(dataDir, "extensions"))
+	agent := newAgentService(dataDir, plugins)
 	a := appui.NewApp(appui.Options{
 		LibraryDir:    dir,
 		DataDir:       dataDir,
@@ -125,7 +127,7 @@ func main() {
 		// page reads it: bind before the runners ask for capabilities. One bind
 		// per open is what makes an enabled role a single runner, and a switch a
 		// change of host rather than a restart.
-		plugins.Bind(hostFor(lib), lib.EnabledExtensions())
+		plugins.Bind(hostFor(lib, plugins), lib.EnabledExtensions())
 		startExtensions(lib, a, plugins)
 	})
 	mygo.App.SetName(appui.Name)

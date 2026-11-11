@@ -38,7 +38,7 @@ func TestExtensionsGiveAContributedPageTheLibrary(t *testing.T) {
 
 	plugins := plugin.New(filepath.Join("..", "..", "examples", "plugins"))
 	t.Cleanup(func() { _ = plugins.Close() })
-	plugins.Bind(hostFor(lib), []string{"leeches"})
+	plugins.Bind(hostFor(lib, plugins), []string{"leeches"})
 
 	runner, err := plugins.Runner("leeches")
 	if err != nil {
@@ -71,7 +71,7 @@ func TestAnEnabledProcessPluginHearsTheLibrarysEvents(t *testing.T) {
 	if err := lib.SetEnabledExtensions([]string{"probe"}); err != nil {
 		t.Fatalf("enable probe: %v", err)
 	}
-	plugins.Bind(hostFor(lib), lib.EnabledExtensions())
+	plugins.Bind(hostFor(lib, plugins), lib.EnabledExtensions())
 	startExtensions(lib, nil, plugins)
 
 	if _, err := lib.SaveNote(core.Note{Title: "Biology", Blocks: []core.Block{{Text: "q :: a"}}}); err != nil {
@@ -103,14 +103,14 @@ func TestASwitchKeepsTheRunnersTheWindowHearsFrom(t *testing.T) {
 		t.Fatalf("enable acme in the second library: %v", err)
 	}
 
-	plugins.Bind(hostFor(first), firstNames)
+	plugins.Bind(hostFor(first, plugins), firstNames)
 	startExtensions(first, nil, plugins)
 	before, err := plugins.Runner("acme")
 	if err != nil {
 		t.Fatalf("Runner(acme): %v", err)
 	}
 
-	plugins.Bind(hostFor(second), secondNames)
+	plugins.Bind(hostFor(second, plugins), secondNames)
 	startExtensions(second, nil, plugins)
 	if after, err := plugins.Runner("acme"); err != nil || after != before {
 		t.Fatalf("the switch answered %v (%v), want the runner it had", after, err)

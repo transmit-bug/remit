@@ -191,6 +191,50 @@ func TestOneNameOneRunner(t *testing.T) {
 	}
 }
 
+// The resolver every door derives through is the card role's plugin: a
+// supervisor whose role resolved answers with that runner, not with a second
+// one it opened for the asker. The regression this guards: a resolver that
+// quietly falls back to the built-in card plugin, so a library whose plugin
+// did not start derives a card nobody chose.
+func TestCardResolverAnswersTheRolePlugin(t *testing.T) {
+	root := t.TempDir()
+	installPlugin(t, root, "acme") // deriveBlock answers no cards
+	s := New(root)
+	t.Cleanup(func() { _ = s.Close() })
+	if role := s.Resolve(core.RoleCardsDerive, "acme", "cards"); role == nil || role.Name() != "acme" {
+		t.Fatalf("the card role resolved to %v, want acme", role)
+	}
+
+	derived, ok := s.CardResolver(core.BuiltinTypes()).Derive("a :: b")
+	// ok says the plugin answered; the built-in would also have made a card of
+	// this, so an empty answer is the role's own.
+	if !ok || len(derived) != 0 {
+		t.Errorf("the resolver derived %+v (ok %v), want the role plugin's empty answer", derived, ok)
+	}
+}
+
+// A card role that resolved to nothing answers a resolver with no plugin: no
+// paragraph makes a new card, and a card reads its own words. The regression
+// this guards: a fallback here that opens the built-in card plugin — a second
+// road beside internal/cards' own "a card reads its own paragraph".
+func TestCardResolverWithoutARoleDerivesNothing(t *testing.T) {
+	s := New(t.TempDir())
+	t.Cleanup(func() { _ = s.Close() })
+	if role := s.Resolve(core.RoleCardsDerive, "gone", ""); role != nil {
+		t.Fatalf("a role nothing plays resolved to %v", role)
+	}
+
+	resolver := s.CardResolver(core.BuiltinTypes())
+	if derived, ok := resolver.Derive("a :: b"); ok || len(derived) != 0 {
+		t.Errorf("a paragraph derived %+v with no card plugin", derived)
+	}
+	got := resolver.Face(core.Card{Type: core.TypeBasic, Ref: core.Reference{Block: "b1"}},
+		core.BlockSet{"b1": {ID: "b1", Text: "asked :: answered"}})
+	if got.Front != "asked :: answered" || got.Back != "" {
+		t.Errorf("the card reads %q / %q, want its own words, unsplit", got.Front, got.Back)
+	}
+}
+
 // A role takes a js plugin only: the rule is checked before anything starts, said
 // once in the log, and the role falls back to the plugin this build ships for it.
 // The regression this guards: a role that accepts what the enabled list accepts,

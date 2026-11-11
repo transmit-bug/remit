@@ -11,6 +11,7 @@ import (
 
 	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/core/store"
+	"github.com/transmit-bug/remit/internal/plugin"
 )
 
 // An external agent drives the app's own agent server over a real socket: it
@@ -28,7 +29,14 @@ func TestAgentRoundTrip(t *testing.T) {
 		t.Fatalf("note: %v", err)
 	}
 
-	ln, err := serveAgent(lib, "secret")
+	// The card role is the plugin this build ships, resolved the way the window
+	// resolves a library's role before the API can start: the API derives through
+	// the role, never through a card plugin of its own.
+	plugins := plugin.New("")
+	t.Cleanup(func() { _ = plugins.Close() })
+	plugins.Resolve(core.RoleCardsDerive, store.DefaultCardsPlugin, store.DefaultCardsPlugin)
+
+	ln, err := serveAgent(lib, plugins, "secret")
 	if err != nil {
 		t.Fatalf("serve: %v", err)
 	}

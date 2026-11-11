@@ -17,8 +17,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
-	"github.com/transmit-bug/remit/internal/ext"
-	"github.com/transmit-bug/remit/internal/ext/builtin"
+	"github.com/transmit-bug/remit/internal/plugin"
 	appui "github.com/transmit-bug/remit/internal/ui"
 )
 
@@ -34,13 +33,17 @@ const (
 // settings page's AgentControls, so the page's switch binds or drops the port
 // now rather than at the next launch.
 type agentService struct {
-	dir string         // the user data directory
-	lib *store.Library // the library open now, nil before one is
-	ln  net.Listener   // the listener serving now, nil when stopped
+	dir     string             // the user data directory
+	plugins *plugin.Supervisor // the one owner of which plugin derives a card
+	lib     *store.Library     // the library open now, nil before one is
+	ln      net.Listener       // the listener serving now, nil when stopped
 }
 
-// newAgentService returns a service that keeps its files in dir.
-func newAgentService(dir string) *agentService { return &agentService{dir: dir} }
+// newAgentService returns a service that keeps its files in dir and serves what
+// the plugins derive through.
+func newAgentService(dir string, plugins *plugin.Supervisor) *agentService {
+	return &agentService{dir: dir, plugins: plugins}
+}
 
 // setLibrary points the service at the library that just opened. A different
 // library replaces the listener, so the API never serves a library the user
@@ -80,7 +83,7 @@ func (s *agentService) SetEnabled(on bool) error {
 	if err != nil {
 		return err
 	}
-	ln, err := serveAgent(s.lib, token)
+	ln, err := serveAgent(s.lib, s.plugins, token)
 	if err != nil {
 		return err
 	}
@@ -137,51 +140,47 @@ func (s *agentService) Status() appui.AgentStatus {
 
 // cardSource is the library as the agent API sees it — and as a plugin reaches
 // it: the shared read/write layer, plus the one write the store does not do
-// itself, deriving a card from a block. A card is made by asking the shared
-// resolver what the block asks, exactly as the notebook does: neither the API
-// nor a plugin derives on its own.
+// itself, deriving a card from a block. A card is made by asking the resolver
+// the supervisor answers for the card role, exactly as the notebook does:
+// neither the API nor a plugin derives with a plugin of its own.
 type cardSource struct {
 	*store.Library
 	faces *cards.Resolver
 }
 
-// errNoCardPlugin is what a card write answers when the card plugin could not
-// start: reads still work, and a card that cannot be derived says why.
-var errNoCardPlugin = errors.New("remit: the card plugin did not start")
+// errNoDerivation is what a card write answers when nothing derived the block:
+// no plugin plays the card role, or the one that does could not read it. Reads
+// still work, and a card the block already has reads the block's own words.
+var errNoDerivation = errors.New("remit: no card plugin derived the block")
 
-// newCardSource opens the card plugin and the library's types for the API's
-// own use. A plugin that does not start leaves a source that reads the library
-// and cannot make a card, so that what does not need derivation keeps working.
-func newCardSource(lib *store.Library) (cardSource, error) {
-	runner, err := builtin.Cards(nil, ext.JSLimits{})
-	if err != nil {
-		return cardSource{Library: lib}, err
-	}
-	return cardSource{Library: lib, faces: cards.New(runner, lib.Types())}, nil
+// newCardSource is the library as the API and the plugins act on it. It derives
+// through the plugin the supervisor resolved for the card role, so the window,
+// the API and a capability make a card through one runner and stamp it alike.
+//
+// A card plugin that did not start is not a second fallback: the resolver holds
+// no plugin, and internal/cards — the one road every card takes — answers with
+// the block's own words.
+func newCardSource(lib *store.Library, plugins *plugin.Supervisor) cardSource {
+	return cardSource{Library: lib, faces: plugins.CardResolver(lib.Types())}
 }
 
-// Faces is what a card asks, as its type's templates render it.
+// Faces is what a card asks, as its type's templates render it — through the
+// same resolver the notebook reads: a card whose plugin is missing reads its
+// own paragraph's words, with the card's own edits on top.
 func (s cardSource) Faces(card core.Card) (front, back, link string) {
-	if s.faces == nil {
-		text, state := card.Ref.Text(blocksOf(s.Library))
-		return text, "", state.String()
-	}
 	return facesOf(s.faces, s.Library, card)
 }
 
 // CreateCard makes the cards the block's text asks for, and answers with the
 // first: what the API's contract asks for.
 func (s cardSource) CreateCard(blockID core.ID) (core.Card, error) {
-	if s.faces == nil {
-		return core.Card{}, errNoCardPlugin
-	}
 	block, ok := s.Block(blockID)
 	if !ok {
 		return core.Card{}, fmt.Errorf("agent api: no block %q", blockID)
 	}
 	derived, ok := s.faces.Derive(block.Text)
 	if !ok {
-		return core.Card{}, fmt.Errorf("agent api: the card plugin could not derive")
+		return core.Card{}, errNoDerivation
 	}
 	cards, err := s.Library.CreateCards(blockID, derived)
 	if err != nil {
@@ -195,16 +194,12 @@ func (s cardSource) CreateCard(blockID core.ID) (core.Card, error) {
 
 // serveAgent serves the agent API on a loopback port the system chooses, and
 // returns the listener. Loopback only: nothing on the network can reach it.
-func serveAgent(lib *store.Library, token string) (net.Listener, error) {
+func serveAgent(lib *store.Library, plugins *plugin.Supervisor, token string) (net.Listener, error) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
 	}
-	source, err := newCardSource(lib)
-	if err != nil {
-		_ = ln.Close()
-		return nil, err
-	}
+	source := newCardSource(lib, plugins)
 	srv := agentapi.New(source, agentapi.Options{Token: token, Stats: source, Today: todayCount(lib)})
 	go func() {
 		// Closing the listener is how the service stops, so a closed

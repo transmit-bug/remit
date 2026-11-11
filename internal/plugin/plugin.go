@@ -18,6 +18,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/transmit-bug/remit/internal/cards"
+	"github.com/transmit-bug/remit/internal/core"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
@@ -118,6 +120,35 @@ func (s *Supervisor) Resolve(role, name, fallback string) Role {
 	if err := runner.Warm(); err != nil {
 		slog.Warn("remit: a role's plugin did not warm", "role", role, "plugin", hook.Name(), "err", err)
 	}
+	return runner
+}
+
+// CardResolver answers what a library derives through: a resolver over the
+// plugin playing the card role, with the library's own card types. Every path
+// that makes a card takes its resolver from here — the window, the loopback
+// agent API and a plugin's remit.cards.create — so which plugin derives is
+// answered once and each card carries that plugin's stamp (docs/specs/
+// plugin-system.md P1: derivation has one road).
+//
+// A card role that resolved to nothing answers the same resolver with no
+// plugin: internal/cards then makes no card and a card reads its own
+// paragraph's words. That is the one fallback, and it lives there — a second
+// one here would be the copy that drifts.
+func (s *Supervisor) CardResolver(types []core.Type) *cards.Resolver {
+	s.mu.Lock()
+	runner := s.cardRunnerLocked()
+	s.mu.Unlock()
+	// Built outside the lock: the resolver compiles the library's templates, and
+	// no other caller waits on that.
+	return cards.New(runner, types)
+}
+
+// cardRunnerLocked is the runner the card role answers, nil when nothing plays
+// it. Resolve warmed it, so a resolver built here never pays the load cost on
+// the first review; a role runs on js only (see jsOnly), which is why it is the
+// engine's own runner.
+func (s *Supervisor) cardRunnerLocked() *ext.JSRunner {
+	runner, _ := s.open[s.roles[core.RoleCardsDerive]].(*ext.JSRunner)
 	return runner
 }
 

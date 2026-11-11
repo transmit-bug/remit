@@ -30,9 +30,11 @@ func openCards(runner plugin.Role) *cardPlugin {
 	return &cardPlugin{runner: runner}
 }
 
-// engine is the runner behind the role, as the card resolver takes it today: a
-// role is js only (internal/plugin enforces it), so it is the engine's own
-// runner. #267 hands the resolver the capability it asks for instead.
+// engine is the runner behind the role, as the card resolver takes it: a role
+// is js only (internal/plugin enforces it), so it is the engine's own runner.
+// The agent API and a plugin's cards:write derive through the same one, which
+// the supervisor answers for the card role (#267), so which plugin derives is
+// answered once and every card is stamped alike.
 func (c *cardPlugin) engine() *ext.JSRunner {
 	if c == nil {
 		return nil
