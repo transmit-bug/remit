@@ -35,11 +35,13 @@ const Timeout = time.Second
 // as a process speaking the protocol. The decision lives here, where the
 // manifest is read, so the app above asks once and gets a runner either way.
 // host is what the extension may reach; nil is a runner that reaches nothing.
-func Open(e Extension, host Host) (Hook, error) {
+// opts configure the process runtime and are ignored by an in-process one: a js
+// extension runs under the app's limits, never the caller's.
+func Open(e Extension, host Host, opts ...StartOptions) (Hook, error) {
 	if Runtime(e.Manifest.Runtime) == RuntimeJS {
 		return OpenJS(e.Dir, host, JSLimits{})
 	}
-	return Start(e)
+	return Start(e, opts...)
 }
 
 // Extension is a discovered extension: its directory and its manifest.

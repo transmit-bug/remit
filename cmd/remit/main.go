@@ -132,7 +132,7 @@ func main() {
 		// The plugins act on the library that just opened, and a contributed
 		// page reads it: bind before the runners ask for capabilities.
 		plugins.SetLibrary(lib)
-		startExtensions(lib, a)
+		startExtensions(lib, a, plugins)
 	})
 	mygo.App.SetName(appui.Name)
 	mygo.App.SetVersion(appui.Version)
