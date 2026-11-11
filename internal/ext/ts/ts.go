@@ -164,18 +164,18 @@ export interface Setting {
 /** A key a when expression may read. An unknown key reads false, with a warning. */
 export type ContextKey = %s;
 
-export type Mode = "notes" | "review" | "browse" | "stats" | "settings" | "";
+export type Mode = %s;
 
 /** The part of the window a contribution sits in; mode is the screen, area its part. */
 export type Area = %s;
 
 /** A card's standing. A lost reference is a LinkState, not a status. */
-export type CardStatus = "new" | "learning" | "review" | "suspended" | "reading";
+export type CardStatus = %s;
 
 export interface Context {
 %s}
 
-`, union(contrib.ContextKeys), union(contrib.Areas), contextFields())
+`, union(contrib.ContextKeys), union(contextValues("mode")), union(contextValues("area")), union(contextValues("card.status")), contextFields())
 
 	fmt.Fprintf(&b, `// ─── a page's tree ─────────────────────────────────────────────────────────
 
@@ -482,35 +482,26 @@ func hookContracts() string {
 	return b.String()
 }
 
-// contextFields is the Context body: one line per key and the value it answers.
-// contextTypes names the type of every key; a key without one reads as a union
-// of the two kinds a context value is, and the drift test says which key.
+// contextFields is the Context body: one line per key of the host's table and
+// the type the table gives it. There is no fallback type: a key the table types
+// nothing is a contract the host does not keep, and the table's test says so.
 func contextFields() string {
 	var b strings.Builder
-	for _, key := range contrib.ContextKeys {
-		typ, ok := contextTypes[key]
-		if !ok {
-			typ = "string | boolean"
-		}
-		fmt.Fprintf(&b, "  %q: %s;\n", key, typ)
+	for _, entry := range contrib.ContextTable {
+		fmt.Fprintf(&b, "  %q: %s;\n", entry.Key, entry.Type)
 	}
 	return b.String()
 }
 
-// contextTypes is what each when key answers, as the host's Context documents.
-var contextTypes = map[string]string{
-	"mode":             "Mode",
-	"area":             "Area",
-	"sub":              "string",
-	"library.open":     "boolean",
-	"note.open":        "boolean",
-	"note.selection":   "boolean",
-	"card.present":     "boolean",
-	"card.status":      "CardStatus",
-	"browse.selection": "boolean",
-	"scope.active":     "boolean",
-	"page.id":          "string",
-	"plugin.id":        "string",
+// contextValues is an enum key's vocabulary as the host's table declares it: the
+// contract's alias for that key lists exactly these, in this order.
+func contextValues(key string) []string {
+	for _, entry := range contrib.ContextTable {
+		if entry.Key == key {
+			return entry.Values
+		}
+	}
+	return nil
 }
 
 // union is a TypeScript union of quoted strings.

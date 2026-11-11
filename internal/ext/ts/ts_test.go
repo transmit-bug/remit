@@ -3,6 +3,7 @@ package ts_test
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -37,17 +38,26 @@ func TestRemitDtsMatchesTheHost(t *testing.T) {
 		ts.FileName, len(have), len(want), ts.FileName)
 }
 
-// The artifact types a value for every context key the window exports: a key
-// added to the contract without a type would otherwise read as a union of the
-// two kinds, and a plugin author would have to guess.
+// The artifact's context goes key by key as the host's table does: the type a
+// key answers is the type the table names, and an enum's own type lists the
+// table's values in its order. A key typed `string | boolean` — or as a
+// vocabulary the host does not read — is a plugin author's type error, caught
+// here rather than in an editor.
 func TestTheArtifactTypesEveryContextKey(t *testing.T) {
 	generated := string(ts.Render())
-	for _, key := range contrib.ContextKeys {
-		if !strings.Contains(generated, `"`+key+`":`) {
-			t.Errorf("context key %q is not in the rendered contract", key)
+	for _, entry := range contrib.ContextTable {
+		if line := `"` + entry.Key + `": ` + entry.Type + `;`; !strings.Contains(generated, line) {
+			t.Errorf("context key %q is not %s in the rendered contract", entry.Key, line)
 		}
-	}
-	if strings.Contains(generated, "string | boolean;") {
-		t.Error("a context key has no type of its own in the rendered contract")
+		if entry.Kind != contrib.ContextEnum {
+			continue
+		}
+		values := make([]string, len(entry.Values))
+		for i, value := range entry.Values {
+			values[i] = strconv.Quote(value)
+		}
+		if line := "export type " + entry.Type + " = " + strings.Join(values, " | ") + ";"; !strings.Contains(generated, line) {
+			t.Errorf("context key %q does not render its values: %s", entry.Key, line)
+		}
 	}
 }

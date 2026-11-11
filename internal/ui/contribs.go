@@ -439,27 +439,11 @@ func (a *App) runnerFor(name string) (CommandRunner, error) {
 	return runner, nil
 }
 
-// contributionPayload is the context a callback reads: the same keys a when
-// expression reads, plus the note and card the command acts on.
+// contributionPayload is the context a callback reads: every key the contract
+// names, with the value a when expression read it as, plus the note and card the
+// command acts on.
 func (a *App) contributionPayload() map[string]any {
-	ctx := a.contributionContext()
-	payload := map[string]any{
-		"mode":         ctx.Mode,
-		"library.open": ctx.LibraryOpen,
-		"note.open":    ctx.NoteOpen,
-		"card.present": ctx.CardPresent,
-		"page.id":      ctx.PageID,
-		"plugin.id":    ctx.PluginID,
-	}
-	if ctx.Area != "" {
-		payload["area"] = ctx.Area
-	}
-	if ctx.Sub != "" {
-		payload["sub"] = ctx.Sub
-	}
-	if ctx.CardStatus != "" {
-		payload["card.status"] = ctx.CardStatus
-	}
+	payload := a.contributionContext().Payload()
 	if id, ok := a.currentCard(); ok {
 		payload["card.id"] = string(id)
 	}

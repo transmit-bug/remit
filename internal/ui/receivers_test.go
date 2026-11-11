@@ -707,7 +707,9 @@ func TestHiddenContributionStaysInSettingsWithItsReason(t *testing.T) {
 // The whole when context is what the window is drawing: one table, walked stop by
 // stop through the real window, read the way a manifest reads it — through the
 // contract's own evaluator — so a key that answers the wrong thing is red where a
-// plugin would see it.
+// plugin would see it. The same table is what a callback is called with, so each
+// stop asks both sides for every key: a command that appeared for a selection is
+// handed that selection, not a payload that forgot it.
 //
 // A key a stop does not name is one the window keeps: a note stays open in the
 // notebook after the user looks at the statistics, and the scope a session took
@@ -726,6 +728,22 @@ func TestContributionContextFollowsTheWindow(t *testing.T) {
 		for _, expr := range append([]string{"library.open"}, want...) {
 			if !contrib.When(expr, ctx) {
 				t.Errorf("%s: %q does not hold in %+v", stop, expr, ctx)
+			}
+		}
+		payload := a.contributionPayload()
+		for _, key := range contrib.ContextKeys {
+			when, ok := ctx.Value(key)
+			if !ok {
+				t.Errorf("%s: context key %q has no reader", stop, key)
+				continue
+			}
+			got, present := payload[key]
+			if !present {
+				t.Errorf("%s: the payload a callback reads has no %q", stop, key)
+				continue
+			}
+			if got != when {
+				t.Errorf("%s: %q is %#v in the payload and %#v to when", stop, key, got, when)
 			}
 		}
 	}

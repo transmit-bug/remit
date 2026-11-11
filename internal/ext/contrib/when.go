@@ -6,99 +6,6 @@ import (
 	"strings"
 )
 
-// Context is the window's state a when expression reads, as the context keys of
-// the contribution contract name it (docs/specs/plugins/ui.md §3). A key the
-// host adds is a version of its API, never a field here that a caller guesses.
-type Context struct {
-	// Mode is the screen the window shows: notes, review, browse, stats or
-	// settings. A plugin page is none of those, so it is empty there and
-	// PageID says which page it is.
-	Mode string
-	// Area is the part of the window a contribution sits in: today, write,
-	// read, recall, stats, settings or plugin. Mode says which screen, which
-	// leaves three areas inside notes; area is the one a slot's receiver knows.
-	// The host fills it as its route changes, and leaves it empty until it does.
-	Area string
-	// Sub is the stable id of the sub-page inside that area (queue, cards, …),
-	// empty where the area has a single screen.
-	Sub string
-	// LibraryOpen is a library read into the window.
-	LibraryOpen bool
-	// NoteOpen is a note in the editor.
-	NoteOpen bool
-	// NoteSelection is words selected inside that note's text: what a
-	// contribution that acts on a passage asks for.
-	NoteSelection bool
-	// CardPresent is a card on screen, in review or in browse.
-	CardPresent bool
-	// CardStatus is that card's standing: new, learning, review, suspended or
-	// lost.
-	CardStatus string
-	// BrowseSelection is a chosen row in the card list.
-	BrowseSelection bool
-	// ScopeActive is a review scope narrower than the whole library: one note's
-	// cards or one tag's, as the recall queue's scope dialog set it.
-	ScopeActive bool
-	// PageID is the plugin page on screen, and PluginID the plugin it belongs
-	// to; both empty elsewhere.
-	PageID   string
-	PluginID string
-}
-
-// value is what a context key answers and a literal is: bool, string or
-// number. Comparisons are total — two values of different kinds are unequal
-// rather than an error — so a when expression can never fail at run time and
-// hide a contribution by accident.
-func (c Context) value(key string) (any, bool) { return contextValue(key, c) }
-
-// Areas are what the area key answers: the window's parts, as the contract
-// names them (ui.md §3). Mode stays the five screens it has always been, so a
-// when expression written against it keeps its meaning.
-var Areas = []string{"today", "write", "read", "recall", "stats", "settings", "plugin"}
-
-// ContextKeys are the keys a when expression may read, in the order the
-// contract lists them (docs/specs/plugins/ui.md §3). This is the one list the
-// host's parser reads and the one remit.d.ts is generated from.
-var ContextKeys = []string{
-	"mode",
-	"area",
-	"sub",
-	"library.open",
-	"note.open",
-	"note.selection",
-	"card.present",
-	"card.status",
-	"browse.selection",
-	"scope.active",
-	"page.id",
-	"plugin.id",
-}
-
-// contextReads is the frozen key table, one reader per key ContextKeys names.
-var contextReads = map[string]func(Context) any{
-	"mode":             func(c Context) any { return c.Mode },
-	"area":             func(c Context) any { return c.Area },
-	"sub":              func(c Context) any { return c.Sub },
-	"library.open":     func(c Context) any { return c.LibraryOpen },
-	"note.open":        func(c Context) any { return c.NoteOpen },
-	"note.selection":   func(c Context) any { return c.NoteSelection },
-	"card.present":     func(c Context) any { return c.CardPresent },
-	"card.status":      func(c Context) any { return c.CardStatus },
-	"browse.selection": func(c Context) any { return c.BrowseSelection },
-	"scope.active":     func(c Context) any { return c.ScopeActive },
-	"page.id":          func(c Context) any { return c.PageID },
-	"plugin.id":        func(c Context) any { return c.PluginID },
-}
-
-// contextValue is what one context key answers, and whether the host knows it.
-func contextValue(key string, c Context) (any, bool) {
-	read, ok := contextReads[key]
-	if !ok {
-		return nil, false
-	}
-	return read(c), true
-}
-
 // Expr is a when expression, compiled once when the contribution was read: what
 // a frame does is Eval, and it costs a walk of a handful of nodes.
 //
@@ -166,7 +73,7 @@ type key struct{ name string }
 // key.eval answers the context's value, or nil for a key this host does not
 // know: nil is false, and compares equal to nothing.
 func (k key) eval(ctx Context) any {
-	v, _ := ctx.value(k.name)
+	v, _ := ctx.Value(k.name)
 	return v
 }
 
