@@ -39,27 +39,55 @@ func (a *App) open() {
 		a.start = true
 		return
 	}
-	a.openRolePlugins()
-	lib, err := store.Open(a.dir, a.storeOptions())
-	if errors.Is(err, fs.ErrNotExist) {
-		// The place has no library: the start view offers to make one here or
-		// to open another.
-		a.start = true
-		return
-	}
-	if err != nil {
+	if _, err := a.openLibrary(a.dir, false); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// The place has no library: the start view offers to make one here or
+			// to open another.
+			a.start = true
+			return
+		}
 		a.openErr = err
 		slog.Error("remit: open library", "dir", a.dir, "err", err)
-		return
 	}
-	a.apply(lib, a.dir)
 }
 
-// storeOptions is what the library opens with: the scheduling plugin's policy
-// and the name to stamp on the reviews it records.
-func (a *App) storeOptions() store.Options {
+// openLibrary opens the library at dir and makes it the one on screen, whatever
+// sent the user there: the start of the run, the start view, the list of
+// libraries opened before, or a link. It is the one path into a library, so the
+// four doors cannot drift apart. create makes one where the folder holds none:
+// a place the user picked to be their library, or one a link points at.
+//
+// The target's roles are resolved first, and into locals: what schedules has to
+// be known before the index replays, so the scheduling plugin is resolved
+// before the store opens, and the policy the library opens with is the one its
+// own plugin gives — never the previous library's, and not none at all. A
+// library that does not open commits none of it: the window keeps the library,
+// the roles and the role plugins it had, so a failed switch is never half a
+// library. On success the previous library is closed and the target's roles and
+// library are the window's.
+func (a *App) openLibrary(dir string, create bool) (*store.Library, error) {
+	cards, scheduler := a.rolesFor(dir)
+	options := libraryOptions(scheduler)
+	lib, err := store.Open(dir, options)
+	if errors.Is(err, fs.ErrNotExist) && create {
+		lib, err = store.Create(dir, options)
+	}
+	if err != nil {
+		return nil, err
+	}
+	a.close()
+	a.cards, a.scheduler = cards, scheduler
+	a.apply(lib, dir)
+	return lib, nil
+}
+
+// libraryOptions is what the library at a place opens with: the policy of the
+// scheduling plugin resolved for that library, and the name every review it
+// records is stamped with. The policy is the target's, so a library created now
+// starts with its plugin's retention rather than the host's default.
+func libraryOptions(scheduler *schedulerPlugin) store.Options {
 	options := store.Options{}
-	if policy, ok := a.scheduler.Policy(); ok {
+	if policy, ok := scheduler.Policy(); ok {
 		options.Scheduler = policy.Identity()
 		if policy.Retention > 0 && policy.Retention <= 1 {
 			options.Params.DesiredRetention = policy.Retention
@@ -68,19 +96,21 @@ func (a *App) storeOptions() store.Options {
 	return options
 }
 
-// openRolePlugins resolves each role to the plugin the library names and starts
-// it, before the library reads: what schedules has to be known before the index
-// replays. A role naming a plugin that is missing or will not start falls back
-// to the built-in and says so in the log — a library always opens, whatever its
-// plugins do. A role change is written at once and picked up here, on the next
-// library open.
-func (a *App) openRolePlugins() {
+// rolesFor resolves what derives the cards and what schedules the reviews for
+// the library at dir, scheduling first: its policy is what the library opens
+// with. Without a plugin service the roles are the app's own, resolved once
+// when the window was built — a library cannot name a plugin this build has no
+// service for. A role naming a plugin that is missing or will not start falls
+// back to the built-in and says so in the log: a library always opens, whatever
+// its plugins do. A role change is written at once and picked up here, on the
+// next library open.
+func (a *App) rolesFor(dir string) (*cardPlugin, *schedulerPlugin) {
 	if a.openPlugin == nil {
-		return
+		return a.cards, a.scheduler
 	}
-	roles := store.ReadRoles(a.dir)
-	a.cards = a.cardRole(roles[core.RoleCardsDerive])
-	a.scheduler = a.schedulerRole(roles[core.RoleReviewSchedule])
+	roles := store.ReadRoles(dir)
+	scheduler := a.schedulerRole(roles[core.RoleReviewSchedule])
+	return a.cardRole(roles[core.RoleCardsDerive]), scheduler
 }
 
 // cardRole starts the plugin the card role names, or the app's own when it
@@ -142,26 +172,13 @@ func (a *App) apply(lib *store.Library, dir string) {
 // remembers it for the next start, and says so where the action was when it
 // could not. It is what the start view's two actions run.
 func (a *App) install(c *ui.Context, dir string) {
-	lib, err := openOrCreate(dir)
-	if err != nil {
+	if _, err := a.openLibrary(dir, true); err != nil {
 		a.report(c, "open library", err)
 		return
 	}
-	a.close()
-	a.apply(lib, dir)
 	if err := a.remember(dir); err != nil {
 		a.report(c, "remember library", err)
 	}
-}
-
-// openOrCreate opens the library at dir, making one when the folder holds
-// none: a place the user picked to be their library.
-func openOrCreate(dir string) (*store.Library, error) {
-	lib, err := store.Open(dir, store.Options{})
-	if errors.Is(err, fs.ErrNotExist) {
-		return store.Create(dir, store.Options{})
-	}
-	return lib, err
 }
 
 // startView draws the window before a library is open: the screen itself lives
@@ -245,8 +262,7 @@ func (a *App) openLibraryAt(c *ui.Context, dir string) {
 	if dir == "" {
 		return
 	}
-	lib, err := store.Open(dir, a.storeOptions())
-	if err != nil {
+	if _, err := a.openLibrary(dir, false); err != nil {
 		slog.Error("remit: open recent library", "dir", dir, "err", err)
 		a.welcome.Failed = &start.Failure{Dir: dir, Err: err.Error()}
 		if errors.Is(err, fs.ErrNotExist) {
@@ -256,12 +272,9 @@ func (a *App) openLibraryAt(c *ui.Context, dir string) {
 		}
 		return
 	}
-	a.close()
-	a.welcome.Failed = nil
 	if err := a.remember(dir); err != nil {
 		a.report(c, "remember library", err)
 	}
-	a.apply(lib, dir)
 }
 
 // forgetLibrary takes a path out of the libraries the welcome screen lists. A
@@ -325,19 +338,16 @@ func (a *App) Library() *store.Library { return a.lib }
 // remembered for the next start. A library that will not open leaves the one
 // on screen alone, or the error state when there is none.
 func (a *App) OpenLibrary(dir string) {
-	lib, err := openOrCreate(dir)
-	if err != nil {
+	if _, err := a.openLibrary(dir, true); err != nil {
 		slog.Error("remit: open library", "dir", dir, "err", err)
 		if a.lib == nil {
 			a.openErr, a.start = err, false
 		}
 		return
 	}
-	a.close()
 	if err := a.remember(dir); err != nil {
 		slog.Warn("remit: remember library", "err", err)
 	}
-	a.apply(lib, dir)
 }
 
 // OnLibraryOpen registers a function told about the library once it opens,
