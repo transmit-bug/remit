@@ -102,7 +102,7 @@ export function list() { return remit.notes.list(); }
 	}
 	defer runner.Close()
 	err = runner.Call("list", nil, nil)
-	if err == nil || !strings.Contains(err.Error(), "no host") {
-		t.Fatalf("a declared capability with no host answered %v", err)
+	if !errors.Is(err, ext.ErrNoLibrary) {
+		t.Fatalf("a declared capability with no host answered %v, want ErrNoLibrary", err)
 	}
 }

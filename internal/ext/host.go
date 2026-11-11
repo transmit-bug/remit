@@ -13,9 +13,10 @@ import (
 // not a second one here — plus the library's clock and FSRS parameters, and the
 // plugin's own store.
 //
-// A host is optional. The extensions the app ships declare no capabilities and
-// are opened before a library is; a call that needs a host a runner was not
-// given is an error, never a panic.
+// A host is optional, and a runner may be given one after it started. The
+// extensions the app ships declare no capabilities and are opened before a
+// library is; a call that needs a host the runner has none of is ErrNoLibrary —
+// never a panic, and never a state the runner cannot leave.
 type Host interface {
 	agentapi.Library
 
@@ -33,4 +34,40 @@ type Host interface {
 	// namespace and no other.
 	PluginData(id string) (string, bool)
 	SetPluginData(id, value string) error
+}
+
+// HostFunc answers with the library a capability call acts on, at the moment
+// the call is made; nil is no library yet. It is the seam a runner holds instead
+// of a host when the service that owns the library outlives it: binding a
+// library then hands nothing to the runner, the provider answers differently
+// from the next call on.
+type HostFunc func() Host
+
+// UseHost makes every later capability call resolve its host through provide,
+// replacing the host the runner was opened with. The runner is not restarted:
+// a plugin started before a library is open answers ErrNoLibrary until one is,
+// then answers from it — the same runner, with its module state and its pool
+// kept. A library switch is seen the same way, one call later. A nil provide
+// leaves the runner reaching nothing again.
+func (r *JSRunner) UseHost(provide HostFunc) {
+	r.hostMu.Lock()
+	defer r.hostMu.Unlock()
+	r.host = provide
+}
+
+// hostProvider is the provider a capability call asks, copied out under the
+// lock and asked without it: a provider that takes a lock of its own cannot
+// deadlock a runtime that is being loaded, and one call sees one provider.
+func (r *JSRunner) hostProvider() HostFunc {
+	r.hostMu.RLock()
+	defer r.hostMu.RUnlock()
+	return r.host
+}
+
+// fixedHost is the provider a runner opened with one host uses.
+func fixedHost(host Host) HostFunc {
+	if host == nil {
+		return nil
+	}
+	return func() Host { return host }
 }

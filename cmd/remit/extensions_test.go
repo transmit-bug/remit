@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -112,5 +114,73 @@ func TestPluginServiceGivesAContributedPageTheLibrary(t *testing.T) {
 	}
 	if !strings.Contains(string(page), "Leech farm") {
 		t.Fatalf("the page did not read the library: %s", page)
+	}
+}
+
+// A role's plugin starts before its library — the scheduling policy has to be in
+// place before the index replays — so the library arrives after the runner does.
+// The regression: SetLibrary closed every runner it had started and emptied the
+// cache, leaving the runner a role held without a host and closed.
+func TestPluginServiceKeepsARunnerAcrossTheLibraryBind(t *testing.T) {
+	root := t.TempDir()
+	installPlugin(t, root, "late",
+		`{"id":"test.late","name":"late","version":"1.0.0","apiVersion":1,"runtime":"js","entry":"main.js","capabilities":["notes:read"]}`,
+		`export function get(id) { return remit.notes.get(id); }`)
+	s := newPluginService(root)
+
+	runner, err := s.Open("late")
+	if err != nil {
+		t.Fatalf("Open(late): %v", err)
+	}
+	t.Cleanup(func() { _ = runner.Close() })
+
+	// No library is open yet: the reason says just that, rather than the plugin
+	// being broken or the runner having to be started again.
+	var note json.RawMessage
+	if err := runner.Call("get", "note_1", &note); !errors.Is(err, ext.ErrNoLibrary) {
+		t.Fatalf("with no library the call answered %v, want ErrNoLibrary", err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	lib, err := store.Create(t.TempDir(), store.Options{Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatalf("create library: %v", err)
+	}
+	t.Cleanup(func() { lib.Close() })
+	saved, err := lib.SaveNote(core.Note{Title: "Biology", Blocks: []core.Block{{Text: "q :: a"}}})
+	if err != nil {
+		t.Fatalf("save note: %v", err)
+	}
+	s.SetLibrary(lib)
+
+	// The same runner, so the plugin started once: a second start would answer
+	// a different pointer.
+	if again, err := s.Open("late"); err != nil || again != runner {
+		t.Fatalf("Open after the bind answered %v (%v), want the runner started before it", again, err)
+	}
+	var got struct {
+		Title string `json:"title"`
+	}
+	if err := runner.Call("get", string(saved.ID), &got); err != nil {
+		t.Fatalf("the same runner after the bind: %v", err)
+	}
+	if got.Title != "Biology" {
+		t.Errorf("the runner read %+v after the bind", got)
+	}
+}
+
+// installPlugin writes one js plugin under root, so that a service discovers it
+// the way it discovers an installed one.
+func installPlugin(t *testing.T, root, name, manifest, source string) {
+	t.Helper()
+	dir := filepath.Join(root, name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("plugin dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "extension.json"), []byte(manifest), 0o644); err != nil {
+		t.Fatalf("manifest: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.js"), []byte(source), 0o644); err != nil {
+		t.Fatalf("entry: %v", err)
 	}
 }

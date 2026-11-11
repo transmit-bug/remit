@@ -99,7 +99,8 @@ func main() {
 	// rebinds the key while the app runs.
 	agent := newAgentService(dataDir)
 	// The plugin directory is cmd's: the app lists it for the settings page and
-	// asks it for the runner each role names, once per library open.
+	// asks it for the runner each role names, once for the process's life — a
+	// runner that outlives a library opens and follows the next one.
 	plugins := newPluginService(filepath.Join(dataDir, "extensions"))
 	a := appui.NewApp(appui.Options{
 		LibraryDir:    dir,

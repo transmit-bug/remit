@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/egoist/mygo"
 
@@ -78,12 +79,18 @@ func startExtensions(lib *store.Library, app *appui.App) {
 
 // pluginService is the plugin directory as the app reaches it: what discovery
 // finds for the settings page, and the runner a role names. Runners are kept by
-// manifest name, so reopening a library does not start a plugin twice.
+// manifest name for the service's life, so reopening a library neither starts a
+// plugin twice nor takes the runner a role holds away from it.
 type pluginService struct {
 	root string
 	mu   sync.Mutex
 	open map[string]*ext.JSRunner
-	host ext.Host
+	// host is the library the plugins act on, replaced when one opens. A runner
+	// reads it through currentHost on every capability call. It is an atomic
+	// pointer rather than s.mu because a plugin may reach its host while Open
+	// holds the lock — loading a module that calls a capability at its top
+	// level — and a lock there would deadlock with itself.
+	host atomic.Pointer[cardSource]
 }
 
 // newPluginService serves the plugins installed under root.
@@ -152,33 +159,50 @@ func (s *pluginService) Open(name string) (*ext.JSRunner, error) {
 	return runner, nil
 }
 
-// SetLibrary gives the plugins the library their callbacks act on. Runners
-// opened before it are dropped: a plugin started without a host answers every
-// capability call with an error, and a page that reads nothing is worse than
-// one that asks again.
+// SetLibrary makes lib the library the plugins' capability calls act on. Runners
+// already open are kept: each resolves its host through currentHost on every
+// call, so a plugin started before a library opened — which a role's must be,
+// the scheduling policy has to be in place before the index replays — works once
+// it does, and a library switch is seen without a second start.
 func (s *pluginService) SetLibrary(lib *store.Library) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	host, err := newCardSource(lib)
 	if err != nil {
 		slog.Warn("remit: extensions: the card plugin did not start", "err", err)
 	}
-	for _, runner := range s.open {
-		_ = runner.Close()
+	s.host.Store(&host)
+}
+
+// currentHost is the library a capability call acts on now; nil when no library
+// is open yet. It is the provider every runner is given.
+func (s *pluginService) currentHost() ext.Host {
+	if host := s.host.Load(); host != nil {
+		return *host
 	}
-	s.host = host
-	s.open = map[string]*ext.JSRunner{}
+	return nil
 }
 
 // start opens one plugin by manifest name. A role's hooks are pure — derive a
 // card, answer a policy — and a contributed command or page reads the library,
-// so every runner gets the host of the library open now.
+// so every runner is opened with no host and given the service's provider: the
+// library a capability call reaches is the one open then, not the one open at
+// construction, which for a role's plugin is none.
 func (s *pluginService) start(name string) (*ext.JSRunner, error) {
+	runner, err := s.newRunner(name)
+	if err != nil {
+		return nil, err
+	}
+	runner.UseHost(s.currentHost)
+	return runner, nil
+}
+
+// newRunner builds the runner a manifest name names: the app's own plugins come
+// from the binary, every other from the plugin directory.
+func (s *pluginService) newRunner(name string) (*ext.JSRunner, error) {
 	switch name {
 	case store.DefaultCardsPlugin:
-		return builtin.Cards(s.host, ext.JSLimits{})
+		return builtin.Cards(nil, ext.JSLimits{})
 	case store.DefaultSchedulerPlugin:
-		return builtin.Scheduler(s.host, ext.JSLimits{})
+		return builtin.Scheduler(nil, ext.JSLimits{})
 	}
 	found, err := ext.Discover(s.root)
 	if err != nil {
@@ -191,7 +215,7 @@ func (s *pluginService) start(name string) (*ext.JSRunner, error) {
 		if ext.Runtime(candidate.Manifest.Runtime) != ext.RuntimeJS {
 			return nil, fmt.Errorf("remit: %q is not a js plugin, and no role runs on another runtime", name)
 		}
-		return ext.OpenJS(candidate.Dir, s.host, ext.JSLimits{})
+		return ext.OpenJS(candidate.Dir, nil, ext.JSLimits{})
 	}
 	return nil, fmt.Errorf("remit: no plugin named %q", name)
 }

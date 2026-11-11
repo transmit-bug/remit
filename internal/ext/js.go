@@ -45,6 +45,13 @@ var ErrMemoryLimit = errors.New("ext: the extension used its memory")
 // ErrNoHook is a call for a hook the extension does not carry.
 var ErrNoHook = errors.New("ext: the extension has no such hook")
 
+// ErrNoLibrary is a capability call a runner cannot answer yet: no library is
+// open. It is not sticky — the runner answers once one opens, so a caller
+// reports it and asks again rather than dropping the runner — and it is the
+// app's timing, not the plugin's failure, so it does not count towards the
+// three strikes that disable one.
+var ErrNoLibrary = errors.New("ext: no library yet")
+
 // ErrDisabled is a call to an extension that failed three times in a row.
 // Re-enabling is a fresh Open; that is the caller's call to make.
 var ErrDisabled = errors.New("ext: the extension is disabled")
@@ -88,9 +95,12 @@ type JSRunner struct {
 	module   *moejs.Module
 	limits   JSLimits
 	caps     map[string]bool
-	// host is what the extension may reach through its capabilities; nil when
-	// it was started without one.
-	host Host
+	// host is what the extension may reach through its capabilities, as a
+	// provider: every capability call asks which library is open now, so a
+	// library opening after the runner started needs no new runner. nil, or a
+	// provider answering nil, is no library yet. Guarded by hostMu.
+	host   HostFunc
+	hostMu sync.RWMutex
 
 	// pool holds idle runtimes that have loaded the module. A channel is the
 	// whole concurrency story: take is a receive, return is a send, a full
@@ -155,7 +165,7 @@ func compileJS(manifest Manifest, source []byte, host Host, limits JSLimits) (*J
 		module:   module,
 		limits:   limits.withDefaults(),
 		caps:     caps,
-		host:     host,
+		host:     fixedHost(host),
 		pool:     make(chan *moejs.Runtime, runtimePoolSize),
 	}, nil
 }
@@ -337,7 +347,12 @@ func (r *JSRunner) Call(method string, params, out any) error {
 	}
 	if res.err != nil {
 		err := r.classify(res.err)
-		r.fail()
+		// A library the runner does not have yet is the app's timing, not the
+		// plugin's failure: counting it would disable a role plugin for having
+		// started before the library it is waiting for.
+		if !errors.Is(err, ErrNoLibrary) {
+			r.fail()
+		}
 		return err
 	}
 	r.succeeded()
@@ -790,17 +805,21 @@ func (r *JSRunner) hostFunc(rt *moejs.Runtime, capability string, call func(Host
 
 // reachable answers with the host a capability call may use, or the reason it
 // may not. A capability the manifest did not declare is a CapabilityError, and
-// the plugin log — this app's one log — says which plugin asked for what.
+// the plugin log — this app's one log — says which plugin asked for what. A
+// runner with no library open yet answers ErrNoLibrary: the caller waits for
+// one instead of treating the runner as broken.
 func (r *JSRunner) reachable(capability string) (Host, error) {
 	if !r.caps[capability] {
 		slog.Warn("remit: a plugin called a capability it did not declare",
 			"extension", r.manifest.Name, "capability", capability)
 		return nil, &CapabilityError{Extension: r.manifest.ID, Capability: capability}
 	}
-	if r.host == nil {
-		return nil, fmt.Errorf("ext: %s: no host to answer %s", r.manifest.Name, capability)
+	if provide := r.hostProvider(); provide != nil {
+		if host := provide(); host != nil {
+			return host, nil
+		}
 	}
-	return r.host, nil
+	return nil, fmt.Errorf("%w: %s: %s", ErrNoLibrary, r.manifest.Name, capability)
 }
 
 // fromGo converts a result for the runtime, naming the plugin when it cannot.
