@@ -4,8 +4,9 @@
 // (docs/specs/plugins/ui.md §5); every spacing, colour, focus and reflow here is
 // the host's.
 //
-// The page reads State and never calls a plugin: the app loads a page's tree
-// before the frame that draws it, and hands the error here when the load failed.
+// The page reads Data and State and never calls a plugin: the app's page
+// runtime loads a page's tree before the frame that draws it and hands the error
+// here when the load failed.
 package pluginpage
 
 import (
@@ -28,10 +29,10 @@ const (
 	chartHeight float32 = 150
 )
 
-// State is the page on screen: what the app's last load left, and the choices
-// the reader made in it. The app fills the first three; the rest lives here so
-// that a tab, a tree branch and a parsed markdown document survive a frame.
-type State struct {
+// Data is the page's content as the app's last load left it: the tree the data
+// command answered, why there is none, and whether more is on its way. The
+// runtime that decides it holds no drawing; this is the whole of what crosses.
+type Data struct {
 	// Title is the page's own message, "%page.key%" or a literal.
 	Title string
 	// Tree is the node tree the page's data command answered.
@@ -41,7 +42,13 @@ type State struct {
 	Err string
 	// Loading is a load in flight: the page shows a skeleton and no error.
 	Loading bool
+}
 
+// State is the page's own view state, which is the screen's alone: the board
+// node the window pointed at, and the reader's choices in the tree — the tab
+// taken, the branch opened, a parsed markdown document — kept by node path so
+// that they survive a frame and a reload.
+type State struct {
 	// Highlight is the board node the window was told to locate, "" for none,
 	// and HighlightRun is how often that moved: a new run replays the pointer
 	// once, and a second trip to the same node plays it again.
@@ -91,7 +98,7 @@ type NodeInfo struct {
 }
 
 // View draws the page: its title, then the tree, or why there is none.
-func View(c *ui.Context, s *State, d Deps) {
+func View(c *ui.Context, s *State, data Data, d Deps) {
 	msgs := locales.In(c.Locale())
 	tk := design.NewTokens(c.Theme())
 	w, _ := c.Size()
@@ -99,16 +106,16 @@ func View(c *ui.Context, s *State, d Deps) {
 	// A page that draws a board takes the wide measure: a graph needs the room a
 	// paragraph does not, and the host scales the page's own space into it (§6.4).
 	measure := tk.PaperWidth
-	if hasBoard(s.Tree) {
+	if hasBoard(data.Tree) {
 		measure = tk.BoardWidth
 	}
 
 	ui.Scroll(c).Grow(1).Children(func() {
 		ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(tk.SpaceXL).Children(func() {
-			ui.Column(c).FillWidth().MaxWidth(measure).Gap(tk.SpaceL).Label(d.message(c, s.Title)).Children(func() {
+			ui.Column(c).FillWidth().MaxWidth(measure).Gap(tk.SpaceL).Label(d.message(c, data.Title)).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(tk.SpaceS).
 					Label(msgs.PluginPageActions()).Children(func() {
-					ui.Text(c, d.message(c, s.Title)).FontSize(tk.TypeH1).Bold()
+					ui.Text(c, d.message(c, data.Title)).FontSize(tk.TypeH1).Bold()
 					ui.Spacer(c)
 					// The page's own actions, then the host's refresh: a page's data
 					// is asked for on entering, on an explicit refresh and on an
@@ -125,12 +132,12 @@ func View(c *ui.Context, s *State, d Deps) {
 						OnClick(func() { d.retry(c) })
 				})
 				switch {
-				case s.Err != "":
-					failed(c, s, d, msgs, tk)
-				case s.Tree.Kind == "":
+				case data.Err != "":
+					failed(c, data, d, msgs, tk)
+				case data.Tree.Kind == "":
 					loading(c, msgs, tk)
 				default:
-					draw(c, s, d, s.Tree, "page", tk, narrow)
+					draw(c, s, d, data.Tree, "page", tk, narrow)
 				}
 			})
 		})
@@ -139,9 +146,9 @@ func View(c *ui.Context, s *State, d Deps) {
 
 // failed is a page whose data did not arrive: what went wrong, and the one
 // action that asks again. It is never a blank page.
-func failed(c *ui.Context, s *State, d Deps, msgs locales.Messages, tk design.Tokens) {
+func failed(c *ui.Context, data Data, d Deps, msgs locales.Messages, tk design.Tokens) {
 	ui.Row(c).Gap(tk.SpaceM).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, msgs.PluginPageFailed(s.Err)).FontSize(tk.TypeUI).TextColor(tk.Danger)
+		ui.Text(c, msgs.PluginPageFailed(data.Err)).FontSize(tk.TypeUI).TextColor(tk.Danger)
 		ui.Button(c, msgs.PluginPageRetry()).MinHeight(tk.Control).
 			OnClick(func() { d.retry(c) })
 	})

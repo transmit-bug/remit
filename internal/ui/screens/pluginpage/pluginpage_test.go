@@ -10,15 +10,15 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/screens/pluginpage"
 )
 
-// pageState is the screen with a tree the contract allows, as the app hands it
-// over: the data command's answer, already parsed, and no error.
-func pageState(t *testing.T, raw string) *pluginpage.State {
+// pageData is a page's content as the app's runtime hands it over: the data
+// command's answer, already parsed, and no error.
+func pageData(t *testing.T, raw string) pluginpage.Data {
 	t.Helper()
 	tree, err := contrib.ParsePage([]byte(raw))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	return &pluginpage.State{Title: "Leeches", Tree: tree}
+	return pluginpage.Data{Title: "Leeches", Tree: tree}
 }
 
 // messages resolves a page's own strings as the app does: the plugin's catalog,
@@ -72,9 +72,10 @@ func TestEveryNodeTheHostKnowsDraws(t *testing.T) {
 	    ]}
 	  ]}
 	]}`
-	s := pageState(t, raw)
+	data := pageData(t, raw)
+	s := &pluginpage.State{}
 	d := &deps{}
-	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, d.deps()) }, 1024, 720)
+	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, data, d.deps()) }, 1024, 720)
 	tt.Frame()
 
 	for _, want := range []string{
@@ -110,9 +111,10 @@ func TestEveryNodeTheHostKnowsDraws(t *testing.T) {
 // A page over the contract's limits is an error the page shows, and a retry is
 // the one action it offers: never a blank page.
 func TestFailedPageSaysWhyAndRetries(t *testing.T) {
+	data := pluginpage.Data{Title: "Leeches", Err: "page: the data command answered nothing"}
+	s := &pluginpage.State{}
 	d := &deps{}
-	s := &pluginpage.State{Title: "Leeches", Err: "page: the data command answered nothing"}
-	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, d.deps()) }, 1024, 720)
+	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, data, d.deps()) }, 1024, 720)
 	tt.Frame()
 
 	if !tt.HasText("This page could not be loaded: page: the data command answered nothing") {
@@ -126,8 +128,8 @@ func TestFailedPageSaysWhyAndRetries(t *testing.T) {
 	}
 
 	// The tree arriving is the page again.
-	s.Err = ""
-	s.Tree = pageState(t, `{"kind":"page","children":[{"kind":"text","text":"loaded"}]}`).Tree
+	data.Err = ""
+	data.Tree = pageData(t, `{"kind":"page","children":[{"kind":"text","text":"loaded"}]}`).Tree
 	tt.Frame()
 	if !tt.HasText("loaded") || tt.HasText("Retry") {
 		t.Errorf("the page did not draw its tree; texts %q", tt.Texts())
@@ -137,8 +139,11 @@ func TestFailedPageSaysWhyAndRetries(t *testing.T) {
 // A page without a tree yet is a skeleton, not an error: the title is up and the
 // content says it is on its way.
 func TestLoadingPageShowsASkeleton(t *testing.T) {
-	s := &pluginpage.State{Title: "Leeches", Loading: true}
-	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, pluginpage.Deps{Message: messages}) }, 1024, 720)
+	data := pluginpage.Data{Title: "Leeches", Loading: true}
+	s := &pluginpage.State{}
+	tt := ui.NewTester(func(c *ui.Context) {
+		pluginpage.View(c, s, data, pluginpage.Deps{Message: messages})
+	}, 1024, 720)
 	tt.Frame()
 	if !tt.HasText("Loading…") {
 		t.Fatalf("the loading page says nothing; texts %q", tt.Texts())
@@ -148,12 +153,13 @@ func TestLoadingPageShowsASkeleton(t *testing.T) {
 // An unknown node keeps its place: the page names the kind it cannot draw and
 // renders everything around it.
 func TestUnknownNodeDrawsInPlace(t *testing.T) {
-	s := pageState(t, `{"kind":"page","children":[
+	data := pageData(t, `{"kind":"page","children":[
 	  {"kind":"text","text":"before"},
 	  {"kind":"sparkline","children":[{"kind":"text","text":"inside"}]},
 	  {"kind":"text","text":"after"}]}`)
+	s := &pluginpage.State{}
 	d := &deps{}
-	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, d.deps()) }, 1024, 720)
+	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, data, d.deps()) }, 1024, 720)
 	tt.Frame()
 
 	if !tt.HasText("before") || !tt.HasText("after") {
@@ -177,7 +183,7 @@ func TestNarrowPageCollapsesItsLayouts(t *testing.T) {
 	    {"kind":"text","text":"second pane"}
 	  ]}
 	]}`
-	s := pageState(t, raw)
+	data := pageData(t, raw)
 	d := &deps{}
 	for _, size := range []struct {
 		name    string
@@ -188,7 +194,8 @@ func TestNarrowPageCollapsesItsLayouts(t *testing.T) {
 		{"narrow", 720, 520, true},
 	} {
 		t.Run(size.name, func(t *testing.T) {
-			tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, d.deps()) }, size.w, size.h)
+			s := &pluginpage.State{}
+			tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, data, d.deps()) }, size.w, size.h)
 			tt.Frame()
 			left, _ := tt.Find("left cell")
 			right, _ := tt.Find("right cell")
@@ -216,12 +223,13 @@ func TestNarrowPageCollapsesItsLayouts(t *testing.T) {
 // The tabs are a tab list: choosing one shows its content, and the labels are
 // the plugin's, in the frame's language.
 func TestTabsChooseTheirContent(t *testing.T) {
-	s := pageState(t, `{"kind":"page","children":[{"kind":"tabs","tabs":[
+	data := pageData(t, `{"kind":"page","children":[{"kind":"tabs","tabs":[
 	  {"label":"%tab.one%","children":[{"kind":"text","text":"one's content"}]},
 	  {"label":"%tab.two%","children":[{"kind":"text","text":"two's content"}]}
 	]}]}`)
+	s := &pluginpage.State{}
 	d := &deps{}
-	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, d.deps()) }, 1024, 720)
+	tt := ui.NewTester(func(c *ui.Context) { pluginpage.View(c, s, data, d.deps()) }, 1024, 720)
 	tt.Frame()
 	if !tt.HasText("one's content") || tt.HasText("two's content") {
 		t.Fatalf("the first tab is not the one shown; texts %q", tt.Texts())

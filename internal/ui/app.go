@@ -19,7 +19,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
-	"github.com/transmit-bug/remit/internal/ext/contrib"
+	"github.com/transmit-bug/remit/internal/pages"
 	"github.com/transmit-bug/remit/internal/plugin"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/screens/cardtypes"
@@ -92,11 +92,10 @@ type App struct {
 	due     []core.ID      // today's queue, as the last reload derived it
 
 	mode             mode
-	area             areaID          // which area the rail shows as chosen
-	sub              subID           // which of its pages; subNone when it has none
-	back             []place         // where back returns to, most recent last
-	session          sessionKind     // the session over the stage, when one is open; none until the session screens land
-	page             contrib.PageRef // the contributed page on screen, when area is areaPlugin
+	area             areaID      // which area the rail shows as chosen
+	sub              subID       // which of its pages; subNone when it has none
+	back             []place     // where back returns to, most recent last
+	session          sessionKind // the session over the stage, when one is open; none until the session screens land
 	review           review.State
 	reviewScope      queue.Scope             // what the review session draws from; within the session only, never stored
 	failed           []core.ID               // the cards this session answered Again, in the order they were missed
@@ -161,8 +160,9 @@ type App struct {
 	// reads what it left; a frame starts nothing.
 	plugins *plugin.Supervisor
 
-	// ui is the plugins' declared UI, parsed once when the library opens, and
-	// pending is what their callbacks answered since the last frame: what a
+	// ui is the plugins' declared UI, parsed once when the library opens and
+	// holding the page runtime that decides what a contributed page draws today;
+	// pending is what their callbacks answered since the last frame — what a
 	// frame reads instead of ever calling a plugin.
 	ui      pluginUI
 	pending pendingWork
@@ -278,6 +278,9 @@ func NewApp(opts ...Options) *App {
 		reveal:      mygo.Shell.ShowItemInFolder,
 		checkUpdate: screensettings.CheckForUpdate,
 	}
+	// The page runtime exists from the first frame, so that a route can ask which
+	// contributed page is on screen before a library opens.
+	a.ui.pages = pages.New()
 	// The importer reads the library open now, which a dropped archive can
 	// replace, so it takes it at call time rather than at construction.
 	a.importAnki = func(path string) (importanki.Report, error) { return importanki.Import(path, a.lib) }

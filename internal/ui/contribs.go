@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"log/slog"
 	"sort"
@@ -16,6 +14,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/queue"
 	"github.com/transmit-bug/remit/internal/ext"
 	"github.com/transmit-bug/remit/internal/ext/contrib"
+	"github.com/transmit-bug/remit/internal/pages"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/screens/pluginpage"
 	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
@@ -23,25 +22,28 @@ import (
 
 // pluginUI is the plugins' declared UI as the window uses it: parsed once when
 // the library opens, so a frame only reads it. Nothing here is a plugin call —
-// the runners are only reached from a handler, off the frame.
+// the runners are only reached from a handler or from a job that runs off the
+// frame — and the pages' own rules are the runtime's, not this struct's.
 type pluginUI struct {
 	index contrib.Index
 	// commanders is what answers a plugin's callbacks, by manifest name, opened
 	// on first use: a plugin with no command never starts.
 	commanders map[string]ext.Commander
-	// pages is each page's state, by plugin and page id: the tree the last load
-	// left, and the reader's choices in it. A page the window dropped keeps its
-	// state until the library reopens.
-	pages map[string]*pluginpage.State
-	// pagesFor is each page's context hash, which is what a cache hit compares:
-	// entering a page again with the same context keeps the tree it has.
-	pagesFor map[string]string
-	// loading marks the pages whose data is in flight, so a second entry asks
-	// once.
-	loading map[string]bool
+	// pages is the page runtime: each page's tree, error, in-flight flag, the
+	// context it was loaded in and its failures. One field and one state
+	// machine (docs/specs/plugin-system.md P5): the window reads it and runs the
+	// jobs it hands out, and never keeps a rule of its own beside it.
+	pages *pages.Runtime
+	// views is each page's drawing state — the tab chosen, the branch opened, the
+	// node the window pointed at — by plugin and page id. It is the screen's, and
+	// stays in the window because the runtime may not know what a page looks
+	// like: it holds data, never a control.
+	views map[string]*pluginpage.State
 	// failures counts each contribution's consecutive failures and remembers
 	// what the third took out: the counts and the hidden set are one value, so
-	// the settings page cannot read a count that disagrees with what shows.
+	// the settings page cannot read a count that disagrees with what shows. A
+	// page's own count is the runtime's; this one is the command's and the menu
+	// item's.
 	failures *contrib.Failures
 	// problems is what each plugin's manifest declared that this host cannot
 	// use, by manifest id, for the log and the settings page.
@@ -65,16 +67,23 @@ func pageKey(plugin, id string) string { return plugin + "/" + id }
 // rather than a plugin that will not enable.
 func (a *App) loadContributions() {
 	area, sub := a.ui.area, a.ui.sub
+	// The page runtime outlives a reload of the declarations: turning a plugin on
+	// or off is no reason to forget what a page already answered or how often it
+	// failed. A window also has one from its first frame, so that a route can ask
+	// which page is on screen before a library opens.
+	pageRuntime := a.ui.pages
 	a.ui = pluginUI{
 		commanders: map[string]ext.Commander{},
-		pages:      map[string]*pluginpage.State{},
-		pagesFor:   map[string]string{},
-		loading:    map[string]bool{},
+		views:      map[string]*pluginpage.State{},
 		failures:   contrib.NewFailures(),
 		problems:   map[string][]string{},
 		names:      map[string]string{},
+		pages:      pageRuntime,
 		area:       area,
 		sub:        sub,
+	}
+	if a.ui.pages == nil {
+		a.ui.pages = pages.New()
 	}
 	if a.lib == nil {
 		return
@@ -110,8 +119,9 @@ func (a *App) loadContributions() {
 	// A page on screen whose plugin went away, or whose page did: the window
 	// returns to the notes rather than drawing a page that no longer exists.
 	if a.area == areaPlugin {
-		if _, ok := a.ui.index.Page(a.page.Plugin, a.page.Page.ID); !ok {
-			a.page = contrib.PageRef{}
+		current := a.ui.pages.Current()
+		if _, ok := a.ui.index.Page(current.Plugin, current.Page.ID); !ok {
+			a.ui.pages.Leave()
 			a.setArea(areaWrite, subNotes)
 		}
 	}
@@ -133,7 +143,8 @@ func (a *App) contributionContext() contrib.Context {
 		ScopeActive:   a.reviewScope.Kind != queue.ScopeAll,
 	}
 	if a.mode == modePlugin {
-		ctx.PluginID, ctx.PageID = a.page.Plugin, a.page.Page.ID
+		page := a.ui.pages.Current()
+		ctx.PluginID, ctx.PageID = page.Plugin, page.Page.ID
 	}
 	if a.mode == modeBrowse && a.area == areaRecall && a.sub == subRecallCards {
 		// The table is on screen: a row the keys are on, or the rows the user
@@ -208,7 +219,7 @@ func (a *App) visiblePages() []contrib.PageRef {
 	ctx := a.contributionContext()
 	var out []contrib.PageRef
 	for _, ref := range a.ui.index.Pages() {
-		if ref.Page.Nav != contrib.NavPlugins || a.ui.failures.Hidden(ref.Plugin, ref.Page.ID) {
+		if ref.Page.Nav != contrib.NavPlugins || a.ui.pages.Hidden(ref.Plugin, ref.Page.ID) {
 			continue
 		}
 		if !ref.Page.When.Eval(ctx) {
@@ -368,7 +379,7 @@ func (a *App) applyCommandAnswer(c *ui.Context, ref contrib.CommandRef, answer e
 		a.openPage(c, page)
 	case "refresh":
 		if a.mode == modePlugin {
-			a.loadPage(c, a.page, true)
+			a.enterPage(c, a.ui.pages.Current(), true)
 		}
 	case "toast":
 		c.Toast(a.pluginText(c, ref.Plugin, answer.Message))
@@ -428,86 +439,76 @@ func (a *App) contributionPayload() map[string]any {
 	return payload
 }
 
-// openPage shows a contributed page and asks for its data, off the frame.
+// pagePayload is the context a page's data command reads: the window's own, with
+// the page it is entering named as it. The runtime learns which page is on screen
+// when Enter returns, so the page cannot be read off the window before that — and
+// the key has to be the same one every frame would build, or the same page would
+// ask again on the next frame.
+func (a *App) pagePayload(ref contrib.PageRef) map[string]any {
+	payload := a.contributionPayload()
+	payload["page.id"], payload["plugin.id"] = ref.Page.ID, ref.Plugin
+	return payload
+}
+
+// openPage shows a contributed page: what its last load left, or its skeleton,
+// and the job that asks for the page's data, run off this frame.
 func (a *App) openPage(c *ui.Context, ref contrib.PageRef) {
 	if ref.Page.ID == "" {
 		return
 	}
-	moved := pageArea(a.page) != pageArea(ref)
+	moved := pageArea(a.ui.pages.Current()) != pageArea(ref)
 	if moved {
 		a.pushPlace(place{a.area, a.sub})
 	}
-	a.page = ref
 	a.setArea(areaPlugin, subNone)
 	if moved {
 		a.anim.mode++
 	}
-	a.loadPage(c, ref, false)
+	a.enterPage(c, ref, false)
 }
 
-// loadPage asks a page's data command for its tree, off the frame. force asks
-// again when the window is already holding an answer for this context, which is
-// what a retry and a refresh result do.
-func (a *App) loadPage(c *ui.Context, ref contrib.PageRef, force bool) {
-	key := pageKey(ref.Plugin, ref.Page.ID)
-	if a.ui.failures.Hidden(ref.Plugin, ref.Page.ID) {
+// enterPage enters a page and runs the job the runtime hands out, when it hands
+// one out: an enter whose tree is the one this context loaded is a read, and a
+// second one while a load is out asks nothing.
+func (a *App) enterPage(c *ui.Context, ref contrib.PageRef, retry bool) {
+	if ref.Page.ID == "" {
 		return
 	}
-	state := a.pageState(ref)
-	payload := a.contributionPayload()
-	hash := contextHash(payload)
-	if !force && state.Err == "" && state.Tree.Kind != "" && a.ui.pagesFor[key] == hash {
-		return
+	var job *pages.Job
+	if retry {
+		_, job = a.ui.pages.Retry(ref, a.pagePayload(ref))
+	} else {
+		_, job = a.ui.pages.Enter(ref, a.pagePayload(ref))
 	}
-	if a.ui.loading[key] {
-		return
+	if job != nil {
+		a.askPage(c, job)
 	}
-	commander, err := a.commanderFor(ref.Name)
+}
+
+// askPage runs one page's data call off the frame and hands the answer back on
+// the UI thread. The plugin is opened here, in a handler: a frame never starts
+// one, and a job it cannot run is dropped rather than answered with a failure.
+func (a *App) askPage(c *ui.Context, job *pages.Job) {
+	commander, err := a.commanderFor(job.Plugin)
 	if err != nil {
-		state.Err = err.Error()
-		state.Loading = false
-		a.pageFailed(ref, err)
+		a.applyPage(job, nil, err)
 		return
 	}
-	state.Loading = true
-	state.Err = ""
-	a.ui.loading[key] = true
-	in := ext.CommandIn{Name: ref.Page.Data, Context: payload}
 	a.background(c, func() func(*ui.Context) {
-		raw, err := commander.PageData(in)
-		return func(c *ui.Context) {
-			delete(a.ui.loading, key)
-			state := a.pageState(ref)
-			state.Loading = false
-			if err != nil {
-				state.Err = err.Error()
-				a.pageFailed(ref, err)
-				return
-			}
-			tree, err := contrib.ParsePage(raw)
-			if err != nil {
-				state.Err = err.Error()
-				a.pageFailed(ref, err)
-				return
-			}
-			a.ui.failures.Succeeded(ref.Plugin, ref.Page.ID)
-			a.ui.pagesFor[key] = hash
-			state.Tree = tree
-			state.Err = ""
-		}
+		tree, err := commander.PageData(job.In)
+		return func(*ui.Context) { a.applyPage(job, tree, err) }
 	})
 }
 
-// pageFailed counts a page's failure, says so in the page (which shows its error
-// state and a retry) and hides that page — and only that page — at the third.
-func (a *App) pageFailed(ref contrib.PageRef, err error) {
-	slog.Warn("remit: a plugin page failed", "plugin", ref.Name, "page", ref.Page.ID, "err", err)
-	if !a.ui.failures.Failed(ref.Plugin, ref.Page.ID, err.Error()) {
+// applyPage takes a job's answer: the runtime keeps the tree, or counts the
+// failure and hides the page at the third. A page the third failure hid is one
+// the window cannot draw any more, so the route leaves it rather than naming a
+// page that is not there.
+func (a *App) applyPage(job *pages.Job, tree []byte, err error) {
+	if !a.ui.pages.Apply(job, tree, err) {
 		return
 	}
-	slog.Warn("remit: a plugin page was hidden after three failures", "plugin", ref.Name, "page", ref.Page.ID)
-	if a.area == areaPlugin && a.page.Plugin == ref.Plugin && a.page.Page.ID == ref.Page.ID {
-		a.page = contrib.PageRef{}
+	if a.area == areaPlugin && a.ui.pages.Current().Page.ID == "" {
 		a.setArea(areaWrite, subNotes)
 	}
 }
@@ -526,39 +527,49 @@ func (a *App) contributionFailed(c *ui.Context, plugin, id, message string) {
 	}
 }
 
-// pageState answers one page's state, made on first use.
+// pageState answers one page's drawing state — its highlight, its chosen tab,
+// its open branches — made on first use. The page's data is the runtime's, never
+// this: a frame draws what the last load left and decides no content here.
 func (a *App) pageState(ref contrib.PageRef) *pluginpage.State {
+	if a.ui.views == nil {
+		a.ui.views = map[string]*pluginpage.State{}
+	}
 	key := pageKey(ref.Plugin, ref.Page.ID)
-	state := a.ui.pages[key]
+	state := a.ui.views[key]
 	if state == nil {
 		state = &pluginpage.State{}
-		a.ui.pages[key] = state
+		a.ui.views[key] = state
 	}
-	state.Title = string(ref.Page.Title)
 	return state
 }
 
-// pluginPageView draws the page on screen. The screen only reads what the last
-// load left: a frame never asks a plugin for anything. A page whose cache key no
-// longer matches what it was loaded in — a write invalidated it — asks again off
-// this frame, which is how the contract's event refreshes an open page.
+// pluginPageView draws the page on screen. The runtime answers what the last
+// load left and, when the context moved under it, the job that asks again: that
+// job runs off this frame and its answer is drawn on a later one. A page whose
+// commander is not open yet is a page no reader entered — opening a plugin is a
+// handler's job — so the job is dropped rather than started here.
 func (a *App) pluginPageView(c *ui.Context) {
-	ref := a.page
+	ref := a.ui.pages.Current()
 	if ref.Page.ID == "" {
 		return
 	}
-	state := a.pageState(ref)
-	key := pageKey(ref.Plugin, ref.Page.ID)
-	// A page that has been drawn before has its commander; opening one is the
-	// handler's job (openPage), so a frame never starts a plugin.
-	_, ready := a.ui.commanders[ref.Name]
-	if ready && state.Err == "" && !a.ui.loading[key] && a.ui.pagesFor[key] != contextHash(a.contributionPayload()) {
-		a.loadPage(c, ref, false)
+	view, job := a.ui.pages.Enter(ref, a.pagePayload(ref))
+	if job != nil {
+		if _, ready := a.ui.commanders[job.Plugin]; ready {
+			a.askPage(c, job)
+		} else {
+			a.ui.pages.Abandon(job)
+		}
 	}
-	pluginpage.View(c, state, pluginpage.Deps{
+	pluginpage.View(c, a.pageState(ref), pluginpage.Data{
+		Title:   string(ref.Page.Title),
+		Tree:    view.Tree,
+		Err:     view.Err,
+		Loading: view.Loading,
+	}, pluginpage.Deps{
 		Message: func(c *ui.Context, raw string) string { return a.pluginText(c, ref.Plugin, raw) },
 		Run:     func(c *ui.Context, command string) { a.runPageCommand(c, ref, command) },
-		Retry:   func(c *ui.Context) { a.loadPage(c, ref, true) },
+		Retry:   func(c *ui.Context) { a.enterPage(c, ref, true) },
 		Header:  a.pageHeaderActions(c),
 		Node:    a.boardNodeInfo,
 		OpenBlock: func(c *ui.Context, note, block string) {
@@ -641,31 +652,12 @@ type pendingWork struct {
 	jobs []func(*ui.Context)
 }
 
-// invalidatePages forgets what each page's cache key was, so that the next entry
-// asks its plugin again: a page is what the library was when it loaded, and a
-// write makes it old. A page on screen asks again on the next frame, off that
-// frame (ui.md §9).
-func (a *App) invalidatePages() {
-	clear(a.ui.pagesFor)
-}
-
 // LibraryEvent is the library saying something was written. It is the one call
 // the event handler makes into the window, so it takes no lock and touches no
 // state: the next frame picks the flag up on the UI thread, where the page
-// states live.
+// states live, and makes them old.
 func (a *App) LibraryEvent() {
 	a.stale.Store(true)
-}
-
-// contextHash is a page load's cache key: the context it was asked in, as JSON,
-// hashed. The same page in the same window state keeps its tree.
-func contextHash(payload map[string]any) string {
-	encoded, err := json.Marshal(payload)
-	if err != nil {
-		return ""
-	}
-	sum := sha256.Sum256(encoded)
-	return hex.EncodeToString(sum[:8])
 }
 
 // pluginSettings is the settings the enabled plugins declared, with the value
@@ -784,13 +776,14 @@ func settingJSON(typ contrib.SettingType, value string) (json.RawMessage, error)
 // reenablePlugin gives a plugin's failed contributions another try: the counts
 // go back to zero and the hidden ones show again. It is the settings page's
 // action beside the failure count (ui.md §8), and it moves only this plugin's
-// entries.
+// entries — a command's in the counter, a page's in the runtime.
 func (a *App) reenablePlugin(c *ui.Context, name string) {
 	for id, idName := range a.ui.names {
 		if idName != name {
 			continue
 		}
 		a.ui.failures.Reenable(id)
+		a.ui.pages.Reenable(id)
 	}
 	a.refreshSettingsData()
 	c.Toast(m(c).PluginReenabled())
@@ -798,11 +791,37 @@ func (a *App) reenablePlugin(c *ui.Context, name string) {
 
 // contributionIssues is the settings page's one snapshot of what the window is
 // not showing: what a manifest declared that this host could not use, and the
-// contributions three failures took out, each with its plugin, its contribution
-// id, the reason and whether failures hid it. It is data — it reads what the load
-// and the counters left, and calls no plugin.
+// contributions three failures took out — a command's in the counter, a page's
+// in the runtime — each with its plugin, its contribution id, the reason and
+// whether failures hid it. It is data: it reads what the load and the two counts
+// left, and calls no plugin. The order is stable for the reason the counter's is:
+// a settings page that reshuffles its rows on every frame reads as broken.
 func (a *App) contributionIssues() []contrib.Issue {
-	return a.ui.failures.Issues(a.ui.problems)
+	issues := a.ui.failures.Issues(a.ui.problems)
+	for _, health := range a.ui.pages.Health() {
+		if !health.Hidden {
+			continue
+		}
+		issues = append(issues, contrib.Issue{
+			Plugin:       health.Plugin,
+			Contribution: health.Page,
+			Reason:       health.Reason,
+			Hidden:       true,
+		})
+	}
+	sort.SliceStable(issues, func(i, j int) bool {
+		if issues[i].Plugin != issues[j].Plugin {
+			return issues[i].Plugin < issues[j].Plugin
+		}
+		if issues[i].Contribution != issues[j].Contribution {
+			return issues[i].Contribution < issues[j].Contribution
+		}
+		if issues[i].Hidden != issues[j].Hidden {
+			return !issues[i].Hidden
+		}
+		return issues[i].Reason < issues[j].Reason
+	})
+	return issues
 }
 
 // pluginProblems is what each plugin's manifest could not offer, by manifest
@@ -842,12 +861,14 @@ func (a *App) hiddenContributions() map[string][]string {
 	return out
 }
 
-// pluginFailures counts a plugin's failed contributions by manifest name.
+// pluginFailures counts a plugin's failed contributions by manifest name: the
+// commands the counter took out and the pages the runtime did.
 func (a *App) pluginFailures(name string) int {
 	total := 0
 	for id, idName := range a.ui.names {
 		if idName == name {
 			total += a.ui.failures.Total(id)
+			total += a.ui.pages.Total(id)
 		}
 	}
 	return total

@@ -15,7 +15,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/schedule"
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
-	"github.com/transmit-bug/remit/internal/ext/contrib"
+	"github.com/transmit-bug/remit/internal/pages"
 	"github.com/transmit-bug/remit/internal/settings"
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
@@ -138,7 +138,9 @@ func (a *App) apply(lib *store.Library, dir string) {
 	a.lib, a.dir = lib, dir
 	a.openErr, a.start = nil, false
 	a.welcome.Failed = nil
-	a.page = contrib.PageRef{}
+	// The pages a plugin contributed belong to the library that declared them:
+	// another library starts with none of the old one's trees or failures.
+	a.ui.pages = pages.New()
 	a.area, a.sub, a.session = areaToday, subNone, sessionNone
 	a.back = a.back[:0]
 	a.syncMode()
@@ -387,7 +389,7 @@ func (a *App) reload() {
 	// The plugin pages are rebuilt from the library that just changed, and the
 	// queues' numbers are reported to whoever watches them: one reload, one
 	// answer for every reader.
-	a.invalidatePages()
+	a.ui.pages.Invalidate()
 	if a.counts != nil {
 		a.counts(a.queueCounts())
 	}

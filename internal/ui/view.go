@@ -17,10 +17,10 @@ func (a *App) View(c *ui.Context) {
 	// so the frame that draws it draws the result. The work itself already ran
 	// off this pass: no frame ever waits on a plugin.
 	a.applyBackground(c)
-	// The library's writes are the contract's event: drop what each page was
-	// loaded against, so the page on screen asks again off this frame.
+	// The library's writes are the contract's event: make every page old, so the
+	// page on screen asks again off this frame.
 	if a.stale.Swap(false) {
-		a.invalidatePages()
+		a.ui.pages.Invalidate()
 	}
 
 	// One place resolves the look: the appearance the user chose folded over the
@@ -182,7 +182,7 @@ func pageArea(page contrib.PageRef) shell.Area {
 // contributed.
 func (a *App) railChoice() shell.Area {
 	if a.area == areaPlugin {
-		return pageArea(a.page)
+		return pageArea(a.ui.pages.Current())
 	}
 	return areaName(a.area)
 }
@@ -249,7 +249,8 @@ func (a *App) subnavItems(c *ui.Context) []shell.Sub {
 func (a *App) crumbs(c *ui.Context) []string {
 	msgs := m(c)
 	if a.area == areaPlugin {
-		return []string{Name, a.pluginText(c, a.page.Plugin, string(a.page.Page.Title))}
+		page := a.ui.pages.Current()
+		return []string{Name, a.pluginText(c, page.Plugin, string(page.Page.Title))}
 	}
 	out := []string{Name, areaLabel(msgs, a.area)}
 	if a.area != areaToday {

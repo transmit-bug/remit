@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/egoist/mygo/ui"
@@ -18,43 +17,20 @@ import (
 
 // boardPage answers the contributed page that places a block on its board: the
 // page whose data, as the last load left it, names that block. It reads the
-// cached trees, so a frame or a handler may ask it and no plugin is called.
+// runtime's loaded trees, so a frame or a handler may ask it and no plugin is
+// called.
 func (a *App) boardPage(block core.ID) (contrib.PageRef, bool) {
 	if block == "" {
 		return contrib.PageRef{}, false
 	}
-	keys := make([]string, 0, len(a.ui.pages))
-	for key := range a.ui.pages {
-		keys = append(keys, key)
-	}
-	// One answer for every frame: two pages may place the same block, and the
-	// first by id is the one the window offers.
-	sort.Strings(keys)
-	for _, key := range keys {
-		state := a.ui.pages[key]
-		if state == nil || state.Tree.Kind == "" {
-			continue
-		}
-		ref, ok := a.pageOf(key)
-		if !ok {
-			continue
-		}
-		for _, target := range pluginpage.BoardTargets(state.Tree) {
+	for _, view := range a.ui.pages.Loaded() {
+		for _, target := range pluginpage.BoardTargets(view.Tree) {
 			if target.Block == string(block) {
-				return ref, true
+				return view.Ref, true
 			}
 		}
 	}
 	return contrib.PageRef{}, false
-}
-
-// pageOf resolves a page's cache key back to the page the library declared.
-func (a *App) pageOf(key string) (contrib.PageRef, bool) {
-	plugin, id, ok := strings.Cut(key, "/")
-	if !ok {
-		return contrib.PageRef{}, false
-	}
-	return a.ui.index.Page(plugin, id)
 }
 
 // OnBoard reports whether the board the window holds places this block. It is

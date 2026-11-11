@@ -131,19 +131,41 @@ const reportTree = `{
   ]
 }`
 
-// fakeRunner answers what a plugin's commands and page data answer, and counts
-// how often it was entered: a test asserts what a frame did not do.
+// fakeRunner answers what a plugin's commands, page data and importer answer,
+// and counts how often it was entered: a test asserts what a frame did not do. It
+// answers the capabilities themselves rather than a wire, because a test's
+// stand-in has none behind it — ext.HooksOf reads one or the other.
 type fakeRunner struct {
 	mu     sync.Mutex
 	names  []string
 	reply  map[string]string // callback name -> its JSON answer
 	failed map[string]error  // callback name -> the error it throws
-	gate   chan struct{}     // when set, Call waits for it before answering
+	gate   chan struct{}     // when set, a call waits for it before answering
 }
 
-func (f *fakeRunner) Call(method string, params, out any) error {
-	name := commandName(params)
+// RunCommand answers a contributed command's callback.
+func (f *fakeRunner) RunCommand(in ext.CommandIn) (ext.CommandResult, error) {
+	var out ext.CommandResult
+	err := f.answer(in.Name, &out)
+	return out, err
+}
 
+// PageData answers a page's data command: its tree, as the wire would carry it.
+func (f *fakeRunner) PageData(in ext.CommandIn) (ext.PageTree, error) {
+	var out ext.PageTree
+	err := f.answer(in.Name, &out)
+	return out, err
+}
+
+// ImportFile answers an importer's suggestions for one file.
+func (f *fakeRunner) ImportFile(ext.ImportIn) (ext.ImportSuggestions, error) {
+	var out ext.ImportSuggestions
+	err := f.answer("importFile", &out)
+	return out, err
+}
+
+// answer is one hook's answer, counted and gated the way the call is.
+func (f *fakeRunner) answer(name string, out any) error {
 	f.mu.Lock()
 	f.names = append(f.names, name)
 	gate := f.gate
@@ -157,31 +179,11 @@ func (f *fakeRunner) Call(method string, params, out any) error {
 	if err := f.failed[name]; err != nil {
 		return err
 	}
-	// A contributed command's params name the callback; a hook the app calls
-	// directly (importFile) has no such field, so its reply is keyed by the
-	// method name.
 	raw, ok := f.reply[name]
-	if !ok {
-		raw, ok = f.reply[method]
-	}
 	if !ok || out == nil {
 		return nil
 	}
 	return json.Unmarshal([]byte(raw), out)
-}
-
-// commandName is the callback a hook's parameters name: the host's own input shape
-// for a command, and the object a test wrote by hand when it asked the runner
-// directly.
-func commandName(params any) string {
-	switch in := params.(type) {
-	case ext.CommandIn:
-		return in.Name
-	case map[string]any:
-		name, _ := in["name"].(string)
-		return name
-	}
-	return ""
 }
 
 // setFailure makes a callback answer or throw, as the plugin's next run does.
@@ -205,10 +207,8 @@ func (f *fakeRunner) calls() int {
 	return len(f.names)
 }
 
-// Identity and Revision are what a producer stamp reads off a runner, the
-// same surface ext.JSRunner carries.
-// Name and Close are what ext.Hook adds to the call: the supervisor holds the
-// runner, so it needs a name and a way to let it go.
+// Name, Close, Identity and Revision are the handle and the stamp: what a
+// producer reads off a started extension, and what the supervisor holds.
 func (f *fakeRunner) Name() string { return "acme.plugin" }
 func (f *fakeRunner) Close() error { return nil }
 
@@ -630,6 +630,14 @@ func TestReenableBringsBackAHiddenContribution(t *testing.T) {
 	reveal(t, tt, 1024, 720, "Re-enable")
 	if !tt.HasText("3 contributed entries failed") {
 		t.Fatalf("the plugins page does not say the page was hidden; texts %q", tt.Texts())
+	}
+	// Which page went, and why: the row reads the runtime's health, so it cannot
+	// disagree with what the window stopped showing.
+	if !tt.HasText("report: the plugin threw") {
+		t.Errorf("the plugins page does not say which page was hidden, or why; texts %q", tt.Texts())
+	}
+	if hidden := a.ui.pages.Health(); len(hidden) != 1 || !hidden[0].Hidden || hidden[0].Page != "report" {
+		t.Errorf("the runtime's health = %+v, want the report page hidden", hidden)
 	}
 	if err := tt.Click("Re-enable"); err != nil {
 		t.Fatalf("the re-enable action: %v", err)

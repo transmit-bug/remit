@@ -136,10 +136,11 @@ func TestTheWhiteboardExampleLocatesItsNode(t *testing.T) {
 	}
 	tt.Frame()
 
-	if a.area != areaPlugin || a.page.Page.ID != "whiteboard" {
-		t.Fatalf("the entry went to %v/%q, want the whiteboard page", a.area, a.page.Page.ID)
+	page := a.ui.pages.Current()
+	if a.area != areaPlugin || page.Page.ID != "whiteboard" {
+		t.Fatalf("the entry went to %v/%q, want the whiteboard page", a.area, page.Page.ID)
 	}
-	state := a.pageState(a.page)
+	state := a.pageState(page)
 	if state.Highlight != string(seed.memory.Blocks[0].ID) || state.HighlightRun != 1 {
 		t.Errorf("the entry points at %q (run %d), want the paragraph's node",
 			state.Highlight, state.HighlightRun)
