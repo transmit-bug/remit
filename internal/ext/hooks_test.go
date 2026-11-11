@@ -2,6 +2,7 @@ package ext_test
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -64,31 +65,6 @@ func TestTheHookTableHasEveryHookTheVocabularyDeclares(t *testing.T) {
 	}
 }
 
-// recordingCaller is a caller that records what it was asked and answers with a
-// canned reply, decoded the way both substrates decode one: through JSON. The
-// typed capabilities are a shape over a Caller, so what they make a plugin receive
-// and what they read back can be checked without an engine.
-type recordingCaller struct {
-	hook   string
-	params any
-	asked  int
-	// answer is the plugin's reply, encoded and decoded as the wire carries it.
-	answer any
-}
-
-func (c *recordingCaller) Call(method string, params, out any) error {
-	c.asked++
-	c.hook, c.params = method, params
-	if out == nil || c.answer == nil {
-		return nil
-	}
-	encoded, err := json.Marshal(c.answer)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(encoded, out)
-}
-
 // A hook's Go input reaches the wire as that hook's own parameters: deriveBlock as
 // two arguments, summary as one object, policy as none — and an importer's bytes
 // as base64, because Go's JSON encoding does that and no caller should. The
@@ -147,13 +123,13 @@ func TestTheTableSpellsEachHooksArguments(t *testing.T) {
 	}
 
 	for _, one := range cases {
-		caller := &recordingCaller{}
+		caller := &ext.RecorderForTest{}
 		one.call(ext.HooksOf(caller))
-		if caller.asked != 1 || caller.hook != one.hook {
-			t.Errorf("%s asked %q %d times, want %q once", one.what, caller.hook, caller.asked, one.hook)
+		if caller.Asked != 1 || caller.Method != one.hook {
+			t.Errorf("%s asked %q %d times, want %q once", one.what, caller.Method, caller.Asked, one.hook)
 			continue
 		}
-		sent, err := json.Marshal(caller.params)
+		sent, err := json.Marshal(caller.Params)
 		if err != nil {
 			t.Errorf("%s: the parameters are not JSON: %v", one.what, err)
 			continue
@@ -253,7 +229,7 @@ func TestEveryCapabilityReadsTheAnswerTheWireCarries(t *testing.T) {
 	}
 
 	for _, one := range cases {
-		caller := &recordingCaller{answer: one.answer}
+		caller := &ext.RecorderForTest{Answer: one.answer}
 		if err := one.call(ext.HooksOf(caller)); err != nil {
 			t.Errorf("%s did not read back: %v", one.what, err)
 			continue
@@ -297,5 +273,43 @@ func TestAFakeDeriverDrivesDerivationWithoutAnEngine(t *testing.T) {
 	asked := deriver.(*fakeDeriver).asked
 	if len(asked) != 1 || asked[0].Block.ID != "" || asked[0].Types[0].ID != "remit.basic" {
 		t.Fatalf("the fake was asked %+v", asked)
+	}
+}
+
+// standIn is a plugin with no wire behind it: a name, a close, and the one
+// capability it answers itself.
+type standIn struct{ fakeDeriver }
+
+func (s *standIn) Name() string { return "stand-in" }
+func (s *standIn) Close() error { return nil }
+
+// A stand-in from another package is asked the capability it answers itself, since
+// the wire's door is unexported: HooksOf is a shape over a started extension, and a
+// test still doubles the one method it is about instead of a whole runner (#270;
+// docs/specs/plugin-system.md, P2: 测试替身只假一个方法).
+func TestAStandInIsAskedTheCapabilityItAnswers(t *testing.T) {
+	fake := &standIn{}
+	got, err := ext.HooksOf(fake).DeriveBlock(ext.DeriveIn{Block: ext.Block{Text: "spacing :: the gaps"}})
+	if err != nil {
+		t.Fatalf("the stand-in was not asked: %v", err)
+	}
+	if len(got) != 1 || got[0].Fields["Front"] != "spacing :: the gaps" {
+		t.Fatalf("the stand-in answered %+v", got)
+	}
+	if len(fake.asked) != 1 {
+		t.Fatalf("the stand-in was asked %d times, want once", len(fake.asked))
+	}
+}
+
+// A stand-in that answers no capability it is asked carries no such hook: the
+// answer is ErrNoHook, not a zero value and not a panic. The regression this
+// guards: a Hook with no wire behind it looking like a plugin that answered.
+func TestAStandInThatAnswersNothingSaysNoSuchHook(t *testing.T) {
+	var stand ext.Hook = &standIn{}
+	if _, err := ext.HooksOf(stand).Policy(); !errors.Is(err, ext.ErrNoHook) {
+		t.Fatalf("a stand-in with no wire answered a policy: %v", err)
+	}
+	if err := ext.HooksOf(stand).OnEvent(ext.Event{Kind: "note.saved"}); !errors.Is(err, ext.ErrNoHook) {
+		t.Fatalf("a stand-in with no wire took an event: %v", err)
 	}
 }

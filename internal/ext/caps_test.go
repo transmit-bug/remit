@@ -46,7 +46,7 @@ func TestCapabilitiesRefuseWhatTheManifestDidNotDeclare(t *testing.T) {
 			}
 			defer runner.Close()
 
-			err = runner.Call(tt.hook, nil, nil)
+			err = ext.CallForTest(runner, tt.hook, nil, nil)
 			var refused *ext.CapabilityError
 			if !errors.As(err, &refused) {
 				t.Fatalf("%s answered %v, want a CapabilityError", tt.hook, err)
@@ -81,7 +81,7 @@ export function list() { return remit.notes.list(); }
 	var notes []struct {
 		Title string `json:"title"`
 	}
-	if err := runner.Call("list", nil, &notes); err != nil {
+	if err := ext.CallForTest(runner, "list", nil, &notes); err != nil {
 		t.Fatalf("list: %v", err)
 	}
 	if len(notes) != 1 || notes[0].Title != "Biology" {
@@ -101,7 +101,7 @@ export function list() { return remit.notes.list(); }
 		t.Fatalf("open: %v", err)
 	}
 	defer runner.Close()
-	err = runner.Call("list", nil, nil)
+	err = ext.CallForTest(runner, "list", nil, nil)
 	if !errors.Is(err, ext.ErrNoLibrary) {
 		t.Fatalf("a declared capability with no host answered %v, want ErrNoLibrary", err)
 	}

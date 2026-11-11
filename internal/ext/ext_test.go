@@ -105,7 +105,7 @@ func TestCallRoundTrip(t *testing.T) {
 	var echo struct {
 		Echo string `json:"echo"`
 	}
-	if err := r.Call("anything", nil, &echo); err != nil {
+	if err := r.call("anything", nil, &echo); err != nil {
 		t.Fatalf("Call: %v", err)
 	}
 	if echo.Echo != "anything" {
@@ -115,7 +115,7 @@ func TestCallRoundTrip(t *testing.T) {
 
 func TestExtensionErrorIsReturned(t *testing.T) {
 	r := startFake(t)
-	err := r.Call("fail", nil, nil)
+	err := r.call("fail", nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "no thanks") {
 		t.Fatalf("Call(fail) = %v, want the extension's message", err)
 	}
@@ -134,18 +134,18 @@ func TestTimeoutKillsTheExtension(t *testing.T) {
 		t.Fatalf("Start: %v", err)
 	}
 	t.Cleanup(func() { _ = r.Close() })
-	err = r.Call("slow", nil, nil)
+	err = r.call("slow", nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "timed out") {
 		t.Fatalf("Call(slow) = %v, want a timeout", err)
 	}
-	if err := r.Call("anything", nil, nil); err == nil || !strings.Contains(err.Error(), "not running") {
+	if err := r.call("anything", nil, nil); err == nil || !strings.Contains(err.Error(), "not running") {
 		t.Errorf("call after a timeout = %v, want the runner marked dead", err)
 	}
 }
 
 func TestCrashIsReported(t *testing.T) {
 	r := startFake(t)
-	if err := r.Call("crash", nil, nil); err == nil {
+	if err := r.call("crash", nil, nil); err == nil {
 		t.Fatal("Call(crash) succeeded, want an error")
 	}
 }
@@ -184,7 +184,7 @@ func TestOpenDispatchesByRuntime(t *testing.T) {
 	var noted struct {
 		Got string `json:"got"`
 	}
-	if err := jsRunner.Call("on_event", map[string]any{"kind": "card_graded", "id": "card_7"}, &noted); err != nil {
+	if err := CallForTest(jsRunner, "on_event", map[string]any{"kind": "card_graded", "id": "card_7"}, &noted); err != nil {
 		t.Fatalf("on_event: %v", err)
 	}
 	if noted.Got != "card_graded:card_7" {
@@ -208,7 +208,7 @@ func TestOpenDispatchesByRuntime(t *testing.T) {
 	var echoed struct {
 		Echo string `json:"echo"`
 	}
-	if err := execRunner.Call("on_event", nil, &echoed); err != nil {
+	if err := CallForTest(execRunner, "on_event", nil, &echoed); err != nil {
 		t.Fatalf("on_event over the pipe: %v", err)
 	}
 	if echoed.Echo != "on_event" {

@@ -75,18 +75,14 @@ func (l JSLimits) withDefaults() JSLimits {
 	return l
 }
 
-// Hook is what a started extension can do, whichever substrate it runs on: the
-// same call shape in process and over a pipe, so that a built-in extension gets
-// no path a downloaded one does not have.
-//
-// It is the seam until #269. The typed capabilities (hooks.go: HooksOf, one
-// interface per job) are the shape the call sites move to; when they have, Call
-// leaves this interface — the fixtures harness asks through Invoke, and business
-// code names a capability instead of a string. Until then both doors open onto
-// the same runner, and #268's test holds them to the same answer.
+// Hook is a started extension, whichever substrate it runs on: the handle the
+// supervisor starts, names and closes. What it can *do* is a capability (hooks.go:
+// HooksOf, one interface per job), and asking a hook is this package's own door —
+// a capability resolves its hook id against the call table and both substrates
+// answer it, so a built-in extension gets no path a downloaded one does not have
+// (docs/specs/plugin-system.md, P2 ②: 按名调用离开接口).
 type Hook interface {
 	Name() string
-	Call(method string, params, out any) error
 	Close() error
 }
 
@@ -208,7 +204,7 @@ func (r *JSRunner) Revision() string { return r.manifest.Version }
 
 // Warm fills the pool at activation, so the first call pays no load cost and a
 // syntax error surfaces while enabling rather than mid-review (ADR 0006).
-// Warming twice is a no-op. A runner that was never warmed still works: Call
+// Warming twice is a no-op. A runner that was never warmed still works: call
 // loads lazily.
 func (r *JSRunner) Warm() error {
 	r.mu.Lock()
@@ -329,19 +325,20 @@ func (r *JSRunner) succeeded() {
 }
 
 // stopped reports whether three failures in a row stopped the runner: the check
-// Call makes before it touches a runtime.
+// call makes before it touches a runtime.
 func (r *JSRunner) stopped() bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.disabled
 }
 
-// Call runs one hook with JSON-shaped parameters and decodes its result into
-// out. A hook that loops, allocates without end or throws is reported, not
-// propagated: the review flow goes on either way. Three failures in a row
-// disable the runner; a disabled runner answers ErrDisabled without touching
-// a runtime.
-func (r *JSRunner) Call(method string, params, out any) error {
+// call runs one hook with JSON-shaped parameters and decodes its result into
+// out. It is the wire's door, unexported: a caller above names a capability, and
+// this function resolves the hook a capability is (hooks.go). A hook that loops,
+// allocates without end or throws is reported, not propagated: the review flow
+// goes on either way. Three failures in a row disable the runner; a disabled
+// runner answers ErrDisabled without touching a runtime.
+func (r *JSRunner) call(method string, params, out any) error {
 	if r.stopped() {
 		return fmt.Errorf("%w: %s", ErrDisabled, r.manifest.Name)
 	}

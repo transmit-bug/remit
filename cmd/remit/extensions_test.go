@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,8 +43,8 @@ func TestExtensionsGiveAContributedPageTheLibrary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Runner(leeches): %v", err)
 	}
-	var page json.RawMessage
-	if err := runner.Call(ext.CommandHook, map[string]any{"name": "leechesData", "context": map[string]any{}}, &page); err != nil {
+	page, err := ext.HooksOf(runner).PageData(ext.CommandIn{Name: "leechesData"})
+	if err != nil {
 		t.Fatalf("the page's data command: %v", err)
 	}
 	if !strings.Contains(string(page), "Leech farm") {

@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -230,6 +229,8 @@ export function summary(session) {
 
 // fakeRole is a plugin a test hands the supervisor in place of the engine: the
 // window asks a role for a policy, and nothing else in these tests needs a hook.
+// It answers the capability itself, which is how a stand-in with no wire behind it
+// is asked (ext.HooksOf).
 type fakeRole struct {
 	name   string
 	family string
@@ -240,11 +241,8 @@ func (f *fakeRole) Name() string { return f.name }
 func (f *fakeRole) Warm() error  { f.warmed++; return nil }
 func (f *fakeRole) Close() error { return nil }
 
-func (f *fakeRole) Call(method string, _, out any) error {
-	if method != "policy" {
-		return fmt.Errorf("fake role %q has no %s", f.name, method)
-	}
-	return json.Unmarshal([]byte(fmt.Sprintf(`{"family":%q,"version":"9"}`, f.family)), out)
+func (f *fakeRole) Policy() (ext.Policy, error) {
+	return ext.Policy{Family: f.family, Version: "9"}, nil
 }
 
 // The window builds no plugin of its own: with a supervisor that can start

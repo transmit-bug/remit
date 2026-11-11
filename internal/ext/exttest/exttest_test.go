@@ -3,6 +3,7 @@ package exttest_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -252,4 +253,39 @@ func TestTheFixtureHostAnswersWhatHostJSONHolds(t *testing.T) {
 	if result.Cases != 1 {
 		t.Fatalf("ran %d cases", result.Cases)
 	}
+}
+
+// The harness drives every hook a manifest declares, and not only the six a
+// capability has a typed method for: identity is in the vocabulary and in the
+// contract, no capability asks it and no typed method names it, and a plugin that
+// declares it is still held to its fixtures. The regression this guards: a
+// harness that could only reach the wired-up capabilities, so a declared hook with
+// no typed method went uncompared (#270, criterion 2).
+func TestAHookNoCapabilityNamesIsStillDriven(t *testing.T) {
+	manifest := strings.Replace(derived,
+		`"implements": { "deriveBlock": 1 }`, `"implements": { "identity": 1 }`, 1)
+	source := `export function identity() { return "acme.scheduler-1"; }`
+
+	t.Run("an answer its fixture holds is trusted", func(t *testing.T) {
+		dir := pluginSource(t, manifest, source, map[string]string{
+			"identity/answered.out.json": `"acme.scheduler-1"`,
+		})
+		result := exttest.Run(dir, exttest.Options{})
+		if len(result.Problems) > 0 {
+			t.Fatalf("a plugin with an identity hook has problems:\n%s", problems(result))
+		}
+		if result.Cases != 1 || !slices.Equal(result.Hooks, []string{"identity"}) {
+			t.Fatalf("ran %d cases over %v, want the identity hook once", result.Cases, result.Hooks)
+		}
+	})
+
+	t.Run("an answer its fixture does not hold is reported", func(t *testing.T) {
+		dir := pluginSource(t, manifest, source, map[string]string{
+			"identity/answered.out.json": `"something else"`,
+		})
+		result := exttest.Run(dir, exttest.Options{})
+		if len(result.Problems) != 1 || !strings.Contains(result.Problems[0].Error(), "fixtures/identity/answered") {
+			t.Fatalf("problems:\n%s", problems(result))
+		}
+	})
 }

@@ -17,7 +17,7 @@ import (
 // brokenEntry is the plugin these tests stop: the callback the window calls
 // throws, as a plugin with a bug does.
 const brokenEntry = `
-export function show() {
+export function policy() {
   throw new Error("the plugin is broken");
 }
 `
@@ -75,7 +75,7 @@ func stoppedApp(t *testing.T) (*App, *ui.Tester) {
 		t.Fatalf("Runner(report): %v", err)
 	}
 	for i := range 3 {
-		if err := hook.Call("show", nil, nil); err == nil {
+		if _, err := ext.HooksOf(hook).Policy(); err == nil {
 			t.Fatalf("call %d was answered by a plugin that throws", i+1)
 		}
 	}

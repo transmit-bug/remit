@@ -105,7 +105,7 @@ export function cards(block) {
 		Name     string `json:"name"`
 		Protocol int    `json:"protocol"`
 	}
-	if err := runner.Call("describe", nil, &described); err != nil {
+	if err := ext.CallForTest(runner, "describe", nil, &described); err != nil {
 		t.Fatalf("describe: %v", err)
 	}
 	if described.Name != "cards" || described.Protocol != 1 {
@@ -117,7 +117,7 @@ export function cards(block) {
 		Front string `json:"front"`
 		Back  string `json:"back"`
 	}
-	err = runner.Call("cards", map[string]any{"id": "block_1", "text": "spacing :: the gaps"}, &cards)
+	err = ext.CallForTest(runner, "cards", map[string]any{"id": "block_1", "text": "spacing :: the gaps"}, &cards)
 	if err != nil {
 		t.Fatalf("cards: %v", err)
 	}
@@ -139,7 +139,7 @@ export function echo(x) { return remit.echo(x); }
 	}
 	defer quiet.Close()
 	var echoed string
-	if err := quiet.Call("echo", "hello", &echoed); err == nil {
+	if err := ext.CallForTest(quiet, "echo", "hello", &echoed); err == nil {
 		t.Errorf("an undeclared capability reached the host: %q", echoed)
 	}
 	if quiet.Has(ext.CapEcho) {
@@ -152,7 +152,7 @@ export function echo(x) { return remit.echo(x); }
 		t.Fatalf("open: %v", err)
 	}
 	defer loud.Close()
-	if err := loud.Call("echo", "hello", &echoed); err != nil {
+	if err := ext.CallForTest(loud, "echo", "hello", &echoed); err != nil {
 		t.Fatalf("declared capability failed: %v", err)
 	}
 	if echoed != "hello" {
@@ -170,7 +170,7 @@ func TestJSTimeout(t *testing.T) {
 	defer runner.Close()
 
 	start := time.Now()
-	err = runner.Call("spin", nil, nil)
+	err = ext.CallForTest(runner, "spin", nil, nil)
 	if !errors.Is(err, ext.ErrTimeout) {
 		t.Fatalf("call answered %v, want a timeout", err)
 	}
@@ -194,7 +194,7 @@ export function hungry() {
 	}
 	defer runner.Close()
 
-	err = runner.Call("hungry", nil, nil)
+	err = ext.CallForTest(runner, "hungry", nil, nil)
 	if !errors.Is(err, ext.ErrMemoryLimit) && !errors.Is(err, ext.ErrTimeout) {
 		t.Fatalf("call answered %v, want the memory limit or the time", err)
 	}
@@ -208,7 +208,7 @@ func TestJSNoDynamicCode(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer runner.Close()
-	if err := runner.Call("dynamic", nil, nil); err == nil {
+	if err := ext.CallForTest(runner, "dynamic", nil, nil); err == nil {
 		t.Error("eval ran in an extension")
 	}
 }
@@ -222,7 +222,7 @@ func TestJSRefusesWhatItCannotRun(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer runner.Close()
-	if err := runner.Call("two", nil, nil); !errors.Is(err, ext.ErrNoHook) {
+	if err := ext.CallForTest(runner, "two", nil, nil); !errors.Is(err, ext.ErrNoHook) {
 		t.Errorf("a missing hook answered %v", err)
 	}
 
@@ -252,7 +252,7 @@ func TestJSPoolWarmAndReuse(t *testing.T) {
 	}
 
 	var one int
-	if err := runner.Call("one", nil, &one); err != nil {
+	if err := ext.CallForTest(runner, "one", nil, &one); err != nil {
 		t.Fatalf("call: %v", err)
 	}
 	if one != 1 {
@@ -267,7 +267,7 @@ func TestJSPoolWarmAndReuse(t *testing.T) {
 	for range 2 {
 		go func() {
 			var n int
-			done <- runner.Call("one", nil, &n)
+			done <- ext.CallForTest(runner, "one", nil, &n)
 		}()
 	}
 	for range 2 {
@@ -295,7 +295,7 @@ export function tick() { seen += 1; return seen; }
 	defer runner.Close()
 	var seen int
 	for i := 1; i <= 3; i++ {
-		if err := runner.Call("tick", nil, &seen); err != nil {
+		if err := ext.CallForTest(runner, "tick", nil, &seen); err != nil {
 			t.Fatalf("tick %d: %v", i, err)
 		}
 		if seen != i {
@@ -323,14 +323,14 @@ export function go(ok) {
 	fail := false
 	pass := true
 	for i := range 2 {
-		if err := runner.Call("go", fail, nil); err == nil {
+		if err := ext.CallForTest(runner, "go", fail, nil); err == nil {
 			t.Fatalf("call %d succeeded", i)
 		}
 	}
 	if got, _, _ := runner.Streak(); got != 2 {
 		t.Fatalf("failures = %d, want 2", got)
 	}
-	if err := runner.Call("go", pass, nil); err != nil {
+	if err := ext.CallForTest(runner, "go", pass, nil); err != nil {
 		t.Fatalf("success after failures: %v", err)
 	}
 	if got, _, _ := runner.Streak(); got != 0 {
@@ -338,7 +338,7 @@ export function go(ok) {
 	}
 
 	for i := range 3 {
-		if err := runner.Call("go", fail, nil); err == nil {
+		if err := ext.CallForTest(runner, "go", fail, nil); err == nil {
 			t.Fatalf("strike %d succeeded", i)
 		}
 	}
@@ -348,7 +348,7 @@ export function go(ok) {
 		t.Error("a stopped runner kept no reason for the settings page")
 	}
 	before := runner.Runtimes()
-	if err := runner.Call("go", pass, nil); !errors.Is(err, ext.ErrDisabled) {
+	if err := ext.CallForTest(runner, "go", pass, nil); !errors.Is(err, ext.ErrDisabled) {
 		t.Fatalf("a disabled runner answered %v, want ErrDisabled", err)
 	}
 	if got := runner.Runtimes(); got != before {
@@ -392,7 +392,7 @@ export function save(ok) {
 	defer runner.Close()
 
 	for i := range 3 {
-		err := runner.Call("save", true, nil)
+		err := ext.CallForTest(runner, "save", true, nil)
 		if !strings.Contains(err.Error(), errDiskFull.Error()) {
 			t.Fatalf("write %d answered %v, want the host's own failure", i+1, err)
 		}
@@ -400,7 +400,7 @@ export function save(ok) {
 	if failures, disabled, _ := runner.Streak(); failures != 0 || disabled {
 		t.Fatalf("three refused writes left %d failures, disabled %v, want a plugin still running", failures, disabled)
 	}
-	if err := runner.Call("save", true, nil); err == nil || !strings.Contains(err.Error(), errDiskFull.Error()) {
+	if err := ext.CallForTest(runner, "save", true, nil); err == nil || !strings.Contains(err.Error(), errDiskFull.Error()) {
 		t.Fatalf("the fourth call answered %v, want the engine's same answer", err)
 	}
 	if host.writes != 4 {
@@ -409,7 +409,7 @@ export function save(ok) {
 
 	// The plugin's own throw is still a strike: the mark excuses the host's
 	// failure alone.
-	if err := runner.Call("save", false, nil); err == nil || strings.Contains(err.Error(), errDiskFull.Error()) {
+	if err := ext.CallForTest(runner, "save", false, nil); err == nil || strings.Contains(err.Error(), errDiskFull.Error()) {
 		t.Fatalf("the plugin's throw answered %v, want its own failure", err)
 	}
 	if got, _, _ := runner.Streak(); got != 1 {
@@ -475,7 +475,7 @@ export function keep(value) { return remit.store.set(value); }
 			Text string `json:"text"`
 		} `json:"blocks"`
 	}
-	if err := runner.Call("list", nil, &notes); err != nil {
+	if err := ext.CallForTest(runner, "list", nil, &notes); err != nil {
 		t.Fatalf("notes.list: %v", err)
 	}
 	if len(notes) != 1 || notes[0].ID != string(note.ID) || notes[0].Title != "Biology" {
@@ -488,14 +488,14 @@ export function keep(value) { return remit.store.set(value); }
 	var got struct {
 		Title string `json:"title"`
 	}
-	if err := runner.Call("get", string(note.ID), &got); err != nil {
+	if err := ext.CallForTest(runner, "get", string(note.ID), &got); err != nil {
 		t.Fatalf("notes.get: %v", err)
 	}
 	if got.Title != "Biology" {
 		t.Errorf("notes.get answered %+v", got)
 	}
 	var missing json.RawMessage
-	if err := runner.Call("get", "note_nope", &missing); err != nil {
+	if err := ext.CallForTest(runner, "get", "note_nope", &missing); err != nil {
 		t.Fatalf("notes.get missing: %v", err)
 	}
 	if string(missing) != "null" {
@@ -506,7 +506,7 @@ export function keep(value) { return remit.store.set(value); }
 	var found []struct {
 		Title string `json:"title"`
 	}
-	if err := runner.Call("search", "UNIT OF LIFE", &found); err != nil {
+	if err := ext.CallForTest(runner, "search", "UNIT OF LIFE", &found); err != nil {
 		t.Fatalf("notes.search: %v", err)
 	}
 	if len(found) != 1 || found[0].Title != "Biology" {
@@ -521,7 +521,7 @@ export function keep(value) { return remit.store.set(value); }
 		Status  string `json:"status"`
 		Reviews int    `json:"reviews"`
 	}
-	if err := runner.Call("create", blockID, &created); err != nil {
+	if err := ext.CallForTest(runner, "create", blockID, &created); err != nil {
 		t.Fatalf("cards.create: %v", err)
 	}
 	if created.ID == "" || created.Block != blockID || created.Type != string(core.TypeBasic) || created.Status != "new" {
@@ -535,13 +535,13 @@ export function keep(value) { return remit.store.set(value); }
 		Status string            `json:"status"`
 	}
 	patch := map[string]any{"fields": map[string]string{"Front": "sharper question"}, "status": "suspended"}
-	if err := runner.Call("update", []any{created.ID, patch}, &patched); err != nil {
+	if err := ext.CallForTest(runner, "update", []any{created.ID, patch}, &patched); err != nil {
 		t.Fatalf("cards.update: %v", err)
 	}
 	if patched.Fields["Front"] != "sharper question" || !patched.Edited || patched.Status != "suspended" {
 		t.Fatalf("cards.update answered %+v", patched)
 	}
-	if err := runner.Call("update", []any{created.ID, map[string]any{"status": "new"}}, &patched); err != nil {
+	if err := ext.CallForTest(runner, "update", []any{created.ID, map[string]any{"status": "new"}}, &patched); err != nil {
 		t.Fatalf("cards.update status: %v", err)
 	}
 	if patched.Status != "new" || patched.Fields["Front"] != "sharper question" {
@@ -553,7 +553,7 @@ export function keep(value) { return remit.store.set(value); }
 		Reviews int    `json:"reviews"`
 		Due     string `json:"due"`
 	}
-	if err := runner.Call("record", []any{created.ID, "good"}, &recorded); err != nil {
+	if err := ext.CallForTest(runner, "record", []any{created.ID, "good"}, &recorded); err != nil {
 		t.Fatalf("review.record: %v", err)
 	}
 	if recorded.Reviews != 1 || recorded.Due == "" {
@@ -565,7 +565,7 @@ export function keep(value) { return remit.store.set(value); }
 		Rating string `json:"rating"`
 		At     string `json:"at"`
 	}
-	if err := runner.Call("history", created.ID, &history); err != nil {
+	if err := ext.CallForTest(runner, "history", created.ID, &history); err != nil {
 		t.Fatalf("review.history: %v", err)
 	}
 	if len(history) != 1 || history[0].Card != created.ID || history[0].Rating != "good" || history[0].At != "2026-11-06T10:00:00Z" {
@@ -573,7 +573,7 @@ export function keep(value) { return remit.store.set(value); }
 	}
 
 	var due int
-	if err := runner.Call("dueCount", nil, &due); err != nil {
+	if err := ext.CallForTest(runner, "dueCount", nil, &due); err != nil {
 		t.Fatalf("review.dueCount: %v", err)
 	}
 	if due != 0 {
@@ -588,7 +588,7 @@ export function keep(value) { return remit.store.set(value); }
 		Reviews    int     `json:"reviews"`
 	}
 	state := map[string]any{"stability": 1.5, "difficulty": 5.0, "reviews": 1, "lastReview": "2026-11-01T09:00:00Z"}
-	if err := runner.Call("step", []any{state, "good"}, &next); err != nil {
+	if err := ext.CallForTest(runner, "step", []any{state, "good"}, &next); err != nil {
 		t.Fatalf("fsrs.review: %v", err)
 	}
 	if next.Reviews != 2 || next.Due == "" || next.LastReview != "2026-11-07T09:00:00Z" || next.Stability <= 0 {
@@ -597,17 +597,17 @@ export function keep(value) { return remit.store.set(value); }
 
 	// store.set / store.get: the plugin's own namespace.
 	var own any
-	if err := runner.Call("own", nil, &own); err != nil {
+	if err := ext.CallForTest(runner, "own", nil, &own); err != nil {
 		t.Fatalf("store.get: %v", err)
 	}
 	if own != nil {
 		t.Errorf("a plugin that stored nothing read %v", own)
 	}
-	if err := runner.Call("keep", `{"streak":3}`, nil); err != nil {
+	if err := ext.CallForTest(runner, "keep", `{"streak":3}`, nil); err != nil {
 		t.Fatalf("store.set: %v", err)
 	}
 	var kept string
-	if err := runner.Call("own", nil, &kept); err != nil {
+	if err := ext.CallForTest(runner, "own", nil, &kept); err != nil {
 		t.Fatalf("store.get after set: %v", err)
 	}
 	if kept != `{"streak":3}` {
@@ -615,7 +615,7 @@ export function keep(value) { return remit.store.set(value); }
 	}
 
 	// cards.delete: the card is gone, its reviews stay.
-	if err := runner.Call("remove", created.ID, nil); err != nil {
+	if err := ext.CallForTest(runner, "remove", created.ID, nil); err != nil {
 		t.Fatalf("cards.delete: %v", err)
 	}
 	if _, ok := host.Card(core.ID(created.ID)); ok {
@@ -645,17 +645,17 @@ export function set(value) { return remit.store.set(value); }
 	}
 	first, second := open("first"), open("second")
 
-	if err := first.Call("set", "one", nil); err != nil {
+	if err := ext.CallForTest(first, "set", "one", nil); err != nil {
 		t.Fatalf("first set: %v", err)
 	}
-	if err := second.Call("set", "two", nil); err != nil {
+	if err := ext.CallForTest(second, "set", "two", nil); err != nil {
 		t.Fatalf("second set: %v", err)
 	}
 	var got string
-	if err := first.Call("get", nil, &got); err != nil || got != "one" {
+	if err := ext.CallForTest(first, "get", nil, &got); err != nil || got != "one" {
 		t.Errorf("first read %q (%v), want one", got, err)
 	}
-	if err := second.Call("get", nil, &got); err != nil || got != "two" {
+	if err := ext.CallForTest(second, "get", nil, &got); err != nil || got != "two" {
 		t.Errorf("second read %q (%v), want two", got, err)
 	}
 	for id, want := range map[string]string{"test.first": "one", "test.second": "two"} {

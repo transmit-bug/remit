@@ -157,10 +157,12 @@ type response struct {
 	Error  string          `json:"error,omitempty"`
 }
 
-// Call sends one request and decodes its result into out, or returns the
-// extension's error. A call that takes longer than Timeout kills the process
-// and marks the runner dead: a hung extension is a broken extension.
-func (r *Runner) Call(method string, params, out any) error {
+// call sends one request and decodes its result into out, or returns the
+// extension's error. It is the wire's door for this substrate, unexported: a
+// caller above names a capability, and hooks.go resolves the hook that is one. A
+// call that takes longer than Timeout kills the process and marks the runner dead:
+// a hung extension is a broken extension.
+func (r *Runner) call(method string, params, out any) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.dead {
@@ -212,10 +214,13 @@ func (r *Runner) Call(method string, params, out any) error {
 	}
 }
 
-// Describe asks the extension what it is, in its own words.
+// Describe asks the extension what it is, in its own words. It is a typed method
+// on purpose: describe is the wire's greeting, not one of the six capabilities,
+// so no business code calls it and it is answered here, where its substrate is
+// known.
 func (r *Runner) Describe() (json.RawMessage, error) {
 	var out json.RawMessage
-	err := r.Call("describe", nil, &out)
+	err := r.call(hookDescribe, nil, &out)
 	return out, err
 }
 

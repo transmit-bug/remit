@@ -10,8 +10,9 @@ import (
 	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
 
-// The scheduler plugin answers policy and identity: a family, a version and the
-// retention to aim for, and nothing about arithmetic.
+// The scheduler plugin answers policy: a family, a version and the retention to
+// aim for, and nothing about arithmetic. It names itself through policy — the
+// identity hook is the wire's other greeting, and no capability asks it.
 func TestSchedulerPolicy(t *testing.T) {
 	runner, err := builtin.Scheduler(nil, ext.JSLimits{})
 	if err != nil {
@@ -19,12 +20,8 @@ func TestSchedulerPolicy(t *testing.T) {
 	}
 	defer runner.Close()
 
-	var policy struct {
-		Family    string  `json:"family"`
-		Version   string  `json:"version"`
-		Retention float64 `json:"retention"`
-	}
-	if err := runner.Call("policy", nil, &policy); err != nil {
+	policy, err := ext.HooksOf(runner).Policy()
+	if err != nil {
 		t.Fatalf("policy: %v", err)
 	}
 	if policy.Family != "fsrs" || policy.Version == "" {
@@ -32,14 +29,6 @@ func TestSchedulerPolicy(t *testing.T) {
 	}
 	if policy.Retention <= 0 || policy.Retention > 1 {
 		t.Errorf("retention is %v", policy.Retention)
-	}
-
-	var identity string
-	if err := runner.Call("identity", nil, &identity); err != nil {
-		t.Fatalf("identity: %v", err)
-	}
-	if identity == "" {
-		t.Error("the scheduler names itself nothing")
 	}
 }
 
@@ -52,11 +41,7 @@ func TestSchedulerSummaryIsQuiet(t *testing.T) {
 	}
 	defer runner.Close()
 
-	var summary struct {
-		Tone  string   `json:"tone"`
-		Lines []string `json:"lines"`
-	}
-	err = runner.Call("summary", map[string]any{"reviewed": 12, "dueTomorrow": 3, "accuracy": 0.9}, &summary)
+	summary, err := ext.HooksOf(runner).Summary(ext.SummaryIn{Reviewed: 12, DueTomorrow: 3, Accuracy: 0.9})
 	if err != nil {
 		t.Fatalf("summary: %v", err)
 	}
@@ -78,10 +63,8 @@ func TestSchedulerPolicySchedulesAsTheGoldens(t *testing.T) {
 	}
 	defer runner.Close()
 
-	var answer struct {
-		Retention float64 `json:"retention"`
-	}
-	if err := runner.Call("policy", nil, &answer); err != nil {
+	answer, err := ext.HooksOf(runner).Policy()
+	if err != nil {
 		t.Fatalf("policy: %v", err)
 	}
 	if answer.Retention != schedule.DefaultRetention {

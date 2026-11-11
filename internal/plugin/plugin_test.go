@@ -72,10 +72,9 @@ type fakeHook struct {
 	closed map[string]int
 }
 
-func (h *fakeHook) Name() string                { return h.name }
-func (h *fakeHook) Call(string, any, any) error { return nil }
-func (h *fakeHook) Warm() error                 { h.warmed[h.name]++; return nil }
-func (h *fakeHook) Close() error                { h.closed[h.name]++; return nil }
+func (h *fakeHook) Name() string { return h.name }
+func (h *fakeHook) Warm() error  { h.warmed[h.name]++; return nil }
+func (h *fakeHook) Close() error { h.closed[h.name]++; return nil }
 
 // A role resolved before a library opens is the one that answers after it: bound
 // to a library, warmed once, never restarted. The regression this guards: the
@@ -313,7 +312,11 @@ func TestTheEnabledListTakesAProcessPlugin(t *testing.T) {
 	if len(enabled) != 1 || enabled[0].Name() != "probe" {
 		t.Fatalf("the enabled list answers %v, want the process plugin", names(enabled))
 	}
-	if err := enabled[0].Call("describe", nil, nil); err != nil {
+	probe, ok := enabled[0].(*ext.Runner)
+	if !ok {
+		t.Fatalf("the process plugin came back as %T", enabled[0])
+	}
+	if _, err := probe.Describe(); err != nil {
 		t.Errorf("the process plugin did not answer: %v", err)
 	}
 }
@@ -375,11 +378,12 @@ func TestCloseEndsEveryRunnerOnce(t *testing.T) {
 	}
 }
 
-// broken is the js plugin these tests drive: one hook that throws while it is
-// told to and answers while it is not, so a test can stop it and start it again.
+// broken is the js plugin these tests drive: one hook that throws when the block
+// it is asked about says so, and answers otherwise, so a test can stop it and
+// start it again.
 const brokenPlugin = `
-export function deriveBlock(ok) {
-  if (!ok) throw new Error("the plugin is broken");
+export function deriveBlock(block) {
+  if (block && block.text === "broken") throw new Error("the plugin is broken");
   return [];
 }
 `
@@ -416,10 +420,24 @@ func realPlugins(t *testing.T, name string) *Supervisor {
 func stop(t *testing.T, hook ext.Hook) {
 	t.Helper()
 	for i := range 3 {
-		if err := hook.Call("deriveBlock", false, nil); err == nil {
+		if _, err := derive(t, hook, brokenText); err == nil {
 			t.Fatalf("call %d succeeded, want the plugin's own failure", i+1)
 		}
 	}
+}
+
+// brokenText is the text the plugin above throws on, and an ordinary one it
+// answers: the two halves of a streak under test.
+const (
+	brokenText = "broken"
+	plainText  = "spacing :: the gaps"
+)
+
+// derive asks the one hook these tests stop and start, through the capability a
+// card role is answered with: a call site above never names it.
+func derive(t *testing.T, hook ext.Hook, text string) ([]ext.DerivedCard, error) {
+	t.Helper()
+	return ext.HooksOf(hook).DeriveBlock(ext.DeriveIn{Block: ext.Block{Text: text}})
 }
 
 // A role whose plugin three failed calls stopped falls back to the plugin this
@@ -441,7 +459,7 @@ func TestARoleFallsBackWhenItsPluginIsDisabled(t *testing.T) {
 	if again == nil || again.Name() != "cards" {
 		t.Fatalf("the role resolved to %v, want the shipped cards plugin", again)
 	}
-	if err := again.Call("deriveBlock", map[string]any{"text": "a :: b"}, nil); err != nil {
+	if _, err := derive(t, again, plainText); err != nil {
 		t.Errorf("the fallback does not answer: %v", err)
 	}
 	if got := s.Health("acme"); len(got.Fallback) != 1 || got.Fallback[0] != (Fallback{Role: core.RoleCardsDerive, Player: "cards"}) {
@@ -498,7 +516,7 @@ func TestReenableOpensAStoppedPluginAgain(t *testing.T) {
 		t.Fatalf("Runner(acme): %v", err)
 	}
 	stop(t, hook)
-	if err := hook.Call("deriveBlock", true, nil); !errors.Is(err, ext.ErrDisabled) {
+	if _, err := derive(t, hook, plainText); !errors.Is(err, ext.ErrDisabled) {
 		t.Fatalf("a stopped runner answered %v, want ErrDisabled", err)
 	}
 
@@ -508,7 +526,7 @@ func TestReenableOpensAStoppedPluginAgain(t *testing.T) {
 	if got := s.Health("acme"); got.State != HealthOK || got.Failures != 0 || got.Reason != "" {
 		t.Fatalf("after Re-enable the plugin reads as %+v, want it running with no count", got)
 	}
-	if err := hook.Call("deriveBlock", true, nil); err != nil {
+	if _, err := derive(t, hook, plainText); err != nil {
 		t.Fatalf("the runner was not opened again: %v", err)
 	}
 }
@@ -527,14 +545,14 @@ func TestHealthCountsAStreakBeforeItStops(t *testing.T) {
 		t.Fatalf("a fresh plugin reads as %+v, want it running", got)
 	}
 
-	if err := hook.Call("deriveBlock", false, nil); err == nil {
+	if _, err := derive(t, hook, brokenText); err == nil {
 		t.Fatal("the plugin's own failure was answered")
 	}
 	if got := s.Health("acme"); got.State != HealthFailing || got.Failures != 1 || got.Reason == "" {
 		t.Fatalf("one failure reads as %+v, want a failing streak of one", got)
 	}
 
-	if err := hook.Call("deriveBlock", true, nil); err != nil {
+	if _, err := derive(t, hook, plainText); err != nil {
 		t.Fatalf("the plugin's own answer: %v", err)
 	}
 	if got := s.Health("acme"); got.State != HealthOK || got.Failures != 0 || got.Reason != "" {

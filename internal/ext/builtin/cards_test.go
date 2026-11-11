@@ -12,15 +12,6 @@ import (
 	"github.com/transmit-bug/remit/internal/ext/builtin"
 )
 
-// derived is one card the plugin answered: a place in a paragraph, typed and
-// with its field values.
-type derived struct {
-	TypeID  string            `json:"typeId"`
-	Ordinal int               `json:"ordinal"`
-	Fields  map[string]string `json:"fields"`
-	Unknown []string          `json:"unknown"`
-}
-
 // frozen is the answer set #100 froze, read as the evidence it is: the
 // plugin's cards are held to it, word for word, rather than to any rule this
 // package still carries.
@@ -62,28 +53,29 @@ func frozenSet(t *testing.T) frozen {
 
 // cards opens the built-in plugin, and the types its answers are checked
 // against.
-func cards(t *testing.T) (*ext.JSRunner, []any) {
+func cards(t *testing.T) (*ext.JSRunner, []ext.CardType) {
 	t.Helper()
 	runner, err := builtin.Cards(nil, ext.JSLimits{})
 	if err != nil {
 		t.Fatalf("open the built-in card plugin: %v", err)
 	}
 	t.Cleanup(func() { _ = runner.Close() })
-	types := make([]any, 0, 3)
+	types := make([]ext.CardType, 0, 3)
 	for _, typ := range core.BuiltinTypes() {
-		types = append(types, map[string]any{
-			"id": string(typ.ID), "fields": typ.Fields, "version": typ.Version,
-		})
+		types = append(types, ext.CardType{ID: string(typ.ID), Fields: typ.Fields, Version: typ.Version})
 	}
 	return runner, types
 }
 
-// derive asks the plugin what a text makes.
-func derive(t *testing.T, runner *ext.JSRunner, types []any, text string) []derived {
+// derive asks the plugin what a text makes, through the capability the app
+// derives with.
+func derive(t *testing.T, runner *ext.JSRunner, types []ext.CardType, text string) []ext.DerivedCard {
 	t.Helper()
-	var got []derived
-	block := map[string]any{"id": "block_1", "text": text}
-	if err := runner.Call("deriveBlock", []any{block, types}, &got); err != nil {
+	got, err := ext.HooksOf(runner).DeriveBlock(ext.DeriveIn{
+		Block: ext.Block{ID: "block_1", Text: text},
+		Types: types,
+	})
+	if err != nil {
 		t.Fatalf("deriveBlock: %v", err)
 	}
 	return got
@@ -224,7 +216,7 @@ func TestCardsRenderLikeTheGoldens(t *testing.T) {
 		}
 		t.Run(face.Kind+"/"+face.Text, func(t *testing.T) {
 			cards := derive(t, runner, types, face.Text)
-			var match *derived
+			var match *ext.DerivedCard
 			for i := range cards {
 				if kindOfType(cards[i].TypeID) == face.Kind && cards[i].Ordinal == face.Ordinal {
 					match = &cards[i]

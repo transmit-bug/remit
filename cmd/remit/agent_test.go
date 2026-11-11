@@ -186,13 +186,15 @@ func TestOneCardRunnerDerivesEveryDoor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Runner(writer): %v", err)
 	}
-	var made struct {
-		ID string `json:"id"`
-	}
-	command := map[string]any{"name": "makeCard", "context": map[string]any{"block": string(block)}}
-	if err := writer.Call(ext.CommandHook, command, &made); err != nil {
+	// The command's answer is the host's to apply, not a card the test reads: what
+	// it made is the library's, found where it was written.
+	if _, err := ext.HooksOf(writer).RunCommand(ext.CommandIn{
+		Name:    "makeCard",
+		Context: ext.ContextJSON{"block": string(block)},
+	}); err != nil {
 		t.Fatalf("remit.cards.create: %v", err)
 	}
+	made := cardOf(t, opened, block)
 
 	// one card through the loopback API
 	service := newAgentService(t.TempDir(), plugins)
@@ -203,9 +205,9 @@ func TestOneCardRunnerDerivesEveryDoor(t *testing.T) {
 	t.Cleanup(service.Stop)
 	created := postCard(t, service, block)
 
-	producer := func(id string) core.Producer {
+	producer := func(id core.ID) core.Producer {
 		t.Helper()
-		card, ok := opened.Card(core.ID(id))
+		card, ok := opened.Card(id)
 		if !ok {
 			t.Fatalf("the library holds no card %q", id)
 		}
@@ -215,7 +217,7 @@ func TestOneCardRunnerDerivesEveryDoor(t *testing.T) {
 	if got := producer(made.ID); got != want {
 		t.Errorf("the capability's card is stamped %+v, want the role plugin %+v", got, want)
 	}
-	if got := producer(created); got != want {
+	if got := producer(core.ID(created)); got != want {
 		t.Errorf("the API's card is stamped %+v, want the role plugin %+v", got, want)
 	}
 	// What the stamps are evidence of, counted: the card plugin the role names was

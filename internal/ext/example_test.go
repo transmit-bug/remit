@@ -30,7 +30,7 @@ func TestTheGuidesExamplePluginRuns(t *testing.T) {
 		Fields  map[string]string `json:"fields"`
 	}
 	block := map[string]any{"id": "block_1", "text": "spacing :: the gaps"}
-	if err := runner.Call("deriveBlock", []any{block, types}, &cards); err != nil {
+	if err := ext.CallForTest(runner, "deriveBlock", []any{block, types}, &cards); err != nil {
 		t.Fatalf("deriveBlock: %v", err)
 	}
 	if len(cards) != 1 || cards[0].TypeID != string(core.TypeBasic) ||
@@ -42,7 +42,7 @@ func TestTheGuidesExamplePluginRuns(t *testing.T) {
 	// with no cards rather than by failing.
 	plain := map[string]any{"id": "block_1", "text": "just prose"}
 	cards = nil
-	if err := runner.Call("deriveBlock", []any{plain, types}, &cards); err != nil {
+	if err := ext.CallForTest(runner, "deriveBlock", []any{plain, types}, &cards); err != nil {
 		t.Fatalf("deriveBlock on prose: %v", err)
 	}
 	if len(cards) != 0 {
@@ -50,12 +50,11 @@ func TestTheGuidesExamplePluginRuns(t *testing.T) {
 	}
 }
 
-// The typed capability and the call sites' old path ask a plugin the same thing.
-// The table's adapter is the only difference between them and it is not one a
-// plugin can see, which is what lets #269 move the call sites without changing
-// what a plugin answers: if the adapter spread deriveBlock's input differently,
+// The typed capability and the wire, handed its arguments by hand, ask a plugin
+// the same thing. The table's adapter is the only difference between them and it is
+// not one a plugin can see: if the adapter spread deriveBlock's input differently,
 // the plugin would read no text and answer no card.
-func TestTheTypedCapabilityAsksAPluginWhatCallDoes(t *testing.T) {
+func TestTheTypedCapabilityAsksAPluginWhatTheWireDoes(t *testing.T) {
 	dir := filepath.Join("..", "..", "examples", "plugins", "cards-mini")
 	runner, err := ext.OpenJS(dir, nil, ext.JSLimits{})
 	if err != nil {
@@ -72,8 +71,8 @@ func TestTheTypedCapabilityAsksAPluginWhatCallDoes(t *testing.T) {
 		t.Fatalf("the typed capability: %v", err)
 	}
 	var called []ext.DerivedCard
-	if err := runner.Call("deriveBlock", []any{in.Block, in.Types}, &called); err != nil {
-		t.Fatalf("the old path: %v", err)
+	if err := ext.CallForTest(runner, "deriveBlock", []any{in.Block, in.Types}, &called); err != nil {
+		t.Fatalf("the wire: %v", err)
 	}
 	if len(typed) == 0 {
 		t.Fatalf("the typed capability derived nothing from %q", in.Block.Text)

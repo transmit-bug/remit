@@ -28,7 +28,7 @@ func TestRunnerWithoutAHostSaysNoLibraryYet(t *testing.T) {
 
 	var callErr error
 	for range 3 {
-		if callErr = runner.Call("get", "note_1", nil); !errors.Is(callErr, ext.ErrNoLibrary) {
+		if callErr = ext.CallForTest(runner, "get", "note_1", nil); !errors.Is(callErr, ext.ErrNoLibrary) {
 			t.Fatalf("with no library the call answered %v, want ErrNoLibrary", callErr)
 		}
 		if _, disabled, _ := runner.Streak(); disabled {
@@ -69,13 +69,13 @@ func TestUseHostGivesARunningRunnerItsLibrary(t *testing.T) {
 	var got struct {
 		Title string `json:"title"`
 	}
-	if err := runner.Call("get", string(note.ID), &got); !errors.Is(err, ext.ErrNoLibrary) {
+	if err := ext.CallForTest(runner, "get", string(note.ID), &got); !errors.Is(err, ext.ErrNoLibrary) {
 		t.Fatalf("before the library the call answered %v, want ErrNoLibrary", err)
 	}
 
 	runner.UseHost(func() ext.Host { return host })
 
-	if err := runner.Call("get", string(note.ID), &got); err != nil {
+	if err := ext.CallForTest(runner, "get", string(note.ID), &got); err != nil {
 		t.Fatalf("after the library was given: %v", err)
 	}
 	if got.Title != "Biology" {
@@ -113,11 +113,11 @@ func TestHostProviderIsAskedOnEveryCall(t *testing.T) {
 	var got struct {
 		Title string `json:"title"`
 	}
-	if err := runner.Call("get", string(firstNote.ID), &got); err != nil || got.Title != "First" {
+	if err := ext.CallForTest(runner, "get", string(firstNote.ID), &got); err != nil || got.Title != "First" {
 		t.Fatalf("the first library answered %+v (%v)", got, err)
 	}
 	current = second
-	if err := runner.Call("get", string(secondNote.ID), &got); err != nil || got.Title != "Second" {
+	if err := ext.CallForTest(runner, "get", string(secondNote.ID), &got); err != nil || got.Title != "Second" {
 		t.Fatalf("the second library answered %+v (%v)", got, err)
 	}
 }

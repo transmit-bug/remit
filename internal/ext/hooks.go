@@ -27,12 +27,13 @@ const (
 	CommandHook = "command"
 )
 
-// Caller is a started extension as one hook call needs it: the one call shape
-// both substrates answer. *Runner and *JSRunner are callers, and so is a test's
-// stand-in — which is the point: what a hook's caller takes is Call, not a
-// runner.
-type Caller interface {
-	Call(method string, params, out any) error
+// caller is a started extension as one hook call needs it: the one call shape
+// both substrates answer, and the wire's own door. It is unexported, and that is
+// the second half of P2's cut (docs/specs/plugin-system.md, P2 ②): the app holds
+// capabilities, so a hook is named in this package and nowhere else. A test's
+// stand-in answers a capability instead of a wire (see HooksOf).
+type caller interface {
+	call(method string, params, out any) error
 }
 
 // Param is one parameter of a hook: the name the contract spells it with, and the
@@ -152,18 +153,6 @@ func hookRow(hook string) (HookType, bool) {
 	return HookType{}, false
 }
 
-// Invoke asks c for one hook by name, with parameters as the wire carries them:
-// one argument per hook parameter. It is how an untyped caller runs any hook the
-// table holds — the fixtures harness compares a plugin's answers through it — so
-// a hook the host does not call cannot be run at all.
-func Invoke(c Caller, hook string, params, out any) error {
-	row, ok := hookRow(hook)
-	if !ok {
-		return fmt.Errorf("%w: %s", ErrNoHook, hook)
-	}
-	return c.Call(row.Name, params, out)
-}
-
 // The six capabilities the host calls on a plugin, one per job, named after what
 // a plugin can do. They are separate interfaces on purpose: a caller takes the
 // one it needs (the card module has no business scheduling), and a test doubles
@@ -219,18 +208,23 @@ type (
 	}
 )
 
-// hooks is the six capabilities over one caller: the one implementation of the
-// typed face, so the two substrates cannot answer a shape differently and a
-// migration of the call sites changes what they ask, never what a plugin sees.
-type hooks struct{ c Caller }
+// hooks is the six capabilities over one started extension: the one
+// implementation of the typed face, so the two substrates cannot answer a shape
+// differently and a migration of the call sites changes what they ask, never what
+// a plugin sees.
+type hooks struct{ h Hook }
 
-// HooksOf is every capability over c. A caller takes the one it needs:
+// HooksOf is every capability over h. A caller takes the one it needs:
 //
 //	var deriver ext.Deriver = ext.HooksOf(runner)
 //
 // The runner itself stays where it belongs — what leaves the seam is what a
-// plugin can do, not the thing that runs it.
-func HooksOf(c Caller) Hooks { return hooks{c} }
+// plugin can do, not the thing that runs it. A started extension answers over its
+// wire, through the call table; a stand-in that answers a capability itself — a
+// test's, which has no wire behind it — is asked that method, so doubling one
+// method stays possible from another package while naming a hook does not (the
+// wire's door, caller, is unexported).
+func HooksOf(h Hook) Hooks { return hooks{h} }
 
 // stamped is a caller that can say who it is: the manifest id and the version of
 // the build that answered. A js runner is one; a test's stand-in need not be.
@@ -239,69 +233,91 @@ type stamped interface {
 	Revision() string
 }
 
-// ProducerOf answers who a caller is, for the cards and notes credited to it: the
-// identity stamp that travels with the capabilities, so that no caller needs the
-// runner behind them. A caller that cannot say answers the empty stamp — the
+// ProducerOf answers who a started extension is, for the cards and notes credited
+// to it: the identity stamp that travels with the capabilities, so that no caller
+// needs the runner behind them. One that cannot say answers the empty stamp — the
 // host's own, which is what a card the app made carries — rather than a stamp it
 // would be wrong to write.
-func ProducerOf(c Caller) core.Producer {
-	stamped, ok := c.(stamped)
+func ProducerOf(h Hook) core.Producer {
+	named, ok := h.(stamped)
 	if !ok {
 		return core.Producer{}
 	}
-	return core.Producer{ID: stamped.Identity(), Version: stamped.Revision()}
+	return core.Producer{ID: named.Identity(), Version: named.Revision()}
 }
 
 // DeriveBlock answers the cards a text is worth, in the order they are numbered.
 func (h hooks) DeriveBlock(in DeriveIn) ([]DerivedCard, error) {
+	if own, ok := h.h.(Deriver); ok {
+		return own.DeriveBlock(in)
+	}
 	var out []DerivedCard
-	err := call(h.c, hookDeriveBlock, in, &out)
+	err := call(h.h, hookDeriveBlock, in, &out)
 	return out, err
 }
 
 // Policy answers what a plugin schedules with.
 func (h hooks) Policy() (Policy, error) {
+	if own, ok := h.h.(Scheduler); ok {
+		return own.Policy()
+	}
 	var out Policy
-	err := call(h.c, hookPolicy, nil, &out)
+	err := call(h.h, hookPolicy, nil, &out)
 	return out, err
 }
 
 // Summary answers what a session is worth saying.
 func (h hooks) Summary(in SummaryIn) (Summary, error) {
+	if own, ok := h.h.(Summariser); ok {
+		return own.Summary(in)
+	}
 	var out Summary
-	err := call(h.c, hookSummary, in, &out)
+	err := call(h.h, hookSummary, in, &out)
 	return out, err
 }
 
 // OnEvent tells a plugin what happened, and ignores the answer.
 func (h hooks) OnEvent(event Event) error {
-	return call(h.c, hookOnEvent, event, nil)
+	if own, ok := h.h.(EventSink); ok {
+		return own.OnEvent(event)
+	}
+	return call(h.h, hookOnEvent, event, nil)
 }
 
 // RunCommand asks a command's callback what to do, as the host's result.
 func (h hooks) RunCommand(in CommandIn) (CommandResult, error) {
+	if own, ok := h.h.(Commander); ok {
+		return own.RunCommand(in)
+	}
 	var out CommandResult
-	err := call(h.c, CommandHook, in, &out)
+	err := call(h.h, CommandHook, in, &out)
 	return out, err
 }
 
 // PageData asks a page's data command for its tree, as raw JSON.
 func (h hooks) PageData(in CommandIn) (PageTree, error) {
+	if own, ok := h.h.(Commander); ok {
+		return own.PageData(in)
+	}
 	var out PageTree
-	err := call(h.c, CommandHook, in, &out)
+	err := call(h.h, CommandHook, in, &out)
 	return out, err
 }
 
 // ImportFile asks what one file suggests.
 func (h hooks) ImportFile(in ImportIn) (ImportSuggestions, error) {
+	if own, ok := h.h.(Importer); ok {
+		return own.ImportFile(in)
+	}
 	var out ImportSuggestions
-	err := call(h.c, hookImportFile, in, &out)
+	err := call(h.h, hookImportFile, in, &out)
 	return out, err
 }
 
-// call asks c for one hook through the table: the row's adapter turns the typed
-// input into the wire's parameters, and the answer is read into out.
-func call(c Caller, hook string, in, out any) error {
+// call asks h for one hook through the table: the row's adapter turns the typed
+// input into the wire's parameters, and the answer is read into out. A hook with
+// no wire behind it carries no hook at all, which is what ErrNoHook says.
+func call(h Hook, hook string, in, out any) error {
 	row, ok := hookRow(hook)
 	if !ok {
 		return fmt.Errorf("%w: %s", ErrNoHook, hook)
@@ -313,5 +329,5 @@ func call(c Caller, hook string, in, out any) error {
 			return err
 		}
 	}
-	return c.Call(row.Name, params, out)
+	return invoke(h, row.Name, params, out)
 }

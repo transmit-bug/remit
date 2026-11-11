@@ -287,21 +287,15 @@ func readHookDir(dir, hook string) ([]fixtureCase, []error) {
 }
 
 // compare runs one case and holds the hook to its fixture. The call goes through
-// the host's hook table, so a fixture can drive any hook the host calls — a hook
-// with no typed method of its own included — and a hook the table does not hold
-// cannot be compared at all.
+// the host's call table, so a case can drive any hook the host calls — a hook with
+// no typed method of its own included — and a hook the table does not hold cannot
+// be compared at all. What the plugin answered never leaves ext.CheckFixture: the
+// harness reads a verdict, which is what makes this door a fixture's and not a
+// by-name call.
 func compare(runner ext.Hook, one fixtureCase) error {
 	where := fmt.Sprintf("%s/%s/%s", FixturesDir, one.hook, one.name)
-	var answer json.RawMessage
-	if err := ext.Invoke(runner, one.hook, one.args, &answer); err != nil {
+	if err := ext.CheckFixture(runner, ext.Fixture{Hook: one.hook, Args: one.args, Want: one.want}); err != nil {
 		return fmt.Errorf("%s: %w", where, err)
-	}
-	got, err := canonical(answer)
-	if err != nil {
-		return fmt.Errorf("%s: the answer is not JSON: %w", where, err)
-	}
-	if !bytes.Equal(got, one.want) {
-		return fmt.Errorf("%s: the hook answered\n%s\nwant\n%s", where, got, one.want)
 	}
 	return nil
 }
@@ -312,24 +306,11 @@ func readCanonical(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	got, err := canonical(data)
+	got, err := ext.Canonical(data)
 	if err != nil {
 		return nil, fmt.Errorf("not JSON: %w", err)
 	}
 	return got, nil
-}
-
-// canonical is one JSON value as the comparison reads it: decoded and written
-// back with sorted keys and two-space indents.
-func canonical(raw []byte) ([]byte, error) {
-	if len(bytes.TrimSpace(raw)) == 0 {
-		raw = []byte("null")
-	}
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return nil, err
-	}
-	return json.MarshalIndent(value, "", "  ")
 }
 
 // readArgs reads a case's arguments: one array member per hook parameter, which
