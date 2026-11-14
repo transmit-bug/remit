@@ -20,6 +20,7 @@ Scope: services outside the window; widgets inside it are `../mygo-components`.
 | Material | Reached for |
 |---|---|
 | `$MYGO/docs/native.md`, where `MYGO=$(go list -m -f '{{.Dir}}' github.com/egoist/mygo)` | every service above: options, returns, per-platform notes |
+| `$MYGO/docs/native-modules.md` | a Go interface implemented in Swift, Rust or Zig — platform code Go lacks; experimental, may break in any release |
 | `$MYGO/docs/menus.md` | menu templates, roles, accelerators, context menus, tray icons |
 | `$MYGO/docs/app.md` | lifecycle hooks, quitting, single instance, deep links, file associations, recent documents, login, directories, Dock and taskbar |
 | `$MYGO/docs/data-transfer.md` | clipboard and drag payloads beyond text and images |
@@ -38,13 +39,13 @@ every option you pass exists in that copy.
 | Need | Service | The rule that bites |
 |---|---|---|
 | Ask for a file, a save path or an answer | `mygo.Dialog.Open/Save/Message` | Blocks until answered: call it from a bound method or a goroutine of the app's own; `Parent` attaches it to a window (a sheet on macOS). Cancel arrives as `nil`, `""`, or the button index; `CancelButton` defaults to the first button labeled Cancel or No — set it by index when Escape must keep the data. `FileFilter` takes `MIMETypes` (`image/*`) beside extensions |
-| Tell about a finished job | `mygo.NewNotification` | macOS shows them for packaged apps only (`NotificationsSupported()`); the first `Show` waits for the permission answer (`ErrNotificationsDenied`); a clicked one stays in Notification Center until `Close`, or `ClearNotifications` on `OnDidBecomeActive`; `ID` routes a click that relaunches the app; `NotificationOptions.Image` shows a picture, a track's cover |
-| Clipboard, plain | `mygo.Clipboard.WriteText/ReadText/WriteImage` | Files, custom formats and lazy providers go through `transfer.Data` (`data-transfer.md`); a page may also use `navigator.clipboard` |
-| Open, reveal, trash | `mygo.Shell.OpenExternal/OpenPath/ShowItemInFolder/TrashItem` | `TrashItem` fails where the trash cannot take the item, and leaves it in place; `FileIcon`'s size is DIPs × the display's scale factor; `TypeIcon` gives a file type's icon with no file on disk |
-| The installed apps, as a launcher shows | `mygo.Shell.InstalledApps/LaunchApp` | Reading them touches the disk, so keep it off the main thread; draw only the icons that show, on the main thread, and keep them |
+| Tell about a finished job | `mygo.NewNotification` | An outcome beside the control, in the window, is `c.Toast` (`../mygo-components`); this is for a job that may finish while the user is elsewhere. macOS shows them for packaged apps only (`NotificationsSupported()`); the first `Show` waits for the permission answer (`ErrNotificationsDenied`); a clicked one stays in Notification Center until `Close`, or `ClearNotifications` on `OnDidBecomeActive`; `ID` routes a click that relaunches the app; `NotificationOptions.Image` shows a picture, a track's cover |
+| Clipboard, plain | `mygo.Clipboard.WriteText/ReadText/WriteImage` | Files, custom formats and lazy providers go through `transfer.Data` (`data-transfer.md`); a page may also use `navigator.clipboard`; a secret goes up with `ClipboardOptions{Concealed: true}` so clipboard managers leave it out of their histories |
+| Open, reveal, trash, preview | `mygo.Shell.OpenExternal/OpenPath/ShowItemInFolder/TrashItem`, `PreviewItem` (Quick Look, macOS) | `TrashItem` fails where the trash cannot take the item, and leaves it in place; `FileIcon`'s size is DIPs × the display's scale factor; `TypeIcon` gives a file type's icon with no file on disk |
+| The installed apps, as a launcher shows; the app a URL opens with | `mygo.Shell.InstalledApps/LaunchApp`, `Shell.DefaultApp` | Reading them touches the disk, so keep it off the main thread; draw only the icons that show, on the main thread, and keep them |
 | Which display; rearrange on change | `mygo.Screen` | `WorkArea` excludes menu bar, Dock and taskbars; `DisplayMatching(rect)` names the display a window is on; `OnDisplaysChanged` re-places windows |
 | Follow dark mode, accent, contrast | `mygo.Theme` | `SetSource` before `Run` starts the app in a saved appearance; `Preferences()` is read once and kept until `OnUpdated`; the default `ui` theme already follows accent, contrast and text scale |
-| A long task keeps the machine awake | `mygo.Power.KeepAwake(reason, displayOn)` | Returns a release function — defer it; `OnSuspend`/`OnResume` pause and resume the work around it |
+| A long task keeps the machine awake; a server keeps running while backgrounded | `mygo.Power.KeepAwake(reason, displayOn)`; backgrounded with no App Nap, machine may sleep: `Power.KeepRunning(reason)` | Returns a release function — defer it; `OnSuspend`/`OnResume` pause and resume the work around it |
 | A sound effect or music | the `audio` package (`DecodeSound`, `OpenStream`) | Codecs are imports (`audio/vorbis`, …); an `OpenStream` player closes its file — close it when done; a `Sound`'s players need no closing; `Player.SetPreservesPitch` keeps a voice's pitch at 1.5×/2×; mixed in Go, no cgo, browsers included |
 | Show what plays; take media keys | `mygo.NowPlaying.Set` + `OnCommand` | While it shows something, media keys drive the app: declare exactly the `Commands` bits you handle, mirror playback back with `SetPlayback`, and `Clear()` when playback stops |
 | Online, metered | `mygo.Network` | `Online` is a route out, not a server that answers; the `OnChanged` listener runs on the main thread; push the status to views as a broadcast typed event |
@@ -52,26 +53,33 @@ every option you pass exists in that copy.
 | A token or key in the system store | `mygo.Secrets` | At most `MaxSecretSize` (2560 B); `errors.Is(err, errors.ErrUnsupported)` is a machine without a credential store — fall back to asking each run; a `mygo dev` build keeps secrets under `<identifier>.dev`, apart from the installed app's |
 | React to file changes | `mygo.WatchFiles` | Own goroutine draining `Next`; each batch is the diff since the last — the hint to re-read, not a changelog; 50 ms debounce, 500 ms `MaxDelay`; a gone directory is a `FileRemove` of `.` then `io.EOF`; `ErrWatchLimit` at `MaxEntries`; `HintsOnly` trades paths for cost — for a reloader only |
 | Works while backgrounded | `mygo.GlobalShortcut.Register` | The callback runs on the main thread, briefly; a taken key fails to register; under Wayland the desktop portal provides it — GNOME 48+, KDE 6, an installed app |
-| The system's permissions: Accessibility, Screen Recording, the microphone, the camera | `plugins/permissionflow`: `Check`, `Request`, `Guide` | Where the user must drag the app into a list, `Guide` opens System Settings at the page and shows the panel to drag it by; all Go — no JavaScript package, nothing to `mygo.Use` |
+| The system's permissions: Accessibility, Screen Recording, the microphone, the camera | `plugins/permissionflow`: `Check`, `Request`, `Guide` | Where the user must drag the app into a list, `Guide` opens System Settings at the page and shows the panel to drag it by; all Go — no JavaScript package, nothing to `mygo.Use`; a `mygo dev` build is signed with your Apple Development identity, so a granted permission survives rebuilds |
 | Menus, tray icon | `mygo.NewMenu`, `mygo.NewTray` | Templates of `*mygo.MenuItem`; roles carry standard labels, keys and platform pruning — keep `RoleAppMenu`/`RoleEditMenu` on macOS; change items in use through their `Set*` methods so the native menu follows; `NewMenuIconSVG` makes a menu icon of the `ui.SVG` the app already draws with `ui.Icon`; `NewTray` errors without the AppIndicator library on Linux |
 | One instance at a time | `mygo.App.RequestSingleInstanceLock` | `false` in the second instance — return from `main`; its argv reaches `OnSecondInstance`; on Windows and Linux this is also the road later launches' deep links and files take |
 | Opened by URL or by file type | `App.OnOpenURL` / `App.OnOpenFile` | Register before `Run` to catch the launch arguments too; schemes and file types are declared in the mygo config; `RegisterURLScheme` covers unpackaged apps |
 | Data and logs in the right place | `mygo.App.Path(PathUserData/PathCache/PathLogs/…)` | Directories derive from the app name and are created on first use; `SetPath` isolates test data |
 | Start with the system | `App.SetOpenAtLogin` | Needs the packaged app on macOS 13+; `WasOpenedAtLogin` starts that session hidden |
-| Install a released update | `mygo.Updater` | Only updates signed with the `mygo keygen` pair are accepted, and losing the secret key strands installed apps; the public key and the release source — a GitHub repo (give it `tagPrefix` when it shares releases) or an HTTPS `url` — live in the mygo config |
+| Install a released update | `mygo.Updater` | Only updates signed with the `mygo keygen` pair are accepted, and losing the secret key strands installed apps; the public key and the release source — a GitHub repo (give it `tagPrefix` when it shares releases) or an HTTPS `url` — live in the mygo config; `OnInstalled(fn)` runs on the main thread once an update is installed |
 
 ## Lifecycle beyond `Run`
 
 - `Run` belongs to the main goroutine; windows are created in `WhenReady`.
   Before it, `main` sets the app up: bind, listeners, `SetName`, `SetMenu`,
   `Theme.SetSource`, `SetOpenAtLogin`, `RegisterURLScheme`, and reads of
-  `App.Path`, `App.Locale`, `Power.IsOnBattery`. Everything else panics with
+  `App.Path`, `App.Locale` (`App.ChosenLocale()` reports the language the
+  app chose, `""` follows the system), `Power.IsOnBattery`. Everything
+  else panics with
   a message naming the call: call it from `WhenReady` on.
 - Closing the last window quits, unless `OnWindowAllClosed` has a listener —
   the macOS pattern keeps the app running and reopens on `OnActivate`.
   `Quit` walks `OnClose`, `OnBeforeQuit`, `OnWillQuit`; each may cancel.
-  `Exit(code)` skips the events; `Relaunch()` restarts with the same
-  arguments.
+  `Exit(code)` skips the events; `Relaunch(args...)` restarts and passes
+  the arguments to the new instance.
+- The OS ending the session (logout, restart, shutdown; Windows and macOS)
+  runs those same listeners with `e.SessionEnding` set: the quit cannot be
+  canceled, and the process may end as soon as they return — state saving
+  there is synchronous, no dialogs, no goroutines to wait for. Linux hears
+  no session end: shutdown arrives as `SIGTERM`, which quits cancelably.
 
 ## Verify
 
