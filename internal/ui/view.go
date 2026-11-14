@@ -5,7 +5,6 @@ import (
 
 	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/design"
-	screensettings "github.com/transmit-bug/remit/internal/ui/screens/settings"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/internal/ui/shell"
 )
@@ -82,31 +81,40 @@ func (a *App) stage(c *ui.Context, tk design.Tokens) {
 		case a.area == areaSettings:
 			// The settings page does not need a library: a first run turns
 			// reminders and update checks on before it makes one.
-			screensettings.View(c, &a.prefs, a.settingsDeps())
+			a.viewPage(c)
 		case a.start:
 			a.startView(c)
 		case a.session == sessionReview:
 			a.reviewView(c, tk)
 		case a.session == sessionReading:
 			a.readingView(c)
-		case a.area == areaWrite:
-			a.writeView(c)
-		case a.area == areaRead:
-			a.readView(c)
-		case a.area == areaRecall:
-			a.recallStage(c)
-		case a.area == areaStats:
-			screenstats.View(c, statsPage(a.sub), a.stats, screenstats.Deps{
-				Items:      a.statsBlockItems(),
-				PluginText: a.pluginText,
-				Run:        a.runContribution,
-			})
 		case a.area == areaPlugin:
 			a.pluginPageView(c)
 		case a.area == areaToday:
 			a.todayView(c)
+		default:
+			a.viewPage(c)
 		}
 	})
+}
+
+// viewPage draws the page the route names, from the one table every page is
+// declared in. An area with no pages of its own never asks.
+func (a *App) viewPage(c *ui.Context) {
+	if p, ok := pageOf(a.area, a.sub); ok {
+		p.view(a, c)
+	}
+}
+
+// statsDeps is what the statistics pages ask of the app: the review data the
+// last load derived, the two ways a block reaches beyond it, and what runs a
+// plugin's command.
+func (a *App) statsDeps() screenstats.Deps {
+	return screenstats.Deps{
+		Items:      a.statsBlockItems(),
+		PluginText: a.pluginText,
+		Run:        a.runContribution,
+	}
 }
 
 // shellDeps is the frame as the app hands it over: where the user is, what the
@@ -223,9 +231,9 @@ func (a *App) subnavItems(c *ui.Context) []shell.Sub {
 	}
 	msgs := m(c)
 	var out []shell.Sub
-	for _, sub := range subsOf(a.area) {
-		item := shell.Sub{ID: subName(sub), Label: subLabel(msgs, sub)}
-		switch sub {
+	for _, p := range pagesOf(a.area) {
+		item := shell.Sub{ID: p.name, Label: p.label(msgs)}
+		switch p.sub {
 		case subNoteList:
 			item.Count = len(a.data.notes)
 		case subRecallQueue:

@@ -21,7 +21,6 @@ import (
 	"github.com/transmit-bug/remit/internal/ui/design"
 	"github.com/transmit-bug/remit/internal/ui/kit"
 	"github.com/transmit-bug/remit/internal/ui/screens/notes"
-	"github.com/transmit-bug/remit/internal/ui/screens/read"
 	"github.com/transmit-bug/remit/internal/ui/screens/start"
 	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/locales"
@@ -475,39 +474,21 @@ func (a *App) loadCurrent() {
 		// else to load, and a frame never asks the store.
 		return
 	}
-	switch a.area {
-	case areaToday:
+	if a.area == areaToday {
 		a.loadToday()
-	case areaRead:
-		// The read area shows the page its sub-navigation names: the queue, or
-		// the archive beside it.
-		if a.sub == subReadArchive {
-			a.read.Show(read.Archive)
-		} else {
-			a.read.Show(read.Queue)
-		}
-	case areaWrite:
-		a.loadWrite()
+		return
+	}
+	p, ok := pageOf(a.area, a.sub)
+	if !ok {
+		return
+	}
+	if p.load != nil {
+		p.load(a)
+	}
+	if a.area == areaWrite {
+		// The document's panel reads what points at the open note, and every
+		// page of the write area keeps it current.
 		a.loadBacklinks()
-	case areaRecall:
-		switch a.sub {
-		case subRecallCards:
-			a.loadCards()
-		case subRecallTypes:
-			// The type list is retaken with the library, so the page reads it.
-		case subRecallPresets:
-			a.loadPresets()
-		case subRecallHistory:
-			a.loadHistory()
-		case subRecallRelink:
-			a.loadRelink()
-		default:
-			a.loadRecall()
-		}
-	case areaStats:
-		a.loadStats()
-	case areaSettings:
-		a.syncPrefs()
 	}
 }
 

@@ -37,49 +37,6 @@ type writePages struct {
 	tree []notes.TreeNode
 }
 
-// writeView draws the page of the write area the window is on: a note in the
-// document, or one of the six list pages its sub-navigation shows.
-func (a *App) writeView(c *ui.Context) {
-	d := a.notesDeps(c)
-	switch a.sub {
-	case subNoteList:
-		notes.ListView(c, &a.notes, d)
-	case subSearch:
-		notes.SearchView(c, &a.notes, d)
-	case subTags:
-		notes.TagsView(c, &a.notes, d)
-	case subAssets:
-		notes.AssetsView(c, &a.notes, d)
-	case subTemplates:
-		notes.TemplatesView(c, &a.notes, d)
-	case subTree:
-		notes.TreeView(c, &a.notes, d)
-	default:
-		notes.View(c, &a.notes, d)
-	}
-}
-
-// loadWrite derives the rows the write page on screen reads: its own query of
-// the store, run once per load so that no frame asks.
-func (a *App) loadWrite() {
-	if a.lib == nil {
-		a.write = writePages{}
-		return
-	}
-	switch a.sub {
-	case subNoteList:
-		a.loadNoteList()
-	case subSearch:
-		a.loadSearch()
-	case subTags:
-		a.loadTagRows()
-	case subAssets:
-		a.loadAssetRows()
-	case subTree:
-		a.loadExcerptTree()
-	}
-}
-
 // loadNoteList asks the store for the notes page's rows: the query, the tag and
 // the three filters the screen holds, in the order it chose.
 func (a *App) loadNoteList() {

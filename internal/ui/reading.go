@@ -21,13 +21,6 @@ func (a *App) readingView(c *ui.Context) {
 	reading.View(c, &a.reading, a.readingDeps(c))
 }
 
-// readView draws the read area's page: today's queue, or the archive. The rows
-// are what the last load derived, so the page reads a snapshot and never the
-// store.
-func (a *App) readView(c *ui.Context) {
-	read.View(c, &a.read, a.readDeps(c))
-}
-
 // readDeps is what the read area's pages ask of the app: the rows it derived,
 // the rhythm under them, and what a row can do. Each runs on the UI thread.
 func (a *App) readDeps(c *ui.Context) read.Deps {

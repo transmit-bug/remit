@@ -457,26 +457,6 @@ func (a *App) failedCardsOf() []review.FailedCard {
 // load path here — never in a frame — and every write goes through the store and
 // ends in reload, which derives the pages again.
 
-// recallStage draws the recall area's page that is up: the queue, the card
-// table, the types, the presets, the history or the broken links. It is the
-// area's one entry — the stage calls it and nothing else routes within Recall.
-func (a *App) recallStage(c *ui.Context) {
-	switch a.sub {
-	case subRecallCards:
-		a.cardTableView(c)
-	case subRecallTypes:
-		a.typesView(c)
-	case subRecallPresets:
-		a.presetsView(c)
-	case subRecallHistory:
-		a.historyView(c)
-	case subRecallRelink:
-		a.relinkPageView(c)
-	default:
-		a.recallView(c)
-	}
-}
-
 // cardTableView draws the card table; the screen lives in its own package and
 // this hands it the rows the app derived and the writes it owns.
 func (a *App) cardTableView(c *ui.Context) {

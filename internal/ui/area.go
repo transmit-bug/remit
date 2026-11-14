@@ -1,7 +1,6 @@
 package ui
 
 import (
-	screenstats "github.com/transmit-bug/remit/internal/ui/screens/stats"
 	"github.com/transmit-bug/remit/internal/ui/shell"
 	"github.com/transmit-bug/remit/locales"
 )
@@ -86,30 +85,19 @@ const (
 // state — the document of a note — is not one of them: what is entered from a
 // list is left the way it was entered.
 func subsOf(area areaID) []subID {
-	switch area {
-	case areaWrite:
-		return []subID{subNoteList, subSearch, subTags, subAssets, subTemplates, subTree}
-	case areaRead:
-		return []subID{subReadQueue, subReadArchive}
-	case areaRecall:
-		return []subID{subRecallQueue, subRecallCards, subRecallTypes,
-			subRecallPresets, subRecallHistory, subRecallRelink}
-	case areaStats:
-		return []subID{subStatsOverview, subStatsHeatmap, subStatsForecast}
-	case areaSettings:
-		return []subID{
-			subSettingsAppearance, subSettingsReview, subSettingsBudget,
-			subSettingsKeys, subSettingsPlugins, subSettingsAgent,
-			subSettingsUpdate, subSettingsAbout,
-		}
+	listed := pagesOf(area)
+	out := make([]subID, 0, len(listed))
+	for _, p := range listed {
+		out = append(out, p.sub)
 	}
-	return nil
+	return out
 }
 
-// defaultSub is the page an area opens on.
+// defaultSub is the page an area opens on: its first, which is never a place
+// entered from another page.
 func defaultSub(area areaID) subID {
-	if subs := subsOf(area); len(subs) > 0 {
-		return subs[0]
+	if listed := pagesOf(area); len(listed) > 0 {
+		return listed[0].sub
 	}
 	return subNone
 }
@@ -119,15 +107,8 @@ func defaultSub(area areaID) subID {
 // area's detail state: a note enters it and the breadcrumb leaves it, so it is
 // not a page of the sub-navigation but it is a place the area can be.
 func hasSub(area areaID, sub subID) bool {
-	if area == areaWrite && sub == subNotes {
-		return true
-	}
-	for _, candidate := range subsOf(area) {
-		if candidate == sub {
-			return true
-		}
-	}
-	return false
+	_, ok := pageOf(area, sub)
+	return ok
 }
 
 // documentOpen reports whether the window is on a note: the write area's detail
@@ -176,118 +157,21 @@ func areaLabel(msgs locales.Messages, area areaID) string {
 
 // subLabel is one page's name in this frame's language.
 func subLabel(msgs locales.Messages, sub subID) string {
-	switch sub {
-	case subNotes:
-		return msgs.DocumentPage()
-	case subNoteList:
-		return msgs.ModeNotes()
-	case subSearch:
-		return msgs.SearchPage()
-	case subTags:
-		return msgs.WriteTagsTitle()
-	case subAssets:
-		return msgs.WriteAssetsTitle()
-	case subTemplates:
-		return msgs.WriteTemplatesTitle()
-	case subTree:
-		return msgs.WriteTreeTitle()
-	case subReadQueue, subRecallQueue:
-		return msgs.QueuePage()
-	case subReadArchive:
-		return msgs.ArchivePage()
-	case subRecallCards:
-		return msgs.CardsPage()
-	case subRecallTypes:
-		return msgs.TypesPage()
-	case subRecallPresets:
-		return msgs.PresetsPage()
-	case subRecallHistory:
-		return msgs.HistoryPage()
-	case subRecallRelink:
-		return msgs.RelinkPage()
-	case subStatsOverview:
-		return msgs.OverviewPage()
-	case subStatsHeatmap:
-		return msgs.StatsHeat()
-	case subStatsForecast:
-		return msgs.StatsForecastTitle()
-	case subSettingsAppearance:
-		return msgs.AppearancePage()
-	case subSettingsReview:
-		return msgs.ReviewPage()
-	case subSettingsBudget:
-		return msgs.BudgetPage()
-	case subSettingsKeys:
-		return msgs.KeysPage()
-	case subSettingsPlugins:
-		return msgs.SettingsPlugins()
-	case subSettingsAgent:
-		return msgs.AgentPage()
-	case subSettingsUpdate:
-		return msgs.UpdatePage()
-	case subSettingsAbout:
-		return msgs.AboutPage()
+	for _, p := range pageTable {
+		if p.sub == sub {
+			return p.label(msgs)
+		}
 	}
 	return ""
 }
 
-// subName is the page's stable id, which the plugin contract's sub reads.
+// subName is the page's stable id, which the plugin contract's sub and a link
+// spell.
 func subName(sub subID) string {
-	switch sub {
-	case subNotes:
-		// The notebook has been the write area's "notes" page since the
-		// contract was written: the list beside it names itself apart.
-		return "notes"
-	case subNoteList:
-		return "list"
-	case subSearch:
-		return "search"
-	case subTags:
-		return "tags"
-	case subAssets:
-		return "assets"
-	case subTemplates:
-		return "templates"
-	case subTree:
-		return "tree"
-	case subReadQueue:
-		return "queue"
-	case subReadArchive:
-		return "archive"
-	case subRecallQueue:
-		return "queue"
-	case subRecallCards:
-		return "cards"
-	case subRecallTypes:
-		return "types"
-	case subRecallPresets:
-		return "presets"
-	case subRecallHistory:
-		return "history"
-	case subRecallRelink:
-		return "relink"
-	case subStatsOverview:
-		return "overview"
-	case subStatsHeatmap:
-		return "heatmap"
-	case subStatsForecast:
-		return "forecast"
-	case subSettingsAppearance:
-		return "appearance"
-	case subSettingsReview:
-		return "review"
-	case subSettingsBudget:
-		return "budget"
-	case subSettingsKeys:
-		return "keys"
-	case subSettingsPlugins:
-		return "plugins"
-	case subSettingsAgent:
-		return "agent"
-	case subSettingsUpdate:
-		return "update"
-	case subSettingsAbout:
-		return "about"
+	for _, p := range pageTable {
+		if p.sub == sub {
+			return p.name
+		}
 	}
 	return ""
 }
@@ -297,26 +181,10 @@ func subName(sub subID) string {
 // that names a note's page lands in it rather than on the list it was opened
 // from.
 func subOfName(area areaID, name string) subID {
-	if area == areaWrite && name == subName(subNotes) {
-		return subNotes
-	}
-	for _, candidate := range subsOf(area) {
-		if subName(candidate) == name {
-			return candidate
-		}
+	if p, ok := pageOfName(area, name); ok {
+		return p.sub
 	}
 	return defaultSub(area)
-}
-
-// statsPage is the statistics area's page as the screen names it.
-func statsPage(sub subID) screenstats.Page {
-	switch sub {
-	case subStatsHeatmap:
-		return screenstats.HeatmapPage
-	case subStatsForecast:
-		return screenstats.ForecastPage
-	}
-	return screenstats.Overview
 }
 
 // setArea is the one way the window changes area. Every control that navigates
