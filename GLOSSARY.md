@@ -88,3 +88,7 @@ _Avoid_: 链接（link 指笔记间连接，若进入模型属另一概念）
 **Asset**（资产）:
 笔记里带的非文本文件（图片），按内容命名存于库内 `assets/<sha256>.<ext>`，笔记以相对路径引用；同图重复落入只存一份，随库目录与 `.remitlib` 归档走，与笔记同属真相。见 [ADR 0003](docs/adr/0003-storage-layout.md)。
 _Avoid_: 附件（attachment 暗示外挂）, media（定名时弃用）, 缓存（资产从不重建）
+
+**Plugin Supervisor**（插件主管）:
+每份库一个，拥有插件的发现、启用列表、角色解析、启动、停用与回退；窗口向它要角色，不自己启动插件。插件级失败计数只有它一份，停用与回退对它一处可见。见 [`docs/specs/plugin-system.md`](docs/specs/plugin-system.md) 二轮修订 P1。
+_Avoid_: 插件管理器（manager 暗示可并存多个）, 插件服务（service 太泛，它不对外提供服务）, 运行时（runtime 是引擎那一层）
