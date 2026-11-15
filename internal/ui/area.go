@@ -80,19 +80,6 @@ const (
 	sessionReading
 )
 
-// subsOf is the pages an area has, in the order its sub-navigation shows them.
-// An empty list hides the row and gives its height back to the stage. A detail
-// state — the document of a note — is not one of them: what is entered from a
-// list is left the way it was entered.
-func subsOf(area areaID) []subID {
-	listed := pagesOf(area)
-	out := make([]subID, 0, len(listed))
-	for _, p := range listed {
-		out = append(out, p.sub)
-	}
-	return out
-}
-
 // defaultSub is the page an area opens on: its first, which is never a place
 // entered from another page.
 func defaultSub(area areaID) subID {
@@ -100,15 +87,6 @@ func defaultSub(area areaID) subID {
 		return listed[0].sub
 	}
 	return subNone
-}
-
-// hasSub reports whether area shows sub; a request for a page it does not have
-// opens the area at its first page instead of nowhere. The document is the write
-// area's detail state: a note enters it and the breadcrumb leaves it, so it is
-// not a page of the sub-navigation but it is a place the area can be.
-func hasSub(area areaID, sub subID) bool {
-	_, ok := pageOf(area, sub)
-	return ok
 }
 
 // documentOpen reports whether the window is on a note: the write area's detail
@@ -155,27 +133,6 @@ func areaLabel(msgs locales.Messages, area areaID) string {
 	return ""
 }
 
-// subLabel is one page's name in this frame's language.
-func subLabel(msgs locales.Messages, sub subID) string {
-	for _, p := range pageTable {
-		if p.sub == sub {
-			return p.label(msgs)
-		}
-	}
-	return ""
-}
-
-// subName is the page's stable id, which the plugin contract's sub and a link
-// spell.
-func subName(sub subID) string {
-	for _, p := range pageTable {
-		if p.sub == sub {
-			return p.name
-		}
-	}
-	return ""
-}
-
 // subOfName is the page an id names within area, or the area's first page when
 // the id names none of its own. The document answers to its own name: a link
 // that names a note's page lands in it rather than on the list it was opened
@@ -187,24 +144,27 @@ func subOfName(area areaID, name string) subID {
 	return defaultSub(area)
 }
 
-// setArea is the one way the window changes area. Every control that navigates
-// calls it or setSub; syncMode derives the plugin contract's mode from what they
-// leave, and the page the new area reads is loaded here, never in a view.
+// setArea is the one way the window changes place. Every control that navigates
+// calls it or setSub; a page the area does not have is the area's first.
 func (a *App) setArea(area areaID, sub subID) {
-	if !hasSub(area, sub) {
-		sub = defaultSub(area)
-	}
-	if area != a.area || sub != a.sub {
+	a.setPage(pageAt(area, sub))
+}
+
+// setPage records the page the window is on. syncMode derives the plugin
+// contract's mode from what it leaves, and the page the new place reads is
+// loaded here, never in a view.
+func (a *App) setPage(p page) {
+	if p.area != a.area || p.sub != a.sub {
 		a.anim.mode++
 	}
-	a.area, a.sub = area, sub
+	a.area, a.sub = p.area, p.sub
 	a.session = sessionNone
 	a.syncMode()
 	// A contribution's when expression reads the route, not only the mode: a
 	// slot's items ask about the area they sit in and the page inside it, which
 	// mode cannot say for the areas that share one. The route is the only writer
 	// of that answer.
-	a.setContributionArea(string(areaName(area)), subName(sub))
+	a.setContributionArea(string(areaName(p.area)), p.name)
 	a.loadCurrent()
 }
 
@@ -229,13 +189,11 @@ const historyDepth = 16
 // goTo moves the window to a page and remembers the one it left, so that back
 // returns there. Asking for the page already on screen is not a move.
 func (a *App) goTo(area areaID, sub subID) {
-	if !hasSub(area, sub) {
-		sub = defaultSub(area)
-	}
-	if area != a.area || sub != a.sub {
+	p := pageAt(area, sub)
+	if p.area != a.area || p.sub != a.sub {
 		a.pushPlace(place{a.area, a.sub})
 	}
-	a.setArea(area, sub)
+	a.setPage(p)
 }
 
 // goBack returns to the page the window was on before this one, and does nothing

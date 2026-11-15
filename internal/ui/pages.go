@@ -278,6 +278,21 @@ func pageOf(area areaID, sub subID) (page, bool) {
 	return page{}, false
 }
 
+// pageAt is the page at a place: the one the table declares there, or the area's
+// first when the place is not one the area has, so that a request for a page puts
+// the user somewhere rather than nowhere. An area that declares no page of its
+// own — today, a plugin's page — is a place with no page: the zero page has no
+// name and no view, and the area's own screen answers for it.
+func pageAt(area areaID, sub subID) page {
+	if p, ok := pageOf(area, sub); ok {
+		return p
+	}
+	if p, ok := pageOf(area, defaultSub(area)); ok {
+		return p
+	}
+	return page{area: area}
+}
+
 // pageOfName is the page an id names within area. A name a link spells that the
 // area does not have is not a page: the caller decides where such a request
 // lands.

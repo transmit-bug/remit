@@ -106,6 +106,14 @@ func (a *App) viewPage(c *ui.Context) {
 	}
 }
 
+// currentPage is the page the window is on. A place the table does not declare —
+// today, a plugin's page — is the zero page, with no name and no word of its own:
+// the area's own screen answers for it.
+func (a *App) currentPage() page {
+	p, _ := pageOf(a.area, a.sub)
+	return p
+}
+
 // statsDeps is what the statistics pages ask of the app: the review data the
 // last load derived, the two ways a block reaches beyond it, and what runs a
 // plugin's command.
@@ -128,7 +136,7 @@ func (a *App) shellDeps(c *ui.Context) shell.Deps {
 		Current:    a.railChoice(),
 		OnSelect:   func(item shell.Area) { a.selectRailItem(c, item) },
 		Subnav:     a.subnavItems(c),
-		CurrentSub: subName(a.sub),
+		CurrentSub: a.currentPage().name,
 		OnSub:      func(id string) { a.setSub(subOfName(a.area, id)) },
 		Crumbs:     a.crumbs(c),
 		OnCrumb:    a.chooseCrumb,
@@ -261,8 +269,8 @@ func (a *App) crumbs(c *ui.Context) []string {
 		return []string{Name, a.pluginText(c, page.Plugin, string(page.Page.Title))}
 	}
 	out := []string{Name, areaLabel(msgs, a.area)}
-	if a.area != areaToday {
-		out = append(out, subLabel(msgs, a.sub))
+	if p := a.currentPage(); p.label != nil {
+		out = append(out, p.label(msgs))
 	}
 	return out
 }

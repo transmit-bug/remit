@@ -119,11 +119,9 @@ func (a *App) syncRecent() {
 // itself is loaded by loadCurrent, so opening it is the same navigation as any
 // other.
 func (a *App) openSettings() {
-	sub := a.settingsSub
-	if !hasSub(areaSettings, sub) {
-		sub = subSettingsAppearance
-	}
-	a.goTo(areaSettings, sub)
+	// The page remembered last, or the area's first when it is one the settings
+	// no longer have: goTo resolves both.
+	a.goTo(areaSettings, a.settingsSub)
 }
 
 // closeSettings returns to the area the page was opened from.
@@ -135,7 +133,7 @@ func (a *App) closeSettings() {
 // report into what the pages show. Every write ends here, so a failed one
 // leaves a page showing what the file holds rather than what the user clicked.
 func (a *App) syncPrefs() {
-	a.prefs.Page = screensettings.Page(subName(a.sub))
+	a.prefs.Page = screensettings.Page(a.currentPage().name)
 	a.syncRecent()
 	if a.area == areaSettings {
 		a.settingsSub = a.sub

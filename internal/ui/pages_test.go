@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/transmit-bug/remit/locales"
@@ -76,10 +75,10 @@ func TestThePageNamesAreTheContract(t *testing.T) {
 			if got := subOfName(area, name); got != p.sub {
 				t.Errorf("%v/%s resolves to %v, want %v", areaName(area), name, got, p.sub)
 			}
-			if got := subName(p.sub); got != name {
+			if got := p.name; got != name {
 				t.Errorf("%v's page %v spells itself %q, want %q", areaName(area), p.sub, got, name)
 			}
-			if got := subLabel(locales.In("en"), p.sub); got == "" {
+			if got := p.label(locales.In("en")); got == "" {
 				t.Errorf("%v/%s shows no word", areaName(area), name)
 			}
 		}
@@ -90,31 +89,41 @@ func TestThePageNamesAreTheContract(t *testing.T) {
 	}
 }
 
-// TestTheSubnavIsTheTableOrder: an area's row is its pages in the table's order,
-// minus the place entered from another page. Reordering the table reorders the
-// row; a detail page that forgets to say so appears as a page beside the one it
-// was entered from.
-func TestTheSubnavIsTheTableOrder(t *testing.T) {
-	for _, area := range []areaID{areaToday, areaWrite, areaRead, areaRecall, areaStats, areaSettings} {
-		var want []subID
-		for _, p := range pageTable {
-			if p.area == area && !p.detail {
-				want = append(want, p.sub)
+// TestEveryPageIsOneClickAway: each page's own word in the sub-navigation goes
+// there, and the area's first page brings the window back — at the size the
+// window opens at and at its minimum. A row drawn from a list of its own sends
+// the click to the wrong place or nowhere, and a page the row cannot leave
+// strands the user in it.
+func TestEveryPageIsOneClickAway(t *testing.T) {
+	msgs := locales.In("en")
+	for _, size := range windowSizes {
+		t.Run(size.name, func(t *testing.T) {
+			a, _, tt := openApp(t)
+			tt.SetSize(size.w, size.h)
+			settle(tt)
+			for _, area := range []areaID{areaWrite, areaRead, areaRecall, areaStats, areaSettings} {
+				pages := pagesOf(area)
+				first := pages[0]
+				a.setArea(area, first.sub)
+				settle(tt)
+				for _, p := range pages[1:] {
+					if err := tt.Click(p.label(msgs)); err != nil {
+						t.Fatalf("%v's row has no %q page: %v", areaName(area), p.name, err)
+					}
+					settle(tt)
+					if a.area != p.area || a.sub != p.sub {
+						t.Fatalf("%v's %q page clicked to %v/%v", areaName(area), p.name, a.area, a.sub)
+					}
+					if err := tt.Click(first.label(msgs)); err != nil {
+						t.Fatalf("%v/%s leaves no word to click back: %v", areaName(area), p.name, err)
+					}
+					settle(tt)
+					if a.area != first.area || a.sub != first.sub {
+						t.Fatalf("%v/%s was left for %v/%v, want %s", areaName(area), p.name, a.area, a.sub, first.name)
+					}
+				}
 			}
-		}
-		if got := subsOf(area); !slices.Equal(got, want) {
-			t.Errorf("%v's row is %v, want %v", areaName(area), got, want)
-		}
-		if area != areaToday && len(want) == 0 {
-			t.Errorf("%v has no pages, so it has nothing to navigate", areaName(area))
-		}
-	}
-	doc, ok := pageOf(areaWrite, subNotes)
-	if !ok {
-		t.Fatal("the document is not a page of the write area")
-	}
-	if !doc.detail {
-		t.Error("the document is not a detail state, so the write area offers it as a page and hides its row")
+		})
 	}
 }
 

@@ -115,7 +115,7 @@ func TestSettingsPages(t *testing.T) {
 			}
 			// No Types page: the card-type editor moves to its own package in
 			// W5, and the sub-navigation does not offer it until then.
-			if got := len(subsOf(areaSettings)); got != len(pages) {
+			if got := len(pagesOf(areaSettings)); got != len(pages) {
 				t.Errorf("the sub-navigation holds %d pages, want the eight", got)
 			}
 
