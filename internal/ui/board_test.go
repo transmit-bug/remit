@@ -365,8 +365,8 @@ func TestInspectorOffersTheWhiteboardWhenANodeExists(t *testing.T) {
 	trip = true
 	tt.Frame()
 	tt.Frame()
-	ref := a.ui.pages.Current()
-	if a.area != areaPlugin || ref.Page.ID != "board" {
+	ref := a.plugin
+	if ref.Page.ID != "board" {
 		t.Fatalf("the trip went to %v/%q, want the board page", a.area, ref.Page.ID)
 	}
 	state := a.pageState(ref)

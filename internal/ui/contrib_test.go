@@ -44,6 +44,14 @@ const reportContributes = `{
       "nav": "plugins",
       "when": "library.open",
       "data": "command:data"
+    },
+    {
+      "id": "stale",
+      "title": "%page.stale%",
+      "icon": "clock",
+      "nav": "plugins",
+      "when": "library.open",
+      "data": "command:stale"
     }
   ],
   "settings": [
@@ -55,6 +63,7 @@ const reportContributes = `{
       "command.show": "Leech report",
       "category.report": "Reports",
       "page.title": "Leeches",
+      "page.stale": "Stale leeches",
       "setting.threshold": "Lapses that make a leech",
       "setting.suspended": "Count suspended cards",
       "section.overview": "Overview",
@@ -73,6 +82,7 @@ const reportContributes = `{
       "command.show": "水蛭报告",
       "category.report": "报告",
       "page.title": "水蛭",
+      "page.stale": "陈旧水蛭",
       "setting.threshold": "水蛭阈值",
       "setting.suspended": "把已暂停的卡片也算进来",
       "section.overview": "概览",
@@ -128,6 +138,15 @@ const reportTree = `{
         {"kind": "sparkline"}
       ]
     }
+  ]
+}`
+
+// staleTree is the second page's answer: content of its own, so that a test can
+// tell which of the plugin's two pages the stage is drawing.
+const staleTree = `{
+  "kind": "page",
+  "children": [
+    {"kind": "markdown", "text": "Nothing has gone stale yet."}
   ]
 }`
 
@@ -283,6 +302,9 @@ func contribApp(t *testing.T, name, contributes string, runner *fakeRunner) (*Ap
 	}
 	if _, ok := runner.reply["data"]; !ok {
 		runner.reply["data"] = reportTree
+	}
+	if _, ok := runner.reply["stale"]; !ok {
+		runner.reply["stale"] = staleTree
 	}
 	// The plugin is a directory the supervisor discovers by its manifest; its
 	// runner is the test's fake, so no engine runs for a contributed command.
@@ -597,12 +619,90 @@ func TestContributedPageFailsWithARetry(t *testing.T) {
 	}
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
-	if _, ok := tt.Find("Plugin pages"); ok {
+	if _, ok := tt.Find("Leeches"); ok {
 		t.Error("the page is still in navigation after three failures")
+	}
+	if _, ok := tt.Find("Stale leeches"); !ok {
+		t.Error("one page's failures hid its sibling")
 	}
 	tt.Key(ui.Cmd, ui.KeyK)
 	if !tt.HasText("Leech report") {
 		t.Errorf("a page's failures hid the plugin's command; texts %q", tt.Texts())
+	}
+}
+
+// Two plugin pages are two places: the route names the page, so back returns to
+// the page the user came from instead of to whichever plugin page was entered
+// last, which is all "the plugin area" can say.
+func TestAPluginPageIsThePlaceBackReturnsTo(t *testing.T) {
+	a, tt := openReport(t, &fakeRunner{})
+	openReportPage(t, tt)
+	// The rail offers every page the plugin contributed, so going to the second
+	// one leaves the first behind rather than going through an area.
+	if err := tt.Click("Stale leeches"); err != nil {
+		t.Fatalf("the rail has no second page: %v", err)
+	}
+	settle(tt)
+	if a.plugin.Page.ID != "stale" {
+		t.Fatalf("the second page did not open; on %q", a.plugin.Page.ID)
+	}
+	if !tt.HasText("Nothing has gone stale yet.") {
+		t.Fatalf("the second page did not draw its own answer; texts %q", tt.Texts())
+	}
+
+	tt.Key(0, ui.KeyEscape)
+	settle(tt)
+
+	if a.plugin.Page.ID != "report" {
+		t.Fatalf("back landed on %q, want the page the user came from", a.plugin.Page.ID)
+	}
+	if tt.HasText("Nothing has gone stale yet.") {
+		t.Errorf("back left the second page's answer on screen; texts %q", tt.Texts())
+	}
+}
+
+// A session is entered over the page on screen and leaves for it: a session
+// started on a plugin page comes back to that page, not to an area's first.
+func TestASessionLeavesForThePluginPageItWasEnteredFrom(t *testing.T) {
+	a, tt := openReport(t, &fakeRunner{})
+	openReportPage(t, tt)
+
+	a.enterSession(sessionReview)
+	settle(tt)
+	a.goBack()
+	settle(tt)
+
+	if a.plugin.Page.ID != "report" || a.session != sessionNone {
+		t.Fatalf("leaving the session landed on %q (session %v), want the plugin page",
+			a.plugin.Page.ID, a.session)
+	}
+	if !tt.HasText("Leeches") {
+		t.Errorf("the plugin page is not up again; texts %q", tt.Texts())
+	}
+}
+
+// A plugin page's path is the three segments a host page's is — the app, the
+// group the page belongs to, and the page — with the plugin that contributed it
+// as the group, and that segment opens the first page the plugin contributed.
+func TestAPluginPageShowsThePathAPageShows(t *testing.T) {
+	a, tt := openReport(t, &fakeRunner{})
+	openReportPage(t, tt)
+	if err := tt.Click("Stale leeches"); err != nil {
+		t.Fatalf("the rail has no second page: %v", err)
+	}
+	settle(tt)
+
+	// The path names the plugin between the app and the page.
+	if _, ok := tt.Find("report"); !ok {
+		t.Fatalf("the path does not name the plugin; texts %q", tt.Texts())
+	}
+	if err := tt.Click("report"); err != nil {
+		t.Fatalf("the path's group segment is not a control: %v", err)
+	}
+	settle(tt)
+
+	if a.plugin.Page.ID != "report" {
+		t.Fatalf("the group segment opened %q, want the plugin's first page", a.plugin.Page.ID)
 	}
 }
 
@@ -622,7 +722,7 @@ func TestReenableBringsBackAHiddenContribution(t *testing.T) {
 	}
 	tt.Key(ui.Cmd, ui.Key2)
 	tt.Advance(320 * time.Millisecond)
-	if _, ok := tt.Find("Plugin pages"); ok {
+	if _, ok := tt.Find("Leeches"); ok {
 		t.Fatal("the page is still in navigation after three failures")
 	}
 

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/ui/shell"
 	"github.com/transmit-bug/remit/locales"
 )
@@ -144,28 +145,36 @@ func subOfName(area areaID, name string) subID {
 	return defaultSub(area)
 }
 
-// setArea is the one way the window changes place. Every control that navigates
-// calls it or setSub; a page the area does not have is the area's first.
+// setArea is the one way the window changes to a page of an area. Every control
+// that navigates calls it or setSub; a page the area does not have is the area's
+// first.
 func (a *App) setArea(area areaID, sub subID) {
-	a.setPage(pageAt(area, sub))
+	a.setPlace(placeAt(area, sub))
 }
 
-// setPage records the page the window is on. syncMode derives the plugin
-// contract's mode from what it leaves, and the page the new place reads is
-// loaded here, never in a view.
-func (a *App) setPage(p page) {
-	if p.area != a.area || p.sub != a.sub {
+// setPlace records where the window is. syncMode derives the plugin contract's
+// mode from what it leaves, and the page the new place reads is loaded here,
+// never in a view.
+func (a *App) setPlace(p place) {
+	if !p.same(a.here()) {
 		a.anim.mode++
 	}
-	a.area, a.sub = p.area, p.sub
+	a.area, a.sub, a.plugin = p.area, p.sub, p.plugin
 	a.session = sessionNone
 	a.syncMode()
 	// A contribution's when expression reads the route, not only the mode: a
 	// slot's items ask about the area they sit in and the page inside it, which
 	// mode cannot say for the areas that share one. The route is the only writer
 	// of that answer.
-	a.setContributionArea(string(areaName(p.area)), p.name)
+	a.setContributionArea(string(areaName(p.area)), p.pageName())
 	a.loadCurrent()
+}
+
+// pageName is the page's stable id for the contribution context: the name the
+// table gives it, and empty where the place is not one of the table's pages.
+func (p place) pageName() string {
+	table, _ := pageOf(p.area, p.sub)
+	return table.name
 }
 
 // setSub switches the area's page, keeping the area — and closing whatever
@@ -174,26 +183,55 @@ func (a *App) setSub(sub subID) {
 	a.goTo(a.area, sub)
 }
 
-// place is one page the window was on: the area and its page. It is what back
-// returns to, so the page the user came from is remembered rather than derived
-// from a mode.
+// place is where the window is: an area's page, or the page a plugin
+// contributed. Both producers answer one value, so back, the rail, the breadcrumb
+// and the frame's dispatch read the place rather than keeping a second copy of
+// it — and two plugin pages are two places, which the area and its page id alone
+// could not say.
 type place struct {
-	area areaID
-	sub  subID
+	area   areaID
+	sub    subID
+	plugin contrib.PageRef // the page a plugin contributed; zero when the place is an area's page
+}
+
+// here is where the window is.
+func (a *App) here() place { return place{a.area, a.sub, a.plugin} }
+
+// same reports whether two places are one. A plugin page is compared by the id
+// navigation names it, which is what the rail and the breadcrumb spell.
+func (p place) same(q place) bool {
+	return p.area == q.area && p.sub == q.sub && pageArea(p.plugin) == pageArea(q.plugin)
+}
+
+// placeAt is the place a request for one of an area's pages names: the page the
+// table declares there, or the area's first.
+func placeAt(area areaID, sub subID) place {
+	p := pageAt(area, sub)
+	return place{area: p.area, sub: p.sub}
+}
+
+// pluginPlace is the place a contributed page is: the plugin area, with the page
+// the manifest contributed named on the route.
+func pluginPlace(ref contrib.PageRef) place {
+	return place{area: areaPlugin, sub: subNone, plugin: ref}
 }
 
 // historyDepth bounds what back remembers: enough for a session's digressions,
 // not the whole run of a day.
 const historyDepth = 16
 
-// goTo moves the window to a page and remembers the one it left, so that back
-// returns there. Asking for the page already on screen is not a move.
+// goTo moves the window to a page of an area and remembers the one it left, so
+// that back returns there. Asking for the page already on screen is not a move.
 func (a *App) goTo(area areaID, sub subID) {
-	p := pageAt(area, sub)
-	if p.area != a.area || p.sub != a.sub {
-		a.pushPlace(place{a.area, a.sub})
+	a.goToPlace(placeAt(area, sub))
+}
+
+// goToPlace is goTo for a place either producer named.
+func (a *App) goToPlace(p place) {
+	if !p.same(a.here()) {
+		a.pushPlace(a.here())
 	}
-	a.setPage(p)
+	a.setPlace(p)
 }
 
 // goBack returns to the page the window was on before this one, and does nothing
@@ -204,7 +242,7 @@ func (a *App) goBack() {
 	}
 	last := a.back[len(a.back)-1]
 	a.back = a.back[:len(a.back)-1]
-	a.setArea(last.area, last.sub)
+	a.setPlace(last)
 }
 
 // land moves the window to a page with nothing behind it: a link from outside
@@ -230,7 +268,7 @@ func (a *App) pushPlace(p place) {
 // enterSession opens a session over the page on screen and remembers that page,
 // so that the session's own way out returns there.
 func (a *App) enterSession(kind sessionKind) {
-	a.pushPlace(place{a.area, a.sub})
+	a.pushPlace(a.here())
 	a.session = kind
 	a.syncMode()
 	a.loadCurrent()

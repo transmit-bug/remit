@@ -19,6 +19,7 @@ import (
 	"github.com/transmit-bug/remit/internal/core/stats"
 	"github.com/transmit-bug/remit/internal/core/store"
 	"github.com/transmit-bug/remit/internal/ext"
+	"github.com/transmit-bug/remit/internal/ext/contrib"
 	"github.com/transmit-bug/remit/internal/pages"
 	"github.com/transmit-bug/remit/internal/plugin"
 	"github.com/transmit-bug/remit/internal/settings"
@@ -92,10 +93,11 @@ type App struct {
 	due     []core.ID      // today's queue, as the last reload derived it
 
 	mode             mode
-	area             areaID      // which area the rail shows as chosen
-	sub              subID       // which of its pages; subNone when it has none
-	back             []place     // where back returns to, most recent last
-	session          sessionKind // the session over the stage, when one is open; none until the session screens land
+	area             areaID          // which area the rail shows as chosen
+	sub              subID           // which of its pages; subNone when it has none
+	plugin           contrib.PageRef // the page a plugin contributed, when that is the place; zero for an area's page
+	back             []place         // where back returns to, most recent last
+	session          sessionKind     // the session over the stage, when one is open; none until the session screens land
 	review           review.State
 	reviewScope      queue.Scope             // what the review session draws from; within the session only, never stored
 	failed           []core.ID               // the cards this session answered Again, in the order they were missed

@@ -118,11 +118,9 @@ func (a *App) loadContributions() {
 	}
 	// A page on screen whose plugin went away, or whose page did: the window
 	// returns to the notes rather than drawing a page that no longer exists.
-	if a.area == areaPlugin {
-		current := a.ui.pages.Current()
-		if _, ok := a.ui.index.Page(current.Plugin, current.Page.ID); !ok {
-			a.ui.pages.Leave()
-			a.setArea(areaWrite, subNotes)
+	if a.plugin.Page.ID != "" {
+		if _, ok := a.ui.index.Page(a.plugin.Plugin, a.plugin.Page.ID); !ok {
+			a.goTo(areaWrite, subNotes)
 		}
 	}
 }
@@ -143,7 +141,7 @@ func (a *App) contributionContext() contrib.Context {
 		ScopeActive:   a.reviewScope.Kind != queue.ScopeAll,
 	}
 	if a.mode == modePlugin {
-		page := a.ui.pages.Current()
+		page := a.plugin
 		ctx.PluginID, ctx.PageID = page.Plugin, page.Page.ID
 	}
 	if a.mode == modeBrowse && a.area == areaRecall && a.sub == subRecallCards {
@@ -378,8 +376,8 @@ func (a *App) applyCommandAnswer(c *ui.Context, ref contrib.CommandRef, answer e
 		}
 		a.openPage(c, page)
 	case "refresh":
-		if a.mode == modePlugin {
-			a.enterPage(c, a.ui.pages.Current(), true)
+		if a.plugin.Page.ID != "" {
+			a.enterPage(c, a.plugin, true)
 		}
 	case "toast":
 		c.Toast(a.pluginText(c, ref.Plugin, answer.Message))
@@ -451,19 +449,14 @@ func (a *App) pagePayload(ref contrib.PageRef) map[string]any {
 }
 
 // openPage shows a contributed page: what its last load left, or its skeleton,
-// and the job that asks for the page's data, run off this frame.
+// and the job that asks for the page's data, run off this frame. The place is
+// what remembers it, so back, a session's return and the rail all land on that
+// page rather than on whichever one the runtime entered last.
 func (a *App) openPage(c *ui.Context, ref contrib.PageRef) {
 	if ref.Page.ID == "" {
 		return
 	}
-	moved := pageArea(a.ui.pages.Current()) != pageArea(ref)
-	if moved {
-		a.pushPlace(place{a.area, a.sub})
-	}
-	a.setArea(areaPlugin, subNone)
-	if moved {
-		a.anim.mode++
-	}
+	a.goToPlace(pluginPlace(ref))
 	a.enterPage(c, ref, false)
 }
 
@@ -508,8 +501,10 @@ func (a *App) applyPage(job *pages.Job, tree []byte, err error) {
 	if !a.ui.pages.Apply(job, tree, err) {
 		return
 	}
-	if a.area == areaPlugin && a.ui.pages.Current().Page.ID == "" {
-		a.setArea(areaWrite, subNotes)
+	// The third failure hid the page: the route leaves it rather than naming a
+	// page the window cannot draw any more.
+	if pageArea(a.plugin) == pageArea(job.Ref) {
+		a.goTo(areaWrite, subNotes)
 	}
 }
 
@@ -549,7 +544,7 @@ func (a *App) pageState(ref contrib.PageRef) *pluginpage.State {
 // commander is not open yet is a page no reader entered — opening a plugin is a
 // handler's job — so the job is dropped rather than started here.
 func (a *App) pluginPageView(c *ui.Context) {
-	ref := a.ui.pages.Current()
+	ref := a.plugin
 	if ref.Page.ID == "" {
 		return
 	}

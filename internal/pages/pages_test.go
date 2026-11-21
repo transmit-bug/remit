@@ -56,7 +56,7 @@ func (s *stub) RunCommand(ext.CommandIn) (ext.CommandResult, error) {
 func ask(t *testing.T, r *pages.Runtime, job *pages.Job, plugin *stub) (hidden bool) {
 	t.Helper()
 	if job == nil {
-		t.Fatalf("the runtime handed out no job; page %+v", r.Current())
+		t.Fatalf("the runtime handed out no job")
 	}
 	answer, err := plugin.PageData(job.In)
 	return r.Apply(job, answer, err)
@@ -205,9 +205,6 @@ func TestThreeFailuresHideThePageAndHealthSaysWhy(t *testing.T) {
 	if !r.Hidden("acme.report", "report") {
 		t.Error("the hidden page is not reported hidden")
 	}
-	if r.Current().Page.ID != "" {
-		t.Error("a page three failures hid is still the page on screen")
-	}
 	// What it draws is the reason, not a skeleton: the error is kept until a
 	// retry asks again.
 	if view, _ := r.Enter(leeches, ctx); view.Err != errThrown.Error() || view.Loading {
@@ -295,16 +292,5 @@ func TestAnAbandonedJobIsHandedOutAgain(t *testing.T) {
 	r.Abandon(job)
 	if view, again := r.Enter(leeches, ctx); again == nil {
 		t.Errorf("the page was left loading after its job was abandoned: %+v", view)
-	}
-}
-
-// A page whose plugin went away is no longer the page on screen: the window's
-// route reads an empty current page and goes back to the notes.
-func TestLeaveForgetsThePageOnScreen(t *testing.T) {
-	r := pages.New()
-	r.Enter(leeches, windowState("notes"))
-	r.Leave()
-	if got := r.Current(); got.Page.ID != "" {
-		t.Errorf("the runtime still says %q is on screen", got.Page.ID)
 	}
 }

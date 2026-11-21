@@ -39,7 +39,6 @@ import (
 type Runtime struct {
 	failures *contrib.Failures
 	pages    map[string]*page
-	current  contrib.PageRef
 }
 
 // page is one contributed page's state, under the key its plugin and id make.
@@ -104,7 +103,6 @@ func (r *Runtime) Retry(ref contrib.PageRef, ctx map[string]any) (View, *Job) {
 
 func (r *Runtime) enter(ref contrib.PageRef, ctx map[string]any, force bool) (View, *Job) {
 	p := r.state(ref)
-	r.current = p.ref
 	hash := contextHash(ctx)
 	loaded := p.loaded && p.hash == hash
 	hidden := r.failures.Hidden(p.ref.Plugin, p.ref.Page.ID)
@@ -128,7 +126,8 @@ func (r *Runtime) enter(ref contrib.PageRef, ctx map[string]any, force bool) (Vi
 
 // Apply takes a job's answer: the tree its data command answered, or the error
 // it threw. It answers whether that was the failure that hid the page, which is
-// the caller's cue to leave it — a hidden page is not one to sit on.
+// the caller's cue: a hidden page is not one to sit on. Which page is on screen
+// is the route's to say, so this never reaches for it.
 //
 // An answer the page is not waiting for — the page went away, or the library
 // reopens and takes its states with it — is dropped: nothing on screen owes it
@@ -153,11 +152,6 @@ func (r *Runtime) Apply(job *Job, tree []byte, err error) (hidden bool) {
 		return false
 	}
 	slog.Warn("remit: a plugin page was hidden after three failures", "plugin", job.Ref.Name, "page", job.Ref.Page.ID)
-	if samePage(r.current, job.Ref) {
-		// The page on screen is gone: the caller's route has nothing left to
-		// draw, and the rail cannot name a page the window no longer has.
-		r.current = contrib.PageRef{}
-	}
 	return true
 }
 
@@ -179,13 +173,6 @@ func (r *Runtime) Invalidate() {
 		p.loaded, p.hash = false, ""
 	}
 }
-
-// Leave forgets the page on screen, which is what a reload of the declarations
-// asks when the library no longer declares that page.
-func (r *Runtime) Leave() { r.current = contrib.PageRef{} }
-
-// Current is the page on screen: the last one entered, empty when none is.
-func (r *Runtime) Current() contrib.PageRef { return r.current }
 
 // Loaded is every page whose tree a load left, in key order: what the window's
 // readers that look across pages — a board naming a block — ask.
@@ -281,10 +268,6 @@ func (r *Runtime) state(ref contrib.PageRef) *page {
 
 func (p *page) view() View {
 	return View{Ref: p.ref, Tree: p.tree, Err: p.err, Loading: p.loading}
-}
-
-func samePage(ref, other contrib.PageRef) bool {
-	return ref.Plugin == other.Plugin && ref.Page.ID == other.Page.ID
 }
 
 // key names a page's state: the plugin's manifest id and the contribution's id.

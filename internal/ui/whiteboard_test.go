@@ -136,8 +136,8 @@ func TestTheWhiteboardExampleLocatesItsNode(t *testing.T) {
 	}
 	tt.Frame()
 
-	page := a.ui.pages.Current()
-	if a.area != areaPlugin || page.Page.ID != "whiteboard" {
+	page := a.plugin
+	if page.Page.ID != "whiteboard" {
 		t.Fatalf("the entry went to %v/%q, want the whiteboard page", a.area, page.Page.ID)
 	}
 	state := a.pageState(page)

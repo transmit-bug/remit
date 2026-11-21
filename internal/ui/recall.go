@@ -272,7 +272,7 @@ func (a *App) showCard(id core.ID) {
 	// The card opens over the queue it belongs to, so leaving the session lands
 	// on the page that holds it, and going back once more returns to the table
 	// it was chosen from.
-	a.pushPlace(place{a.area, a.sub})
+	a.pushPlace(a.here())
 	a.setArea(areaRecall, subRecallQueue)
 	a.review.Reset()
 	a.review.Only(id)

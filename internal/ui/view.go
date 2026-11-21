@@ -88,7 +88,7 @@ func (a *App) stage(c *ui.Context, tk design.Tokens) {
 			a.reviewView(c, tk)
 		case a.session == sessionReading:
 			a.readingView(c)
-		case a.area == areaPlugin:
+		case a.plugin.Page.ID != "":
 			a.pluginPageView(c)
 		case a.area == areaToday:
 			a.todayView(c)
@@ -139,7 +139,7 @@ func (a *App) shellDeps(c *ui.Context) shell.Deps {
 		CurrentSub: a.currentPage().name,
 		OnSub:      func(id string) { a.setSub(subOfName(a.area, id)) },
 		Crumbs:     a.crumbs(c),
-		OnCrumb:    a.chooseCrumb,
+		OnCrumb:    func(i int) { a.chooseCrumb(c, i) },
 		Actions:    a.contextActions,
 		OnPalette:  func() { a.openPalette(c) },
 		Overflow:   func(menu *ui.Menu) { a.overflowMenu(c, menu) },
@@ -197,8 +197,8 @@ func pageArea(page contrib.PageRef) shell.Area {
 // railChoice is the rail item that is chosen: an area's id, or the page a plugin
 // contributed.
 func (a *App) railChoice() shell.Area {
-	if a.area == areaPlugin {
-		return pageArea(a.ui.pages.Current())
+	if a.plugin.Page.ID != "" {
+		return pageArea(a.plugin)
 	}
 	return areaName(a.area)
 }
@@ -261,14 +261,22 @@ func (a *App) subnavItems(c *ui.Context) []shell.Sub {
 }
 
 // crumbs is the path to where the user is, which the top bar shows: the app, the
-// area and the page, the last one being the page itself.
+// group the page belongs to — an area, or the plugin that contributed it — and
+// the page itself.
 func (a *App) crumbs(c *ui.Context) []string {
-	msgs := m(c)
-	if a.area == areaPlugin {
-		page := a.ui.pages.Current()
-		return []string{Name, a.pluginText(c, page.Plugin, string(page.Page.Title))}
+	return append([]string{Name}, a.placeWords(c)...)
+}
+
+// placeWords are the two segments below the app: the group's word, and the word
+// of the page inside it. Both producers of a place answer here, so a plugin page
+// is the same three segments a host page is.
+func (a *App) placeWords(c *ui.Context) []string {
+	if a.plugin.Page.ID != "" {
+		title := a.pluginText(c, a.plugin.Plugin, string(a.plugin.Page.Title))
+		return []string{a.plugin.Name, title}
 	}
-	out := []string{Name, areaLabel(msgs, a.area)}
+	msgs := m(c)
+	out := []string{areaLabel(msgs, a.area)}
 	if p := a.currentPage(); p.label != nil {
 		out = append(out, p.label(msgs))
 	}
@@ -276,10 +284,20 @@ func (a *App) crumbs(c *ui.Context) []string {
 }
 
 // chooseCrumb goes back to an earlier segment of the path: the app itself is
-// today, and an area is that area's first page.
-func (a *App) chooseCrumb(index int) {
+// today, an area is that area's first page, and a plugin is the first page it
+// contributed.
+func (a *App) chooseCrumb(c *ui.Context, index int) {
 	if index == 0 {
 		a.goTo(areaToday, subNone)
+		return
+	}
+	if a.plugin.Page.ID != "" {
+		for _, ref := range a.visiblePages() {
+			if ref.Plugin == a.plugin.Plugin {
+				a.openPage(c, ref)
+				return
+			}
+		}
 		return
 	}
 	a.goTo(a.area, defaultSub(a.area))
